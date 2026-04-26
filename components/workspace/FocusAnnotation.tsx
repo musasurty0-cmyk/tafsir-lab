@@ -174,16 +174,24 @@ export default function FocusAnnotation({ verses, verseKey, wordPos, onClose, on
     const canvas = canvasRef.current;
     const body   = bodyRef.current;
     if (!canvas || !body) return;
+
+    const dpr = window.devicePixelRatio || 1;
     const { width, height } = body.getBoundingClientRect();
-    if (canvas.width !== Math.round(width) || canvas.height !== Math.round(height)) {
-      canvas.width  = Math.round(width);
-      canvas.height = Math.round(height);
+    const w = Math.round(width * dpr), h = Math.round(height * dpr);
+    if (canvas.width !== w || canvas.height !== h) {
+      canvas.width  = w;
+      canvas.height = h;
+      canvas.style.width  = `${Math.round(width)}px`;
+      canvas.style.height = `${Math.round(height)}px`;
     }
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.save();
+    ctx.scale(dpr, dpr); // all stroke coords are in CSS px
     for (const s of strokesRef.current) drawStroke(ctx, s);
     if (activeStroke.current) drawStroke(ctx, activeStroke.current);
+    ctx.restore();
   }, []);
 
   // Re-render whenever strokes change
@@ -203,6 +211,15 @@ export default function FocusAnnotation({ verses, verseKey, wordPos, onClose, on
     ro.observe(el);
     return () => { ro.disconnect(); cancelAnimationFrame(rafRef.current); };
   }, [render]);
+
+  // ── Suppress iOS long-press callout (copy/search/translate popup) ────────
+  useEffect(() => {
+    const el = bodyRef.current;
+    if (!el) return;
+    const prevent = (e: Event) => e.preventDefault();
+    el.addEventListener("contextmenu", prevent);
+    return () => el.removeEventListener("contextmenu", prevent);
+  }, []);
 
   // ── Keyboard shortcuts ─────────────────────────────────────────────────
 

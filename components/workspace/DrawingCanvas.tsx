@@ -208,11 +208,18 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     const container = containerRef.current;
     if (!canvas || !container) return;
 
+    // ── DPR-aware sizing ─────────────────────────────────────────────
+    // On Retina / iPad (DPR=2), we draw at 2× physical resolution then
+    // display at CSS size — this is what makes strokes crisp, not blurry.
+    const dpr = window.devicePixelRatio || 1;
     const { width, height } = container.getBoundingClientRect();
-    const w = Math.round(width), h = Math.round(height);
+    const w = Math.round(width * dpr), h = Math.round(height * dpr);
     if (canvas.width !== w || canvas.height !== h) {
       canvas.width  = w;
       canvas.height = h;
+      // CSS size stays at logical pixels so the element fills its container
+      canvas.style.width  = `${Math.round(width)}px`;
+      canvas.style.height = `${Math.round(height)}px`;
     }
 
     const ctx = canvas.getContext("2d");
@@ -221,6 +228,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.save();
+    ctx.scale(dpr, dpr);           // ← DPR first, so all coords below are in CSS px
     ctx.translate(vp.x, vp.y);
     ctx.scale(vp.zoom, vp.zoom);
 
@@ -253,15 +261,16 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
       if (hlCtx) {
         hlCtx.clearRect(0, 0, w, h);
         hlCtx.save();
+        hlCtx.scale(dpr, dpr);         // same DPR + viewport transform as main canvas
         hlCtx.translate(vp.x, vp.y);
         hlCtx.scale(vp.zoom, vp.zoom);
         for (const s of highlights) drawStroke(hlCtx, s, 1);
         hlCtx.restore();
-        ctx.restore(); // pop the transform before drawImage (drawImage works in screen space)
+        ctx.restore(); // back to identity before drawImage (pixel-perfect copy)
         ctx.globalAlpha = 0.35;
         ctx.drawImage(hl, 0, 0);
         ctx.globalAlpha = 1;
-        return; // already restored
+        return;
       }
     }
 
@@ -318,6 +327,15 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
   useEffect(() => () => {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     cancelAnimationFrame(rafRef.current);
+  }, []);
+
+  // ── Suppress iOS long-press callout (copy/search/translate popup) ─────
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const prevent = (e: Event) => e.preventDefault();
+    el.addEventListener("contextmenu", prevent);
+    return () => el.removeEventListener("contextmenu", prevent);
   }, []);
 
   // ── Imperative handle (undo / redo / clear) ───────────────────────────
