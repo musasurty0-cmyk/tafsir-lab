@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:api.anthropic.com)",
+      "Bash(npm --version)",
+      "Bash(npm install *)",
+      "Bash(npx remotion *)",
+      "Bash(curl -s http://localhost:3333)",
+      "Bash(curl -s \"http://localhost:3333/api/compositions\")",
+      "Bash(npx tsc *)"
+    ]
+  }
+}

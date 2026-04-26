@@ -1,0 +1,979 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>TafsirLab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Serif:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&family=Amiri+Quran&display=swap" rel="stylesheet">
+<style>
+/* ---------- Tokens ---------- */
+:root {
+  --bg: oklch(0.987 0.003 80);
+  --bg-elev: oklch(0.995 0.002 80);
+  --panel: oklch(0.97 0.004 80);
+  --panel-2: oklch(0.945 0.005 80);
+  --ink: oklch(0.22 0.012 80);
+  --ink-2: oklch(0.38 0.012 80);
+  --ink-3: oklch(0.56 0.01 80);
+  --ink-4: oklch(0.72 0.008 80);
+  --line: oklch(0.22 0.012 80 / 0.09);
+  --line-strong: oklch(0.22 0.012 80 / 0.16);
+  --hover: oklch(0.22 0.012 80 / 0.045);
+  --active: oklch(0.22 0.012 80 / 0.075);
+  --shadow-sm: 0 1px 2px oklch(0.22 0.012 80 / 0.04), 0 1px 1px oklch(0.22 0.012 80 / 0.02);
+  --shadow-md: 0 4px 12px oklch(0.22 0.012 80 / 0.06), 0 2px 4px oklch(0.22 0.012 80 / 0.04);
+  --shadow-lg: 0 24px 48px oklch(0.22 0.012 80 / 0.1), 0 8px 16px oklch(0.22 0.012 80 / 0.06);
+  --accent: oklch(0.55 0.08 160);
+  --accent-soft: oklch(0.55 0.08 160 / 0.1);
+  --accent-ink: oklch(0.42 0.07 160);
+  --rail: 56px;
+  --sidebar: 272px;
+  --drawer: 440px;
+  --radius: 6px;
+  --radius-lg: 10px;
+  --font-sans: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-serif: "IBM Plex Serif", Georgia, serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --font-arabic: "Amiri Quran", "Amiri", serif;
+  --row-h: 28px;
+  --canvas-pad-y: 72px;
+  --canvas-max: 740px;
+}
+[data-density="compact"] { --row-h: 24px; --canvas-pad-y: 48px; }
+[data-density="cozy"]    { --row-h: 28px; --canvas-pad-y: 72px; }
+[data-density="roomy"]   { --row-h: 34px; --canvas-pad-y: 104px; }
+[data-canvas="focused"]  { --canvas-max: 720px; }
+[data-canvas="wide"]     { --canvas-max: 920px; }
+[data-accent="emerald"]  { --accent: oklch(0.55 0.08 160); --accent-soft: oklch(0.55 0.08 160 / 0.1); --accent-ink: oklch(0.42 0.07 160); }
+[data-accent="amber"]    { --accent: oklch(0.62 0.11 70);  --accent-soft: oklch(0.62 0.11 70 / 0.12);  --accent-ink: oklch(0.5 0.1 70); }
+[data-accent="indigo"]   { --accent: oklch(0.52 0.12 275); --accent-soft: oklch(0.52 0.12 275 / 0.1);  --accent-ink: oklch(0.42 0.11 275); }
+[data-theme="dark"] {
+  --bg: oklch(0.17 0.008 250); --bg-elev: oklch(0.2 0.008 250);
+  --panel: oklch(0.22 0.008 250); --panel-2: oklch(0.26 0.008 250);
+  --ink: oklch(0.94 0.005 80); --ink-2: oklch(0.78 0.006 80);
+  --ink-3: oklch(0.6 0.008 250); --ink-4: oklch(0.44 0.01 250);
+  --line: oklch(0.94 0.005 80 / 0.09); --line-strong: oklch(0.94 0.005 80 / 0.16);
+  --hover: oklch(0.94 0.005 80 / 0.05); --active: oklch(0.94 0.005 80 / 0.09);
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.4);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.35), 0 2px 4px rgba(0,0,0,0.25);
+  --shadow-lg: 0 24px 48px rgba(0,0,0,0.5), 0 8px 16px rgba(0,0,0,0.3);
+}
+[data-theme="dark"][data-accent="emerald"] { --accent: oklch(0.68 0.1 160); --accent-soft: oklch(0.68 0.1 160 / 0.15); --accent-ink: oklch(0.78 0.1 160); }
+[data-theme="dark"][data-accent="amber"]   { --accent: oklch(0.76 0.12 70); --accent-soft: oklch(0.76 0.12 70 / 0.15);  --accent-ink: oklch(0.84 0.1 70); }
+[data-theme="dark"][data-accent="indigo"]  { --accent: oklch(0.7 0.13 275); --accent-soft: oklch(0.7 0.13 275 / 0.15);  --accent-ink: oklch(0.78 0.12 275); }
+
+/* ---------- Reset ---------- */
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; height: 100%; }
+body { font-family: var(--font-sans); font-size: 14px; color: var(--ink); background: var(--bg); -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; font-feature-settings: "ss01","cv11"; }
+#root { height: 100%; }
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+input, textarea { font: inherit; color: inherit; }
+[contenteditable]:focus { outline: none; }
+.scroll::-webkit-scrollbar { width: 10px; height: 10px; }
+.scroll::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 10px; border: 2px solid transparent; background-clip: content-box; }
+.scroll::-webkit-scrollbar-thumb:hover { background: var(--ink-4); background-clip: content-box; border: 2px solid transparent; }
+.scroll::-webkit-scrollbar-track { background: transparent; }
+
+/* ---------- App shell ---------- */
+.app { display: grid; grid-template-columns: var(--rail) var(--sidebar) minmax(0,1fr); height: 100vh; width: 100vw; overflow: hidden; background: var(--bg); position: relative; }
+
+/* ---------- Rail ---------- */
+.rail { border-right: 1px solid var(--line); display: flex; flex-direction: column; align-items: center; padding: 10px 0; gap: 4px; background: var(--bg); z-index: 5; }
+.rail-logo { width: 36px; height: 36px; border-radius: 9px; background: var(--ink); color: var(--bg); display: grid; place-items: center; font-family: var(--font-serif); font-weight: 600; font-size: 17px; letter-spacing: -0.02em; margin-bottom: 8px; }
+.rail-btn { width: 36px; height: 36px; border-radius: 8px; display: grid; place-items: center; color: var(--ink-3); position: relative; transition: background .12s, color .12s; }
+.rail-btn:hover { background: var(--hover); color: var(--ink); }
+.rail-btn[data-active="true"] { background: var(--active); color: var(--ink); }
+.rail-btn[data-active="true"]::before { content: ""; position: absolute; left: -10px; top: 8px; bottom: 8px; width: 2px; background: var(--accent); border-radius: 2px; }
+.rail-spacer { flex: 1; }
+.rail-divider { width: 20px; height: 1px; background: var(--line); margin: 6px 0; }
+.rail-ws { width: 32px; height: 32px; border-radius: 7px; display: grid; place-items: center; font-size: 12px; font-weight: 600; letter-spacing: -0.01em; color: var(--ink); background: var(--panel); border: 1px solid var(--line); transition: transform .12s, box-shadow .12s; }
+.rail-ws:hover { transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+.rail-ws[data-active="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.rail-account { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, oklch(0.55 0.08 160) 0%, oklch(0.42 0.07 160) 100%); color: white; display: grid; place-items: center; font-size: 11px; font-weight: 600; position: relative; cursor: pointer; }
+.rail-account::after { content: ""; position: absolute; bottom: -1px; right: -1px; width: 10px; height: 10px; border-radius: 50%; background: oklch(0.68 0.15 145); border: 2px solid var(--bg); }
+
+/* ---------- Sidebar ---------- */
+.sidebar { background: var(--bg); border-right: 1px solid var(--line); display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+.sidebar-head { padding: 14px 14px 10px 14px; display: flex; align-items: center; gap: 8px; justify-content: space-between; }
+.ws-switcher { display: flex; align-items: center; gap: 8px; padding: 4px 8px 4px 4px; border-radius: 6px; flex: 1; min-width: 0; transition: background .12s; }
+.ws-switcher:hover { background: var(--hover); }
+.ws-switcher-avatar { width: 22px; height: 22px; border-radius: 5px; background: linear-gradient(135deg, var(--accent), var(--accent-ink)); color: white; display: grid; place-items: center; font-size: 11px; font-weight: 600; flex-shrink: 0; }
+.ws-switcher-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ws-switcher-caret { color: var(--ink-4); flex-shrink: 0; }
+.sidebar-search { margin: 0 10px 6px 10px; display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: var(--panel); border: 1px solid transparent; border-radius: 6px; color: var(--ink-3); font-size: 13px; transition: background .12s, border-color .12s; }
+.sidebar-search:hover { background: var(--panel-2); }
+.sidebar-search:focus-within { background: var(--bg-elev); border-color: var(--line-strong); }
+.sidebar-search input { border: 0; background: transparent; outline: none; flex: 1; min-width: 0; color: var(--ink); }
+.sidebar-search input::placeholder { color: var(--ink-4); }
+.sidebar-search-kbd { font-family: var(--font-mono); font-size: 11px; color: var(--ink-4); padding: 1px 5px; border: 1px solid var(--line-strong); border-radius: 4px; }
+.sidebar-section { padding: 10px 10px 4px 16px; font-size: 11px; font-weight: 500; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-4); display: flex; align-items: center; justify-content: space-between; }
+.sidebar-section-add { width: 18px; height: 18px; display: grid; place-items: center; border-radius: 4px; color: var(--ink-4); opacity: 0; transition: opacity .12s, background .12s; }
+.sidebar-section:hover .sidebar-section-add { opacity: 1; }
+.sidebar-section-add:hover { background: var(--hover); color: var(--ink); }
+.tree { padding: 0 6px 16px 6px; flex: 1; overflow-y: auto; }
+.tree-row { display: flex; align-items: center; gap: 2px; height: var(--row-h); padding: 0 6px 0 0; border-radius: 5px; color: var(--ink-2); font-size: 13px; cursor: pointer; user-select: none; position: relative; }
+.tree-row:hover { background: var(--hover); color: var(--ink); }
+.tree-row[data-active="true"] { background: var(--active); color: var(--ink); font-weight: 500; }
+.tree-chevron { width: 18px; height: 18px; display: grid; place-items: center; color: var(--ink-4); border-radius: 3px; flex-shrink: 0; transition: transform .12s; }
+.tree-chevron:hover { background: var(--line); color: var(--ink); }
+.tree-chevron[data-open="true"] { transform: rotate(90deg); }
+.tree-chevron[data-empty="true"] { visibility: hidden; }
+.tree-icon { width: 18px; height: 18px; display: grid; place-items: center; color: var(--ink-3); flex-shrink: 0; }
+.tree-row[data-active="true"] .tree-icon { color: var(--accent); }
+.tree-label { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tree-count { font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-4); padding: 0 4px; }
+.tree-more { width: 18px; height: 18px; border-radius: 3px; display: grid; place-items: center; opacity: 0; color: var(--ink-3); }
+.tree-row:hover .tree-more { opacity: 1; }
+.tree-more:hover { background: var(--line); color: var(--ink); }
+.tree-children { position: relative; }
+.tree-children::before { content: ""; position: absolute; top: 0; bottom: 4px; left: 15px; width: 1px; background: var(--line); }
+
+/* ---------- Canvas ---------- */
+.canvas { overflow-y: auto; position: relative; background: var(--bg); display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.topbar { position: sticky; top: 0; z-index: 4; background: color-mix(in oklch, var(--bg) 82%, transparent); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid var(--line); display: flex; align-items: center; padding: 10px 20px; gap: 10px; min-height: 48px; }
+.crumbs { display: flex; align-items: center; gap: 4px; font-size: 13px; color: var(--ink-3); flex: 1; min-width: 0; }
+.crumb { padding: 3px 6px; border-radius: 4px; white-space: nowrap; transition: background .12s, color .12s; }
+.crumb:hover { background: var(--hover); color: var(--ink); }
+.crumb[data-current="true"] { color: var(--ink); font-weight: 500; }
+.crumb-sep { color: var(--ink-4); font-size: 12px; }
+.topbar-actions { display: flex; align-items: center; gap: 4px; }
+.tb-btn { height: 28px; padding: 0 10px; border-radius: 6px; display: flex; align-items: center; gap: 6px; color: var(--ink-2); font-size: 13px; transition: background .12s, color .12s; }
+.tb-btn:hover { background: var(--hover); color: var(--ink); }
+.tb-btn[data-active="true"] { background: var(--active); color: var(--ink); }
+.tb-icon { width: 28px; height: 28px; border-radius: 6px; display: grid; place-items: center; color: var(--ink-3); transition: background .12s, color .12s; }
+.tb-icon:hover { background: var(--hover); color: var(--ink); }
+.tb-divider { width: 1px; height: 18px; background: var(--line); margin: 0 4px; }
+.tb-share { height: 28px; padding: 0 12px; border-radius: 6px; background: var(--ink); color: var(--bg); font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 6px; transition: opacity .12s; }
+.tb-share:hover { opacity: 0.88; }
+.doc-wrap { width: 100%; display: flex; justify-content: center; padding: 0 48px; }
+.doc { width: 100%; max-width: var(--canvas-max); padding: var(--canvas-pad-y) 0 240px 0; }
+.doc-cover { margin-bottom: 24px; display: flex; flex-direction: column; gap: 12px; }
+.doc-cover-tag { font-family: var(--font-mono); font-size: 11px; color: var(--ink-3); letter-spacing: 0.04em; text-transform: uppercase; }
+.doc-title { font-family: var(--font-serif); font-size: 40px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.1; color: var(--ink); margin: 0; text-wrap: pretty; }
+.doc-meta { display: flex; align-items: center; gap: 14px; font-size: 12.5px; color: var(--ink-3); margin-top: 4px; }
+.doc-meta-item { display: flex; align-items: center; gap: 5px; }
+.doc-meta-avatar { width: 18px; height: 18px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), var(--accent-ink)); color: white; display: grid; place-items: center; font-size: 9.5px; font-weight: 600; }
+
+/* Blocks */
+.block { position: relative; padding: 3px 0; margin: 0; }
+.block-handle { position: absolute; left: -34px; top: 50%; transform: translateY(-50%); display: flex; gap: 2px; opacity: 0; transition: opacity .12s; }
+.block:hover .block-handle { opacity: 1; }
+.handle-btn { width: 18px; height: 22px; display: grid; place-items: center; border-radius: 4px; color: var(--ink-4); cursor: grab; }
+.handle-btn:hover { background: var(--hover); color: var(--ink-2); }
+.block p, .block-p { font-family: var(--font-serif); font-size: 16.5px; line-height: 1.65; margin: 0; color: var(--ink); text-wrap: pretty; }
+.block-h1 { font-family: var(--font-serif); font-size: 30px; font-weight: 600; letter-spacing: -0.015em; line-height: 1.2; margin: 32px 0 4px 0; color: var(--ink); }
+.block-h2 { font-family: var(--font-serif); font-size: 22px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.3; margin: 28px 0 4px 0; color: var(--ink); }
+.block-h3 { font-family: var(--font-sans); font-size: 14px; font-weight: 600; letter-spacing: 0.02em; text-transform: uppercase; color: var(--ink-2); margin: 24px 0 2px 0; }
+.block-callout { display: flex; gap: 12px; padding: 14px 16px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-lg); margin: 8px 0; }
+.callout-icon { width: 22px; height: 22px; flex-shrink: 0; display: grid; place-items: center; color: var(--accent-ink); margin-top: 2px; }
+.callout-body { font-family: var(--font-serif); font-size: 15px; line-height: 1.6; color: var(--ink-2); }
+.block-divider { height: 1px; background: var(--line); margin: 24px 0; }
+.block-quote { margin: 10px 0; padding: 4px 0 4px 18px; border-left: 2px solid var(--line-strong); font-family: var(--font-serif); font-style: italic; color: var(--ink-2); line-height: 1.6; }
+.block-list { margin: 4px 0; padding-left: 22px; font-family: var(--font-serif); font-size: 16px; line-height: 1.7; }
+.block-list li { margin: 2px 0; color: var(--ink); }
+.block-list li::marker { color: var(--ink-4); }
+
+/* Verse block */
+.verse-block { margin: 18px 0; padding: 22px 26px; background: var(--bg-elev); border: 1px solid var(--line); border-radius: var(--radius-lg); display: flex; flex-direction: column; gap: 14px; position: relative; transition: border-color .15s, box-shadow .15s; }
+.verse-block:hover { border-color: var(--line-strong); box-shadow: var(--shadow-sm); }
+.verse-block[data-active="true"] { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.verse-header { display: flex; align-items: center; justify-content: space-between; font-family: var(--font-mono); font-size: 11px; color: var(--ink-3); letter-spacing: 0.04em; text-transform: uppercase; }
+.verse-ref { display: flex; align-items: center; gap: 8px; }
+.verse-ref-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
+.verse-actions { display: flex; gap: 2px; }
+.verse-action { width: 24px; height: 24px; border-radius: 5px; display: grid; place-items: center; color: var(--ink-3); opacity: 0; transition: opacity .12s, background .12s, color .12s; }
+.verse-block:hover .verse-action { opacity: 1; }
+.verse-action:hover { background: var(--hover); color: var(--ink); }
+.verse-action[data-active="true"] { opacity: 1; background: var(--accent-soft); color: var(--accent-ink); }
+.verse-arabic { font-family: var(--font-arabic); font-size: 28px; line-height: 2.1; direction: rtl; text-align: right; color: var(--ink); letter-spacing: 0; }
+.verse-translit { font-family: var(--font-serif); font-style: italic; font-size: 14.5px; color: var(--ink-3); line-height: 1.5; }
+.verse-translation { font-family: var(--font-serif); font-size: 16px; line-height: 1.55; color: var(--ink); }
+.verse-translation .tr-num { font-family: var(--font-mono); font-size: 11px; color: var(--ink-4); vertical-align: super; margin-right: 2px; }
+.verse-anchor { display: inline-flex; align-items: center; gap: 3px; padding: 1px 5px; margin: 0 1px; border-radius: 4px; font-family: var(--font-mono); font-size: 12px; color: var(--accent-ink); background: var(--accent-soft); cursor: pointer; transition: background .12s; text-decoration: none; white-space: nowrap; }
+.verse-anchor:hover { background: color-mix(in oklch, var(--accent) 22%, transparent); }
+
+/* Add block */
+.add-block { height: 28px; display: flex; align-items: center; gap: 6px; color: var(--ink-4); font-size: 13px; padding: 0 4px; border-radius: 5px; opacity: 0; transition: opacity .15s, background .12s; margin-top: 4px; width: fit-content; }
+.doc:hover .add-block { opacity: 1; }
+.add-block:hover { background: var(--hover); color: var(--ink-2); }
+
+/* Slash menu */
+.slash-menu { position: absolute; background: var(--bg-elev); border: 1px solid var(--line-strong); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); padding: 6px; width: 280px; z-index: 50; max-height: 340px; overflow-y: auto; }
+.slash-section { padding: 6px 8px 2px 8px; font-size: 10.5px; font-weight: 500; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-4); }
+.slash-item { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 6px; cursor: pointer; color: var(--ink); }
+.slash-item:hover, .slash-item[data-selected="true"] { background: var(--hover); }
+.slash-item-icon { width: 32px; height: 32px; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); display: grid; place-items: center; color: var(--ink-2); flex-shrink: 0; }
+.slash-item-text { min-width: 0; }
+.slash-item-name { font-size: 13px; font-weight: 500; }
+.slash-item-desc { font-size: 11.5px; color: var(--ink-3); margin-top: 1px; }
+
+/* Format bar */
+.format-bar { position: absolute; background: var(--bg-elev); border: 1px solid var(--line-strong); border-radius: 8px; box-shadow: var(--shadow-md); padding: 4px; display: flex; gap: 1px; z-index: 40; }
+.fb-btn { width: 28px; height: 28px; border-radius: 5px; display: grid; place-items: center; color: var(--ink-2); font-size: 13px; transition: background .12s, color .12s; }
+.fb-btn:hover, .fb-btn[data-active="true"] { background: var(--hover); color: var(--ink); }
+.fb-sep { width: 1px; height: 18px; background: var(--line); margin: 0 2px; align-self: center; }
+
+/* Drawer */
+.drawer-overlay { position: fixed; inset: 0 0 0 auto; width: var(--drawer); z-index: 30; background: color-mix(in oklch, var(--bg-elev) 92%, transparent); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-left: 1px solid var(--line-strong); box-shadow: var(--shadow-lg); display: flex; flex-direction: column; transform: translateX(100%); transition: transform .28s cubic-bezier(.2,.8,.2,1); }
+.app[data-glass="medium"] .drawer-overlay { background: color-mix(in oklch, var(--bg-elev) 78%, transparent); backdrop-filter: blur(20px) saturate(140%); }
+.app[data-glass="heavy"]  .drawer-overlay { background: color-mix(in oklch, var(--bg-elev) 60%, transparent); backdrop-filter: blur(30px) saturate(180%); }
+.drawer-overlay[data-open="true"] { transform: translateX(0); }
+.drawer-head { padding: 14px 18px; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 10px; }
+.drawer-head-title { flex: 1; font-size: 13.5px; font-weight: 500; color: var(--ink); min-width: 0; }
+.drawer-head-ref { font-family: var(--font-mono); font-size: 11px; color: var(--ink-3); margin-top: 2px; }
+.drawer-close { width: 28px; height: 28px; border-radius: 6px; display: grid; place-items: center; color: var(--ink-3); }
+.drawer-close:hover { background: var(--hover); color: var(--ink); }
+.drawer-tabs { padding: 8px 14px 0 14px; display: flex; gap: 2px; border-bottom: 1px solid var(--line); }
+.drawer-tab { padding: 8px 10px; font-size: 13px; color: var(--ink-3); border-bottom: 2px solid transparent; margin-bottom: -1px; transition: color .12s, border-color .12s; }
+.drawer-tab:hover { color: var(--ink); }
+.drawer-tab[data-active="true"] { color: var(--ink); border-bottom-color: var(--accent); font-weight: 500; }
+.drawer-body { flex: 1; overflow-y: auto; padding: 20px 22px 40px 22px; }
+.drawer-verse { padding: 16px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-lg); margin-bottom: 22px; }
+.drawer-verse-arabic { font-family: var(--font-arabic); font-size: 22px; direction: rtl; text-align: right; line-height: 1.9; color: var(--ink); margin-bottom: 10px; }
+.drawer-verse-translation { font-family: var(--font-serif); font-size: 14.5px; color: var(--ink-2); line-height: 1.55; }
+.commentary-section { margin-bottom: 26px; }
+.commentary-author { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.commentary-avatar { width: 28px; height: 28px; border-radius: 50%; background: var(--panel-2); border: 1px solid var(--line); display: grid; place-items: center; font-family: var(--font-serif); font-size: 13px; font-weight: 500; color: var(--ink-2); }
+.commentary-name { font-size: 13.5px; font-weight: 500; color: var(--ink); }
+.commentary-sub { font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-3); margin-top: 1px; letter-spacing: 0.03em; }
+.commentary-body { font-family: var(--font-serif); font-size: 14.5px; line-height: 1.7; color: var(--ink); }
+.commentary-body p { margin: 0 0 10px 0; }
+.commentary-body .arabic { font-family: var(--font-arabic); font-size: 17px; direction: rtl; color: var(--ink); margin: 0 4px; }
+.lang-list { display: flex; flex-direction: column; gap: 4px; }
+.lang-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-radius: 6px; background: var(--panel); border: 1px solid var(--line); cursor: pointer; transition: border-color .12s; }
+.lang-item:hover { border-color: var(--line-strong); }
+.lang-item[data-active="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.lang-item-name { font-size: 13.5px; font-weight: 500; }
+.lang-item-sub { font-size: 12px; color: var(--ink-3); margin-top: 2px; font-family: var(--font-mono); }
+.wbw { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px,1fr)); gap: 10px; }
+.wbw-cell { padding: 12px; background: var(--bg-elev); border: 1px solid var(--line); border-radius: 8px; text-align: center; }
+.wbw-ar { font-family: var(--font-arabic); font-size: 18px; direction: rtl; color: var(--ink); margin-bottom: 4px; }
+.wbw-tr { font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-3); letter-spacing: 0.02em; }
+.wbw-en { font-family: var(--font-serif); font-size: 12.5px; color: var(--ink); margin-top: 4px; }
+
+/* Tweaks */
+.tweaks-panel { position: fixed; bottom: 20px; right: 20px; width: 300px; background: var(--bg-elev); border: 1px solid var(--line-strong); border-radius: 12px; box-shadow: var(--shadow-lg); z-index: 100; overflow: hidden; }
+.tweaks-head { padding: 12px 14px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); }
+.tweaks-title { font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-2); }
+.tweaks-close { color: var(--ink-3); width: 22px; height: 22px; border-radius: 5px; display: grid; place-items: center; }
+.tweaks-close:hover { background: var(--hover); color: var(--ink); }
+.tweaks-body { padding: 12px 14px 14px 14px; display: flex; flex-direction: column; gap: 14px; }
+.tw-row { display: flex; flex-direction: column; gap: 6px; }
+.tw-label { font-size: 11px; color: var(--ink-3); letter-spacing: 0.03em; text-transform: uppercase; font-weight: 500; }
+.tw-segments { display: flex; gap: 2px; padding: 2px; background: var(--panel); border: 1px solid var(--line); border-radius: 7px; }
+.tw-seg { flex: 1; padding: 5px 8px; border-radius: 5px; font-size: 12px; color: var(--ink-2); text-align: center; transition: background .12s, color .12s; }
+.tw-seg:hover { color: var(--ink); }
+.tw-seg[data-active="true"] { background: var(--bg-elev); color: var(--ink); font-weight: 500; box-shadow: var(--shadow-sm); }
+.tw-swatches { display: flex; gap: 6px; }
+.tw-swatch { flex: 1; height: 28px; border-radius: 6px; border: 1px solid var(--line); display: grid; place-items: center; position: relative; transition: border-color .12s; }
+.tw-swatch:hover { border-color: var(--line-strong); }
+.tw-swatch[data-active="true"] { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+.tw-swatch-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+/* Utility */
+.dim { color: var(--ink-3); }
+.kbd { font-family: var(--font-mono); font-size: 11px; color: var(--ink-3); padding: 1px 5px; border: 1px solid var(--line-strong); border-radius: 4px; background: var(--bg-elev); }
+
+@media (max-width: 760px) {
+  .app { grid-template-columns: var(--rail) 0 minmax(0,1fr); }
+  .doc-wrap { padding: 0 24px; }
+  .drawer-overlay { width: min(440px,100vw); }
+}
+@media (max-width: 1100px) { .doc-wrap { padding: 0 28px; } }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin></script>
+
+<script type="text/babel">
+// ============================================================
+// ICONS
+// ============================================================
+const Icon = ({ d, size=16, fill="none", stroke="currentColor", sw=1.5, children, style, ...rest }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24"
+    fill={fill} stroke={stroke} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" style={style} {...rest}>
+    {d ? <path d={d}/> : children}
+  </svg>
+);
+const Icons = {
+  Search:     p => <Icon {...p}><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></Icon>,
+  Plus:       p => <Icon {...p}><path d="M12 5v14M5 12h14"/></Icon>,
+  Chevron:    p => <Icon {...p}><path d="m9 6 6 6-6 6"/></Icon>,
+  ChevronDown:p => <Icon {...p}><path d="m6 9 6 6 6-6"/></Icon>,
+  Notebook:   p => <Icon {...p}><path d="M5 3h12a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5z"/><path d="M9 3v18"/><path d="M5 8h4M5 12h4M5 16h4"/></Icon>,
+  Folder:     p => <Icon {...p}><path d="M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></Icon>,
+  File:       p => <Icon {...p}><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></Icon>,
+  Page:       p => <Icon {...p}><path d="M7 3h7l5 5v11a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M8 12h8M8 16h5"/></Icon>,
+  Home:       p => <Icon {...p}><path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10"/></Icon>,
+  Books:      p => <Icon {...p}><path d="M4 4h4v16H4zM10 4h4v16h-4zM16 5l4 1-3 14-4-1z"/></Icon>,
+  Inbox:      p => <Icon {...p}><path d="M3 13h5l1 2h6l1-2h5"/><path d="M5 5h14l2 8v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-6z"/></Icon>,
+  Star:       p => <Icon {...p}><path d="m12 3 2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.8 6.2 20.9l1.1-6.5L2.6 9.8l6.5-.9z"/></Icon>,
+  Settings:   p => <Icon {...p}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 1 1-2.9 2.9l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 1 1-2.9-2.9l.1-.1A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.5-1H3a2 2 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 1 1 2.9-2.9l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 1 1 2.9 2.9l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></Icon>,
+  Share:      p => <Icon {...p}><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="m16 6-4-4-4 4"/><path d="M12 2v13"/></Icon>,
+  Comment:    p => <Icon {...p}><path d="M21 12a8 8 0 1 1-3.5-6.6L21 4l-1.4 3.5A8 8 0 0 1 21 12z"/></Icon>,
+  Dots:       p => <Icon {...p}><circle cx="5" cy="12" r="1.1" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.1" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.1" fill="currentColor" stroke="none"/></Icon>,
+  Grip:       p => <Icon {...p} sw={1}><circle cx="9" cy="6" r="1.3" fill="currentColor" stroke="none"/><circle cx="15" cy="6" r="1.3" fill="currentColor" stroke="none"/><circle cx="9" cy="12" r="1.3" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="1.3" fill="currentColor" stroke="none"/><circle cx="9" cy="18" r="1.3" fill="currentColor" stroke="none"/><circle cx="15" cy="18" r="1.3" fill="currentColor" stroke="none"/></Icon>,
+  Text:       p => <Icon {...p}><path d="M5 5h14M12 5v14M8 19h8"/></Icon>,
+  H1:         p => <Icon {...p}><path d="M5 5v14M13 5v14M5 12h8M17 9l2-1v11"/></Icon>,
+  H2:         p => <Icon {...p}><path d="M5 5v14M13 5v14M5 12h8M16 9a2 2 0 0 1 4 0c0 2-4 3-4 6h4"/></Icon>,
+  H3:         p => <Icon {...p}><path d="M5 5v14M13 5v14M5 12h8M16 9a2 2 1 1 2 3 2 2 1 1-2 3"/></Icon>,
+  Quote:      p => <Icon {...p}><path d="M7 7c-2 1-3 3-3 6h3v4H3v-4c0-3 1-5 4-6zM17 7c-2 1-3 3-3 6h3v4h-4v-4c0-3 1-5 4-6z"/></Icon>,
+  List:       p => <Icon {...p}><path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r="1" fill="currentColor" stroke="none"/><circle cx="4" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="4" cy="18" r="1" fill="currentColor" stroke="none"/></Icon>,
+  Divider:    p => <Icon {...p}><path d="M4 12h16"/></Icon>,
+  Callout:    p => <Icon {...p}><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></Icon>,
+  Verse:      p => <Icon {...p}><path d="M4 5h5v5H4zM15 5h5v5h-5zM4 14h16v5H4z"/></Icon>,
+  Bold:       p => <Icon {...p} sw={2}><path d="M7 5h6a3 3 0 0 1 0 6H7zM7 11h7a3 3 0 0 1 0 6H7z"/></Icon>,
+  Italic:     p => <Icon {...p}><path d="M14 5h-4M14 19h-4M15 5l-6 14"/></Icon>,
+  Underline:  p => <Icon {...p}><path d="M7 5v7a5 5 0 0 0 10 0V5M5 20h14"/></Icon>,
+  Strike:     p => <Icon {...p}><path d="M4 12h16"/><path d="M16 7a4 4 0 0 0-4-2c-3 0-5 2-5 4 0 5 10 3 10 7 0 2-2 4-5 4a4 4 0 0 1-4-2"/></Icon>,
+  Code:       p => <Icon {...p}><path d="m9 8-4 4 4 4M15 8l4 4-4 4"/></Icon>,
+  Link:       p => <Icon {...p}><path d="M10 14a4 4 0 0 0 5.6 0l3-3a4 4 0 0 0-5.6-5.6l-1.2 1.2"/><path d="M14 10a4 4 0 0 0-5.6 0l-3 3a4 4 0 0 0 5.6 5.6l1.2-1.2"/></Icon>,
+  Sliders:    p => <Icon {...p}><path d="M4 7h10M18 7h2M4 17h4M12 17h8M4 12h7M15 12h5"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/><circle cx="13" cy="12" r="2"/></Icon>,
+  Close:      p => <Icon {...p}><path d="m6 6 12 12M18 6 6 18"/></Icon>,
+  Expand:     p => <Icon {...p}><path d="M4 14v6h6M20 10V4h-6M20 4l-7 7M4 20l7-7"/></Icon>,
+  Book:       p => <Icon {...p}><path d="M4 4h10a3 3 0 0 1 3 3v13H7a3 3 0 0 1-3-3z"/><path d="M4 4v13a3 3 0 0 1 3-3h10"/></Icon>,
+  BookOpen:   p => <Icon {...p}><path d="M2 5h7a3 3 0 0 1 3 3v11a2 2 0 0 0-2-2H2z"/><path d="M22 5h-7a3 3 0 0 0-3 3v11a2 2 0 0 1 2-2h8z"/></Icon>,
+  Play:       p => <Icon {...p} fill="currentColor"><path d="M7 4v16l13-8z"/></Icon>,
+  Bookmark:   p => <Icon {...p}><path d="M6 3h12v18l-6-4-6 4z"/></Icon>,
+  Copy:       p => <Icon {...p}><rect x="8" y="8" width="13" height="13" rx="2"/><path d="M16 8V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h4"/></Icon>,
+  History:    p => <Icon {...p}><path d="M12 7v5l3 2"/><circle cx="12" cy="12" r="9"/></Icon>,
+  Question:   p => <Icon {...p}><circle cx="12" cy="12" r="9"/><path d="M10 9a2 2 1 1 3 2c-1 .5-1 1-1 2M12 17h.01"/></Icon>,
+  Sparkle:    p => <Icon {...p}><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M18.4 5.6l-2.8 2.8M8.4 15.6l-2.8 2.8"/></Icon>,
+};
+Icons.DotsH = Icons.Dots;
+
+// ============================================================
+// CONTENT DATA
+// ============================================================
+const SURAH_FATIHA = [
+  { n:1, ar:"بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ", tl:"Bismi llāhi r-Raḥmāni r-Raḥīmi", en:"In the name of Allah — the Most Compassionate, the Most Merciful." },
+  { n:2, ar:"ٱلْحَمْدُ لِلَّهِ رَبِّ ٱلْعَٰلَمِينَ", tl:"Al-ḥamdu lillāhi rabbi l-ʿālamīn", en:"All praise is for Allah — Lord of all worlds," },
+  { n:3, ar:"ٱلرَّحْمَٰنِ ٱلرَّحِيمِ", tl:"Ar-Raḥmāni r-Raḥīmi", en:"the Most Compassionate, the Most Merciful," },
+  { n:4, ar:"مَٰلِكِ يَوْمِ ٱلدِّينِ", tl:"Māliki yawmi d-dīn", en:"Master of the Day of Judgment." },
+  { n:5, ar:"إِيَّاكَ نَعْبُدُ وَإِيَّاكَ نَسْتَعِينُ", tl:"Iyyāka naʿbudu wa iyyāka nastaʿīn", en:"You alone we worship, and You alone we ask for help." },
+  { n:6, ar:"ٱهْدِنَا ٱلصِّرَٰطَ ٱلْمُسْتَقِيمَ", tl:"Ihdinā ṣ-ṣirāṭa l-mustaqīm", en:"Guide us along the Straight Path," },
+  { n:7, ar:"صِرَٰطَ ٱلَّذِينَ أَنْعَمْتَ عَلَيْهِمْ غَيْرِ ٱلْمَغْضُوبِ عَلَيْهِمْ وَلَا ٱلضَّآلِّينَ", tl:"Ṣirāṭa lladhīna anʿamta ʿalayhim, ghayri l-maghḍūbi ʿalayhim wa lā ḍ-ḍāllīn", en:"the Path of those You have blessed — not of those who incur Your wrath, nor of those who go astray." },
+];
+
+const NOTEBOOK_TREE = [
+  { id:"qs", title:"Quranic Studies", type:"notebook", open:true, children:[
+    { id:"surahs", title:"Surahs in progress", type:"section", open:true, children:[
+      { id:"fatiha", title:"Surah Al-Fatiha", type:"surah", open:true, children:[
+        { id:"p-names",   title:"1. Names of the Surah", page:true },
+        { id:"p-merits",  title:"2. Merits & virtues", page:true },
+        { id:"p-when",    title:"3. When were these Ayat revealed?", page:true },
+        { id:"p-why",     title:"4. Asbāb al-Nuzūl — context", page:true },
+        { id:"p-lang",    title:"5. Linguistic style & rhetoric", page:true },
+        { id:"p-order",   title:"6. Order & structure", page:true },
+        { id:"p-message", title:"7. Core message(s)", page:true },
+        { id:"p-rulings", title:"8. Jurisprudential rulings", page:true },
+      ]},
+      { id:"baqarah", title:"Surah Al-Baqarah", type:"surah", open:false, children:[
+        { id:"b1", title:"1. Names of the Surah", page:true },
+        { id:"b2", title:"2. Merits & virtues", page:true },
+      ]},
+      { id:"ikhlas", title:"Surah Al-Ikhlāṣ", type:"surah", open:false, children:[
+        { id:"k1", title:"1. Names of the Surah", page:true },
+      ]},
+    ]},
+    { id:"methodology", title:"Methodology", type:"section", open:false, children:[
+      { id:"m1", title:"Tafsīr framework (8-question)", page:true },
+      { id:"m2", title:"Classical sources — reading list", page:true },
+    ]},
+    { id:"refs", title:"References", type:"section", open:false, children:[
+      { id:"r1", title:"Ibn Kathīr", page:true },
+      { id:"r2", title:"Al-Qurṭubī", page:true },
+      { id:"r3", title:"Al-Ṭabarī", page:true },
+      { id:"r4", title:"Al-Rāzī", page:true },
+    ]},
+  ]},
+  { id:"hadith", title:"Hadith Research", type:"notebook", open:false, children:[
+    { id:"h1", title:"Ṣaḥīḥ al-Bukhārī — notes", page:true },
+  ]},
+  { id:"fiqh", title:"Uṣūl al-Fiqh", type:"notebook", open:false, children:[
+    { id:"u1", title:"Definitions", page:true },
+    { id:"u2", title:"Qiyās & analogical reasoning", page:true },
+  ]},
+];
+
+const VerseAnchor = ({ vref, onOpen }) => (
+  <span className="verse-anchor" onClick={e => { e.stopPropagation(); onOpen(vref); }} title={`Open commentary for ${vref}`}>
+    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M7 4v16l5-4 5 4V4z"/></svg>
+    {vref}
+  </span>
+);
+
+const buildDoc = (openVerse) => [
+  { type:"h2", id:"b1", text:"Question 1 of 8 · Quranic Studies Framework" },
+  { type:"callout", id:"b2", icon:"Sparkle", text:<>The Prophet ﷺ said Al-Fatiha is <em>Umm al-Kitāb</em> — the Mother of the Book. Before reading any tafsīr, we begin by asking: <b>what is this Surah called, and why?</b> Every name opens a window onto its function.</> },
+  { type:"p", id:"b3", text:<>Surah <b>Al-Fatiha</b> is the opening chapter of the Qur'an, consisting of seven short verses <VerseAnchor vref="Q 1:1–7" onOpen={openVerse}/>. Classical scholars record more than twenty names for it — an abundance that, as Al-Suyūṭī notes, is itself an indication of its rank. The names fall into four clusters: names about <b>position</b>, names about <b>function</b>, names about <b>content</b>, and names of <b>praise</b>.</> },
+  { type:"verse", id:"v1", verse:SURAH_FATIHA[0], label:"Opening verse" },
+  { type:"h3", id:"b4", text:"Names about position" },
+  { type:"p", id:"b5", text:<><b>Fātiḥat al-Kitāb</b> (<i>The Opener of the Book</i>) — because the muṣḥaf begins with it. It is also called <b>Awwal al-Qur'ān</b> for the same reason, though scholars dispute whether it was the first Surah revealed or only the first by order of compilation (see <VerseAnchor vref="Q 96:1–5" onOpen={openVerse}/> for the first revelation).</> },
+  { type:"list", id:"b6", items:[<><b>Al-Fātiḥa</b> — "the opening"; its most widely-used name.</>, <><b>Fātiḥat al-Kitāb</b> — "the opener of the Book".</>, <><b>Awwal al-Qur'ān</b> — "the first of the Qur'an".</>] },
+  { type:"h3", id:"b7", text:"Names about function — prayer" },
+  { type:"p", id:"b8", text:<><b>Al-Ṣalāh</b> (<i>the prayer</i>) appears in a famous divine ḥadīth qudsī, where Allah says, "I have divided the prayer between Myself and My servant" — referring to Al-Fatiha. Its function is liturgical: without it, the ṣalāh is not valid.</> },
+  { type:"quote", id:"b9", text:<>"There is no prayer for one who does not recite the opening of the Book." — reported by Al-Bukhārī &amp; Muslim, from ʿUbādah ibn al-Ṣāmit.</> },
+  { type:"list", id:"b10", items:[<><b>Al-Ṣalāh</b> — "the prayer" itself.</>, <><b>Al-Kāfiya</b> — "the sufficient".</>, <><b>Al-Wāfiya</b> — "the complete".</>] },
+  { type:"h3", id:"b11", text:"Names about content" },
+  { type:"p", id:"b12", text:<><b>Umm al-Kitāb</b> (<i>the Mother of the Book</i>) — not because it is first, but because it contains the essence of what the Qur'an teaches: theology (<VerseAnchor vref="Q 1:1–4" onOpen={openVerse}/>), worship and reliance (<VerseAnchor vref="Q 1:5" onOpen={openVerse}/>), and the request for guidance (<VerseAnchor vref="Q 1:6–7" onOpen={openVerse}/>). Al-Ṭabarī writes that every chapter of the Qur'an elaborates on something found in concentrated form here.</> },
+  { type:"list", id:"b13", items:[<><b>Umm al-Qur'ān / Umm al-Kitāb</b> — "the Mother of the Qur'an".</>, <><b>Al-Asās</b> — "the foundation".</>, <><b>Al-Sabʿ al-Mathānī</b> — "the seven oft-repeated" (<VerseAnchor vref="Q 15:87" onOpen={openVerse}/>).</>] },
+  { type:"verse", id:"v5", verse:SURAH_FATIHA[4], label:"Pivot of the Surah" },
+  { type:"h3", id:"b14", text:"Names of praise & healing" },
+  { type:"p", id:"b15", text:<><b>Al-Shifāʾ</b> (<i>the cure</i>) and <b>Al-Ruqyā</b> (<i>the incantation</i>) come from the ḥadīth of Abū Saʿīd al-Khudrī. When the Prophet ﷺ heard of the companion who recited Al-Fatiha as a ruqyā, he smiled and said, <i>"How did you know it was a ruqyā?"</i></> },
+  { type:"list", id:"b16", items:[<><b>Al-Shifāʾ</b> — "the cure".</>, <><b>Al-Ruqyā</b> — "the incantation".</>, <><b>Al-Ḥamd</b> — "the praise", from its second verse <VerseAnchor vref="Q 1:2" onOpen={openVerse}/>.</>, <><b>Al-Nūr</b> — "the light".</>] },
+  { type:"divider", id:"b17" },
+  { type:"h3", id:"b18", text:"Why so many names?" },
+  { type:"p", id:"b19", text:<>Ibn al-Qayyim offers the principle: <i>kathrat al-asmāʾ tadullu ʿalā sharaf al-musammā</i> — the multiplicity of names indicates the nobility of the named. Each name captures a distinct facet of function.</> },
+  { type:"callout", id:"b20", icon:"Question", text:<><b>Open question →</b> Al-Qurṭubī lists twelve names; Al-Suyūṭī lists twenty-nine. Why the divergence? Is it a difference in <i>what counts as a name</i>, or in the sources each is drawing on? <span className="dim">Drafted for review with the study group.</span></> },
+  { type:"p", id:"b21", text:<><span className="dim">Next → </span><b>Question 2.</b> Merits &amp; virtues of Al-Fatiha — the narrations in Bukhārī, Muslim, and Al-Tirmidhī on reciting it in ṣalāh and as ruqyā.</> },
+];
+
+const COMMENTARY = {
+  "Q 1:1":{ verse:SURAH_FATIHA[0], wbw:[{ar:"بِسْمِ",tr:"bismi",en:"In the name"},{ar:"ٱللَّهِ",tr:"llāhi",en:"of Allah"},{ar:"ٱلرَّحْمَٰنِ",tr:"r-Raḥmāni",en:"Most Compassionate"},{ar:"ٱلرَّحِيمِ",tr:"r-Raḥīmi",en:"Most Merciful"}], sources:[{author:"Ibn Kathīr",years:"d. 774 AH · Damascus",initials:"IK",body:<><p>The companions began every matter with <span className="arabic">بِسْمِ ٱللَّهِ</span>, following the example of the Prophet ﷺ. Ibn Kathīr records the disagreement over whether the Basmala is a standalone verse of Al-Fatiha — the majority of the Ḥijāz held it was not counted within Al-Fatiha, while the Kufans held that it was.</p><p>On <span className="arabic">ٱلرَّحْمَٰنِ ٱلرَّحِيمِ</span>: Al-Raḥmān denotes vast mercy encompassing believer and unbeliever; Al-Raḥīm denotes mercy <i>specific</i> to the believers in the Hereafter.</p></>},{author:"Al-Qurṭubī",years:"d. 671 AH · Córdoba",initials:"Q",body:<><p>Al-Qurṭubī devotes a long discussion to the <b>bāʾ</b> in <span className="arabic">بِسْمِ</span>. Is its meaning <i>istiʿāna</i> (seeking help) or <i>muṣāḥaba</i> (accompaniment)? He prefers the first, citing that the elided verb is contextual: <i>bismi llāhi aqraʾu</i>.</p></>}]},
+  "Q 1:2":{ verse:SURAH_FATIHA[1], wbw:[{ar:"ٱلْحَمْدُ",tr:"al-ḥamdu",en:"All praise"},{ar:"لِلَّهِ",tr:"lillāhi",en:"to Allah"},{ar:"رَبِّ",tr:"rabbi",en:"Lord"},{ar:"ٱلْعَٰلَمِينَ",tr:"l-ʿālamīn",en:"of all worlds"}], sources:[{author:"Al-Ṭabarī",years:"d. 310 AH · Baghdad",initials:"Ṭ",body:<><p><span className="arabic">ٱلْحَمْدُ</span> with the definite article is <i>istighrāq</i>: it exhausts every kind of praise. Al-Ṭabarī: every praise is ultimately owed to Allah alone. The difference between <b>ḥamd</b> and <b>shukr</b>: shukr is gratitude for a favor; ḥamd is praise for praiseworthy attributes, whether or not one has personally benefited.</p></>},{author:"Al-Rāzī",years:"d. 606 AH · Herāt",initials:"R",body:<><p>Al-Rāzī asks why the Surah opens with praise rather than a command. His answer: <i>maʿrifa precedes ʿibāda</i> — one must know whom one worships before worshipping. The first three verses are cognitive; the fourth is eschatological; only verse five turns to worship.</p></>}]},
+  "Q 1:5":{ verse:SURAH_FATIHA[4], wbw:[{ar:"إِيَّاكَ",tr:"iyyāka",en:"You alone"},{ar:"نَعْبُدُ",tr:"naʿbudu",en:"we worship"},{ar:"وَإِيَّاكَ",tr:"wa-iyyāka",en:"and You alone"},{ar:"نَسْتَعِينُ",tr:"nastaʿīn",en:"we ask for help"}], sources:[{author:"Ibn Kathīr",years:"d. 774 AH · Damascus",initials:"IK",body:<><p>The fronting of <span className="arabic">إِيَّاكَ</span> before the verb is a rhetorical device of <i>ḥaṣr</i> (exclusivity): <i>You — and only You — do we worship</i>. Classical Arabic syntax is object-last; inverting it signals restriction.</p><p>The shift from third person (verses 1–4) to second person ("You") is the <b>iltifāt</b> of the Surah — the rhetorical turn. Ibn Kathīr notes this is the pivot on which the whole Surah swings.</p></>}]},
+  "Q 1:1–7":{ verse:SURAH_FATIHA[0], wbw:null, sources:[{author:"Surah overview",years:"Al-Fatiha · 7 āyāt · Makkī (majority view)",initials:"§",body:<><p>Al-Fatiha is recited in every rakʿah of every obligatory prayer. The majority hold it is Makkan, though a minority hold it is Madanī.</p><p>Its structure divides in two: the first half (1–4) is praise and theology. The second half (5–7) is petition. Verse 5 stands at the hinge, containing both worship and supplication.</p></>}]},
+  "Q 1:6–7":{ verse:SURAH_FATIHA[5], wbw:[{ar:"ٱهْدِنَا",tr:"ihdinā",en:"Guide us"},{ar:"ٱلصِّرَٰطَ",tr:"ṣ-ṣirāṭa",en:"the path"},{ar:"ٱلْمُسْتَقِيمَ",tr:"l-mustaqīm",en:"the straight"}], sources:[{author:"Al-Qurṭubī",years:"d. 671 AH · Córdoba",initials:"Q",body:<><p>The request is not for <i>new</i> guidance alone but for <i>thabāt</i> — firmness on the guidance one already has. The believer who already prays is still commanded to ask <span className="arabic">ٱهْدِنَا</span> seventeen times a day.</p></>}]},
+  "Q 1:1–4":{ verse:SURAH_FATIHA[0], wbw:null, sources:[{author:"Theological sequence",years:"Verses 1–4 · the praise section",initials:"§",body:<><p>The first four verses establish the theological foundation: Allah's name, His mercy (twice), His lordship over all worlds, and His ownership of the Day of Judgment — a progression from essence to attributes to relationship to eschatology.</p></>}]},
+  "Q 15:87":{ verse:{n:87,ar:"وَلَقَدْ ءَاتَيْنَٰكَ سَبْعًا مِّنَ ٱلْمَثَانِى وَٱلْقُرْءَانَ ٱلْعَظِيمَ",tl:"Wa-laqad ātaynāka sabʿan mina l-mathānī wa-l-Qurʾāna l-ʿaẓīm",en:"We have certainly given you the seven oft-repeated verses and the great Qur'an."}, wbw:null, sources:[{author:"Ibn Kathīr",years:"d. 774 AH · Damascus",initials:"IK",body:<><p>The majority of exegetes identified <b>al-sabʿ al-mathānī</b> as Al-Fatiha. "Oft-repeated" because its seven verses are recited in every rakʿah. Strikingly, Al-Fatiha is <i>gifted</i> alongside "the great Qur'an" — suggesting a station adjacent to the whole.</p></>}]},
+  "Q 96:1–5":{ verse:{n:1,ar:"ٱقْرَأْ بِٱسْمِ رَبِّكَ ٱلَّذِى خَلَقَ",tl:"Iqraʾ bismi rabbika lladhī khalaq",en:"Read, in the name of your Lord who created."}, wbw:null, sources:[{author:"Revelation context",years:"Al-ʿAlaq · first revelation",initials:"§",body:<><p>The first five verses of Al-ʿAlaq were the first to be revealed, in the cave of Ḥirāʾ. The claim that Al-Fatiha was the first Surah revealed <i>in full</i> is a minority view — the first verses revealed are from Al-ʿAlaq.</p></>}]},
+  "Q 1:2":{ verse:SURAH_FATIHA[1], wbw:[{ar:"ٱلْحَمْدُ",tr:"al-ḥamdu",en:"All praise"},{ar:"لِلَّهِ",tr:"lillāhi",en:"to Allah"},{ar:"رَبِّ",tr:"rabbi",en:"Lord"},{ar:"ٱلْعَٰلَمِينَ",tr:"l-ʿālamīn",en:"of all worlds"}], sources:[{author:"Al-Ṭabarī",years:"d. 310 AH · Baghdad",initials:"Ṭ",body:<><p>The definite article makes ḥamd exhaustive — every form of praise belongs to Allah. Al-Ṭabarī distinguishes <b>ḥamd</b> (praise for inherent attributes) from <b>shukr</b> (gratitude for favors received).</p></>}]},
+};
+
+// ============================================================
+// SIDEBAR & RAIL
+// ============================================================
+const { useState, useEffect, useRef, useMemo } = React;
+
+function filterNodes(nodes, q) {
+  const out = [];
+  for (const n of nodes) {
+    if (n.title.toLowerCase().includes(q)) { out.push(n); }
+    else if (n.children) {
+      const kids = filterNodes(n.children, q);
+      if (kids.length) out.push({ ...n, children: kids, open: true });
+    }
+  }
+  return out;
+}
+
+function TreeNode({ node, depth, activeId, onSelect, searchQuery }) {
+  const [open, setOpen] = useState(node.open !== false);
+  const hasChildren = node.children && node.children.length > 0;
+  const isActive = activeId === node.id;
+
+  if (searchQuery) {
+    const q = searchQuery.toLowerCase();
+    const matchesSelf = node.title.toLowerCase().includes(q);
+    const matchingDescendants = hasChildren ? filterNodes(node.children, q) : [];
+    if (!matchesSelf && matchingDescendants.length === 0) return null;
+    node = { ...node, children: matchesSelf ? node.children : matchingDescendants };
+  }
+
+  const iconFor = () => {
+    if (node.type === "notebook") return <Icons.Notebook size={14}/>;
+    if (node.type === "section") return <Icons.Folder size={14}/>;
+    if (node.type === "surah") return <Icons.Book size={14}/>;
+    if (node.page) return <Icons.Page size={14}/>;
+    return <Icons.File size={14}/>;
+  };
+
+  return (
+    <div>
+      <div className="tree-row" data-active={isActive} style={{ paddingLeft: depth * 12 + 4 }}
+        onClick={() => { if (node.page) onSelect(node.id); else if (hasChildren) setOpen(!open); }}>
+        <div className="tree-chevron" data-open={open} data-empty={!hasChildren}
+          onClick={e => { e.stopPropagation(); setOpen(!open); }}>
+          <Icons.Chevron size={11}/>
+        </div>
+        <div className="tree-icon">{iconFor()}</div>
+        <div className="tree-label">{node.title}</div>
+        {hasChildren && !node.page && <div className="tree-count">{node.children.length}</div>}
+        <div className="tree-more" onClick={e => e.stopPropagation()} title="More">
+          <Icons.DotsH size={12}/>
+        </div>
+      </div>
+      {hasChildren && open && (
+        <div className="tree-children">
+          {node.children.map(c => (
+            <TreeNode key={c.id} node={c} depth={depth+1} activeId={activeId} onSelect={onSelect} searchQuery={searchQuery}/>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function QuickNav() {
+  const items = [
+    { icon:<Icons.Home size={14}/>, label:"Home" },
+    { icon:<Icons.Inbox size={14}/>, label:"Inbox", count:3 },
+    { icon:<Icons.Star size={14}/>, label:"Starred" },
+    { icon:<Icons.Books size={14}/>, label:"Qur'ān library" },
+  ];
+  return (
+    <div>
+      {items.map(i => (
+        <div key={i.label} className="tree-row" style={{ paddingLeft: 8 }}>
+          <div className="tree-chevron" data-empty="true"><Icons.Chevron size={11}/></div>
+          <div className="tree-icon">{i.icon}</div>
+          <div className="tree-label">{i.label}</div>
+          {i.count != null && <div className="tree-count">{i.count}</div>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function Sidebar({ activeId, onSelect }) {
+  const [query, setQuery] = useState("");
+  return (
+    <aside className="sidebar">
+      <div className="sidebar-head">
+        <button className="ws-switcher" title="Switch workspace">
+          <div className="ws-switcher-avatar">TL</div>
+          <div className="ws-switcher-name">Tafsir Scholars</div>
+          <Icons.ChevronDown size={14} className="ws-switcher-caret"/>
+        </button>
+        <button className="rail-btn" title="New page" style={{ width:28, height:28 }}>
+          <Icons.Plus size={15}/>
+        </button>
+      </div>
+      <div className="sidebar-search">
+        <Icons.Search size={14}/>
+        <input placeholder="Search notebooks…" value={query} onChange={e => setQuery(e.target.value)}/>
+        <span className="sidebar-search-kbd">⌘K</span>
+      </div>
+      <div style={{ padding:"4px 10px 0 10px" }}><QuickNav/></div>
+      <div className="sidebar-section">
+        <span>Notebooks</span>
+        <button className="sidebar-section-add" title="New notebook"><Icons.Plus size={12}/></button>
+      </div>
+      <div className="tree scroll">
+        {NOTEBOOK_TREE.map(n => (
+          <TreeNode key={n.id} node={n} depth={0} activeId={activeId} onSelect={onSelect} searchQuery={query}/>
+        ))}
+      </div>
+    </aside>
+  );
+}
+
+function Rail({ active, onSelect }) {
+  const workspaces = [
+    { id:"scholars", label:"TS", title:"Tafsir Scholars" },
+    { id:"personal", label:"AB", title:"Personal" },
+    { id:"usul",     label:"UF", title:"Uṣūl Circle" },
+  ];
+  return (
+    <div className="rail">
+      <div className="rail-logo" title="TafsirLab">T</div>
+      <button className="rail-btn" data-active={active==="notes"} onClick={() => onSelect("notes")} title="Notes">
+        <Icons.Notebook size={18}/>
+      </button>
+      <button className="rail-btn" title="Qur'ān library"><Icons.BookOpen size={18}/></button>
+      <button className="rail-btn" title="Search"><Icons.Search size={18}/></button>
+      <button className="rail-btn" title="Inbox"><Icons.Inbox size={18}/></button>
+      <div className="rail-spacer"/>
+      <div className="rail-divider"/>
+      {workspaces.map(w => (
+        <button key={w.id} className="rail-ws" data-active={w.id==="scholars"} title={w.title}>{w.label}</button>
+      ))}
+      <div className="rail-divider"/>
+      <button className="rail-btn" title="Settings"><Icons.Settings size={17}/></button>
+      <div className="rail-account" title="Signed in via enterprise SSO">AB</div>
+    </div>
+  );
+}
+
+// ============================================================
+// EDITOR
+// ============================================================
+const SLASH_ITEMS = [
+  { group:"Basic", items:[
+    { id:"p",       name:"Text",          desc:"Plain paragraph",         icon:"Text"    },
+    { id:"h1",      name:"Heading 1",     desc:"Large section title",     icon:"H1"      },
+    { id:"h2",      name:"Heading 2",     desc:"Medium heading",          icon:"H2"      },
+    { id:"h3",      name:"Heading 3",     desc:"Small heading",           icon:"H3"      },
+    { id:"list",    name:"Bulleted list", desc:"Unordered list",          icon:"List"    },
+    { id:"quote",   name:"Quote",         desc:"Blockquote",              icon:"Quote"   },
+    { id:"divider", name:"Divider",       desc:"Horizontal rule",         icon:"Divider" },
+  ]},
+  { group:"Research", items:[
+    { id:"verse",   name:"Verse block",   desc:"Anchor a Qur'ānic āyah",  icon:"Verse"   },
+    { id:"callout", name:"Callout",       desc:"Highlighted note",        icon:"Callout" },
+  ]},
+];
+
+function Block({ block, active, onOpenVerse, onActivate }) {
+  const CE = text => typeof text === "string" ? { contentEditable:true, suppressContentEditableWarning:true } : {};
+  const Row = ({ children }) => (
+    <div className="block" data-focused={active}>
+      <div className="block-handle">
+        <button className="handle-btn" title="Add"><Icons.Plus size={13}/></button>
+        <button className="handle-btn" title="Drag"><Icons.Grip size={13}/></button>
+      </div>
+      {children}
+    </div>
+  );
+  if (block.type==="h1")      return <Row><h1 className="block-h1" {...CE(block.text)}>{block.text}</h1></Row>;
+  if (block.type==="h2")      return <Row><h2 className="block-h2" {...CE(block.text)}>{block.text}</h2></Row>;
+  if (block.type==="h3")      return <Row><h3 className="block-h3" {...CE(block.text)}>{block.text}</h3></Row>;
+  if (block.type==="p")       return <Row><p  className="block-p"  {...CE(block.text)}>{block.text}</p></Row>;
+  if (block.type==="divider") return <Row><div className="block-divider"/></Row>;
+  if (block.type==="quote")   return <Row><div className="block-quote"  {...CE(block.text)}>{block.text}</div></Row>;
+  if (block.type==="list")    return <Row><ul className="block-list">{block.items.map((it,i) => <li key={i}>{it}</li>)}</ul></Row>;
+  if (block.type==="callout") {
+    const IC = Icons[block.icon] || Icons.Callout;
+    return <Row><div className="block-callout"><div className="callout-icon"><IC size={18}/></div><div className="callout-body">{block.text}</div></div></Row>;
+  }
+  if (block.type==="verse") {
+    const v = block.verse;
+    const ref = `Q 1:${v.n}`;
+    return (
+      <div className="verse-block" data-active={active} onClick={() => onActivate && onActivate(block.id)}>
+        <div className="verse-header">
+          <div className="verse-ref"><span className="verse-ref-dot"/><span>{ref} · {block.label||"Verse"}</span></div>
+          <div className="verse-actions">
+            <button className="verse-action" title="Copy" onClick={e => e.stopPropagation()}><Icons.Copy size={13}/></button>
+            <button className="verse-action" title="Bookmark" onClick={e => e.stopPropagation()}><Icons.Bookmark size={13}/></button>
+            <button className="verse-action" data-active={active} title="Open tafsīr"
+              onClick={e => { e.stopPropagation(); onOpenVerse(ref); }}><Icons.BookOpen size={13}/></button>
+          </div>
+        </div>
+        <div className="verse-arabic">{v.ar}</div>
+        <div className="verse-translit">{v.tl}</div>
+        <div className="verse-translation"><span className="tr-num">{v.n}</span>{v.en}</div>
+      </div>
+    );
+  }
+  return null;
+}
+
+function Editor({ doc, openVerse, activeVerseRef, activeBlockId, onActivateBlock }) {
+  const [slashOpen, setSlashOpen] = useState(false);
+  const [slashPos, setSlashPos]   = useState({ top:0, left:0 });
+  const [slashSel, setSlashSel]   = useState(0);
+  const [slashFilter, setSlashFilter] = useState("");
+  const [fmtBar, setFmtBar] = useState(null);
+  const docRef = useRef(null);
+
+  useEffect(() => {
+    const onKey = e => {
+      if (!(e.target && e.target.isContentEditable)) return;
+      if (e.key === "/") {
+        const sel = window.getSelection();
+        if (sel && sel.rangeCount) {
+          const rect = sel.getRangeAt(0).getBoundingClientRect();
+          const cont = docRef.current.getBoundingClientRect();
+          setSlashPos({ top: rect.bottom - cont.top + 6, left: rect.left - cont.left });
+          setSlashOpen(true); setSlashSel(0); setSlashFilter("");
+        }
+      }
+      if (slashOpen) {
+        if (e.key==="ArrowDown")  { e.preventDefault(); setSlashSel(s => s+1); }
+        if (e.key==="ArrowUp")    { e.preventDefault(); setSlashSel(s => Math.max(s-1,0)); }
+        if (e.key==="Escape")     setSlashOpen(false);
+        if (e.key==="Enter")      { e.preventDefault(); setSlashOpen(false); }
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [slashOpen, slashFilter]);
+
+  useEffect(() => {
+    const onSel = () => {
+      const sel = window.getSelection();
+      if (!sel || sel.isCollapsed || !sel.rangeCount) { setFmtBar(null); return; }
+      const node = sel.anchorNode;
+      if (!node) { setFmtBar(null); return; }
+      const el = node.nodeType===1 ? node : node.parentElement;
+      if (!el || !el.closest(".doc")) { setFmtBar(null); return; }
+      const rect = sel.getRangeAt(0).getBoundingClientRect();
+      if (rect.width < 2) { setFmtBar(null); return; }
+      const cont = docRef.current.getBoundingClientRect();
+      setFmtBar({ top: rect.top-cont.top-42, left: rect.left-cont.left+rect.width/2-130,
+        bold: document.queryCommandState("bold"), italic: document.queryCommandState("italic"),
+        under: document.queryCommandState("underline") });
+    };
+    document.addEventListener("selectionchange", onSel);
+    return () => document.removeEventListener("selectionchange", onSel);
+  }, []);
+
+  const exec = cmd => document.execCommand(cmd, false, null);
+  const filteredSlash = SLASH_ITEMS.map(g => ({ ...g, items: g.items.filter(i => i.name.toLowerCase().includes(slashFilter.toLowerCase())) })).filter(g => g.items.length);
+
+  return (
+    <div className="doc-wrap">
+      <div className="doc" ref={docRef}>
+        <div className="doc-cover">
+          <div className="doc-cover-tag">Quranic Studies · Surah Al-Fatiha · Question 1</div>
+          <h1 className="doc-title" contentEditable suppressContentEditableWarning>Names of the Surah, and why</h1>
+          <div className="doc-meta">
+            <div className="doc-meta-item"><div className="doc-meta-avatar">AB</div><span>Abdullah B.</span></div>
+            <span>·</span>
+            <div className="doc-meta-item"><Icons.History size={12}/> Edited 2 hours ago</div>
+            <span>·</span>
+            <div className="doc-meta-item"><Icons.Comment size={12}/> 4 comments</div>
+            <span>·</span>
+            <div className="doc-meta-item"><Icons.BookOpen size={12}/> 12 min read</div>
+          </div>
+        </div>
+
+        {doc.map(b => (
+          <Block key={b.id} block={b}
+            active={(b.type==="verse" && activeVerseRef===`Q 1:${b.verse.n}`) || activeBlockId===b.id}
+            onOpenVerse={openVerse} onActivate={onActivateBlock}/>
+        ))}
+
+        <button className="add-block">
+          <Icons.Plus size={14}/>
+          <span>Click to add a block, or type <span className="kbd">/</span> for menu</span>
+        </button>
+
+        {slashOpen && (
+          <div className="slash-menu" style={{ top:slashPos.top, left:slashPos.left }}>
+            <div style={{ padding:"4px 8px 6px 8px", borderBottom:"1px solid var(--line)", marginBottom:4 }}>
+              <input autoFocus placeholder="Filter blocks…" value={slashFilter}
+                onChange={e => { setSlashFilter(e.target.value); setSlashSel(0); }}
+                onKeyDown={e => e.stopPropagation()}
+                style={{ width:"100%", border:0, background:"transparent", outline:"none", fontSize:13, padding:"3px 0" }}/>
+            </div>
+            {filteredSlash.map((g,gi) => (
+              <div key={g.group}>
+                <div className="slash-section">{g.group}</div>
+                {g.items.map((it, idx) => {
+                  const flat = filteredSlash.slice(0,gi).reduce((a,gg)=>a+gg.items.length,0)+idx;
+                  const IC = Icons[it.icon] || Icons.Text;
+                  return (
+                    <div key={it.id} className="slash-item" data-selected={slashSel===flat}
+                      onMouseEnter={() => setSlashSel(flat)} onClick={() => setSlashOpen(false)}>
+                      <div className="slash-item-icon"><IC size={15}/></div>
+                      <div className="slash-item-text">
+                        <div className="slash-item-name">{it.name}</div>
+                        <div className="slash-item-desc">{it.desc}</div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
+            {filteredSlash.length===0 && <div style={{ padding:"16px 10px", color:"var(--ink-3)", fontSize:13, textAlign:"center" }}>No blocks match "{slashFilter}"</div>}
+          </div>
+        )}
+
+        {fmtBar && (
+          <div className="format-bar" style={{ top:fmtBar.top, left:fmtBar.left }}>
+            <button className="fb-btn" data-active={fmtBar.bold}   onMouseDown={e=>{e.preventDefault();exec("bold")}}><Icons.Bold size={14}/></button>
+            <button className="fb-btn" data-active={fmtBar.italic} onMouseDown={e=>{e.preventDefault();exec("italic")}}><Icons.Italic size={14}/></button>
+            <button className="fb-btn" data-active={fmtBar.under}  onMouseDown={e=>{e.preventDefault();exec("underline")}}><Icons.Underline size={14}/></button>
+            <button className="fb-btn" onMouseDown={e=>{e.preventDefault();exec("strikeThrough")}}><Icons.Strike size={14}/></button>
+            <div className="fb-sep"/>
+            <button className="fb-btn" onMouseDown={e=>e.preventDefault()}><Icons.Code size={14}/></button>
+            <button className="fb-btn" onMouseDown={e=>e.preventDefault()}><Icons.Link size={14}/></button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// DRAWER
+// ============================================================
+function Drawer({ openRef, onClose }) {
+  const [tab, setTab] = useState("commentary");
+  if (!openRef) return null;
+  const data = COMMENTARY[openRef] || COMMENTARY["Q 1:1–7"];
+  return (
+    <div className="drawer-overlay" data-open={!!openRef}>
+      <div className="drawer-head">
+        <div style={{ flex:1, minWidth:0 }}>
+          <div className="drawer-head-title">Tafsīr · Classical commentary</div>
+          <div className="drawer-head-ref">{openRef} · Al-Fatiha</div>
+        </div>
+        <button className="drawer-close" title="Expand" onClick={()=>{}}><Icons.Expand size={14}/></button>
+        <button className="drawer-close" onClick={onClose} title="Close"><Icons.Close size={14}/></button>
+      </div>
+      <div className="drawer-tabs">
+        {["commentary","wbw","translations","audio"].map(t => (
+          <button key={t} className="drawer-tab" data-active={tab===t} onClick={() => setTab(t)}>
+            {{commentary:"Commentary",wbw:"Word-by-word",translations:"Translations",audio:"Recitation"}[t]}
+          </button>
+        ))}
+      </div>
+      <div className="drawer-body scroll">
+        <div className="drawer-verse">
+          <div className="drawer-verse-arabic">{data.verse.ar}</div>
+          <div className="drawer-verse-translation"><i>{data.verse.tl}</i><br/>{data.verse.en}</div>
+        </div>
+        {tab==="commentary" && <>
+          {data.sources.map((s,i) => (
+            <div key={i} className="commentary-section">
+              <div className="commentary-author">
+                <div className="commentary-avatar">{s.initials}</div>
+                <div style={{ minWidth:0 }}>
+                  <div className="commentary-name">{s.author}</div>
+                  <div className="commentary-sub">{s.years}</div>
+                </div>
+              </div>
+              <div className="commentary-body">{s.body}</div>
+            </div>
+          ))}
+          <div style={{ borderTop:"1px solid var(--line)", paddingTop:16, marginTop:8 }}>
+            <button className="tb-btn" style={{ padding:"6px 12px", border:"1px solid var(--line-strong)" }}>
+              <Icons.Plus size={13}/> Add source
+            </button>
+          </div>
+        </>}
+        {tab==="wbw" && (data.wbw
+          ? <div className="wbw">{data.wbw.map((w,i)=><div key={i} className="wbw-cell"><div className="wbw-ar">{w.ar}</div><div className="wbw-tr">{w.tr}</div><div className="wbw-en">{w.en}</div></div>)}</div>
+          : <div style={{ padding:20, textAlign:"center", color:"var(--ink-3)", fontSize:13 }}>Word-by-word breakdown not available for this range.</div>
+        )}
+        {tab==="translations" && <div className="lang-list">
+          {[{name:"Saheeh International",sub:"EN · literal / clear",active:true},{name:"Abdel Haleem",sub:"EN · contemporary"},{name:"M.A.S. Pickthall",sub:"EN · early 20th c."},{name:"Yusuf Ali",sub:"EN · explanatory"},{name:"Hamidullah",sub:"FR · Hamidullah"}].map(t=>(
+            <div key={t.name} className="lang-item" data-active={t.active}>
+              <div><div className="lang-item-name">{t.name}</div><div className="lang-item-sub">{t.sub}</div></div>
+              <Icons.Chevron size={14} style={{ color:"var(--ink-4)" }}/>
+            </div>
+          ))}
+        </div>}
+        {tab==="audio" && <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+          {[{name:"Mishary Rashid Alafasy",sub:"Kuwait · Ḥafṣ ʿan ʿĀṣim"},{name:"ʿAbd al-Bāsiṭ ʿAbd al-Ṣamad",sub:"Egypt · murattal"},{name:"Maher Al Muaiqly",sub:"Makkah · tarāwīḥ"}].map((r,i)=>(
+            <div key={i} className="lang-item">
+              <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+                <button style={{ width:30, height:30, borderRadius:999, background:"var(--accent)", color:"white", display:"grid", placeItems:"center" }}><Icons.Play size={12}/></button>
+                <div><div className="lang-item-name">{r.name}</div><div className="lang-item-sub">{r.sub}</div></div>
+              </div>
+              <span className="lang-item-sub">0:12</span>
+            </div>
+          ))}
+        </div>}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// TWEAKS
+// ============================================================
+function Tweaks({ state, onChange, onClose }) {
+  return (
+    <div className="tweaks-panel">
+      <div className="tweaks-head">
+        <div className="tweaks-title">Tweaks</div>
+        <button className="tweaks-close" onClick={onClose}><Icons.Close size={13}/></button>
+      </div>
+      <div className="tweaks-body">
+        <div className="tw-row">
+          <div className="tw-label">Theme</div>
+          <div className="tw-segments">
+            {["light","dark"].map(v=><button key={v} className="tw-seg" data-active={state.theme===v} onClick={()=>onChange({theme:v})}>{v==="light"?"Paper":"Slate"}</button>)}
+          </div>
+        </div>
+        <div className="tw-row">
+          <div className="tw-label">Accent</div>
+          <div className="tw-swatches">
+            {[{id:"emerald",color:"oklch(0.55 0.08 160)"},{id:"amber",color:"oklch(0.62 0.11 70)"},{id:"indigo",color:"oklch(0.52 0.12 275)"}].map(a=>(
+              <button key={a.id} className="tw-swatch" data-active={state.accent===a.id} onClick={()=>onChange({accent:a.id})} title={a.id}>
+                <span className="tw-swatch-dot" style={{ background:a.color }}/>
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="tw-row">
+          <div className="tw-label">Density</div>
+          <div className="tw-segments">
+            {["compact","cozy","roomy"].map(v=><button key={v} className="tw-seg" data-active={state.density===v} onClick={()=>onChange({density:v})}>{v[0].toUpperCase()+v.slice(1)}</button>)}
+          </div>
+        </div>
+        <div className="tw-row">
+          <div className="tw-label">Canvas width</div>
+          <div className="tw-segments">
+            {["focused","wide"].map(v=><button key={v} className="tw-seg" data-active={state.canvasWidth===v} onClick={()=>onChange({canvasWidth:v})}>{v[0].toUpperCase()+v.slice(1)}</button>)}
+          </div>
+        </div>
+        <div className="tw-row">
+          <div className="tw-label">Drawer blur</div>
+          <div className="tw-segments">
+            {["light","medium","heavy"].map(v=><button key={v} className="tw-seg" data-active={state.glass===v} onClick={()=>onChange({glass:v})}>{v[0].toUpperCase()+v.slice(1)}</button>)}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// APP
+// ============================================================
+const DEFAULTS = { theme:"light", accent:"emerald", density:"cozy", canvasWidth:"focused", glass:"light" };
+
+function App() {
+  const [tw, setTw] = useState(() => {
+    try { const s = localStorage.getItem("tafsirlab.tweaks"); if (s) return { ...DEFAULTS, ...JSON.parse(s) }; } catch {}
+    return DEFAULTS;
+  });
+  const updateTw = patch => setTw(prev => {
+    const next = { ...prev, ...patch };
+    try { localStorage.setItem("tafsirlab.tweaks", JSON.stringify(next)); } catch {}
+    return next;
+  });
+
+  const [showTweaks, setShowTweaks] = useState(false);
+  const [activePage, setActivePage] = useState("p-names");
+  const [drawerRef, setDrawerRef]   = useState(null);
+  const [activeBlockId, setActiveBlockId] = useState(null);
+
+  const openVerse = ref => setDrawerRef(ref);
+  const closeDrawer = () => setDrawerRef(null);
+  const doc = useMemo(() => buildDoc(openVerse), []);
+
+  return (
+    <div className="app" data-theme={tw.theme} data-accent={tw.accent} data-density={tw.density} data-canvas={tw.canvasWidth} data-glass={tw.glass}>
+      <Rail active="notes" onSelect={()=>{}}/>
+      <Sidebar activeId={activePage} onSelect={setActivePage}/>
+      <main className="canvas scroll">
+        <div className="topbar">
+          <div className="crumbs">
+            <span className="crumb">Tafsir Scholars</span>
+            <span className="crumb-sep">/</span>
+            <span className="crumb">Quranic Studies</span>
+            <span className="crumb-sep">/</span>
+            <span className="crumb">Surah Al-Fatiha</span>
+            <span className="crumb-sep">/</span>
+            <span className="crumb" data-current="true">Names of the Surah</span>
+          </div>
+          <div className="topbar-actions">
+            <button className="tb-icon" title="Comments"><Icons.Comment size={15}/></button>
+            <button className="tb-icon" title="History"><Icons.History size={15}/></button>
+            <button className="tb-icon" title="Copy link"><Icons.Link size={15}/></button>
+            <div className="tb-divider"/>
+            <button className="tb-btn" data-active={showTweaks} onClick={() => setShowTweaks(v=>!v)} title="Tweaks">
+              <Icons.Sliders size={14}/> Tweaks
+            </button>
+            <button className="tb-btn" data-active={!!drawerRef} onClick={() => setDrawerRef(drawerRef ? null : "Q 1:1–7")} title="Toggle tafsīr">
+              <Icons.Book size={14}/> Tafsīr
+            </button>
+            <button className="tb-share" title="Share"><Icons.Share size={13}/> Share</button>
+          </div>
+        </div>
+        <Editor doc={doc} openVerse={openVerse} activeVerseRef={drawerRef} activeBlockId={activeBlockId} onActivateBlock={setActiveBlockId}/>
+      </main>
+      <Drawer openRef={drawerRef} onClose={closeDrawer}/>
+      {showTweaks && <Tweaks state={tw} onChange={updateTw} onClose={() => setShowTweaks(false)}/>}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>

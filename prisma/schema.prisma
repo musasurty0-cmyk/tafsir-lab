@@ -1,0 +1,333 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ─────────────────────────────────────────────────────────────
+// USERS
+// ─────────────────────────────────────────────────────────────
+model User {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email       String   @unique
+  firebaseUid String?  @unique   // set on first Google sign-in
+  name        String
+  avatarUrl   String?
+  createdAt   DateTime @default(now()) @db.Timestamptz(6)
+
+  ownedWorkspaces  Workspace[]            @relation("WorkspaceOwner")
+  memberships      WorkspaceMember[]
+  createdPages     Page[]                 @relation("PageCreatedBy")
+  publishedPages   Page[]                 @relation("PagePublishedBy")
+  notes            StructuredNote[]
+  drawings         CanvasDrawing[]
+  personalProgress PersonalAyahProgress[]
+  groupChanges     GroupAyahProgress[]    @relation("GroupProgressChangedBy")
+  pagePrefs        PageUserPrefs[]
+  activityLogs     ActivityLog[]
+  templates        PageTemplate[]
+}
+
+// ─────────────────────────────────────────────────────────────
+// WORKSPACES
+// ─────────────────────────────────────────────────────────────
+model Workspace {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name       String
+  type       String   // 'private' | 'group'
+  ownerId    String   @db.Uuid
+  avatarUrl  String?
+  inviteCode String?  @unique
+  createdAt  DateTime @default(now()) @db.Timestamptz(6)
+
+  owner       User              @relation("WorkspaceOwner", fields: [ownerId], references: [id])
+  members     WorkspaceMember[]
+  surahs      WorkspaceSurah[]
+  activityLog ActivityLog[]
+}
+
+model WorkspaceMember {
+  workspaceId String   @db.Uuid
+  userId      String   @db.Uuid
+  role        String   // 'owner' | 'admin' | 'member'
+  joinedAt    DateTime @default(now()) @db.Timestamptz(6)
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([workspaceId, userId])
+}
+
+// ─────────────────────────────────────────────────────────────
+// TEMPLATES
+// ─────────────────────────────────────────────────────────────
+model PageTemplate {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String
+  surahNumber Int?     // null = universal
+  // [{ title: string, orderIndex: number, isAdminAuthored: boolean }]
+  structure   Json
+  isSystem    Boolean  @default(false)
+  createdById String?  @db.Uuid
+  createdAt   DateTime @default(now()) @db.Timestamptz(6)
+
+  createdBy       User?            @relation(fields: [createdById], references: [id])
+  workspaceSurahs WorkspaceSurah[]
+  derivedPages    Page[]
+}
+
+// ─────────────────────────────────────────────────────────────
+// SURAH SESSIONS
+// ─────────────────────────────────────────────────────────────
+model WorkspaceSurah {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId String   @db.Uuid
+  surahNumber Int
+  templateId  String?  @db.Uuid
+  startedAt   DateTime @default(now()) @db.Timestamptz(6)
+
+  workspace Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  template  PageTemplate? @relation(fields: [templateId], references: [id])
+  pages     Page[]
+
+  @@unique([workspaceId, surahNumber])
+}
+
+// ─────────────────────────────────────────────────────────────
+// PAGES
+// ─────────────────────────────────────────────────────────────
+model Page {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceSurahId String    @db.Uuid
+  title            String
+  orderIndex       Int
+  // 'draft' | 'published' | 'archived'
+  status           String    @default("draft")
+  tiptapContent    Json?
+
+  // Signals admin-authored content is present on this page.
+  // Does NOT prevent members from adding their own notes.
+  // Full page lock is a separate future concept.
+  isAdminAuthored  Boolean   @default(false)
+
+  // Template lineage
+  templateId       String?   @db.Uuid
+  templatePageIdx  Int?
+
+  // Authorship trail
+  createdById      String    @db.Uuid
+  createdAt        DateTime  @default(now()) @db.Timestamptz(6)
+  publishedById    String?   @db.Uuid
+  publishedAt      DateTime? @db.Timestamptz(6)
+  archivedAt       DateTime? @db.Timestamptz(6)
+
+  workspaceSurah   WorkspaceSurah     @relation(fields: [workspaceSurahId], references: [id], onDelete: Cascade)
+  template         PageTemplate?      @relation(fields: [templateId], references: [id])
+  createdBy        User               @relation("PageCreatedBy", fields: [createdById], references: [id])
+  publishedBy      User?              @relation("PagePublishedBy", fields: [publishedById], references: [id])
+  notes            StructuredNote[]
+  drawings         CanvasDrawing[]
+  personalProgress PersonalAyahProgress[]
+  groupProgress    GroupAyahProgress[]
+  userPrefs        PageUserPrefs[]
+}
+
+// ─────────────────────────────────────────────────────────────
+// AYAH PROGRESS — two tables, clean semantics
+// ─────────────────────────────────────────────────────────────
+
+// One record per (page, user, surah, ayah).
+// User can freely set any status in any direction.
+model PersonalAyahProgress {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  pageId      String   @db.Uuid
+  userId      String   @db.Uuid
+  surahNumber Int
+  ayahNumber  Int
+  // 'not_studied' | 'pending' | 'studied'
+  status      String
+  changedAt   DateTime @updatedAt @db.Timestamptz(6)
+
+  page Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([pageId, userId, surahNumber, ayahNumber])
+}
+
+// One record per (page, surah, ayah). Shared group state.
+// Direction rules enforced in progress.service:
+//   members  → can only advance (not_studied → pending → studied)
+//   admin+   → can set any status
+model GroupAyahProgress {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  pageId        String   @db.Uuid
+  surahNumber   Int
+  ayahNumber    Int
+  status        String   // 'not_studied' | 'pending' | 'studied'
+  lastChangedBy String   @db.Uuid // accountability: who made the last change
+  changedAt     DateTime @updatedAt @db.Timestamptz(6)
+
+  page      Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  changedBy User @relation("GroupProgressChangedBy", fields: [lastChangedBy], references: [id])
+
+  @@unique([pageId, surahNumber, ayahNumber])
+}
+
+// ─────────────────────────────────────────────────────────────
+// STRUCTURED NOTES (anchored, searchable)
+// ─────────────────────────────────────────────────────────────
+model StructuredNote {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  pageId       String   @db.Uuid
+  authorId     String   @db.Uuid
+  // 'text' | 'callout' | 'linguistic' | 'thematic' | 'ruling' | 'question'
+  noteType     String
+  // 'ayah' | 'word' | 'page'
+  anchorType   String
+  surahNumber  Int?
+  ayahNumber   Int?
+  wordPosition Int?
+  content      Json     // TipTap JSON — rich text, full-text searchable
+  // 'amber' | 'emerald' | 'sky' | 'rose' | null
+  color        String?
+  // Canvas geometry — used in Mode B, ignored in Mode A
+  offsetX      Float    @default(40)
+  offsetY      Float    @default(0)
+  width        Float    @default(280)
+  height       Float?   // null = auto
+  zIndex       Int      @default(0)
+  isMinimized  Boolean  @default(false)
+  // true → only admin+ can edit or delete
+  isAdmin      Boolean  @default(false)
+  createdAt    DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt    DateTime @updatedAt @db.Timestamptz(6)
+
+  page   Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  author User @relation(fields: [authorId], references: [id])
+}
+
+// ─────────────────────────────────────────────────────────────
+// DRAWING LAYER (visual only, not searchable)
+// DESIGN DECISION: each user owns their own layer per page.
+// All layers are rendered together in the UI.
+// No shared collaborative drawing layer in v1.
+// ─────────────────────────────────────────────────────────────
+model CanvasDrawing {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  pageId    String   @db.Uuid
+  authorId  String   @db.Uuid
+  strokes   Json     // raw stroke array
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+
+  page   Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  author User @relation(fields: [authorId], references: [id])
+
+  @@unique([pageId, authorId])
+}
+
+// ─────────────────────────────────────────────────────────────
+// PAGE USER PREFERENCES
+// ─────────────────────────────────────────────────────────────
+model PageUserPrefs {
+  pageId         String @db.Uuid
+  userId         String @db.Uuid
+  // Ayah numbers this user has collapsed. Sole source of truth for note visibility.
+  collapsedAyahs Int[]  @default([])
+  // { x: number, y: number, zoom: number } — Mode B only
+  canvasViewport Json?
+
+  page Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([pageId, userId])
+}
+
+// ─────────────────────────────────────────────────────────────
+// ACTIVITY LOG
+// ─────────────────────────────────────────────────────────────
+model ActivityLog {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId String   @db.Uuid
+  userId      String   @db.Uuid
+  action      String
+  entityType  String
+  entityId    String?  @db.Uuid
+  metadata    Json?
+  createdAt   DateTime @default(now()) @db.Timestamptz(6)
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id])
+}
+
+// ─────────────────────────────────────────────────────────────
+// TAFSIR INGESTION LAYER
+//
+// Three-table design:
+//   TafsirSource   — catalog of sources (one row per tafsir book/API)
+//   TafsirEntry    — the ingested content (one row per source × verse)
+//   TafsirFetchJob — progress tracking for bulk ingestion runs
+//
+// The old TafsirCache model has been replaced by this layer.
+// ─────────────────────────────────────────────────────────────
+
+model TafsirSource {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  // Human-readable unique key, e.g. "ibn-kathir-en", "tabari-ar"
+  slug        String   @unique
+  name        String   // "Ibn Kathīr (English)"
+  nameArabic  String?  // "ابن كثير"
+  language    String   // ISO 639-1: "en" | "ar" | "ur" …
+  // "api"    → fetched from a structured API (e.g. quran.com)
+  // "scrape" → fetched by parsing an HTML page (e.g. tafsir.app)
+  type        String
+  // Source-specific config (varies by type):
+  //   api:    { provider: "quran.com", tafsirId: 169 }
+  //   scrape: { provider: "tafsir.app", slug: "tabari" }
+  config      Json
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now()) @db.Timestamptz(6)
+
+  entries   TafsirEntry[]
+  fetchJobs TafsirFetchJob[]
+}
+
+model TafsirEntry {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sourceId    String   @db.Uuid
+  verseKey    String   // "1:1"
+  // Plain-text content (always present)
+  content     String
+  // HTML content as returned by the source (optional, may contain
+  // formatting like <em> and footnotes — strip before display if needed)
+  contentHtml String?
+  fetchedAt   DateTime @default(now()) @db.Timestamptz(6)
+  // Flagged true when a re-fetch found newer content; old row kept for audit
+  isStale     Boolean  @default(false)
+
+  source TafsirSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceId, verseKey])
+}
+
+model TafsirFetchJob {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sourceId        String    @db.Uuid
+  // 0 = whole-Quran job (all 114 surahs); 1–114 = single surah
+  surahNumber     Int
+  // "pending" | "running" | "done" | "failed"
+  status          String    @default("pending")
+  startedAt       DateTime?
+  completedAt     DateTime?
+  error           String?
+  recordsInserted Int       @default(0)
+  createdAt       DateTime  @default(now()) @db.Timestamptz(6)
+
+  source TafsirSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+
+  // One active job per source × surah at a time
+  @@unique([sourceId, surahNumber])
+}
