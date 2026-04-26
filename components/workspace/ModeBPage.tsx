@@ -89,7 +89,7 @@ export default function ModeBPage({
   verses, pageId,
   userPrefs,
   notes,
-  onOpenTafsir: _onOpenTafsir,
+  onOpenTafsir,
   onNoteUpdated,
   onNoteDeleted,
   onAyahSelect,
@@ -275,12 +275,13 @@ export default function ModeBPage({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scrollToNoteId]);
 
-  // ── Wheel zoom ────────────────────────────────────────────────────────
+  // ── Wheel zoom (hand tool only — prevents accidental zoom while drawing) ─
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
     function onWheel(e: WheelEvent) {
       if (focusAnchor) return;
+      if (tool !== "hand") return; // don't zoom while a drawing tool is selected
       e.preventDefault();
       const delta   = -e.deltaY * 0.001 * (e.deltaMode === 1 ? 16 : 1);
       const prev    = viewportRef.current;
@@ -293,21 +294,20 @@ export default function ModeBPage({
     }
     el.addEventListener("wheel", onWheel, { passive: false });
     return () => el.removeEventListener("wheel", onWheel);
-  }, [patchViewport, focusAnchor]);
+  }, [patchViewport, focusAnchor, tool]);
 
-  // ── Drag to pan ───────────────────────────────────────────────────────
+  // ── Drag to pan (pointer events so Apple Pencil works in hand mode) ───
   const isDragging = useRef(false);
   const dragStart  = useRef<{ mx: number; my: number; vx: number; vy: number } | null>(null);
 
-  function onMouseDown(e: React.MouseEvent) {
+  function onPointerDown(e: React.PointerEvent) {
     if (tool !== "hand" || e.button !== 0 || focusAnchor) return;
     isDragging.current = true;
-    // Directly set data-panning on the DOM element — avoids a React re-render
-    // for a purely visual cursor change.
     containerRef.current?.setAttribute("data-panning", "true");
-    dragStart.current  = { mx: e.clientX, my: e.clientY, vx: viewport.x, vy: viewport.y };
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    dragStart.current = { mx: e.clientX, my: e.clientY, vx: viewport.x, vy: viewport.y };
   }
-  function onMouseMove(e: React.MouseEvent) {
+  function onPointerMove(e: React.PointerEvent) {
     if (!isDragging.current || !dragStart.current) return;
     const next: CanvasViewport = {
       ...viewportRef.current,
@@ -316,7 +316,7 @@ export default function ModeBPage({
     };
     setViewport(next); patchViewport(next);
   }
-  function onMouseUp() {
+  function onPointerUp() {
     isDragging.current = false;
     dragStart.current  = null;
     containerRef.current?.removeAttribute("data-panning");
@@ -329,10 +329,10 @@ export default function ModeBPage({
       ref={containerRef}
       className="mode-b-canvas"
       data-tool={tool}
-      onMouseDown={onMouseDown}
-      onMouseMove={onMouseMove}
-      onMouseUp={onMouseUp}
-      onMouseLeave={onMouseUp}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerUp}
     >
       {/* ── Transformed inner layer ── */}
       <div
@@ -415,6 +415,7 @@ export default function ModeBPage({
           verseKey={focusAnchor.verseKey}
           wordPos={focusAnchor.wordPos}
           onClose={closeFocus}
+          onOpenTafsir={onOpenTafsir}
         />
       )}
     </div>

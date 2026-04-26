@@ -285,6 +285,7 @@ input, textarea { font: inherit; color: inherit; }
 .canvas-area {
   display: flex; flex-direction: column;
   min-width: 0; min-height: 0; overflow: hidden;
+  position: relative;
 }
 .study-layout {
   flex: 1; display: flex; overflow: hidden; position: relative;
@@ -1225,7 +1226,44 @@ input, textarea { font: inherit; color: inherit; }
   grid-template-columns: var(--rail) var(--sidebar) minmax(0, 1fr);
   height: 100vh; width: 100vw; overflow: hidden;
   background: var(--bg);
+  transition: grid-template-columns 0.2s ease;
 }
+
+/* ── Sidebar collapsed state ── */
+.sidebar--collapsed { pointer-events: none; }
+
+/* ── Sidebar expand button (shown in canvas-area when sidebar is collapsed) ── */
+.sidebar-expand-btn {
+  position: absolute;
+  top: 50%;
+  left: 6px;
+  transform: translateY(-50%);
+  z-index: 10;
+  width: 24px; height: 40px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 0 6px 6px 0;
+  color: var(--ink-3);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.sidebar-expand-btn:hover { background: var(--hover); color: var(--ink); }
+
+/* ── FocusAnnotation Tafsir button ── */
+.fa-tafsir-btn {
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 5px;
+  background: var(--accent);
+  color: var(--bg);
+  cursor: pointer;
+  border: none;
+  margin-right: 6px;
+  transition: opacity 0.12s;
+}
+.fa-tafsir-btn:hover { opacity: 0.85; }
 
 /* ── Sidebar page list enhancements ── */
 .page-row-meta {

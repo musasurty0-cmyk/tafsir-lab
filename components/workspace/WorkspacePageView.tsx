@@ -21,6 +21,7 @@ import type { ProgressStatus } from "@/lib/services/progress.service";
 import type { NoteData } from "./NoteCard";
 import type { ViewMode } from "./TopBar";
 import Rail from "./Rail";
+import { ChevronRight } from "lucide-react";
 import WorkspaceSidebar from "./WorkspaceSidebar";
 import TopBar from "./TopBar";
 import ModeAPage from "./ModeAPage";
@@ -92,9 +93,10 @@ export default function WorkspacePageView({
   const router = useRouter();
 
   // ── UI state ─────────────────────────────────────────────────────────
-  const [tweaks, setTweaks]         = useState<TweaksState>(TWEAKS_DEFAULTS);
-  const [showTweaks, setShowTweaks] = useState(false);
-  const [mode, setMode]             = useState<ViewMode>("editor");
+  const [tweaks, setTweaks]               = useState<TweaksState>(TWEAKS_DEFAULTS);
+  const [showTweaks, setShowTweaks]       = useState(false);
+  const [mode, setMode]                   = useState<ViewMode>("editor");
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   // ── Tafsir drawer ─────────────────────────────────────────────────────
   const [tafsirOpen, setTafsirOpen]         = useState(false);
@@ -154,8 +156,19 @@ export default function WorkspacePageView({
     );
   const [progressLoading, setProgressLoading] = useState(false);
 
-  // Hydrate tweaks after mount.
-  useEffect(() => { setTweaks(loadTweaks()); }, []);
+  // Hydrate tweaks + sidebar state after mount.
+  useEffect(() => {
+    setTweaks(loadTweaks());
+    setSidebarCollapsed(localStorage.getItem("tl-sidebar-collapsed") === "1");
+  }, []);
+
+  const toggleSidebar = useCallback(() => {
+    setSidebarCollapsed((prev) => {
+      const next = !prev;
+      localStorage.setItem("tl-sidebar-collapsed", next ? "1" : "0");
+      return next;
+    });
+  }, []);
 
   // Fetch personal progress whenever the active page changes.
   useEffect(() => {
@@ -309,6 +322,9 @@ export default function WorkspacePageView({
       data-accent={tweaks.accent}
       data-density={tweaks.density}
       data-canvas={tweaks.canvasWidth}
+      style={sidebarCollapsed
+        ? { gridTemplateColumns: "var(--rail) 0px minmax(0, 1fr)" }
+        : undefined}
     >
       <Rail activeWorkspaceId={workspaceId} />
 
@@ -321,9 +337,20 @@ export default function WorkspacePageView({
         groupProgress={groupProgress}
         personalProgress={personalProgress}
         onPageSelect={handlePageSelect}
+        collapsed={sidebarCollapsed}
+        onToggleCollapse={toggleSidebar}
       />
 
       <div className="canvas-area">
+        {sidebarCollapsed && (
+          <button
+            className="sidebar-expand-btn"
+            onClick={toggleSidebar}
+            title="Expand sidebar"
+          >
+            <ChevronRight size={14} />
+          </button>
+        )}
         <TopBar
           workspaceId={workspaceId}
           surahNumber={surahNumber}

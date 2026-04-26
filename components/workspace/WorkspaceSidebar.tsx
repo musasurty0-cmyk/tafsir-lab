@@ -11,7 +11,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronRight, Search, X, Plus } from "lucide-react";
+import { ChevronRight, ChevronLeft, Search, X, Plus } from "lucide-react";
 import type { Chapter } from "@/lib/types";
 import type { ProgressStatus } from "@/lib/services/progress.service";
 import Link from "next/link";
@@ -67,14 +67,16 @@ interface PageSummary {
 }
 
 interface Props {
-  workspaceId:      string;
-  workspaceName:    string;
-  chapter:          Chapter;
-  pages:            PageSummary[];
-  activePageId:     string;
-  groupProgress:    Record<string, { status: ProgressStatus; lastChangedBy: string }>;
-  personalProgress: Record<string, ProgressStatus>;
-  onPageSelect:     (pageId: string) => void;
+  workspaceId:       string;
+  workspaceName:     string;
+  chapter:           Chapter;
+  pages:             PageSummary[];
+  activePageId:      string;
+  groupProgress:     Record<string, { status: ProgressStatus; lastChangedBy: string }>;
+  personalProgress:  Record<string, ProgressStatus>;
+  onPageSelect:      (pageId: string) => void;
+  collapsed?:        boolean;
+  onToggleCollapse?: () => void;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────
@@ -88,6 +90,8 @@ export default function WorkspaceSidebar({
   groupProgress,
   personalProgress: _personalProgress,
   onPageSelect,
+  collapsed = false,
+  onToggleCollapse,
 }: Props) {
   const router = useRouter();
 
@@ -151,7 +155,7 @@ export default function WorkspaceSidebar({
   }
 
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar${collapsed ? " sidebar--collapsed" : ""}`}>
 
       {/* ── Workspace header ── */}
       <div className="sidebar-head">
@@ -176,6 +180,17 @@ export default function WorkspaceSidebar({
         >
           <Plus size={14} />
         </button>
+
+        {onToggleCollapse && (
+          <button
+            className="rail-btn sidebar-collapse-btn"
+            style={{ width: 28, height: 28 }}
+            title="Collapse sidebar"
+            onClick={onToggleCollapse}
+          >
+            <ChevronLeft size={14} />
+          </button>
+        )}
       </div>
 
       {/* ── Search ── */}

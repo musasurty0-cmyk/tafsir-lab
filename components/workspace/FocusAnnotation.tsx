@@ -134,15 +134,16 @@ function drawStroke(ctx: CanvasRenderingContext2D, stroke: Stroke) {
 // ── Props ──────────────────────────────────────────────────────────────────
 
 interface Props {
-  verses:   Verse[];
-  verseKey: string;        // e.g. "1:1"
-  wordPos:  number | null; // null → ayah-level focus
-  onClose:  () => void;
+  verses:         Verse[];
+  verseKey:       string;        // e.g. "1:1"
+  wordPos:        number | null; // null → ayah-level focus
+  onClose:        () => void;
+  onOpenTafsir?:  (verseKey: string) => void;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────
 
-export default function FocusAnnotation({ verses, verseKey, wordPos, onClose }: Props) {
+export default function FocusAnnotation({ verses, verseKey, wordPos, onClose, onOpenTafsir }: Props) {
   const [, ayahNumStr] = verseKey.split(":");
   const ayahNum = Number(ayahNumStr);
   const verse   = verses.find((v) => v.verse_key === verseKey) ?? verses[0];
@@ -367,6 +368,15 @@ export default function FocusAnnotation({ verses, verseKey, wordPos, onClose }: 
           </button>
         </div>
 
+        {onOpenTafsir && (
+          <button
+            className="fa-tafsir-btn"
+            title="Open Tafsir for this verse"
+            onClick={() => { onOpenTafsir(verseKey); onClose(); }}
+          >
+            Tafsir
+          </button>
+        )}
         <button className="fa-close-btn" onClick={onClose} title="Close (Esc)">×</button>
       </div>
 

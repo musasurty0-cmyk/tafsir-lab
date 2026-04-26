@@ -71,6 +71,7 @@ const TOOL_OPACITY: Record<"pen" | "highlight" | "arrow", number> = {
 
 const ERASER_RADIUS = 15;   // canvas-space units
 const SAVE_DEBOUNCE = 1200; // ms
+const MIN_DIST_SQ   = 4;    // minimum squared distance between recorded points (2 px)
 
 // ── Geometry ──────────────────────────────────────────────────────────────
 
@@ -96,12 +97,33 @@ function strokeHit(stroke: Stroke, cx: number, cy: number, r: number): boolean {
   return false;
 }
 
+// ── Chaikin curve smoothing ────────────────────────────────────────────────
+
+function chaikin(pts: Point[], iterations = 2): Point[] {
+  if (pts.length < 3) return pts;
+  let result = pts;
+  for (let iter = 0; iter < iterations; iter++) {
+    const smoothed: Point[] = [result[0]];
+    for (let i = 0; i < result.length - 1; i++) {
+      const p0 = result[i], p1 = result[i + 1];
+      smoothed.push(
+        { x: 0.75 * p0.x + 0.25 * p1.x, y: 0.75 * p0.y + 0.25 * p1.y },
+        { x: 0.25 * p0.x + 0.75 * p1.x, y: 0.25 * p0.y + 0.75 * p1.y },
+      );
+    }
+    smoothed.push(result[result.length - 1]);
+    result = smoothed;
+  }
+  return result;
+}
+
 // ── Rendering ──────────────────────────────────────────────────────────────
 
-function drawStroke(ctx: CanvasRenderingContext2D, stroke: Stroke) {
+/** Draw a single stroke. For highlight strokes, caller must set globalAlpha externally. */
+function drawStroke(ctx: CanvasRenderingContext2D, stroke: Stroke, overrideAlpha?: number) {
   if (!stroke.points.length) return;
   ctx.save();
-  ctx.globalAlpha = stroke.opacity;
+  ctx.globalAlpha = overrideAlpha ?? stroke.opacity;
   ctx.strokeStyle = stroke.color;
   ctx.lineWidth   = stroke.width;
   ctx.lineCap     = "round";
@@ -120,14 +142,15 @@ function drawStroke(ctx: CanvasRenderingContext2D, stroke: Stroke) {
     ctx.lineTo(p1.x - hl * Math.cos(ang + 0.38), p1.y - hl * Math.sin(ang + 0.38));
     ctx.closePath(); ctx.fill();
   } else {
+    const pts = stroke.points.length >= 3 ? chaikin(stroke.points) : stroke.points;
     ctx.beginPath();
-    ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
-    for (let i = 1; i < stroke.points.length; i++) {
-      const mx = (stroke.points[i - 1].x + stroke.points[i].x) / 2;
-      const my = (stroke.points[i - 1].y + stroke.points[i].y) / 2;
-      ctx.quadraticCurveTo(stroke.points[i - 1].x, stroke.points[i - 1].y, mx, my);
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length; i++) {
+      const mx = (pts[i - 1].x + pts[i].x) / 2;
+      const my = (pts[i - 1].y + pts[i].y) / 2;
+      ctx.quadraticCurveTo(pts[i - 1].x, pts[i - 1].y, mx, my);
     }
-    ctx.lineTo(stroke.points[stroke.points.length - 1].x, stroke.points[stroke.points.length - 1].y);
+    ctx.lineTo(pts[pts.length - 1].x, pts[pts.length - 1].y);
     ctx.stroke();
   }
   ctx.restore();
@@ -152,6 +175,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
 ) {
   const containerRef    = useRef<HTMLDivElement>(null);
   const canvasRef       = useRef<HTMLCanvasElement>(null);
+  const hlCanvasRef     = useRef<HTMLCanvasElement | null>(null);  // offscreen canvas for highlight batching
   const activeStrokeRef = useRef<Stroke | null>(null);
   const isDrawingRef    = useRef(false);
   const viewportRef     = useRef(viewport);
@@ -185,9 +209,10 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     if (!canvas || !container) return;
 
     const { width, height } = container.getBoundingClientRect();
-    if (canvas.width !== Math.round(width) || canvas.height !== Math.round(height)) {
-      canvas.width  = Math.round(width);
-      canvas.height = Math.round(height);
+    const w = Math.round(width), h = Math.round(height);
+    if (canvas.width !== w || canvas.height !== h) {
+      canvas.width  = w;
+      canvas.height = h;
     }
 
     const ctx = canvas.getContext("2d");
@@ -199,15 +224,46 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     ctx.translate(vp.x, vp.y);
     ctx.scale(vp.zoom, vp.zoom);
 
-    // Other users — slightly faded
+    // ── Other users' strokes — slightly faded ─────────────────────────
     ctx.globalAlpha = 0.7;
     for (const layer of otherLayers) {
       for (const s of layer.strokes) drawStroke(ctx, s);
     }
     ctx.globalAlpha = 1;
 
-    for (const s of myStrokesRef.current) drawStroke(ctx, s);
-    if (activeStrokeRef.current) drawStroke(ctx, activeStrokeRef.current);
+    // ── Collect all "my" strokes (committed + in-progress) ────────────
+    const allMine: Stroke[] = [
+      ...myStrokesRef.current,
+      ...(activeStrokeRef.current ? [activeStrokeRef.current] : []),
+    ];
+
+    const nonHighlights = allMine.filter((s) => s.tool !== "highlight");
+    const highlights    = allMine.filter((s) => s.tool === "highlight");
+
+    // Non-highlight strokes drawn normally
+    for (const s of nonHighlights) drawStroke(ctx, s);
+
+    // Highlight strokes batched to an offscreen canvas at full opacity,
+    // then composited at 0.35 — prevents compounding at intersections.
+    if (highlights.length > 0) {
+      if (!hlCanvasRef.current) hlCanvasRef.current = document.createElement("canvas");
+      const hl = hlCanvasRef.current;
+      if (hl.width !== w || hl.height !== h) { hl.width = w; hl.height = h; }
+      const hlCtx = hl.getContext("2d");
+      if (hlCtx) {
+        hlCtx.clearRect(0, 0, w, h);
+        hlCtx.save();
+        hlCtx.translate(vp.x, vp.y);
+        hlCtx.scale(vp.zoom, vp.zoom);
+        for (const s of highlights) drawStroke(hlCtx, s, 1);
+        hlCtx.restore();
+        ctx.restore(); // pop the transform before drawImage (drawImage works in screen space)
+        ctx.globalAlpha = 0.35;
+        ctx.drawImage(hl, 0, 0);
+        ctx.globalAlpha = 1;
+        return; // already restored
+      }
+    }
 
     ctx.restore();
   }, [otherLayers]);
@@ -332,6 +388,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
   function onDown(e: React.PointerEvent) {
     if (tool === "hand") return;
     e.preventDefault();
+    e.stopPropagation();
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
     const pt = toCanvas(e);
     if (tool === "eraser") { eraseAt(pt.x, pt.y); return; }
@@ -352,6 +409,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
 
   function onMove(e: React.PointerEvent) {
     if (tool === "hand" || !isDrawingRef.current || !activeStrokeRef.current) return;
+    e.stopPropagation();
     const pt = toCanvas(e);
     if (tool === "eraser") { if (e.buttons & 1) eraseAt(pt.x, pt.y); return; }
     if (activeStrokeRef.current.tool === "arrow") {
@@ -360,6 +418,11 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
         points: [activeStrokeRef.current.points[0], pt],
       };
     } else {
+      // Minimum distance threshold: skip redundant points (important at high sample rates)
+      const pts  = activeStrokeRef.current.points;
+      const last = pts[pts.length - 1];
+      const dx = pt.x - last.x, dy = pt.y - last.y;
+      if (dx * dx + dy * dy < MIN_DIST_SQ) return;
       activeStrokeRef.current.points.push(pt);
     }
     cancelAnimationFrame(rafRef.current);
@@ -394,7 +457,10 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     <div
       ref={containerRef}
       className="drawing-canvas-wrap"
-      style={{ pointerEvents: tool === "hand" ? "none" : "auto" }}
+      style={{
+        pointerEvents: tool === "hand" ? "none" : "auto",
+        touchAction:   tool === "hand" ? "auto" : "none",
+      }}
     >
       <canvas
         ref={canvasRef}
