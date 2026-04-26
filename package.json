@@ -18,6 +18,9 @@
     "tafsir:ingest": "npx tsx scripts/ingest-tafsir.ts",
     "tafsir:sources": "npx tsx scripts/ingest-tafsir.ts --list-sources"
   },
+  "engines": {
+    "node": ">=20.0.0 <21.0.0"
+  },
   "prisma": {
     "seed": "npm run db:seed"
   },
