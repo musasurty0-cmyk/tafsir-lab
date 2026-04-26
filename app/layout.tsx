@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Sans, IBM_Plex_Serif, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
-import NameEntryModal from "@/components/NameEntryModal";
 
 const plex = IBM_Plex_Sans({
   subsets: ["latin"],
@@ -47,7 +46,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         style={{ fontFamily: "var(--font-sans), system-ui, sans-serif" }}
       >
         {children}
-        <NameEntryModal />
       </body>
     </html>
   );

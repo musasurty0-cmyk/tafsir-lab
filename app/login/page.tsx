@@ -45,7 +45,7 @@ export default function LoginPage() {
 
         {/* Logo */}
         <div className="login-logo">
-          <div className="login-logo-mark">ط</div>
+          <div className="login-logo-mark">T</div>
         </div>
 
         <h1 className="login-title">TafsirLab</h1>
