@@ -28,7 +28,7 @@ export default async function HomePage() {
   }
 
   const [workspaces, lastPage, user, latestSurahs, chapters] = await Promise.all([
-    listForUser(userId),
+    listForUser(userId).catch((e) => { console.error("[home] listForUser failed:", e); throw e; }),
 
     db.page.findFirst({
       where: {
@@ -47,21 +47,21 @@ export default async function HomePage() {
           },
         },
       },
-    }),
+    }).catch((e) => { console.error("[home] lastPage query failed:", e); throw e; }),
 
     db.user.findUnique({
       where:  { id: userId },
       select: { name: true, avatarUrl: true },
-    }),
+    }).catch((e) => { console.error("[home] user query failed:", e); throw e; }),
 
     db.workspaceSurah.findMany({
       where:    { workspace: { members: { some: { userId } } } },
       orderBy:  { startedAt: "desc" },
       distinct: ["workspaceId"],
       select:   { workspaceId: true, surahNumber: true, startedAt: true },
-    }),
+    }).catch((e) => { console.error("[home] latestSurahs query failed:", e); throw e; }),
 
-    fetchChapters(),
+    fetchChapters().catch((e) => { console.error("[home] fetchChapters failed:", e); throw e; }),
   ]);
 
   // Build lightweight lookup: surahNumber → { name, arabic }
