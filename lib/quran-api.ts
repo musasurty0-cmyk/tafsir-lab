@@ -1,17 +1,20 @@
-import type { Chapter, Verse, VerseResponse } from "./types";
+import { unstable_cache } from "next/cache";
+import type { Chapter, Verse } from "./types";
 
 const BASE = "https://api.quran.com/api/v4";
 
-export async function fetchChapters(): Promise<Chapter[]> {
+// ── Raw fetchers (called by the cached wrappers below) ─────────────────────
+
+async function _fetchChapters(): Promise<Chapter[]> {
   const res = await fetch(`${BASE}/chapters?language=en`, {
-    next: { revalidate: 86400 }, // cache 24h
+    next: { revalidate: 86400 },
   });
   if (!res.ok) throw new Error(`chapters fetch failed: ${res.status}`);
   const data = await res.json();
   return data.chapters as Chapter[];
 }
 
-export async function fetchChapter(id: number): Promise<Chapter> {
+async function _fetchChapter(id: number): Promise<Chapter> {
   const res = await fetch(`${BASE}/chapters/${id}?language=en`, {
     next: { revalidate: 86400 },
   });
@@ -20,14 +23,14 @@ export async function fetchChapter(id: number): Promise<Chapter> {
   return data.chapter as Chapter;
 }
 
-export async function fetchVerses(surahId: number): Promise<Verse[]> {
+async function _fetchVerses(surahId: number): Promise<Verse[]> {
   const params = new URLSearchParams({
     language: "en",
     words: "true",
-    translations: "20", // Saheeh International (ID 20)
+    translations: "20",
     fields: "text_uthmani",
     word_fields: "text_uthmani,transliteration",
-    per_page: "50",
+    per_page: "286", // max per page — avoids pagination for all but Al-Baqarah
     page: "1",
   });
 
@@ -45,13 +48,34 @@ export async function fetchVerses(surahId: number): Promise<Verse[]> {
     const data = await res.json();
     if (!data.verses) throw new Error(`Unexpected API response: ${JSON.stringify(data).slice(0, 200)}`);
     all.push(...data.verses);
-    // API returns either data.pagination or data.meta depending on version
     totalPages = (data.pagination ?? data.meta)?.total_pages ?? 1;
     page++;
   }
 
   return all;
 }
+
+// ── Cached exports ─────────────────────────────────────────────────────────
+// unstable_cache stores results in Next.js's shared data cache (persists across
+// Lambda invocations on Vercel). Quran text never changes so 24-hour TTL is safe.
+
+export const fetchChapters = unstable_cache(
+  _fetchChapters,
+  ["quran-chapters"],
+  { revalidate: 86400, tags: ["quran"] }
+);
+
+export const fetchChapter = unstable_cache(
+  _fetchChapter,
+  ["quran-chapter"],
+  { revalidate: 86400, tags: ["quran"] }
+);
+
+export const fetchVerses = unstable_cache(
+  _fetchVerses,
+  ["quran-verses"],
+  { revalidate: 86400, tags: ["quran"] }
+);
 
 export async function fetchWordDetails(wordKey: string) {
   // wordKey format: "surahId:verseId:wordPosition"

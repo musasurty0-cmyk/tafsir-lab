@@ -29,28 +29,29 @@ export default async function PageViewPage({
 
   if (isNaN(surahNumber) || surahNumber < 1 || surahNumber > 114) notFound();
 
-  const { userId } = await getSession();
+  // ── Round 1: everything that doesn't depend on each other ──────────────
+  // getSession, workspaceSurah lookup, and Quran data all run simultaneously.
+  const [{ userId }, workspaceSurah, chapter, verses] = await Promise.all([
+    getSession(),
+    db.workspaceSurah.findUnique({
+      where: { workspaceId_surahNumber: { workspaceId, surahNumber } },
+      select: { id: true },
+    }),
+    fetchChapter(surahNumber),   // served from cache after first hit
+    fetchVerses(surahNumber),    // served from cache after first hit
+  ]);
 
-  // Resolve workspace_surah.
-  const workspaceSurah = await db.workspaceSurah.findUnique({
-    where: { workspaceId_surahNumber: { workspaceId, surahNumber } },
-    select: { id: true },
-  });
   if (!workspaceSurah) notFound();
 
-  // Fetch all stable data in parallel.
-  const [{ workspace, role }, pages, page, chapter, verses] = await Promise.all([
+  // ── Round 2: auth-dependent queries + group progress ─────────────────
+  const [{ workspace, role }, pages, page, groupProgressMap] = await Promise.all([
     WorkspacesService.getWorkspaceWithRole(workspaceId, userId),
     PagesService.listPages(workspaceSurah.id, userId, { includeArchived: false }),
     PagesService.getPage(pageId, userId).catch(() => null),
-    fetchChapter(surahNumber),
-    fetchVerses(surahNumber),
+    ProgressService.getGroupProgress(pageId, userId).catch(
+      () => new Map<string, { status: ProgressService.ProgressStatus; lastChangedBy: string }>()
+    ),
   ]);
-
-  // Group progress for the active page — fetch only if page exists.
-  const groupProgressMap = page
-    ? await ProgressService.getGroupProgress(pageId, userId)
-    : new Map<string, { status: ProgressService.ProgressStatus; lastChangedBy: string }>();
 
   // Serialize Map → plain object for the RSC → client boundary.
   const groupProgress = Object.fromEntries(groupProgressMap);
