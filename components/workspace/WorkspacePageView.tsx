@@ -354,6 +354,7 @@ export default function WorkspacePageView({
         notes={notes}
         groupProgress={groupProgress}
         personalProgress={personalProgress}
+        currentUserId={currentUserId}
         onOpenTafsir={openTafsir}
         onProgressChange={handleProgressChange}
         onNoteCreated={handleNoteCreated}

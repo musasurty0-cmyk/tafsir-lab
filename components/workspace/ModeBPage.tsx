@@ -333,6 +333,15 @@ export default function ModeBPage({
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
+      onCopy={(e) => e.preventDefault()}
+      onContextMenu={(e) => e.preventDefault()}
+      style={{
+        // Prevent iOS from showing copy/paste/translate popup when palm
+        // rests on the canvas — even when DrawingCanvas passes events through
+        WebkitTouchCallout: "none",
+        WebkitUserSelect:   "none",
+        userSelect:         "none",
+      } as React.CSSProperties}
     >
       {/* ── Transformed inner layer ── */}
       <div

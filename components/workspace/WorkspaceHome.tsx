@@ -11,7 +11,7 @@
  * Rail is rendered here (fetches workspaces itself).
  */
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useLayoutEffect } from "react";
 import { useRouter } from "next/navigation";
 import type { Chapter } from "@/lib/types";
 import type { MemberRole } from "@/lib/services/workspaces.service";
@@ -38,6 +38,13 @@ export default function WorkspaceHome({
   workspaceSurahs,
 }: Props) {
   const router = useRouter();
+
+  // Remove navigation splash screen injected by HomeClient on mount.
+  useLayoutEffect(() => {
+    document.getElementById("tl-nav-splash")?.remove();
+    document.getElementById("tl-nav-splash-style")?.remove();
+  }, []);
+
   const [starting,   setStarting]   = useState<number | null>(null);
   const [filter,     setFilter]     = useState<"all" | "started" | "not-started">("all");
   const [prevFilter, setPrevFilter] = useState(filter);

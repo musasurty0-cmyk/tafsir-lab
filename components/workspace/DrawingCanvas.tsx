@@ -344,16 +344,21 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     cancelAnimationFrame(rafRef.current);
   }, []);
 
-  // ── Suppress iOS long-press callout (copy/search/translate popup) ─────
+  // ── Suppress iOS long-press callout / copy / context menu ───────────
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
     const prevent = (e: Event) => e.preventDefault();
-    el.addEventListener("contextmenu", prevent);
-    el.addEventListener("selectstart", prevent);
+    el.addEventListener("contextmenu",  prevent);
+    el.addEventListener("selectstart",  prevent);
+    el.addEventListener("copy",         prevent);
+    // Non-passive touchstart lets us block palm-resting copy on iOS
+    el.addEventListener("touchstart",   prevent, { passive: false });
     return () => {
-      el.removeEventListener("contextmenu", prevent);
-      el.removeEventListener("selectstart", prevent);
+      el.removeEventListener("contextmenu",  prevent);
+      el.removeEventListener("selectstart",  prevent);
+      el.removeEventListener("copy",         prevent);
+      el.removeEventListener("touchstart",   prevent);
     };
   }, []);
 
@@ -507,7 +512,9 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
         className="drawing-canvas-el"
         style={{ cursor }}
         onPointerDown={(e) => {
-          if (e.pointerType === "pen") e.preventDefault();
+          // Prevent iOS from converting any drawing touch into a text-selection
+          // gesture (which triggers the copy popup when palm is resting on screen).
+          if (tool !== "hand") e.preventDefault();
           onDown(e);
         }}
         onPointerMove={onMove}

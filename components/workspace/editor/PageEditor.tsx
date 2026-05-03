@@ -34,6 +34,12 @@ import {
   type SlashCommandItem,
 } from "./SlashCommand";
 import CommandList, { type CommandListHandle } from "./CommandList";
+import {
+  RemoteCursorsExtension,
+  setRemoteCursors,
+  getUserColor,
+  type RemoteCursor,
+} from "./RemoteCursorsExtension";
 
 // ── Constants ─────────────────────────────────────────────────────────────
 
@@ -49,7 +55,21 @@ const EMPTY_DOC = {
 interface Props {
   pageId:         string;
   initialContent: unknown; // page.tiptapContent from DB (JSON or null)
+  currentUserId:  string;
 }
+
+// ── Presence types ────────────────────────────────────────────────────────
+
+interface PresenceUser {
+  userId:    string;
+  isTyping:  boolean;
+  cursorFrom: number | null;
+  cursorTo:   number | null;
+  user: { id: string; name: string; avatarUrl: string | null };
+}
+
+const CURSOR_SEND_DEBOUNCE = 400;  // ms — how often we POST our own cursor
+const CURSOR_POLL_INTERVAL = 1800; // ms — how often we poll remote cursors
 
 // ── Slash command portal state ────────────────────────────────────────────
 
@@ -62,13 +82,16 @@ interface PaletteState {
 
 // ── Component ─────────────────────────────────────────────────────────────
 
-export default function PageEditor({ pageId, initialContent }: Props) {
+export default function PageEditor({ pageId, initialContent, currentUserId }: Props) {
   const [palette, setPalette]   = useState<PaletteState | null>(null);
   const commandListRef          = useRef<CommandListHandle>(null);
   const ALL_COMMANDS            = useRef(buildCommands());
 
   // ── Save helper ───────────────────────────────────────────────────────
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // ── Cursor send debounce ──────────────────────────────────────────────
+  const cursorTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const scheduleSave = useCallback(
     (editor: Editor) => {
@@ -84,7 +107,10 @@ export default function PageEditor({ pageId, initialContent }: Props) {
     [pageId]
   );
 
-  useEffect(() => () => { if (saveTimer.current) clearTimeout(saveTimer.current); }, []);
+  useEffect(() => () => {
+    if (saveTimer.current)   clearTimeout(saveTimer.current);
+    if (cursorTimer.current) clearTimeout(cursorTimer.current);
+  }, []);
 
   // ── TipTap editor ─────────────────────────────────────────────────────
   const editor = useEditor({
@@ -104,6 +130,7 @@ export default function PageEditor({ pageId, initialContent }: Props) {
       }),
 
       AyahBlockExtension,
+      RemoteCursorsExtension,
 
       SlashCommandExtension.configure({
         suggestion: {
@@ -171,6 +198,19 @@ export default function PageEditor({ pageId, initialContent }: Props) {
       scheduleSave(editor);
     },
 
+    onSelectionUpdate({ editor }) {
+      // Debounce cursor position POST so we don't spam the API on every keystroke
+      if (cursorTimer.current) clearTimeout(cursorTimer.current);
+      cursorTimer.current = setTimeout(() => {
+        const { from, to } = editor.state.selection;
+        fetch(`/api/pages/${pageId}/presence`, {
+          method:  "POST",
+          headers: { "Content-Type": "application/json" },
+          body:    JSON.stringify({ isTyping: true, cursorFrom: from, cursorTo: to }),
+        }).catch(() => {});
+      }, CURSOR_SEND_DEBOUNCE);
+    },
+
     editorProps: {
       attributes: {
         class: "page-editor-content",
@@ -191,6 +231,40 @@ export default function PageEditor({ pageId, initialContent }: Props) {
     },
     [palette]
   );
+
+  // ── Poll remote cursors and apply decorations ─────────────────────────
+  useEffect(() => {
+    if (!editor || !pageId) return;
+
+    function poll() {
+      if (document.visibilityState !== "visible") return;
+      fetch(`/api/pages/${pageId}/presence`)
+        .then((r) => r.ok ? r.json() : null)
+        .then((data: { presence?: PresenceUser[] } | null) => {
+          if (!data?.presence || !editor || editor.isDestroyed) return;
+          const cursors: RemoteCursor[] = data.presence
+            .filter((p) => p.user?.id !== currentUserId && p.cursorFrom != null)
+            .map((p) => ({
+              userId: p.user.id,
+              name:   p.user.name,
+              color:  getUserColor(p.user.id),
+              from:   p.cursorFrom!,
+              to:     p.cursorTo ?? p.cursorFrom!,
+            }));
+          setRemoteCursors(editor, cursors);
+        })
+        .catch(() => {});
+    }
+
+    poll();
+    const interval = setInterval(poll, CURSOR_POLL_INTERVAL);
+    document.addEventListener("visibilitychange", poll);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", poll);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editor, pageId, currentUserId]);
 
   // ── Render ────────────────────────────────────────────────────────────
   return (

@@ -29,11 +29,16 @@ export async function POST(
   try {
     const { userId } = await getSession();
     const { pageId } = await params;
-    const { isTyping = false } = await req.json().catch(() => ({})) as { isTyping?: boolean };
+    const body = await req.json().catch(() => ({})) as {
+      isTyping?: boolean;
+      cursorFrom?: number | null;
+      cursorTo?: number | null;
+    };
+    const { isTyping = false, cursorFrom = null, cursorTo = null } = body;
     await db.pagePresence.upsert({
-      where: { pageId_userId: { pageId, userId } },
-      create: { pageId, userId, isTyping },
-      update: { isTyping, updatedAt: new Date() },
+      where:  { pageId_userId: { pageId, userId } },
+      create: { pageId, userId, isTyping, cursorFrom, cursorTo },
+      update: { isTyping, cursorFrom, cursorTo, updatedAt: new Date() },
     });
     return NextResponse.json({ ok: true });
   } catch {

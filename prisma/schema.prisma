@@ -340,11 +340,13 @@ model TafsirFetchJob {
 // PAGE PRESENCE (live collaboration — who is on the page)
 // ─────────────────────────────────────────────────────────────
 model PagePresence {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  pageId    String   @db.Uuid
-  userId    String   @db.Uuid
-  isTyping  Boolean  @default(false)
-  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  pageId     String   @db.Uuid
+  userId     String   @db.Uuid
+  isTyping   Boolean  @default(false)
+  cursorFrom Int?
+  cursorTo   Int?
+  updatedAt  DateTime @updatedAt @db.Timestamptz(6)
 
   page Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)

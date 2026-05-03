@@ -45,6 +45,7 @@ interface Props {
   notes:             NoteData[];
   groupProgress:     Record<string, { status: ProgressStatus; lastChangedBy: string }>;
   personalProgress:  Record<string, ProgressStatus>;
+  currentUserId:     string;
   // Split-view: highlighted verse key from Mode B (scroll + flash)
   highlightedVerseKey?: string | null;
   // Callbacks delegated up to WorkspacePageView
@@ -103,6 +104,7 @@ export default function ModeAPage({
   notes,
   groupProgress,
   personalProgress,
+  currentUserId,
   onOpenTafsir,
   onProgressChange,
   onNoteCreated,
@@ -161,6 +163,7 @@ export default function ModeAPage({
           <PageEditor
             pageId={pageId}
             initialContent={page.tiptapContent}
+            currentUserId={currentUserId}
           />
 
         </div>
