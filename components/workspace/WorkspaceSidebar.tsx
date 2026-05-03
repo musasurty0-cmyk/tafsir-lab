@@ -273,12 +273,14 @@ export default function WorkspaceSidebar({
 
         {filtered.map((page) => {
           const isActive = page.id === activePageId;
+          const href = `/workspaces/${workspaceId}/surahs/${chapter.id}/pages/${page.id}`;
           return (
-            <div
+            <Link
               key={page.id}
+              href={href}
+              prefetch={true}
               className="tree-row"
               data-active={isActive ? "true" : "false"}
-              onClick={() => onPageSelect(page.id)}
             >
               <div className="tree-label">{page.title}</div>
               <div className="page-row-meta">
@@ -289,7 +291,7 @@ export default function WorkspaceSidebar({
                   <span className="page-admin-dot" title="Admin authored" />
                 )}
               </div>
-            </div>
+            </Link>
           );
         })}
       </div>

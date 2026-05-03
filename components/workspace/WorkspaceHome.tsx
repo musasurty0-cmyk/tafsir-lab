@@ -112,7 +112,6 @@ export default function WorkspaceHome({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             surahNumber: chapter.id,
-            templateId: "00000000-0000-0000-0000-000000000001",
           }),
         });
         if (!res.ok) {
