@@ -21,7 +21,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import * as NotesService from "@/lib/services/notes.service";
-import { WorkspaceError } from "@/lib/services/workspaces.service";
+import { WorkspaceError, getWorkspaceWithRole } from "@/lib/services/workspaces.service";
+import { db } from "@/lib/db";
 
 export async function GET(
   _req: NextRequest,
@@ -31,11 +32,15 @@ export async function GET(
     const { userId } = await getSession();
     const { pageId } = await params;
 
-    // getNotesForPage does not currently check workspace membership.
-    // For Phase 3, we rely on the page existing (invalid pageId returns []).
-    // Phase 4 will add explicit membership check here.
-    void userId; // present for when auth is real
-    const notes = await NotesService.getNotesForPage(pageId);
+    // Resolve the workspaceId from the page so we can check membership and get role.
+    const page = await db.page.findUnique({
+      where: { id: pageId },
+      select: { workspaceSurah: { select: { workspaceId: true } } },
+    });
+    if (!page) return NextResponse.json({ error: "Page not found" }, { status: 404 });
+
+    const { role } = await getWorkspaceWithRole(page.workspaceSurah.workspaceId, userId);
+    const notes = await NotesService.getNotesForPage(pageId, userId, role);
 
     return NextResponse.json({ notes });
   } catch (err) {
@@ -62,6 +67,7 @@ export async function POST(
       wordPosition?: unknown;
       content?:     unknown;
       color?:       unknown;
+      visibility?:  unknown;
     };
 
     // Basic validation — service validates anchor logic and membership.
@@ -80,6 +86,9 @@ export async function POST(
       wordPosition:typeof body.wordPosition=== "number" ? body.wordPosition: undefined,
       content:     body.content,
       color:       typeof body.color === "string" ? body.color : undefined,
+      visibility:  (body.visibility === "private" || body.visibility === "workspace" || body.visibility === "admin")
+                     ? body.visibility
+                     : undefined,
     });
 
     return NextResponse.json({ note }, { status: 201 });

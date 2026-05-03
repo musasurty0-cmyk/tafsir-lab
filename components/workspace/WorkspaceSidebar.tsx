@@ -14,6 +14,8 @@ import { useRouter } from "next/navigation";
 import { ChevronRight, ChevronLeft, Search, X, Plus, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import type { Chapter } from "@/lib/types";
 import type { ProgressStatus } from "@/lib/services/progress.service";
+import type { MemberRole } from "@/lib/services/workspaces.service";
+import { isAdmin } from "@/lib/services/workspaces.service";
 import Link from "next/link";
 
 // ── Icons ──────────────────────────────────────────────────────────────────
@@ -74,6 +76,7 @@ interface Props {
   activePageId:      string;
   groupProgress:     Record<string, { status: ProgressStatus; lastChangedBy: string }>;
   personalProgress:  Record<string, ProgressStatus>;
+  role:              MemberRole;
   onPageSelect:      (pageId: string) => void;
   onPageRenamed:     (id: string, title: string) => void;
   onPageDeleted:     (id: string) => void;
@@ -84,7 +87,7 @@ interface Props {
 // ── PageRow ────────────────────────────────────────────────────────────────
 
 function PageRow({
-  page, isActive, workspaceId, chapter, groupProgress, onRenamed, onDeleted,
+  page, isActive, workspaceId, chapter, groupProgress, showActions, onRenamed, onDeleted,
 }: {
   page:          PageSummary;
   isActive:      boolean;
@@ -92,6 +95,7 @@ function PageRow({
   chapter:       Chapter;
   groupProgress: Record<string, { status: ProgressStatus; lastChangedBy: string }>;
   activePageId:  string;
+  showActions:   boolean;
   onRenamed:     (id: string, title: string) => void;
   onDeleted:     (id: string) => void;
 }) {
@@ -168,24 +172,26 @@ function PageRow({
         )}
       </Link>
 
-      <div className="tree-row-actions">
-        <button
-          className="tree-row-action-btn"
-          title="Rename"
-          onClick={startEdit}
-        >
-          <Pencil size={11} />
-        </button>
-        <button
-          className={`tree-row-action-btn${confirmDelete ? " tree-row-action-btn--danger" : ""}`}
-          title={confirmDelete ? "Click again to confirm delete" : "Delete"}
-          onClick={confirmAndDelete}
-          disabled={deleting}
-          onBlur={() => setConfirmDelete(false)}
-        >
-          <Trash2 size={11} />
-        </button>
-      </div>
+      {showActions && (
+        <div className="tree-row-actions">
+          <button
+            className="tree-row-action-btn"
+            title="Rename"
+            onClick={startEdit}
+          >
+            <Pencil size={11} />
+          </button>
+          <button
+            className={`tree-row-action-btn${confirmDelete ? " tree-row-action-btn--danger" : ""}`}
+            title={confirmDelete ? "Click again to confirm delete" : "Delete"}
+            onClick={confirmAndDelete}
+            disabled={deleting}
+            onBlur={() => setConfirmDelete(false)}
+          >
+            <Trash2 size={11} />
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -200,12 +206,14 @@ export default function WorkspaceSidebar({
   activePageId,
   groupProgress,
   personalProgress: _personalProgress,
+  role,
   onPageSelect: _onPageSelect,
   onPageRenamed,
   onPageDeleted,
   collapsed = false,
   onToggleCollapse,
 }: Props) {
+  const canManagePages = isAdmin(role);
   const router = useRouter();
 
   const [query,        setQuery]        = useState("");
@@ -284,15 +292,17 @@ export default function WorkspaceSidebar({
           <ChevronRight size={12} style={{ color: "var(--ink-4)", transform: "rotate(90deg)" }} />
         </button>
 
-        <button
-          className="rail-btn"
-          style={{ width: 28, height: 28 }}
-          title="New page"
-          onClick={openNewPage}
-          disabled={saving}
-        >
-          <Plus size={14} />
-        </button>
+        {canManagePages && (
+          <button
+            className="rail-btn"
+            style={{ width: 28, height: 28 }}
+            title="New page"
+            onClick={openNewPage}
+            disabled={saving}
+          >
+            <Plus size={14} />
+          </button>
+        )}
 
         {onToggleCollapse && (
           <button
@@ -393,6 +403,7 @@ export default function WorkspaceSidebar({
             chapter={chapter}
             groupProgress={groupProgress}
             activePageId={activePageId}
+            showActions={canManagePages}
             onRenamed={(id, title) => onPageRenamed(id, title)}
             onDeleted={(id) => onPageDeleted(id)}
           />

@@ -6,7 +6,7 @@
  */
 
 import { db } from "@/lib/db";
-import { getWorkspaceWithRole } from "./workspaces.service";
+import { getWorkspaceWithRole, isAdmin, type MemberRole } from "./workspaces.service";
 import { log } from "./activity.service";
 
 export class NoteError extends Error {
@@ -17,6 +17,7 @@ export class NoteError extends Error {
 
 export type NoteType = "text" | "callout" | "linguistic" | "thematic" | "ruling" | "question";
 export type AnchorType = "ayah" | "word" | "page";
+export type NoteVisibility = "private" | "workspace" | "admin";
 
 export interface CreateNoteInput {
   noteType: NoteType;
@@ -30,6 +31,7 @@ export interface CreateNoteInput {
   offsetY?: number;
   width?: number;
   height?: number;
+  visibility?: NoteVisibility;
 }
 
 export interface NoteGeometryPatch {
@@ -63,9 +65,16 @@ function validateAnchor(input: CreateNoteInput) {
 
 // ── Queries ──────────────────────────────────────────────────────────
 
-export async function getNotesForPage(pageId: string) {
+export async function getNotesForPage(pageId: string, userId: string, role: MemberRole) {
   return db.structuredNote.findMany({
-    where: { pageId },
+    where: {
+      pageId,
+      OR: [
+        { visibility: "workspace" },
+        { visibility: "private", authorId: userId },
+        ...(isAdmin(role) ? [{ visibility: "admin" }] : []),
+      ],
+    },
     orderBy: [{ zIndex: "asc" }, { createdAt: "asc" }],
     include: {
       author: { select: { id: true, name: true, avatarUrl: true } },
@@ -118,6 +127,7 @@ export async function createNote(
       offsetY: input.offsetY ?? 0,
       width: input.width ?? 280,
       height: input.height ?? null,
+      visibility: input.visibility ?? "workspace",
     },
     // Include author so callers receive a fully-shaped NoteData without
     // a second round-trip (needed by the Mode A optimistic note creation).

@@ -343,6 +343,7 @@ export default function WorkspacePageView({
         activePageId={activePageId}
         groupProgress={groupProgress}
         personalProgress={personalProgress}
+        role={role}
         onPageSelect={handlePageSelect}
         onPageRenamed={(id, title) =>
           setPageList((prev) => prev.map((p) => p.id === id ? { ...p, title } : p))

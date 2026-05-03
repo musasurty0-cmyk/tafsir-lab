@@ -18,6 +18,7 @@ import type { MemberRole } from "@/lib/services/workspaces.service";
 import type { WorkspaceSurahSummary } from "@/app/workspaces/[workspaceId]/page";
 import Rail from "./Rail";
 import NewWorkspaceModal from "@/components/NewWorkspaceModal";
+import WorkspaceSettings from "./WorkspaceSettings";
 
 const PLACE: Record<string, string> = { makkah: "Makki", madinah: "Madani" };
 
@@ -43,6 +44,7 @@ export default function WorkspaceHome({
   const tabsRef = useRef<Record<string, HTMLButtonElement | null>>({ all: null, started: null, "not-started": null });
   const tabsContainerRef = useRef<HTMLDivElement | null>(null);
   const [modalOpen,  setModalOpen]  = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   // ── Workspace rename (owner only) ──────────────────────────────────────────
   const [wsName,      setWsName]      = useState(workspace.name);
@@ -206,7 +208,7 @@ export default function WorkspaceHome({
             </p>
           </div>
 
-          {/* Workspace actions (owner only) */}
+          {/* Workspace actions */}
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             {role === "owner" && (
               <button
@@ -219,10 +221,10 @@ export default function WorkspaceHome({
             )}
             <button
               className="ws-new-btn ws-new-btn--ghost"
-              title="Coming soon"
-              onClick={() => {}}
+              title="Workspace settings and members"
+              onClick={() => setSettingsOpen(true)}
             >
-              Members
+              Settings
             </button>
             <button
               className="ws-new-btn"
@@ -320,6 +322,25 @@ export default function WorkspaceHome({
     </div>
 
     {modalOpen && <NewWorkspaceModal onClose={() => setModalOpen(false)} />}
+
+    {settingsOpen && (
+      <WorkspaceSettings
+        workspaceId={workspaceId}
+        workspaceName={wsName}
+        workspaceType={workspace.type}
+        currentUserId={workspace.ownerId}
+        currentUserRole={role}
+        onClose={() => setSettingsOpen(false)}
+        onRenamed={(name) => {
+          setWsName(name);
+          setSettingsOpen(false);
+        }}
+        onDeleted={() => {
+          setSettingsOpen(false);
+          router.push("/home");
+        }}
+      />
+    )}
     </>
   );
 }

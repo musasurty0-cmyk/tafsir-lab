@@ -14,6 +14,7 @@ import { useRef, useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { getFirebaseAuth } from "@/lib/firebase/client";
 import NewWorkspaceModal from "@/components/NewWorkspaceModal";
+import JoinWorkspaceModal from "@/components/JoinWorkspaceModal";
 import type { MemberRole } from "@/lib/services/workspaces.service";
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -304,6 +305,7 @@ export default function HomeClient({
   const router = useRouter();
   const [workspaces, setWorkspaces] = useState(initial);
   const [modalOpen,  setModalOpen]  = useState(false);
+  const [joinOpen,   setJoinOpen]   = useState(false);
 
   // Remove any lingering splash when this page mounts (back-navigation)
   useEffect(() => {
@@ -426,7 +428,7 @@ export default function HomeClient({
 
         {/* Join */}
         <div className="home-join-row">
-          <button className="home-join-btn" disabled title="Coming soon">
+          <button className="home-join-btn" onClick={() => setJoinOpen(true)}>
             Join a workspace with an invite code
           </button>
         </div>
@@ -434,6 +436,14 @@ export default function HomeClient({
       </div>
 
       {modalOpen && <NewWorkspaceModal onClose={() => setModalOpen(false)} />}
+      {joinOpen && (
+        <JoinWorkspaceModal
+          onClose={() => {
+            setJoinOpen(false);
+            router.refresh();
+          }}
+        />
+      )}
     </div>
   );
 }

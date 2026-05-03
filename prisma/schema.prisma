@@ -203,6 +203,8 @@ model StructuredNote {
   isMinimized  Boolean  @default(false)
   // true → only admin+ can edit or delete
   isAdmin      Boolean  @default(false)
+  // 'private' | 'workspace' | 'admin'
+  visibility   String   @default("workspace")
   createdAt    DateTime @default(now()) @db.Timestamptz(6)
   updatedAt    DateTime @updatedAt @db.Timestamptz(6)
 

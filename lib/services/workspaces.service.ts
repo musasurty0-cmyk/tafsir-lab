@@ -12,6 +12,7 @@
 
 import { db } from "@/lib/db";
 import { log } from "./activity.service";
+import { randomBytes } from "crypto";
 
 // ── Error type ────────────────────────────────────────────────
 
@@ -219,4 +220,93 @@ export async function startSurah(
   });
 
   return workspaceSurah;
+}
+
+// ── Invite codes ──────────────────────────────────────────────
+
+function generateInviteCode(): string {
+  return randomBytes(5).toString("hex").toUpperCase(); // 10-char uppercase hex
+}
+
+export async function regenerateInviteCode(workspaceId: string, userId: string): Promise<string> {
+  const { role } = await getWorkspaceWithRole(workspaceId, userId);
+  if (!isAdmin(role)) throw new WorkspaceError("Only admins can regenerate invite codes", "FORBIDDEN");
+  const code = generateInviteCode();
+  await db.workspace.update({ where: { id: workspaceId }, data: { inviteCode: code } });
+  return code;
+}
+
+export async function joinByInviteCode(code: string, userId: string) {
+  const workspace = await db.workspace.findUnique({ where: { inviteCode: code } });
+  if (!workspace) throw new WorkspaceError("Invalid invite code", "NOT_FOUND");
+  if (workspace.type !== "group") throw new WorkspaceError("This workspace is private", "FORBIDDEN");
+
+  const existing = await db.workspaceMember.findUnique({
+    where: { workspaceId_userId: { workspaceId: workspace.id, userId } },
+  });
+  if (existing) throw new WorkspaceError("Already a member", "CONFLICT");
+
+  await db.workspaceMember.create({
+    data: { workspaceId: workspace.id, userId, role: "member" },
+  });
+  return workspace;
+}
+
+export async function listMembers(workspaceId: string, userId: string) {
+  await getWorkspaceWithRole(workspaceId, userId); // verify membership
+  return db.workspaceMember.findMany({
+    where: { workspaceId },
+    include: { user: { select: { id: true, name: true, avatarUrl: true } } },
+    orderBy: { joinedAt: "asc" },
+  });
+}
+
+export async function setMemberRole(
+  workspaceId: string,
+  targetUserId: string,
+  newRole: "admin" | "member",
+  actingUserId: string
+) {
+  const [{ role: actingRole }, target] = await Promise.all([
+    getWorkspaceWithRole(workspaceId, actingUserId),
+    db.workspaceMember.findUnique({ where: { workspaceId_userId: { workspaceId, userId: targetUserId } } }),
+  ]);
+  if (actingRole !== "owner") throw new WorkspaceError("Only the owner can change roles", "FORBIDDEN");
+  if (!target) throw new WorkspaceError("Member not found", "NOT_FOUND");
+  if (target.role === "owner") throw new WorkspaceError("Cannot change owner role", "FORBIDDEN");
+  return db.workspaceMember.update({
+    where: { workspaceId_userId: { workspaceId, userId: targetUserId } },
+    data: { role: newRole },
+  });
+}
+
+export async function removeMember(workspaceId: string, targetUserId: string, actingUserId: string) {
+  const [{ role: actingRole }, target] = await Promise.all([
+    getWorkspaceWithRole(workspaceId, actingUserId),
+    db.workspaceMember.findUnique({ where: { workspaceId_userId: { workspaceId, userId: targetUserId } } }),
+  ]);
+  if (!isAdmin(actingRole)) throw new WorkspaceError("Only admins can remove members", "FORBIDDEN");
+  if (!target) throw new WorkspaceError("Member not found", "NOT_FOUND");
+  if (target.role === "owner") throw new WorkspaceError("Cannot remove the owner", "FORBIDDEN");
+  await db.workspaceMember.delete({ where: { workspaceId_userId: { workspaceId, userId: targetUserId } } });
+}
+
+export async function leaveWorkspace(workspaceId: string, userId: string) {
+  const { role } = await getWorkspaceWithRole(workspaceId, userId);
+  if (role === "owner") throw new WorkspaceError("Owner cannot leave — transfer ownership first", "FORBIDDEN");
+  await db.workspaceMember.delete({ where: { workspaceId_userId: { workspaceId, userId } } });
+}
+
+export async function deleteWorkspace(workspaceId: string, userId: string) {
+  const { role } = await getWorkspaceWithRole(workspaceId, userId);
+  if (role !== "owner") throw new WorkspaceError("Only the owner can delete the workspace", "FORBIDDEN");
+  await db.workspace.delete({ where: { id: workspaceId } });
+}
+
+export async function ensureInviteCode(workspaceId: string): Promise<string> {
+  const ws = await db.workspace.findUnique({ where: { id: workspaceId }, select: { inviteCode: true } });
+  if (ws?.inviteCode) return ws.inviteCode;
+  const code = generateInviteCode();
+  await db.workspace.update({ where: { id: workspaceId }, data: { inviteCode: code } });
+  return code;
 }

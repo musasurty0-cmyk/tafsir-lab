@@ -10,6 +10,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { renameWorkspace, WorkspaceError } from "@/lib/services/workspaces.service";
+import * as WorkspacesService from "@/lib/services/workspaces.service";
 
 export async function PATCH(
   req: NextRequest,
@@ -33,5 +34,20 @@ export async function PATCH(
     }
     console.error("[workspaces PATCH]", err);
     return NextResponse.json({ error: "Failed to rename workspace" }, { status: 500 });
+  }
+}
+
+export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ workspaceId: string }> }) {
+  try {
+    const { userId } = await getSession();
+    const { workspaceId } = await params;
+    await WorkspacesService.deleteWorkspace(workspaceId, userId);
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    if (err instanceof WorkspaceError) {
+      const s = err.code === "NOT_FOUND" ? 404 : err.code === "FORBIDDEN" ? 403 : 400;
+      return NextResponse.json({ error: err.message }, { status: s });
+    }
+    return NextResponse.json({ error: String(err) }, { status: 500 });
   }
 }
