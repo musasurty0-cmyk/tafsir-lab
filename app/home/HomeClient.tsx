@@ -10,7 +10,7 @@
  *   JoinRow       — secondary invite-code action
  */
 
-import { useRef, useState } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { getFirebaseAuth } from "@/lib/firebase/client";
 import NewWorkspaceModal from "@/components/NewWorkspaceModal";
@@ -92,14 +92,15 @@ function WelcomeHero({
   surahNames,
   totalSurahs,
   onCreateWorkspace,
+  onNavigate,
 }: {
   user:              UserInfo | null;
   lastPage:          LastPage | null;
   surahNames:        Record<number, SurahName>;
   totalSurahs:       number;
   onCreateWorkspace: () => void;
+  onNavigate:        (href: string) => void;
 }) {
-  const router = useRouter();
 
   const name = user?.name ? firstName(user.name) : null;
 
@@ -132,8 +133,8 @@ function WelcomeHero({
           className="hw-resume"
           role="button"
           tabIndex={0}
-          onClick={() => router.push(href)}
-          onKeyDown={(e) => { if (e.key === "Enter") router.push(href); }}
+          onClick={() => onNavigate(href)}
+          onKeyDown={(e) => { if (e.key === "Enter") onNavigate(href); }}
         >
           <div className="hw-resume-accent" />
           <div className="hw-resume-body">
@@ -153,7 +154,7 @@ function WelcomeHero({
           </div>
           <button
             className="hw-resume-btn"
-            onClick={(e) => { e.stopPropagation(); router.push(href); }}
+            onClick={(e) => { e.stopPropagation(); onNavigate(href); }}
           >
             Resume Study <ArrowIcon />
           </button>
@@ -186,12 +187,13 @@ function WorkspaceCard({
   ws,
   surahNames,
   onRenamed,
+  onNavigate,
 }: {
   ws:         WorkspaceItem;
   surahNames: Record<number, SurahName>;
   onRenamed:  (id: string, name: string) => void;
+  onNavigate: (href: string) => void;
 }) {
-  const router   = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const isOwner  = ws.role === "owner";
 
@@ -237,8 +239,8 @@ function WorkspaceCard({
       className="hw-ws-card"
       role="button"
       tabIndex={0}
-      onClick={() => !editing && router.push(`/workspaces/${ws.id}`)}
-      onKeyDown={(e) => { if (e.key === "Enter" && !editing) router.push(`/workspaces/${ws.id}`); }}
+      onClick={() => !editing && onNavigate(`/workspaces/${ws.id}`)}
+      onKeyDown={(e) => { if (e.key === "Enter" && !editing) onNavigate(`/workspaces/${ws.id}`); }}
     >
       {/* Card header */}
       <div className="hw-ws-card-header">
@@ -303,6 +305,46 @@ export default function HomeClient({
   const [workspaces, setWorkspaces] = useState(initial);
   const [modalOpen,  setModalOpen]  = useState(false);
 
+  // Remove any lingering splash when this page mounts (back-navigation)
+  useEffect(() => {
+    document.getElementById("tl-nav-splash")?.remove();
+    document.getElementById("tl-nav-splash-style")?.remove();
+  }, []);
+
+  const navigate = useCallback((href: string) => {
+    if (!document.getElementById("tl-nav-splash")) {
+      // Fully self-contained — inline styles + injected keyframes,
+      // no dependency on globals.css classes.
+      const style = document.createElement("style");
+      style.id = "tl-nav-splash-style";
+      style.textContent = `
+        @keyframes _tl_spin  { to { transform: rotate(360deg); } }
+        @keyframes _tl_fadein { from { opacity:0; transform:scale(.8); } to { opacity:1; transform:scale(1); } }
+      `;
+      document.head.appendChild(style);
+
+      const el = document.createElement("div");
+      el.id = "tl-nav-splash";
+      el.style.cssText = [
+        "position:fixed", "inset:0", "z-index:2147483647",
+        "background:#f5f4ef",
+        "display:flex", "flex-direction:column",
+        "align-items:center", "justify-content:center", "gap:20px",
+      ].join(";");
+
+      el.innerHTML = `
+        <div style="position:relative;width:72px;height:72px;display:flex;align-items:center;justify-content:center;">
+          <div style="position:absolute;inset:0;border-radius:50%;border:2.5px solid transparent;border-top-color:#4d7c5e;border-right-color:#4d7c5e;animation:_tl_spin .9s linear infinite;"></div>
+          <div style="width:52px;height:52px;border-radius:12px;background:#4d7c5e;color:#fff;font-size:26px;font-weight:700;font-family:Georgia,serif;display:flex;align-items:center;justify-content:center;animation:_tl_fadein .3s cubic-bezier(.34,1.56,.64,1) both;">T</div>
+        </div>
+        <div style="font-family:Georgia,serif;font-size:18px;font-weight:600;color:#1c1c1c;letter-spacing:.01em;">TafsirLab</div>
+        <div style="font-family:system-ui,sans-serif;font-size:13px;color:#888;">Loading your workspace…</div>
+      `;
+      document.body.appendChild(el);
+    }
+    router.push(href);
+  }, [router]);
+
   const userInitials = user?.name
     ? user.name.split(" ").map((p) => p[0]).join("").slice(0, 2).toUpperCase()
     : "U";
@@ -347,6 +389,7 @@ export default function HomeClient({
           surahNames={surahNames}
           totalSurahs={totalSurahs}
           onCreateWorkspace={() => setModalOpen(true)}
+          onNavigate={navigate}
         />
 
         {/* Workspaces */}
@@ -373,6 +416,7 @@ export default function HomeClient({
                     ws={ws}
                     surahNames={surahNames}
                     onRenamed={handleRenamed}
+                    onNavigate={navigate}
                   />
                 </div>
               ))}

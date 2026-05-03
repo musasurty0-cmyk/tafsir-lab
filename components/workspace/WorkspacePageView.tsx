@@ -105,6 +105,12 @@ export default function WorkspacePageView({
   // ── Notes — single source of truth for both panes ─────────────────────
   const [notes, setNotes] = useState<NoteData[]>(page?.notes ?? []);
 
+  // Remove navigation splash screen injected by HomeClient on mount.
+  useEffect(() => {
+    document.getElementById("tl-nav-splash")?.remove();
+    document.getElementById("tl-nav-splash-style")?.remove();
+  }, []);
+
   // Reset when navigating to a different page.
   const pageIdRef = useRef(page?.id);
   useEffect(() => {
