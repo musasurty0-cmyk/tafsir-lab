@@ -1,15 +1,17 @@
 /**
  * /workspaces/[workspaceId]/surahs/[surahNumber]/pages/[pageId]
  *
- * Full workspace view: Rail + Sidebar + TopBar + ModeAPage (Phase 3).
- * All stable data fetched server-side; interactive state lives in WorkspacePageView.
+ * Optimised to 2 true parallel rounds — no hidden serial chains.
+ *
+ * Round 1: session + cached Quran data (no DB)
+ * Round 2: ALL 7 DB queries fire simultaneously, zero redundant
+ *          getWorkspaceWithRole calls inside service helpers.
  */
 
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
-import * as WorkspacesService from "@/lib/services/workspaces.service";
-import * as PagesService from "@/lib/services/pages.service";
-import * as ProgressService from "@/lib/services/progress.service";
+import { isAdmin, MemberRole } from "@/lib/services/workspaces.service";
+import { ProgressStatus } from "@/lib/services/progress.service";
 import { db } from "@/lib/db";
 import WorkspacePageView from "@/components/workspace/WorkspacePageView";
 import type { CanvasViewport } from "@/components/workspace/ModeBPage";
@@ -29,45 +31,126 @@ export default async function PageViewPage({
 
   if (isNaN(surahNumber) || surahNumber < 1 || surahNumber > 114) notFound();
 
-  // ── Round 1: everything that doesn't depend on each other ──────────────
-  // getSession, workspaceSurah lookup, and Quran data all run simultaneously.
-  const [{ userId }, workspaceSurah, chapter, verses] = await Promise.all([
+  // ── Round 1: session + cached Quran data (no DB round-trip for Quran) ──
+  const [{ userId }, chapter, verses] = await Promise.all([
     getSession(),
+    fetchChapter(surahNumber),
+    fetchVerses(surahNumber),
+  ]);
+
+  // ── Round 2: all 7 DB queries fire in parallel ──────────────────────────
+  const [
+    workspace,
+    membership,
+    workspaceSurah,
+    rawPages,
+    activePage,
+    userPrefs,
+    progressRecords,
+  ] = await Promise.all([
+    // Access control
+    db.workspace.findUnique({
+      where:  { id: workspaceId },
+      select: { id: true, name: true, type: true, ownerId: true },
+    }),
+    db.workspaceMember.findUnique({
+      where:  { workspaceId_userId: { workspaceId, userId } },
+      select: { role: true },
+    }),
+    // Surah session
     db.workspaceSurah.findUnique({
-      where: { workspaceId_surahNumber: { workspaceId, surahNumber } },
+      where:  { workspaceId_surahNumber: { workspaceId, surahNumber } },
       select: { id: true },
     }),
-    fetchChapter(surahNumber),   // served from cache after first hit
-    fetchVerses(surahNumber),    // served from cache after first hit
+    // Pages list — filter via relation so we don't need workspaceSurahId first
+    db.page.findMany({
+      where:   { workspaceSurah: { workspaceId, surahNumber } },
+      orderBy: { orderIndex: "asc" },
+      select: {
+        id:              true,
+        title:           true,
+        orderIndex:      true,
+        status:          true,
+        isAdminAuthored: true,
+        createdById:     true,
+        createdAt:       true,
+        publishedAt:     true,
+        createdBy: { select: { id: true, name: true, avatarUrl: true } },
+      },
+    }),
+    // Active page with full content
+    db.page.findUnique({
+      where: { id: pageId },
+      include: {
+        workspaceSurah: {
+          include: {
+            workspace: { select: { id: true, name: true, type: true, ownerId: true } },
+          },
+        },
+        createdBy:   { select: { id: true, name: true, avatarUrl: true } },
+        publishedBy: { select: { id: true, name: true, avatarUrl: true } },
+        template:    { select: { id: true, name: true } },
+        notes: {
+          orderBy: [{ zIndex: "asc" }, { createdAt: "asc" }],
+          include: { author: { select: { id: true, name: true, avatarUrl: true } } },
+        },
+      },
+    }),
+    // User prefs for this page
+    db.pageUserPrefs.findUnique({
+      where: { pageId_userId: { pageId, userId } },
+    }),
+    // Group progress
+    db.groupAyahProgress.findMany({
+      where:  { pageId },
+      select: { surahNumber: true, ayahNumber: true, status: true, lastChangedBy: true },
+    }),
   ]);
 
+  // ── Access control ──────────────────────────────────────────────────────
+  if (!workspace)    notFound();
+  if (!membership)   redirect("/home");   // not a member
   if (!workspaceSurah) notFound();
 
-  // ── Round 2: auth-dependent queries + group progress ─────────────────
-  const [{ workspace, role }, pages, page, groupProgressMap] = await Promise.all([
-    WorkspacesService.getWorkspaceWithRole(workspaceId, userId),
-    PagesService.listPages(workspaceSurah.id, userId, { includeArchived: false }),
-    PagesService.getPage(pageId, userId).catch(() => null),
-    ProgressService.getGroupProgress(pageId, userId).catch(
-      () => new Map<string, { status: ProgressService.ProgressStatus; lastChangedBy: string }>()
-    ),
-  ]);
+  const role = membership.role as MemberRole;
 
-  // Serialize Map → plain object for the RSC → client boundary.
-  const groupProgress = Object.fromEntries(groupProgressMap);
+  // ── Inline visibility helpers (mirrors pages.service logic) ────────────
+  function canSeeDraft(page: { createdById: string }) {
+    if (workspace!.type === "private") return workspace!.ownerId === userId;
+    return isAdmin(role) || page.createdById === userId;
+  }
 
-  // Cast Prisma's JsonValue for canvasViewport to the expected CanvasViewport type.
-  const normalizedPage = page
-    ? {
-        ...page,
-        userPrefs: page.userPrefs
-          ? {
-              ...page.userPrefs,
-              canvasViewport: page.userPrefs.canvasViewport as CanvasViewport | null,
-            }
+  const pages = rawPages.filter((p) => {
+    if (p.status === "published") return true;
+    if (p.status === "draft")     return canSeeDraft(p);
+    return false; // archived excluded from sidebar
+  });
+
+  // ── Active page visibility + prefs injection ────────────────────────────
+  let normalizedPage = null;
+  if (activePage) {
+    const visible =
+      activePage.status === "published" ||
+      (activePage.status === "draft"    && canSeeDraft(activePage)) ||
+      (activePage.status === "archived" && isAdmin(role));
+
+    if (visible) {
+      normalizedPage = {
+        ...activePage,
+        userPrefs: userPrefs
+          ? { ...userPrefs, canvasViewport: userPrefs.canvasViewport as CanvasViewport | null }
           : null,
-      }
-    : null;
+      };
+    }
+  }
+
+  // ── Group progress map ──────────────────────────────────────────────────
+  const groupProgress = Object.fromEntries(
+    progressRecords.map((r) => [
+      `${r.surahNumber}:${r.ayahNumber}`,
+      { status: r.status as ProgressStatus, lastChangedBy: r.lastChangedBy },
+    ])
+  );
 
   return (
     <WorkspacePageView
