@@ -1,14 +1,20 @@
 /**
- * GET /api/pages/[pageId]
- *
- * Returns a single page with full content.
- * Draft visibility rules are enforced in pages.service.
- * Returns NOT_FOUND (not FORBIDDEN) for invisible drafts.
+ * GET    /api/pages/[pageId]  — fetch full page
+ * PATCH  /api/pages/[pageId]  — rename  { title: string }
+ * DELETE /api/pages/[pageId]  — permanently delete
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import * as PagesService from "@/lib/services/pages.service";
+
+function errResponse(err: unknown) {
+  if (err instanceof PagesService.PageError) {
+    const status = err.code === "NOT_FOUND" ? 404 : err.code === "FORBIDDEN" ? 403 : 400;
+    return NextResponse.json({ error: err.message }, { status });
+  }
+  return NextResponse.json({ error: String(err) }, { status: 500 });
+}
 
 export async function GET(
   _req: NextRequest,
@@ -17,15 +23,35 @@ export async function GET(
   try {
     const { userId } = await getSession();
     const { pageId } = await params;
-
     const page = await PagesService.getPage(pageId, userId);
-
     return NextResponse.json({ page });
-  } catch (err) {
-    if (err instanceof PagesService.PageError) {
-      const status = err.code === "NOT_FOUND" ? 404 : err.code === "FORBIDDEN" ? 403 : 400;
-      return NextResponse.json({ error: err.message }, { status });
+  } catch (err) { return errResponse(err); }
+}
+
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ pageId: string }> }
+) {
+  try {
+    const { userId } = await getSession();
+    const { pageId } = await params;
+    const body = await req.json() as { title?: string };
+    if (!body.title?.trim()) {
+      return NextResponse.json({ error: "Title is required" }, { status: 400 });
     }
-    return NextResponse.json({ error: String(err) }, { status: 500 });
-  }
+    const page = await PagesService.renamePage(pageId, userId, body.title);
+    return NextResponse.json({ page });
+  } catch (err) { return errResponse(err); }
+}
+
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ pageId: string }> }
+) {
+  try {
+    const { userId } = await getSession();
+    const { pageId } = await params;
+    await PagesService.deletePage(pageId, userId);
+    return NextResponse.json({ ok: true });
+  } catch (err) { return errResponse(err); }
 }

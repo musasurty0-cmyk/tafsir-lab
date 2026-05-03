@@ -104,6 +104,7 @@ export default function WorkspacePageView({
 
   // ── Notes — single source of truth for both panes ─────────────────────
   const [notes, setNotes] = useState<NoteData[]>(page?.notes ?? []);
+  const [pageList, setPageList] = useState(() => pages);
 
   // Remove navigation splash screen injected by HomeClient on mount.
   useEffect(() => {
@@ -338,11 +339,17 @@ export default function WorkspacePageView({
         workspaceId={workspaceId}
         workspaceName={workspace.name}
         chapter={chapter}
-        pages={pages}
+        pages={pageList}
         activePageId={activePageId}
         groupProgress={groupProgress}
         personalProgress={personalProgress}
         onPageSelect={handlePageSelect}
+        onPageRenamed={(id, title) =>
+          setPageList((prev) => prev.map((p) => p.id === id ? { ...p, title } : p))
+        }
+        onPageDeleted={(id) =>
+          setPageList((prev) => prev.filter((p) => p.id !== id))
+        }
         collapsed={sidebarCollapsed}
         onToggleCollapse={toggleSidebar}
       />

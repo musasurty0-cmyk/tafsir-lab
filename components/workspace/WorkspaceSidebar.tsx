@@ -11,7 +11,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronRight, ChevronLeft, Search, X, Plus } from "lucide-react";
+import { ChevronRight, ChevronLeft, Search, X, Plus, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import type { Chapter } from "@/lib/types";
 import type { ProgressStatus } from "@/lib/services/progress.service";
 import Link from "next/link";
@@ -75,8 +75,119 @@ interface Props {
   groupProgress:     Record<string, { status: ProgressStatus; lastChangedBy: string }>;
   personalProgress:  Record<string, ProgressStatus>;
   onPageSelect:      (pageId: string) => void;
+  onPageRenamed:     (id: string, title: string) => void;
+  onPageDeleted:     (id: string) => void;
   collapsed?:        boolean;
   onToggleCollapse?: () => void;
+}
+
+// ── PageRow ────────────────────────────────────────────────────────────────
+
+function PageRow({
+  page, isActive, workspaceId, chapter, groupProgress, onRenamed, onDeleted,
+}: {
+  page:          PageSummary;
+  isActive:      boolean;
+  workspaceId:   string;
+  chapter:       Chapter;
+  groupProgress: Record<string, { status: ProgressStatus; lastChangedBy: string }>;
+  activePageId:  string;
+  onRenamed:     (id: string, title: string) => void;
+  onDeleted:     (id: string) => void;
+}) {
+  const router = useRouter();
+  const href   = `/workspaces/${workspaceId}/surahs/${chapter.id}/pages/${page.id}`;
+
+  const [editing,      setEditing]      = useState(false);
+  const [draft,        setDraft]        = useState(page.title);
+  const [saving,       setSaving]       = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting,     setDeleting]     = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  function startEdit(e: React.MouseEvent) {
+    e.preventDefault(); e.stopPropagation();
+    setDraft(page.title);
+    setEditing(true);
+    setTimeout(() => { inputRef.current?.focus(); inputRef.current?.select(); }, 20);
+  }
+
+  async function commitRename() {
+    const trimmed = draft.trim();
+    setEditing(false);
+    if (!trimmed || trimmed === page.title) { setDraft(page.title); return; }
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/pages/${page.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: trimmed }),
+      });
+      if (res.ok) { onRenamed(page.id, trimmed); }
+      else        { setDraft(page.title); }
+    } catch { setDraft(page.title); }
+    finally { setSaving(false); }
+  }
+
+  async function confirmAndDelete(e: React.MouseEvent) {
+    e.preventDefault(); e.stopPropagation();
+    if (!confirmDelete) { setConfirmDelete(true); return; }
+    setDeleting(true);
+    try {
+      await fetch(`/api/pages/${page.id}`, { method: "DELETE" });
+      onDeleted(page.id);
+      if (isActive) router.push(`/workspaces/${workspaceId}`);
+    } finally { setDeleting(false); setConfirmDelete(false); }
+  }
+
+  if (editing) {
+    return (
+      <div className="tree-row tree-row--editing" data-active={isActive ? "true" : "false"}>
+        <input
+          ref={inputRef}
+          className="tree-row-rename-input"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={commitRename}
+          onKeyDown={(e) => {
+            if (e.key === "Enter")  e.currentTarget.blur();
+            if (e.key === "Escape") { setEditing(false); setDraft(page.title); }
+          }}
+          disabled={saving}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="tree-row tree-row--with-actions" data-active={isActive ? "true" : "false"}>
+      <Link href={href} prefetch className="tree-row-link">
+        <span className="tree-label">{page.title}</span>
+        {Object.keys(groupProgress).length > 0 && (
+          <GroupProgressDot progress={groupProgress} />
+        )}
+      </Link>
+
+      <div className="tree-row-actions">
+        <button
+          className="tree-row-action-btn"
+          title="Rename"
+          onClick={startEdit}
+        >
+          <Pencil size={11} />
+        </button>
+        <button
+          className={`tree-row-action-btn${confirmDelete ? " tree-row-action-btn--danger" : ""}`}
+          title={confirmDelete ? "Click again to confirm delete" : "Delete"}
+          onClick={confirmAndDelete}
+          disabled={deleting}
+          onBlur={() => setConfirmDelete(false)}
+        >
+          <Trash2 size={11} />
+        </button>
+      </div>
+    </div>
+  );
 }
 
 // ── Component ─────────────────────────────────────────────────────────────
@@ -89,7 +200,9 @@ export default function WorkspaceSidebar({
   activePageId,
   groupProgress,
   personalProgress: _personalProgress,
-  onPageSelect,
+  onPageSelect: _onPageSelect,
+  onPageRenamed,
+  onPageDeleted,
   collapsed = false,
   onToggleCollapse,
 }: Props) {
@@ -271,29 +384,19 @@ export default function WorkspaceSidebar({
           </div>
         )}
 
-        {filtered.map((page) => {
-          const isActive = page.id === activePageId;
-          const href = `/workspaces/${workspaceId}/surahs/${chapter.id}/pages/${page.id}`;
-          return (
-            <Link
-              key={page.id}
-              href={href}
-              prefetch={true}
-              className="tree-row"
-              data-active={isActive ? "true" : "false"}
-            >
-              <div className="tree-label">{page.title}</div>
-              <div className="page-row-meta">
-                {Object.keys(groupProgress).length > 0 && (
-                  <GroupProgressDot progress={groupProgress} />
-                )}
-                {page.isAdminAuthored && (
-                  <span className="page-admin-dot" title="Admin authored" />
-                )}
-              </div>
-            </Link>
-          );
-        })}
+        {filtered.map((page) => (
+          <PageRow
+            key={page.id}
+            page={page}
+            isActive={page.id === activePageId}
+            workspaceId={workspaceId}
+            chapter={chapter}
+            groupProgress={groupProgress}
+            activePageId={activePageId}
+            onRenamed={(id, title) => onPageRenamed(id, title)}
+            onDeleted={(id) => onPageDeleted(id)}
+          />
+        ))}
       </div>
 
       {/* ── Footer ── */}

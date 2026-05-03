@@ -231,3 +231,54 @@ export async function createPage(
 
   return page;
 }
+
+/**
+ * Rename a page.
+ * Only the page creator or a workspace admin can rename.
+ */
+export async function renamePage(
+  pageId: string,
+  userId: string,
+  title: string,
+) {
+  const page = await db.page.findUnique({
+    where: { id: pageId },
+    include: { workspaceSurah: { include: { workspace: { select: { id: true, type: true, ownerId: true } } } } },
+  });
+  if (!page) throw new PageError("Page not found", "NOT_FOUND");
+
+  const { role } = await getWorkspaceWithRole(page.workspaceSurah.workspace.id, userId);
+
+  if (!isAdmin(role) && page.createdById !== userId) {
+    throw new PageError("Not allowed to rename this page", "FORBIDDEN");
+  }
+
+  return db.page.update({
+    where: { id: pageId },
+    data:  { title: title.trim() },
+    select: { id: true, title: true },
+  });
+}
+
+/**
+ * Delete a page permanently.
+ * Only the page creator or a workspace admin can delete.
+ */
+export async function deletePage(
+  pageId: string,
+  userId: string,
+) {
+  const page = await db.page.findUnique({
+    where: { id: pageId },
+    include: { workspaceSurah: { include: { workspace: { select: { id: true, type: true, ownerId: true } } } } },
+  });
+  if (!page) throw new PageError("Page not found", "NOT_FOUND");
+
+  const { role } = await getWorkspaceWithRole(page.workspaceSurah.workspace.id, userId);
+
+  if (!isAdmin(role) && page.createdById !== userId) {
+    throw new PageError("Not allowed to delete this page", "FORBIDDEN");
+  }
+
+  await db.page.delete({ where: { id: pageId } });
+}

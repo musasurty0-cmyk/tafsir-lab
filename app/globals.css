@@ -273,6 +273,48 @@ input, textarea { font: inherit; color: inherit; }
 .tree-children { position: relative; }
 .tree-children::before { content: ""; position: absolute; top: 0; bottom: 4px; left: 15px; width: 1px; background: var(--line); }
 
+/* ── Page row with rename / delete actions ── */
+.tree-row--with-actions { padding: 0; gap: 0; }
+.tree-row-link {
+  flex: 1; min-width: 0;
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 6px 4px 10px;
+  color: inherit; text-decoration: none;
+  overflow: hidden;
+}
+.tree-row-link .tree-label { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tree-row-actions {
+  display: flex; align-items: center; gap: 1px;
+  padding-right: 4px;
+  opacity: 0;
+  transition: opacity .12s;
+  flex-shrink: 0;
+}
+.tree-row--with-actions:hover .tree-row-actions { opacity: 1; }
+.tree-row-action-btn {
+  width: 22px; height: 22px; border-radius: 4px;
+  display: grid; place-items: center;
+  color: var(--ink-3);
+  transition: background .1s, color .1s;
+  flex-shrink: 0;
+}
+.tree-row-action-btn:hover { background: var(--active); color: var(--ink); }
+.tree-row-action-btn--danger { color: oklch(0.52 0.18 25); }
+.tree-row-action-btn--danger:hover { background: oklch(0.52 0.18 25 / 0.1); color: oklch(0.52 0.18 25); }
+
+/* Inline rename input */
+.tree-row--editing { padding: 3px 6px; }
+.tree-row-rename-input {
+  flex: 1; width: 100%;
+  padding: 2px 6px;
+  font-size: 13.5px;
+  background: var(--bg-elev);
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  color: var(--ink);
+  outline: none;
+}
+
 /* ── Canvas ── */
 .canvas {
   overflow-y: auto;
