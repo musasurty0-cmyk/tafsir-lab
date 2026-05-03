@@ -335,7 +335,7 @@ export default function HomeClient({
       el.innerHTML = `
         <div style="position:relative;width:72px;height:72px;display:flex;align-items:center;justify-content:center;">
           <div style="position:absolute;inset:0;border-radius:50%;border:2.5px solid transparent;border-top-color:#4d7c5e;border-right-color:#4d7c5e;animation:_tl_spin .9s linear infinite;"></div>
-          <div style="width:52px;height:52px;border-radius:12px;background:#4d7c5e;color:#fff;font-size:26px;font-weight:700;font-family:Georgia,serif;display:flex;align-items:center;justify-content:center;animation:_tl_fadein .3s cubic-bezier(.34,1.56,.64,1) both;">T</div>
+          <div style="width:52px;height:52px;border-radius:12px;background:#111;color:#fff;font-size:26px;font-weight:700;font-family:Georgia,serif;display:flex;align-items:center;justify-content:center;animation:_tl_fadein .3s cubic-bezier(.34,1.56,.64,1) both;">T</div>
         </div>
         <div style="font-family:Georgia,serif;font-size:18px;font-weight:600;color:#1c1c1c;letter-spacing:.01em;">TafsirLab</div>
         <div style="font-family:system-ui,sans-serif;font-size:13px;color:#888;">Loading your workspace…</div>
