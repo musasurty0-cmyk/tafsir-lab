@@ -34,11 +34,20 @@ export async function POST(
       cursorFrom?: number | null;
       cursorTo?: number | null;
     };
-    const { isTyping = false, cursorFrom = null, cursorTo = null } = body;
+    const { isTyping = false } = body;
+
+    // Only include cursor fields in the update when they were explicitly sent.
+    // PresenceBar pings with { isTyping: false } only — we must not wipe
+    // cursor positions that the editor just posted.
+    const hasCursor = "cursorFrom" in body;
+    const cursorPatch = hasCursor
+      ? { cursorFrom: body.cursorFrom ?? null, cursorTo: body.cursorTo ?? null }
+      : {};
+
     await db.pagePresence.upsert({
       where:  { pageId_userId: { pageId, userId } },
-      create: { pageId, userId, isTyping, cursorFrom, cursorTo },
-      update: { isTyping, cursorFrom, cursorTo, updatedAt: new Date() },
+      create: { pageId, userId, isTyping, cursorFrom: body.cursorFrom ?? null, cursorTo: body.cursorTo ?? null },
+      update: { isTyping, ...cursorPatch, updatedAt: new Date() },
     });
     return NextResponse.json({ ok: true });
   } catch {

@@ -4012,70 +4012,65 @@ input, textarea { font: inherit; color: inherit; }
   font-style: italic;
 }
 
-/* ── Remote cursors (collaborative editing) ─────────────────────────────── */
+/* ── Remote cursors — collaborative Google-Docs-style overlay ─────���──────
+   All elements are portaled into document.body at position:fixed so they
+   sit at the exact viewport coordinates returned by coordsAtPos().
+   pointer-events:none ensures they never block editor interaction.
+   ──────────────────────────────────────────────────────────────────────── */
 
-/* Blinking caret widget */
-.rc-caret {
-  position: relative;
-  display:  inline-block;
-  width:    0;
-  overflow: visible;
+/* Wrapper scoped to one remote user — sets --rc-color */
+.rc-cursor-root {
   pointer-events: none;
-  user-select: none;
+  user-select:    none;
 }
-.rc-caret::after {
-  content:  "";
-  position: absolute;
-  top:      -2px;
-  left:     0;
-  width:    2px;
-  height:   1.3em;
+
+/* Caret line — the blinking vertical bar */
+.rc-caret {
+  position:   fixed;
+  width:      2px;
   background: var(--rc-color, #4285F4);
   border-radius: 1px;
+  pointer-events: none;
   animation: rc-blink 1.1s ease-in-out infinite;
+  z-index: 9998;
 }
 @keyframes rc-blink {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0; }
+  0%, 65% { opacity: 1; }
+  80%     { opacity: 0; }
+  100%    { opacity: 1; }
 }
 
-/* Name label that floats above the caret */
+/* Name label floating above the caret */
 .rc-label {
-  position:     absolute;
-  bottom:       calc(1.3em + 2px);
-  left:         0;
-  white-space:  nowrap;
-  background:   var(--rc-color, #4285F4);
-  color:        #fff;
-  font-size:    10px;
-  font-weight:  600;
-  font-family:  system-ui, sans-serif;
-  padding:      1px 5px;
+  position:      absolute;
+  bottom:        100%;
+  left:          0;
+  white-space:   nowrap;
+  background:    var(--rc-color, #4285F4);
+  color:         #fff;
+  font-size:     10px;
+  font-weight:   600;
+  font-family:   system-ui, sans-serif;
+  padding:       1px 6px 2px;
   border-radius: 3px 3px 3px 0;
-  line-height:  1.5;
+  line-height:   1.6;
   pointer-events: none;
-  opacity:      0;
-  transition:   opacity 0.15s;
+  /* flash into view on each update, then fade */
+  animation: rc-label-flash 2.2s ease forwards;
 }
-/* Show label on hover / when caret is newly placed */
-.rc-caret:hover .rc-label,
-.rc-caret:focus-within .rc-label {
-  opacity: 1;
-}
-/* Always visible for 2 s after the cursor moves — achieved via animation */
 @keyframes rc-label-flash {
-  0%, 60% { opacity: 1; }
-  100%     { opacity: 0; }
-}
-.rc-caret .rc-label {
-  animation: rc-label-flash 2s ease forwards;
+  0%, 55% { opacity: 1; }
+  100%    { opacity: 0; }
 }
 
-/* Selection highlight */
-.rc-selection {
-  background: color-mix(in srgb, var(--rc-color, #4285F4) 18%, transparent);
+/* Selection highlight rect */
+.rc-sel {
+  position:   fixed;
+  background: color-mix(in srgb, var(--rc-color, #4285F4) 20%, transparent);
   border-bottom: 1.5px solid var(--rc-color, #4285F4);
   border-radius: 1px;
+  pointer-events: none;
+  z-index: 9997;
 }
 
 /* ── Surah card entrance animation ── */
