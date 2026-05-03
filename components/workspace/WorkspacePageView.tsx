@@ -28,6 +28,7 @@ import ModeAPage from "./ModeAPage";
 import ModeBPage, { type PageUserPrefsData } from "./ModeBPage";
 import TafsirDrawer from "./TafsirDrawer";
 import TweaksPanel, { type TweaksState, TWEAKS_DEFAULTS } from "./TweaksPanel";
+import PresenceBar from "./PresenceBar";
 
 // ── Shared types ──────────────────────────────────────────────────────────
 
@@ -52,16 +53,17 @@ interface FullPage extends PageSummary {
 }
 
 interface Props {
-  workspaceId:  string;
-  workspace:    { id: string; name: string; type: string; ownerId: string };
-  role:         MemberRole;
-  chapter:      Chapter;
-  surahNumber:  number;
-  verses:       Verse[];
-  pages:        PageSummary[];
-  activePageId: string;
-  page:         FullPage | null;
-  groupProgress:Record<string, { status: ProgressStatus; lastChangedBy: string }>;
+  workspaceId:   string;
+  workspace:     { id: string; name: string; type: string; ownerId: string };
+  role:          MemberRole;
+  chapter:       Chapter;
+  surahNumber:   number;
+  verses:        Verse[];
+  pages:         PageSummary[];
+  activePageId:  string;
+  page:          FullPage | null;
+  groupProgress: Record<string, { status: ProgressStatus; lastChangedBy: string }>;
+  currentUserId: string;
 }
 
 // ── Tweaks helpers ────────────────────────────────────────────────────────
@@ -89,6 +91,7 @@ export default function WorkspacePageView({
   activePageId,
   page,
   groupProgress: initialGroupProgress,
+  currentUserId,
 }: Props) {
   const router = useRouter();
 
@@ -121,13 +124,35 @@ export default function WorkspacePageView({
     }
   }, [page]);
 
+  // ── Typing signal (declared early so handleNote* can reference it) ────
+  const typingTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  const signalTyping = useCallback(() => {
+    if (!activePageId) return;
+    fetch(`/api/pages/${activePageId}/presence`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ isTyping: true }),
+    }).catch(() => {});
+    clearTimeout(typingTimerRef.current);
+    typingTimerRef.current = setTimeout(() => {
+      fetch(`/api/pages/${activePageId}/presence`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isTyping: false }),
+      }).catch(() => {});
+    }, 3000);
+  }, [activePageId]);
+
   const handleNoteCreated = useCallback((note: NoteData) => {
     setNotes((prev) => [...prev, note]);
-  }, []);
+    signalTyping();
+  }, [signalTyping]);
 
   const handleNoteUpdated = useCallback((updated: NoteData) => {
     setNotes((prev) => prev.map((n) => (n.id === updated.id ? { ...n, ...updated } : n)));
-  }, []);
+    signalTyping();
+  }, [signalTyping]);
 
   const handleNoteDeleted = useCallback((noteId: string) => {
     setNotes((prev) => prev.filter((n) => n.id !== noteId));
@@ -188,6 +213,51 @@ export default function WorkspacePageView({
       })
       .catch(() => {})
       .finally(() => setProgressLoading(false));
+  }, [activePageId]);
+
+  // ── Live sync polling ─────────────────────────────────────────────────────
+  const lastPollRef = useRef<{ notes: number; progress: number }>({
+    notes: Date.now(), progress: Date.now(),
+  });
+
+  useEffect(() => {
+    if (!activePageId) return;
+
+    function poll() {
+      if (document.visibilityState !== "visible") return;
+      const now = Date.now();
+      const last = lastPollRef.current;
+
+      // Poll notes every 5s
+      if (now - last.notes >= 5000) {
+        last.notes = now;
+        fetch(`/api/pages/${activePageId}/notes`)
+          .then((r) => r.ok ? r.json() : null)
+          .then((data: { notes?: NoteData[] } | null) => {
+            if (data?.notes) setNotes(data.notes);
+          })
+          .catch(() => {});
+      }
+
+      // Poll group progress every 8s
+      if (now - last.progress >= 8000) {
+        last.progress = now;
+        fetch(`/api/pages/${activePageId}/progress?scope=group`)
+          .then((r) => r.ok ? r.json() : null)
+          .then((data: { progress?: Record<string, { status: ProgressStatus; lastChangedBy: string }> } | null) => {
+            if (data?.progress) setGroupProgress(data.progress);
+          })
+          .catch(() => {});
+      }
+    }
+
+    const interval = setInterval(poll, 2000);
+    document.addEventListener("visibilitychange", poll);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", poll);
+    };
   }, [activePageId]);
 
   const patchTweaks = (patch: Partial<TweaksState>) => {
@@ -384,6 +454,9 @@ export default function WorkspacePageView({
           showTweaks={showTweaks}
           onToggleTweaks={() => setShowTweaks((s) => !s)}
         />
+        {activePageId && (
+          <PresenceBar pageId={activePageId} currentUserId={currentUserId} />
+        )}
 
         <div className={`study-layout${mode === "split" ? " study-layout--split" : ""}`}>
 

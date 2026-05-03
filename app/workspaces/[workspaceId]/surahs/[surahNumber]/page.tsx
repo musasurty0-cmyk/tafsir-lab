@@ -6,6 +6,8 @@
  * comes in a later phase).
  */
 
+export const dynamic = "force-dynamic";
+
 import { redirect, notFound } from "next/navigation";
 import { getSession } from "@/lib/session";
 import * as WorkspacesService from "@/lib/services/workspaces.service";

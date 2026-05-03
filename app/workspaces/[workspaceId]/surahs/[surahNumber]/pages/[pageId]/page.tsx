@@ -8,6 +8,8 @@
  *          getWorkspaceWithRole calls inside service helpers.
  */
 
+export const dynamic = "force-dynamic";
+
 import { notFound, redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { isAdmin, MemberRole } from "@/lib/services/workspaces.service";
@@ -164,6 +166,7 @@ export default async function PageViewPage({
       activePageId={pageId}
       page={normalizedPage}
       groupProgress={groupProgress}
+      currentUserId={userId}
     />
   );
 }

@@ -272,14 +272,15 @@ export default function WorkspaceHome({
             return cur > prev ? "left" : "right";
           })()}
         >
-          {visible.map((ch) => {
+          {visible.map((ch, index) => {
             const session = startedMap.get(ch.id);
             const isStarting = starting === ch.id;
 
             return (
               <button
                 key={ch.id}
-                className="ws-surah-card"
+                className="ws-surah-card ws-surah-card--animate"
+                style={{ animationDelay: `${Math.min(index * 15, 300)}ms` }}
                 data-started={session ? "true" : "false"}
                 data-loading={isStarting ? "true" : "false"}
                 onClick={() => handleCardClick(ch)}

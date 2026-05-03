@@ -311,6 +311,21 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
       .catch(() => {});
   }, [pageId]);
 
+  // ── Poll other users' drawings every 6s ──────────────────────────────
+  useEffect(() => {
+    if (!pageId) return;
+    const interval = setInterval(() => {
+      if (document.visibilityState !== "visible") return;
+      fetch(`/api/pages/${pageId}/drawings`)
+        .then((r) => r.ok ? r.json() : null)
+        .then((data: { myStrokes?: Stroke[]; otherLayers?: DrawingLayer[] } | null) => {
+          if (data?.otherLayers) setOtherLayers(data.otherLayers);
+        })
+        .catch(() => {});
+    }, 6000);
+    return () => clearInterval(interval);
+  }, [pageId]);
+
   // ── Debounced save ────────────────────────────────────────────────────
 
   const scheduleSave = useCallback(() => {
@@ -335,7 +350,11 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     if (!el) return;
     const prevent = (e: Event) => e.preventDefault();
     el.addEventListener("contextmenu", prevent);
-    return () => el.removeEventListener("contextmenu", prevent);
+    el.addEventListener("selectstart", prevent);
+    return () => {
+      el.removeEventListener("contextmenu", prevent);
+      el.removeEventListener("selectstart", prevent);
+    };
   }, []);
 
   // ── Imperative handle (undo / redo / clear) ───────────────────────────
@@ -476,15 +495,21 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
       ref={containerRef}
       className="drawing-canvas-wrap"
       style={{
-        pointerEvents: tool === "hand" ? "none" : "auto",
-        touchAction:   tool === "hand" ? "auto" : "none",
+        pointerEvents:          tool === "hand" ? "none" : "auto",
+        touchAction:            tool === "hand" ? "pan-x pan-y" : "none",
+        WebkitTouchCallout:     "none",
+        WebkitUserSelect:       "none",
+        userSelect:             "none",
       }}
     >
       <canvas
         ref={canvasRef}
         className="drawing-canvas-el"
         style={{ cursor }}
-        onPointerDown={onDown}
+        onPointerDown={(e) => {
+          if (e.pointerType === "pen") e.preventDefault();
+          onDown(e);
+        }}
         onPointerMove={onMove}
         onPointerUp={onUp}
         onPointerCancel={onUp}

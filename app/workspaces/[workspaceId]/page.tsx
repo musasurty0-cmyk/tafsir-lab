@@ -6,6 +6,8 @@
  * The Rail fetches the workspace list client-side.
  */
 
+export const dynamic = "force-dynamic";
+
 import { getSession } from "@/lib/session";
 import * as WorkspacesService from "@/lib/services/workspaces.service";
 import { db } from "@/lib/db";
