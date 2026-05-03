@@ -21,7 +21,7 @@ export default function PageNotFound() {
         This page does not exist or you do not have access to it.
       </p>
       <Link
-        href="/"
+        href="/home"
         style={{
           marginTop: "0.5rem",
           padding: "0.5rem 1.25rem",

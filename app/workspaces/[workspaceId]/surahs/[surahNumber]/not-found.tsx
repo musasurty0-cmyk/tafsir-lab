@@ -21,7 +21,7 @@ export default function SurahNotFound() {
         This surah has not been added to the workspace yet.
       </p>
       <Link
-        href="/"
+        href="/home"
         style={{
           marginTop: "0.5rem",
           padding: "0.5rem 1.25rem",

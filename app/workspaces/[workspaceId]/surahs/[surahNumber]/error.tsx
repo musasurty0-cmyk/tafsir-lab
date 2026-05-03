@@ -44,7 +44,7 @@ export default function SurahError({
           Try again
         </button>
         <Link
-          href="/"
+          href="/home"
           style={{
             padding: "0.5rem 1.25rem",
             background: "transparent",

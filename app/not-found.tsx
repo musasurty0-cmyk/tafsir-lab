@@ -19,7 +19,7 @@ export default function NotFound() {
         The page you are looking for does not exist or has been moved.
       </p>
       <Link
-        href="/"
+        href="/home"
         style={{
           marginTop: "0.5rem",
           padding: "0.5rem 1.25rem",

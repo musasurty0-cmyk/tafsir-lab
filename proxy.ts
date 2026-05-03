@@ -1,5 +1,5 @@
 /**
- * Next.js middleware — runs on every matched request before the page renders.
+ * Next.js proxy (middleware) — runs on every matched request before the page renders.
  *
  * Protected routes (/home, /workspaces) redirect to /login when no valid
  * session cookie is present. Public routes (/login, /api/auth/*) are excluded.
@@ -17,7 +17,7 @@ function secret() {
   return new TextEncoder().encode(s);
 }
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const token = req.cookies.get(COOKIE)?.value;
 
   if (!token) {

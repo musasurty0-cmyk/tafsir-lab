@@ -9,8 +9,8 @@
 
 import { type NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
-import { renameWorkspace, WorkspaceError } from "@/lib/services/workspaces.service";
 import * as WorkspacesService from "@/lib/services/workspaces.service";
+import { WorkspaceError } from "@/lib/services/workspaces.service";
 
 export async function PATCH(
   req: NextRequest,
@@ -25,7 +25,7 @@ export async function PATCH(
       return NextResponse.json({ error: "name is required" }, { status: 400 });
     }
 
-    const workspace = await renameWorkspace(workspaceId, userId, body.name);
+    const workspace = await WorkspacesService.renameWorkspace(workspaceId, userId, body.name);
     return NextResponse.json({ workspace });
   } catch (err) {
     if (err instanceof WorkspaceError) {
