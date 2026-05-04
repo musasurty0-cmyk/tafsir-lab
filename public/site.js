@@ -73,19 +73,17 @@
 
 /* ─────────────── Beta gate modal ─────────────── */
 (() => {
-  const modal   = document.getElementById('beta-modal');
-  const form    = document.getElementById('beta-modal-form');
-  const input   = document.getElementById('beta-modal-input');
-  const errorEl = document.getElementById('beta-modal-error');
+  const BETA_PASSWORD = 'READY2027';
+
+  const modal    = document.getElementById('beta-modal');
+  const form     = document.getElementById('beta-modal-form');
+  const input    = document.getElementById('beta-modal-input');
+  const errorEl  = document.getElementById('beta-modal-error');
   const closeBtn = modal?.querySelector('.beta-modal-close');
   const submitBtn = modal?.querySelector('.beta-modal-btn');
   if (!modal || !form || !input) return;
 
-  // Where to send the user after a successful code — default /login
-  let destination = '/login';
-
-  function openModal(dest) {
-    destination = dest || '/login';
+  function openModal() {
     modal.hidden = false;
     errorEl.hidden = true;
     input.value = '';
@@ -96,58 +94,32 @@
     modal.hidden = true;
   }
 
-  // Intercept all .js-beta-gate links/buttons
   document.querySelectorAll('.js-beta-gate').forEach(el => {
     el.addEventListener('click', e => {
       e.preventDefault();
-      openModal('/login');
+      openModal();
     });
   });
 
   closeBtn?.addEventListener('click', closeModal);
-
-  // Close on backdrop click
   modal.querySelector('.beta-modal-backdrop')?.addEventListener('click', closeModal);
-
-  // Escape key
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape' && !modal.hidden) closeModal();
   });
 
-  form.addEventListener('submit', async e => {
+  form.addEventListener('submit', e => {
     e.preventDefault();
     const password = input.value.trim();
     if (!password) return;
 
-    submitBtn.disabled = true;
-    submitBtn.innerHTML = '<span class="beta-modal-spinner"></span>';
-    errorEl.hidden = true;
-
-    try {
-      const res  = await fetch('/api/beta/verify', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ password }),
-      });
-      const data = await res.json();
-
-      if (!data.ok) {
-        errorEl.textContent = data.error || 'Invalid access code';
-        errorEl.hidden = false;
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Continue →';
-        input.select();
-        return;
-      }
-
-      // Cookie set by server — navigate to sign in
-      window.location.href = destination;
-    } catch {
-      errorEl.textContent = 'Something went wrong. Please try again.';
+    if (password !== BETA_PASSWORD) {
+      errorEl.textContent = 'Invalid access code';
       errorEl.hidden = false;
-      submitBtn.disabled = false;
-      submitBtn.textContent = 'Continue →';
+      input.select();
+      return;
     }
+
+    window.location.href = '/login';
   });
 })();
 
