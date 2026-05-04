@@ -1,12 +1,22 @@
 /**
  * / — Root page
  *
- * Middleware redirects unauthenticated users to /login before they reach here.
- * Authenticated users are forwarded to /home.
+ * Authenticated users are forwarded straight to /home.
+ * Everyone else sees the marketing landing page.
  */
 
 import { redirect } from "next/navigation";
+import { getSessionOrNull } from "@/lib/session";
+import LandingPage from "@/components/LandingPage";
 
-export default function RootPage() {
-  redirect("/home");
+export const metadata = {
+  title: "TafsirLab — Collaborative Qurʾān Study",
+  description:
+    "Write tafsir, annotate the Mushaf, track your progress, and study together in real time.",
+};
+
+export default async function RootPage() {
+  const session = await getSessionOrNull();
+  if (session) redirect("/home");
+  return <LandingPage />;
 }
