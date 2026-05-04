@@ -8,10 +8,15 @@ const nextConfig: NextConfig = {
     ],
   },
   async rewrites() {
-    return [
-      // Serve the static marketing landing page at the root URL
-      { source: "/", destination: "/landing.html" },
-    ];
+    // beforeFiles runs before the App Router, so "/" serves the static
+    // landing page without app/page.tsx getting a chance to redirect.
+    return {
+      beforeFiles: [
+        { source: "/", destination: "/landing.html" },
+      ],
+      afterFiles: [],
+      fallback: [],
+    };
   },
 };
 
