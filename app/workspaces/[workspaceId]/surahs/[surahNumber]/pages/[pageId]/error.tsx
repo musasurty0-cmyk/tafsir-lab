@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 
 export default function PageError({
@@ -9,6 +10,11 @@ export default function PageError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  useEffect(() => {
+    document.getElementById("tl-nav-splash")?.remove();
+    document.getElementById("tl-nav-splash-style")?.remove();
+  }, []);
+
   return (
     <div
       style={{

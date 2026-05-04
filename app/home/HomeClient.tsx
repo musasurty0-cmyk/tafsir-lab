@@ -343,6 +343,13 @@ export default function HomeClient({
         <div style="font-family:system-ui,sans-serif;font-size:13px;color:#888;">Loading your workspace…</div>
       `;
       document.body.appendChild(el);
+
+      // Safety net: if nothing removes the splash within 5 s (e.g. a silent
+      // navigation error), clear it automatically so the user isn't stuck.
+      setTimeout(() => {
+        document.getElementById("tl-nav-splash")?.remove();
+        document.getElementById("tl-nav-splash-style")?.remove();
+      }, 5000);
     }
     router.push(href);
   }, [router]);
