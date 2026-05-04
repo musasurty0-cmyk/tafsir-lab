@@ -7,6 +7,12 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "cdn.islamic.network" },
     ],
   },
+  async rewrites() {
+    return [
+      // Serve the static marketing landing page at the root URL
+      { source: "/", destination: "/landing.html" },
+    ];
+  },
 };
 
 export default nextConfig;
