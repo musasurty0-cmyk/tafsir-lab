@@ -29,6 +29,7 @@ import Placeholder from "@tiptap/extension-placeholder";
 import type { SuggestionProps, SuggestionKeyDownProps } from "@tiptap/suggestion";
 
 import { AyahBlockExtension } from "./AyahBlockExtension";
+import { TafsirBlockExtension } from "./TafsirBlockExtension";
 import {
   SlashCommandExtension,
   buildCommands,
@@ -189,6 +190,7 @@ export default function PageEditor({ pageId, initialContent, currentUserId }: Pr
       }),
 
       AyahBlockExtension,
+      TafsirBlockExtension,
 
       SlashCommandExtension.configure({
         suggestion: {

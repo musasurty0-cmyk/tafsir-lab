@@ -15,6 +15,7 @@ import { useRouter } from "next/navigation";
 import { getFirebaseAuth } from "@/lib/firebase/client";
 import NewWorkspaceModal from "@/components/NewWorkspaceModal";
 import JoinWorkspaceModal from "@/components/JoinWorkspaceModal";
+import TutorialOverlay from "@/components/TutorialOverlay";
 import type { MemberRole } from "@/lib/services/workspaces.service";
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -441,6 +442,8 @@ export default function HomeClient({
         </div>
 
       </div>
+
+      <TutorialOverlay />
 
       {modalOpen && <NewWorkspaceModal onClose={() => setModalOpen(false)} />}
       {joinOpen && (

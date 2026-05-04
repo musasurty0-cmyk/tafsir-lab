@@ -79,6 +79,36 @@ export function buildCommands(): SlashCommandItem[] {
       },
     },
     {
+      id:          "tafsir",
+      title:       "Ibn Kathir Tafsir",
+      description: "Embed Ibn Kathīr's commentary (e.g. /tafsir 2:255)",
+      icon:        "📚",
+      aliases:     ["ibn", "kathir", "commentary", "tafseer"],
+      execute(editor, range, query) {
+        const parts    = query.trim().split(/\s+/);
+        const rawKey   = parts.slice(1).join("").trim();
+        const verseKey = rawKey || "1:1";
+
+        editor
+          .chain()
+          .focus()
+          .deleteRange(range)
+          .insertContent([
+            {
+              type: "tafsirBlock",
+              attrs: {
+                verseKey,
+                contentHtml: "",
+                sourceName:  "Ibn Kathir",
+              },
+            },
+            { type: "paragraph" },
+          ])
+          .scrollIntoView()
+          .run();
+      },
+    },
+    {
       id:          "h1",
       title:       "Heading 1",
       description: "Large section heading",
