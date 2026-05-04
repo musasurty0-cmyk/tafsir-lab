@@ -1,45 +1,79 @@
 /**
  * Next.js proxy (middleware) — runs on every matched request before the page renders.
  *
- * Protected routes (/home, /workspaces) redirect to /login when no valid
- * session cookie is present. Public routes (/login, /api/auth/*) are excluded.
+ * Two-layer gate:
+ *   1. Beta access  — all routes except "/" and "/beta" require the beta_access cookie.
+ *      Visitors without it are redirected to /beta (password gate).
+ *   2. Auth         — /home and /workspaces additionally require a valid tl-session JWT.
+ *      Unauthenticated users are sent to /login.
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify }                 from "jose";
 
-const COOKIE  = "tl-session";
-const LOGIN   = "/login";
+const SESSION_COOKIE = "tl-session";
+const BETA_COOKIE    = "beta_access";
 
-function secret() {
+// Paths that bypass the beta gate entirely (public)
+const BETA_EXEMPT = ["/", "/beta", "/api/beta/verify"];
+
+function isBetaExempt(pathname: string) {
+  return BETA_EXEMPT.some(
+    (p) => pathname === p || pathname.startsWith(p + "/"),
+  );
+}
+
+function sessionSecret() {
   const s = process.env.SESSION_SECRET;
   if (!s) throw new Error("SESSION_SECRET not set");
   return new TextEncoder().encode(s);
 }
 
 export async function proxy(req: NextRequest) {
-  const token = req.cookies.get(COOKIE)?.value;
+  const { pathname } = req.nextUrl;
 
-  if (!token) {
-    return NextResponse.redirect(new URL(LOGIN, req.url));
+  // ── 1. Beta gate ──────────────────────────────────────────────────────────
+  if (!isBetaExempt(pathname)) {
+    const betaCookie = req.cookies.get(BETA_COOKIE)?.value;
+    if (!betaCookie) {
+      const url = req.nextUrl.clone();
+      url.pathname = "/beta";
+      url.searchParams.set("next", pathname);
+      return NextResponse.redirect(url);
+    }
   }
 
-  try {
-    await jwtVerify(token, secret());
-    return NextResponse.next();
-  } catch {
-    // Expired or tampered — send to login
-    const res = NextResponse.redirect(new URL(LOGIN, req.url));
-    res.cookies.delete(COOKIE);
-    return res;
+  // ── 2. Auth gate (app routes only) ───────────────────────────────────────
+  const AUTH_PATHS = ["/home", "/workspaces", "/workspace"];
+  const needsAuth  = AUTH_PATHS.some(
+    (p) => pathname === p || pathname.startsWith(p + "/"),
+  );
+
+  if (needsAuth) {
+    const token = req.cookies.get(SESSION_COOKIE)?.value;
+
+    if (!token) {
+      return NextResponse.redirect(new URL("/login", req.url));
+    }
+
+    try {
+      await jwtVerify(token, sessionSecret());
+    } catch {
+      const res = NextResponse.redirect(new URL("/login", req.url));
+      res.cookies.delete(SESSION_COOKIE);
+      return res;
+    }
   }
+
+  return NextResponse.next();
 }
 
 export const config = {
   matcher: [
-    "/home/:path*",
-    "/workspaces/:path*",
-    // Protect all API routes except public ones
-    "/api/((?!auth|ayah|tafsir|chapters|verses).*)",
+    /*
+     * Run on everything except Next.js internals and static assets.
+     * Both the beta gate and auth gate are handled inside the function above.
+     */
+    "/((?!_next/static|_next/image|favicon\\.ico).*)",
   ],
 };
