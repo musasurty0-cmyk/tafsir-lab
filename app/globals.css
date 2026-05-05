@@ -4808,174 +4808,179 @@ input, textarea { font: inherit; color: inherit; }
 .bt-close-btn:hover { color: var(--bt-ink); background: oklch(0.93 0.005 80 / 0.07); }
 
 /* ─────────────────────────────────────────────────────────────
-   In-app tour  (.tr- prefix)
+   In-app tour  (.tr- prefix) — uses the app's own design tokens
 ───────────────────────────────────────────────────────────── */
 
-/* Floating bubble (steps 0-2) */
 @keyframes tr-bubble-in {
-  from { opacity: 0; transform: translateY(12px); }
+  from { opacity: 0; transform: translateY(10px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 @keyframes tr-bubble-out {
   from { opacity: 1; transform: translateY(0); }
-  to   { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 0; transform: translateY(10px); }
 }
+
+/* Floating bubble (steps 0–4) */
 .tr-bubble {
-  position:      fixed;
-  bottom:        28px;
-  right:         28px;
-  width:         340px;
-  background:    oklch(0.18 0.01 80);
-  border:        1px solid oklch(0.93 0.005 80 / 0.12);
-  border-radius: 10px;
-  padding:       20px 20px 16px;
-  box-shadow:    0 8px 32px oklch(0 0 0 / 0.35);
-  z-index:       8000;
-  display:       flex;
+  position:       fixed;
+  bottom:         24px;
+  right:          24px;
+  width:          320px;
+  background:     var(--bg-elev);
+  border:         1px solid var(--line-strong);
+  border-radius:  var(--radius-lg);
+  padding:        16px 16px 14px;
+  box-shadow:     var(--shadow-lg);
+  z-index:        8000;
+  display:        flex;
   flex-direction: column;
-  gap:           10px;
+  gap:            8px;
 }
-.tr-bubble.tr-in  { animation: tr-bubble-in  0.3s cubic-bezier(0.22,1,0.36,1) both; }
-.tr-bubble.tr-out { animation: tr-bubble-out 0.25s ease both; pointer-events: none; }
+.tr-bubble.tr-in  { animation: tr-bubble-in  0.28s cubic-bezier(0.22,1,0.36,1) both; }
+.tr-bubble.tr-out { animation: tr-bubble-out 0.22s ease both; pointer-events: none; }
 
 .tr-bubble-top {
   display:         flex;
   align-items:     center;
   justify-content: space-between;
+  margin-bottom:   2px;
 }
-.tr-dots { display: flex; gap: 5px; align-items: center; }
+
+.tr-dots { display: flex; gap: 4px; align-items: center; }
 .tr-dot {
-  width: 6px; height: 6px;
+  width:      5px;
+  height:     5px;
   border-radius: 50%;
-  background: oklch(0.93 0.005 80 / 0.2);
+  background: var(--line-strong);
   transition: background 0.2s, transform 0.2s;
 }
-.tr-dot--cur  { background: oklch(0.72 0.14 155); transform: scale(1.3); }
-.tr-dot--done { background: oklch(0.93 0.005 80 / 0.5); }
+.tr-dot--cur  { background: var(--accent); transform: scale(1.3); }
+.tr-dot--done { background: var(--ink-4); }
 
 .tr-skip {
-  font-size:  0.75rem;
-  color:      oklch(0.93 0.005 80 / 0.3);
-  background: none;
-  border:     none;
-  cursor:     pointer;
-  padding:    0;
+  font-size:   0.75rem;
+  color:       var(--ink-4);
+  background:  none;
+  border:      none;
+  cursor:      pointer;
+  padding:     0;
   font-family: var(--font-sans, system-ui);
-  transition: color 0.15s;
+  transition:  color 0.15s;
 }
-.tr-skip:hover { color: oklch(0.93 0.005 80 / 0.7); }
+.tr-skip:hover { color: var(--ink-2); }
 
 .tr-title {
-  font-size:      0.9375rem;
+  font-size:      0.875rem;
   font-weight:    600;
-  color:          oklch(0.93 0.005 80);
+  color:          var(--ink);
   margin:         0;
   letter-spacing: -0.01em;
   font-family:    var(--font-sans, system-ui);
 }
+
 .tr-body {
   font-size:   0.8125rem;
-  font-weight: 400;
-  line-height: 1.65;
-  color:       oklch(0.72 0.007 80);
+  line-height: 1.6;
+  color:       var(--ink-2);
   margin:      0;
   font-family: var(--font-sans, system-ui);
 }
+
 .tr-next-btn {
-  font-family:  var(--font-sans, system-ui);
-  font-size:    0.875rem;
-  font-weight:  500;
-  color:        oklch(0.11 0.008 80);
-  background:   oklch(0.72 0.14 155);
-  border:       none;
-  border-radius: 5px;
-  padding:      9px 16px;
-  cursor:       pointer;
-  text-align:   left;
-  align-self:   flex-start;
-  margin-top:   2px;
-  transition:   background 0.15s, transform 0.1s;
+  font-family:   var(--font-sans, system-ui);
+  font-size:     0.8125rem;
+  font-weight:   500;
+  color:         #fff;
+  background:    var(--accent);
+  border:        none;
+  border-radius: var(--radius);
+  padding:       7px 14px;
+  cursor:        pointer;
+  align-self:    flex-start;
+  margin-top:    4px;
+  transition:    opacity 0.15s, transform 0.1s;
 }
-.tr-next-btn:hover  { background: oklch(0.78 0.14 155); transform: translateY(-1px); }
-.tr-next-btn:active { transform: none; }
-.tr-next-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+.tr-next-btn:hover   { opacity: 0.88; transform: translateY(-1px); }
+.tr-next-btn:active  { transform: none; }
+.tr-next-btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+
 .tr-error {
-  font-size: 0.75rem;
-  color: oklch(0.65 0.15 25);
-  margin: 0;
+  font-size:   0.75rem;
+  color:       oklch(0.5 0.15 25);
+  margin:      0;
   font-family: var(--font-sans, system-ui);
 }
 
-/* Bismillah finale (step 3) */
-@keyframes tr-finale-in {
-  from { opacity: 0; }
-  to   { opacity: 1; }
-}
-@keyframes tr-finale-out {
-  from { opacity: 1; }
-  to   { opacity: 0; }
-}
+/* Bismillah finale (step 5) */
+@keyframes tr-finale-in  { from { opacity: 0; } to { opacity: 1; } }
+@keyframes tr-finale-out { from { opacity: 1; } to { opacity: 0; } }
+
 .tr-finale {
-  position:   fixed;
-  inset:      0;
-  z-index:    8500;
-  background: oklch(0.11 0.008 80);
-  display:    flex;
-  align-items: center;
+  position:        fixed;
+  inset:           0;
+  z-index:         8500;
+  background:      var(--bg);
+  display:         flex;
+  align-items:     center;
   justify-content: center;
-  padding:    24px;
+  padding:         32px;
 }
-.tr-finale.tr-in  { animation: tr-finale-in  0.4s ease both; }
-.tr-finale.tr-out { animation: tr-finale-out 0.3s ease both; pointer-events: none; }
+.tr-finale.tr-in  { animation: tr-finale-in  0.35s ease both; }
+.tr-finale.tr-out { animation: tr-finale-out 0.25s ease both; pointer-events: none; }
 
 .tr-finale-card {
-  text-align: center;
-  max-width:  520px;
-  display:    flex;
-  flex-direction: column;
-  align-items: center;
-  gap:        16px;
+  text-align:      center;
+  max-width:       480px;
+  display:         flex;
+  flex-direction:  column;
+  align-items:     center;
+  gap:             14px;
 }
+
 .tr-bismillah-ar {
-  font-family: "Scheherazade New", "Amiri Quran", "Amiri", serif;
-  font-size:   clamp(2rem, 6vw, 4rem);
-  line-height: 2;
-  color:       oklch(0.93 0.005 80 / 0.9);
+  font-family: var(--font-arabic, "Amiri Quran", "Amiri", serif);
+  font-size:   clamp(1.75rem, 5vw, 3rem);
+  line-height: 2.2;
+  color:       var(--ink);
   direction:   rtl;
   margin:      0;
 }
+
 .tr-bismillah-en {
-  font-size:   0.875rem;
-  color:       oklch(0.56 0.008 80);
+  font-size:   0.8125rem;
+  color:       var(--ink-3);
   font-style:  italic;
   margin:      0;
   font-family: var(--font-sans, system-ui);
 }
+
 .tr-finale-divider {
-  width:      48px;
+  width:      40px;
   height:     1px;
-  background: oklch(0.93 0.005 80 / 0.12);
+  background: var(--line-strong);
 }
+
 .tr-finale-msg {
-  font-size:   0.9375rem;
-  color:       oklch(0.72 0.007 80);
+  font-size:   0.875rem;
+  color:       var(--ink-2);
   margin:      0;
   font-family: var(--font-sans, system-ui);
 }
+
 .tr-begin-btn {
-  font-family:  var(--font-sans, system-ui);
-  font-size:    1rem;
-  font-weight:  500;
-  color:        oklch(0.11 0.008 80);
-  background:   oklch(0.72 0.14 155);
-  border:       none;
-  border-radius: 5px;
-  padding:      13px 32px;
-  cursor:       pointer;
-  margin-top:   8px;
-  transition:   background 0.15s, transform 0.1s;
+  font-family:   var(--font-sans, system-ui);
+  font-size:     0.9375rem;
+  font-weight:   500;
+  color:         #fff;
+  background:    var(--accent);
+  border:        none;
+  border-radius: var(--radius);
+  padding:       10px 28px;
+  cursor:        pointer;
+  margin-top:    6px;
+  transition:    opacity 0.15s, transform 0.1s;
 }
-.tr-begin-btn:hover  { background: oklch(0.78 0.14 155); transform: translateY(-1px); }
+.tr-begin-btn:hover  { opacity: 0.88; transform: translateY(-1px); }
 .tr-begin-btn:active { transform: none; }
 
 /* ── Tutorial overlay wrapper ── */
