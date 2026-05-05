@@ -29,6 +29,7 @@ import ModeBPage, { type PageUserPrefsData } from "./ModeBPage";
 import TafsirDrawer from "./TafsirDrawer";
 import TweaksPanel, { type TweaksState, TWEAKS_DEFAULTS } from "./TweaksPanel";
 import PresenceBar from "./PresenceBar";
+import TourBubble  from "@/components/TourBubble";
 
 // ── Shared types ──────────────────────────────────────────────────────────
 
@@ -499,6 +500,7 @@ export default function WorkspacePageView({
           onClose={() => setShowTweaks(false)}
         />
       )}
+      <TourBubble workspaceId={workspaceId} />
     </div>
   );
 }

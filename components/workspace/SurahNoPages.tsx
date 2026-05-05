@@ -11,6 +11,7 @@ import Link from "next/link";
 import type { Chapter } from "@/lib/types";
 import type { MemberRole } from "@/lib/services/workspaces.service";
 import Rail from "./Rail";
+import TourBubble from "@/components/TourBubble";
 
 const BookIcon = () => (
   <svg width="40" height="40" viewBox="0 0 24 24" fill="none"
@@ -76,6 +77,7 @@ export default function SurahNoPages({
   }
 
   return (
+    <>
     <div className="workspace-home">
       <Rail activeWorkspaceId={workspaceId} />
 
@@ -132,5 +134,7 @@ export default function SurahNoPages({
         </div>
       </div>
     </div>
+    <TourBubble workspaceId={workspaceId} />
+    </>
   );
 }

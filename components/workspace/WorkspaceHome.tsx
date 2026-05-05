@@ -19,6 +19,7 @@ import type { WorkspaceSurahSummary } from "@/app/workspaces/[workspaceId]/page"
 import Rail from "./Rail";
 import NewWorkspaceModal from "@/components/NewWorkspaceModal";
 import WorkspaceSettings from "./WorkspaceSettings";
+import TourBubble from "@/components/TourBubble";
 
 const PLACE: Record<string, string> = { makkah: "Makki", madinah: "Madani" };
 
@@ -349,6 +350,7 @@ export default function WorkspaceHome({
         }}
       />
     )}
+    <TourBubble workspaceId={workspaceId} />
     </>
   );
 }

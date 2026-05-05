@@ -16,6 +16,8 @@ import { getFirebaseAuth } from "@/lib/firebase/client";
 import NewWorkspaceModal from "@/components/NewWorkspaceModal";
 import JoinWorkspaceModal from "@/components/JoinWorkspaceModal";
 import TutorialOverlay from "@/components/TutorialOverlay";
+import TourBubble      from "@/components/TourBubble";
+import { startTour }   from "@/lib/tour";
 import type { MemberRole } from "@/lib/services/workspaces.service";
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -311,7 +313,8 @@ export default function HomeClient({
 
   function replayTutorial() {
     localStorage.removeItem("tl-tutorial-done");
-    setTutKey((k) => k + 1);
+    startTour(workspaces[0]?.id);
+    setTutKey((k) => k + 1); // remount TutorialOverlay so it doesn't re-fire
   }
 
   // Remove any lingering splash when this page mounts (back-navigation)
@@ -452,7 +455,8 @@ export default function HomeClient({
 
       </div>
 
-      <TutorialOverlay key={tutKey} />
+      <TutorialOverlay key={tutKey} workspaceId={workspaces[0]?.id} />
+      <TourBubble />
 
       {modalOpen && <NewWorkspaceModal onClose={() => setModalOpen(false)} />}
       {joinOpen && (
