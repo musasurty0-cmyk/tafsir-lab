@@ -4770,6 +4770,19 @@ input, textarea { font: inherit; color: inherit; }
   transition: color 0.12s, border-color 0.12s;
 }
 .bt-cta-ghost:hover { color: var(--bt-ink); border-color: oklch(0.93 0.005 80 / 0.3); }
+.bt-replay-btn {
+  margin-top: 32px;
+  font-family: var(--bt-body);
+  font-size: 0.8125rem;
+  color: var(--bt-ink-3);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  letter-spacing: 0.01em;
+  transition: color 0.15s;
+}
+.bt-replay-btn:hover { color: var(--bt-ink-2); }
 
 /* ── Responsive ── */
 @media (max-width: 768px) {

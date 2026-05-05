@@ -351,7 +351,7 @@ function LiveStep() {
 // Step 04 — Begin
 // ─────────────────────────────────────────────────────────────────────────────
 
-function BeginStep() {
+function BeginStep({ onReplay }: { onReplay: () => void }) {
   return (
     <div className="bt-begin">
       <span className="bt-begin-n">04</span>
@@ -370,6 +370,9 @@ function BeginStep() {
           I already have an account
         </Link>
       </div>
+      <button className="bt-replay-btn" onClick={onReplay}>
+        ↩ Replay tutorial
+      </button>
     </div>
   );
 }
@@ -406,6 +409,14 @@ export default function BetaTutorial() {
     }, 260);
   }, [step]);
 
+  const replay = useCallback(() => {
+    setLeaving(true);
+    setTimeout(() => {
+      setStep(0);
+      setLeaving(false);
+    }, 260);
+  }, []);
+
   return (
     <div className="bt">
       {/* ── Header ── */}
@@ -435,7 +446,7 @@ export default function BetaTutorial() {
         {step === 0 && <WriteStep />}
         {step === 1 && <AnnotateStep />}
         {step === 2 && <LiveStep />}
-        {step === 3 && <BeginStep />}
+        {step === 3 && <BeginStep onReplay={replay} />}
       </div>
 
       {/* ── Footer nav ── */}
