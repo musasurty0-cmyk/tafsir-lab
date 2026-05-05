@@ -88,6 +88,16 @@ const PencilIcon = () => (
   </svg>
 );
 
+const TrashIcon = () => (
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="3 6 5 6 21 6"/>
+    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+    <path d="M10 11v6M14 11v6"/>
+    <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+  </svg>
+);
+
 // ── WelcomeHero ────────────────────────────────────────────────────────────
 
 function WelcomeHero({
@@ -191,27 +201,52 @@ function WorkspaceCard({
   ws,
   surahNames,
   onRenamed,
+  onDeleted,
   onNavigate,
 }: {
   ws:         WorkspaceItem;
   surahNames: Record<number, SurahName>;
   onRenamed:  (id: string, name: string) => void;
+  onDeleted:  (id: string) => void;
   onNavigate: (href: string) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const isOwner  = ws.role === "owner";
 
-  const [editing, setEditing] = useState(false);
-  const [draft,   setDraft]   = useState(ws.name);
-  const [saving,  setSaving]  = useState(false);
-  const [error,   setError]   = useState<string | null>(null);
+  const [editing,     setEditing]     = useState(false);
+  const [draft,       setDraft]       = useState(ws.name);
+  const [saving,      setSaving]      = useState(false);
+  const [error,       setError]       = useState<string | null>(null);
+  const [confirmDel,  setConfirmDel]  = useState(false);
+  const [deleting,    setDeleting]    = useState(false);
 
   function startEdit(e: React.MouseEvent) {
     e.stopPropagation();
     setDraft(ws.name);
     setError(null);
     setEditing(true);
+    setConfirmDel(false);
     setTimeout(() => inputRef.current?.select(), 0);
+  }
+
+  async function handleDelete(e: React.MouseEvent) {
+    e.stopPropagation();
+    if (!confirmDel) { setConfirmDel(true); return; }
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/workspaces/${ws.id}`, { method: "DELETE" });
+      if (res.ok) {
+        onDeleted(ws.id);
+      } else {
+        setError("Failed to delete");
+        setDeleting(false);
+        setConfirmDel(false);
+      }
+    } catch {
+      setError("Network error");
+      setDeleting(false);
+      setConfirmDel(false);
+    }
   }
 
   async function commitEdit() {
@@ -250,9 +285,36 @@ function WorkspaceCard({
       <div className="hw-ws-card-header">
         <div className="hw-ws-card-avatar">{initials}</div>
         {isOwner && !editing && (
-          <button className="hw-ws-card-edit" onClick={startEdit} title="Rename">
-            <PencilIcon />
-          </button>
+          <div className="hw-ws-card-actions" onClick={(e) => e.stopPropagation()}>
+            {confirmDel ? (
+              <>
+                <button
+                  className="hw-ws-card-del-confirm"
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  title="Confirm delete"
+                >
+                  {deleting ? "…" : "Delete?"}
+                </button>
+                <button
+                  className="hw-ws-card-edit"
+                  onClick={(e) => { e.stopPropagation(); setConfirmDel(false); }}
+                  title="Cancel"
+                >
+                  ✕
+                </button>
+              </>
+            ) : (
+              <>
+                <button className="hw-ws-card-edit" onClick={startEdit} title="Rename">
+                  <PencilIcon />
+                </button>
+                <button className="hw-ws-card-del" onClick={handleDelete} title="Delete workspace">
+                  <TrashIcon />
+                </button>
+              </>
+            )}
+          </div>
         )}
       </div>
 
@@ -330,6 +392,10 @@ export default function HomeClient({
     setWorkspaces((prev) => prev.map((ws) => ws.id === id ? { ...ws, name } : ws));
   }
 
+  function handleDeleted(id: string) {
+    setWorkspaces((prev) => prev.filter((ws) => ws.id !== id));
+  }
+
   async function handleSignOut() {
     await fetch("/api/auth/logout", { method: "POST" });
     try { await getFirebaseAuth().signOut(); } catch { /* ignore */ }
@@ -393,6 +459,7 @@ export default function HomeClient({
                     ws={ws}
                     surahNames={surahNames}
                     onRenamed={handleRenamed}
+                    onDeleted={handleDeleted}
                     onNavigate={navigate}
                   />
                 </div>
