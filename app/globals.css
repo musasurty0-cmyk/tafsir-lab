@@ -4297,6 +4297,502 @@ input, textarea { font: inherit; color: inherit; }
   z-index: 9997;
 }
 
+/* ─────────────────────────────────────────────────────────────
+   Beta tutorial  (.bt prefix — fully isolated from app shell)
+───────────────────────────────────────────────────────────── */
+
+.bt {
+  --bt-bg:      oklch(0.11 0.008 80);
+  --bt-surf:    oklch(0.155 0.009 80);
+  --bt-ink:     oklch(0.93 0.005 80);
+  --bt-ink-2:   oklch(0.72 0.007 80);
+  --bt-ink-3:   oklch(0.48 0.008 80);
+  --bt-line:    oklch(0.93 0.005 80 / 0.09);
+  --bt-acc:     oklch(0.72 0.14 155);
+  --bt-display: "Spectral", Georgia, serif;
+  --bt-body:    "Sora", system-ui, sans-serif;
+  --bt-arabic:  "Scheherazade New", "Amiri Quran", "Amiri", serif;
+
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bt-bg);
+  color: var(--bt-ink);
+  font-family: var(--bt-body);
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+/* ── Header ── */
+.bt-header {
+  height: 56px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 32px;
+  border-bottom: 1px solid var(--bt-line);
+}
+.bt-logo {
+  font-family: var(--bt-display);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 1.1rem;
+  letter-spacing: -0.02em;
+  color: var(--bt-ink);
+  margin-right: auto;
+}
+.bt-dots { display: flex; gap: 6px; align-items: center; }
+.bt-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--bt-ink-3);
+  transition: background 0.2s, transform 0.2s;
+}
+.bt-dot--cur  { background: var(--bt-acc); transform: scale(1.35); }
+.bt-dot--done { background: var(--bt-ink-2); }
+.bt-step-counter {
+  font-size: 0.75rem;
+  color: var(--bt-ink-3);
+  font-feature-settings: "tnum";
+  min-width: 28px;
+  text-align: right;
+}
+
+/* ── Step body ── */
+.bt-body {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+@keyframes bt-enter {
+  from { opacity: 0; transform: translateX(28px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes bt-leave {
+  from { opacity: 1; transform: translateX(0); }
+  to   { opacity: 0; transform: translateX(-28px); }
+}
+.bt-body--enter { animation: bt-enter 0.3s cubic-bezier(0.22,1,0.36,1) both; }
+.bt-body--leave { animation: bt-leave 0.26s ease both; pointer-events: none; }
+
+/* ── Footer ── */
+.bt-footer {
+  height: 64px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 32px;
+  border-top: 1px solid var(--bt-line);
+}
+.bt-footer-hint {
+  font-size: 0.8125rem;
+  color: var(--bt-ink-3);
+  font-style: italic;
+}
+.bt-next-btn {
+  font-family: var(--bt-body);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: oklch(0.11 0.008 80);
+  background: var(--bt-acc);
+  border: none;
+  padding: 10px 28px;
+  border-radius: 4px;
+  cursor: pointer;
+  letter-spacing: -0.01em;
+  flex-shrink: 0;
+  transition: background 0.15s, transform 0.1s;
+}
+.bt-next-btn:hover  { background: oklch(0.78 0.14 155); transform: translateY(-1px); }
+.bt-next-btn:active { transform: none; }
+
+/* ── Step shell (sidebar + demo area) ── */
+.bt-shell {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  overflow: hidden;
+  min-height: 0;
+}
+.bt-sidebar {
+  padding: 36px 32px;
+  border-right: 1px solid var(--bt-line);
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  overflow-y: auto;
+}
+.bt-step-n {
+  display: block;
+  font-family: var(--bt-display);
+  font-weight: 300;
+  font-size: 2.75rem;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  color: oklch(0.93 0.005 80 / 0.07);
+  margin-bottom: 14px;
+}
+.bt-step-title {
+  font-family: var(--bt-display);
+  font-weight: 400;
+  font-size: 1.4rem;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+  color: var(--bt-ink);
+  margin: 0 0 12px;
+}
+.bt-step-desc {
+  font-size: 0.875rem;
+  font-weight: 300;
+  line-height: 1.75;
+  color: var(--bt-ink-2);
+  margin: 0;
+}
+.bt-sidebar-extra { margin-top: 24px; }
+.bt-demo-area {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  min-height: 0;
+}
+
+/* ── Step 01: Editor ── */
+.bt-editor-frame {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 28px oklch(0 0 0 / 0.22);
+  min-height: 0;
+}
+.bt-editor-bar {
+  height: 40px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 12px;
+  background: oklch(0.985 0.002 80);
+  border-bottom: 1px solid oklch(0.22 0.012 80 / 0.08);
+}
+.bt-bar-pill {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: oklch(0.38 0.012 80);
+  padding: 3px 8px;
+  border-radius: 3px;
+  background: oklch(0.97 0.003 80);
+  border: 1px solid oklch(0.22 0.012 80 / 0.09);
+  font-family: "Sora", system-ui, sans-serif;
+}
+.bt-bar-flex { flex: 1; }
+.bt-bar-hint {
+  font-size: 0.75rem;
+  color: oklch(0.56 0.01 80);
+  font-style: italic;
+}
+.bt-editor-body { flex: 1; overflow-y: auto; }
+.bt-editor-body .ProseMirror {
+  min-height: 100%;
+  padding: 20px 24px;
+  outline: none;
+  font-family: "Sora", system-ui, sans-serif;
+  font-size: 0.9375rem;
+  font-weight: 300;
+  line-height: 1.8;
+  color: oklch(0.22 0.012 80);
+}
+.bt-editor-body .ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: oklch(0.72 0.008 80);
+  pointer-events: none;
+  float: left;
+  height: 0;
+}
+.bt-editor-body .ProseMirror h1,
+.bt-editor-body .ProseMirror h2,
+.bt-editor-body .ProseMirror h3 {
+  font-family: "Spectral", Georgia, serif;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  margin-top: 1.4em;
+  margin-bottom: 0.4em;
+  color: oklch(0.22 0.012 80);
+}
+.bt-editor-body .ProseMirror blockquote {
+  margin: 1em 0;
+  padding-left: 16px;
+  border-left: 2px solid oklch(0.72 0.14 155);
+  color: oklch(0.38 0.012 80);
+  font-style: italic;
+}
+.bt-editor-body .ProseMirror ul,
+.bt-editor-body .ProseMirror ol {
+  padding-left: 1.5em;
+}
+
+/* ── Step 02: Canvas ── */
+.bt-anno-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.bt-swatches { display: flex; gap: 5px; }
+.bt-swatch {
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform 0.12s;
+}
+.bt-swatch:hover { transform: scale(1.2); }
+.bt-swatch--on   { border-color: #fff; transform: scale(1.25); }
+.bt-clear-btn {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--bt-ink-3);
+  background: none;
+  border: 1px solid var(--bt-line);
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: "Sora", system-ui, sans-serif;
+  transition: color 0.12s, border-color 0.12s;
+}
+.bt-clear-btn:hover { color: var(--bt-ink); border-color: oklch(0.93 0.005 80 / 0.25); }
+.bt-mushaf-frame {
+  flex: 1;
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 28px oklch(0 0 0 / 0.25);
+  min-height: 280px;
+}
+.bt-mushaf-paper {
+  position: absolute;
+  inset: 0;
+  background: oklch(0.97 0.006 80);
+  padding: 20px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-end;
+  overflow: hidden;
+}
+.bt-ar-line {
+  font-family: "Scheherazade New", "Amiri Quran", "Amiri", serif;
+  font-size: clamp(1rem, 2vw, 1.45rem);
+  line-height: 2.1;
+  color: oklch(0.28 0.012 80);
+  margin: 0;
+  direction: rtl;
+  text-align: right;
+  width: 100%;
+}
+.bt-draw-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  cursor: crosshair;
+}
+
+/* ── Step 03: Live collab ── */
+.bt-collab-frame {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 28px oklch(0 0 0 / 0.22);
+  min-height: 0;
+}
+.bt-collab-bar {
+  height: 44px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 16px;
+  background: oklch(0.985 0.002 80);
+  border-bottom: 1px solid oklch(0.22 0.012 80 / 0.08);
+}
+.bt-collab-title {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: oklch(0.38 0.012 80);
+  font-family: "Sora", system-ui, sans-serif;
+}
+.bt-presence-row { display: flex; gap: 6px; }
+.bt-presence-pill {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: var(--pc, #888);
+  background: color-mix(in srgb, var(--pc, #888) 12%, transparent);
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-family: "Sora", system-ui, sans-serif;
+}
+.bt-presence-dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--pc, #888);
+  animation: bt-pulse 1.8s ease-in-out infinite;
+}
+@keyframes bt-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.45; }
+}
+.bt-collab-doc {
+  flex: 1;
+  padding: 20px 24px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.bt-collab-block {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.bt-collab-block--you { opacity: 0.45; }
+.bt-collab-author {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  font-family: "Sora", system-ui, sans-serif;
+}
+.bt-collab-para {
+  font-size: 0.9rem;
+  font-weight: 300;
+  line-height: 1.75;
+  color: oklch(0.28 0.012 80);
+  margin: 0;
+  font-family: "Sora", system-ui, sans-serif;
+  min-height: 1.4em;
+}
+.bt-collab-para--empty {
+  font-style: italic;
+  color: oklch(0.72 0.008 80);
+}
+.bt-collab-waiting {
+  font-style: italic;
+  color: oklch(0.72 0.008 80);
+  font-size: 0.85em;
+}
+.bt-fake-caret {
+  display: inline-block;
+  width: 2px;
+  height: 1.05em;
+  background: var(--cc, #4285F4);
+  margin-left: 1px;
+  vertical-align: text-bottom;
+  animation: bt-blink 1s ease-in-out infinite;
+}
+@keyframes bt-blink {
+  0%, 45%, 100% { opacity: 1; }
+  55%, 95%      { opacity: 0; }
+}
+
+/* ── Step 04: Begin ── */
+.bt-begin {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: clamp(40px, 6vw, 80px) clamp(48px, 10vw, 120px);
+}
+.bt-begin-n {
+  display: block;
+  font-family: var(--bt-display);
+  font-weight: 300;
+  font-size: 3rem;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  color: oklch(0.93 0.005 80 / 0.07);
+  margin-bottom: 20px;
+}
+.bt-begin-title {
+  font-family: var(--bt-display);
+  font-weight: 300;
+  font-size: clamp(2rem, 5vw, 4.5rem);
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+  color: var(--bt-ink);
+  margin: 0 0 18px;
+}
+.bt-begin-title em { font-style: italic; color: var(--bt-acc); }
+.bt-begin-desc {
+  font-size: clamp(0.875rem, 1.5vw, 1.05rem);
+  font-weight: 300;
+  line-height: 1.75;
+  color: var(--bt-ink-2);
+  max-width: 50ch;
+  margin: 0 0 36px;
+}
+.bt-begin-actions { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+.bt-cta-primary {
+  font-family: var(--bt-body);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: oklch(0.11 0.008 80);
+  background: var(--bt-acc);
+  padding: 13px 32px;
+  border-radius: 4px;
+  text-decoration: none;
+  letter-spacing: -0.01em;
+  transition: background 0.15s, transform 0.1s;
+}
+.bt-cta-primary:hover { background: oklch(0.78 0.14 155); transform: translateY(-1px); }
+.bt-cta-ghost {
+  font-family: var(--bt-body);
+  font-size: 0.875rem;
+  color: var(--bt-ink-2);
+  text-decoration: none;
+  border-bottom: 1px solid var(--bt-line);
+  padding-bottom: 2px;
+  transition: color 0.12s, border-color 0.12s;
+}
+.bt-cta-ghost:hover { color: var(--bt-ink); border-color: oklch(0.93 0.005 80 / 0.3); }
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .bt { height: auto; min-height: 100vh; overflow: auto; }
+  .bt-body { overflow: visible; }
+  .bt-shell {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+    overflow: visible;
+  }
+  .bt-sidebar {
+    padding: 24px 20px;
+    border-right: none;
+    border-bottom: 1px solid var(--bt-line);
+  }
+  .bt-demo-area { padding: 16px; min-height: 360px; }
+  .bt-begin { padding: 32px 24px; }
+  .bt-footer { padding: 0 20px; height: auto; padding-top: 12px; padding-bottom: 12px; }
+  .bt-footer-hint { display: none; }
+  .bt-header { padding: 0 20px; }
+  .bt-presence-row { display: none; }
+}
+
 /* ── Surah card entrance animation ── */
 @keyframes surah-card-in {
   from { opacity: 0; transform: translateY(8px); }
