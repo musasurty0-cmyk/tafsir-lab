@@ -4899,6 +4899,12 @@ input, textarea { font: inherit; color: inherit; }
 .tr-next-btn:hover  { background: oklch(0.78 0.14 155); transform: translateY(-1px); }
 .tr-next-btn:active { transform: none; }
 .tr-next-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+.tr-error {
+  font-size: 0.75rem;
+  color: oklch(0.65 0.15 25);
+  margin: 0;
+  font-family: var(--font-sans, system-ui);
+}
 
 /* Bismillah finale (step 3) */
 @keyframes tr-finale-in {

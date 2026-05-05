@@ -261,6 +261,25 @@ export default function WorkspacePageView({
     };
   }, [activePageId]);
 
+  // ── Tour event listeners (TourBubble → WorkspacePageView) ─────────────────
+  useEffect(() => {
+    function onTourMode(e: Event) {
+      setMode((e as CustomEvent<ViewMode>).detail);
+    }
+    function onTourAction(e: Event) {
+      const action = (e as CustomEvent<string>).detail;
+      if (action === "open-tafsir") {
+        setTafsirOpen(true);
+      }
+    }
+    window.addEventListener("tl-tour-mode",   onTourMode);
+    window.addEventListener("tl-tour-action", onTourAction);
+    return () => {
+      window.removeEventListener("tl-tour-mode",   onTourMode);
+      window.removeEventListener("tl-tour-action", onTourAction);
+    };
+  }, []);
+
   const patchTweaks = (patch: Partial<TweaksState>) => {
     setTweaks((prev) => {
       const next = { ...prev, ...patch };
@@ -500,7 +519,7 @@ export default function WorkspacePageView({
           onClose={() => setShowTweaks(false)}
         />
       )}
-      <TourBubble workspaceId={workspaceId} />
+      <TourBubble />
     </div>
   );
 }

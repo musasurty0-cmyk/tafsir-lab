@@ -134,7 +134,7 @@ export default function SurahNoPages({
         </div>
       </div>
     </div>
-    <TourBubble workspaceId={workspaceId} />
+    <TourBubble />
     </>
   );
 }

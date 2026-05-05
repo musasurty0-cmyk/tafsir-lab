@@ -313,8 +313,8 @@ export default function HomeClient({
 
   function replayTutorial() {
     localStorage.removeItem("tl-tutorial-done");
-    startTour(workspaces[0]?.id);
-    setTutKey((k) => k + 1); // remount TutorialOverlay so it doesn't re-fire
+    startTour();
+    setTutKey((k) => k + 1);
   }
 
   // Remove any lingering splash when this page mounts (back-navigation)
@@ -455,7 +455,7 @@ export default function HomeClient({
 
       </div>
 
-      <TutorialOverlay key={tutKey} workspaceId={workspaces[0]?.id} />
+      <TutorialOverlay key={tutKey} />
       <TourBubble />
 
       {modalOpen && <NewWorkspaceModal onClose={() => setModalOpen(false)} />}

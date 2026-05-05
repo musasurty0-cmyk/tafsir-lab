@@ -350,7 +350,7 @@ export default function WorkspaceHome({
         }}
       />
     )}
-    <TourBubble workspaceId={workspaceId} />
+    <TourBubble />
     </>
   );
 }

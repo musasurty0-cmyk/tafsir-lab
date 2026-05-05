@@ -8,8 +8,9 @@ const DONE_KEY = "tl-tutorial-done";
 
 export interface TourState {
   active:       boolean;
-  step:         number;       // 0=home  1=workspace  2=surah/page  3=finale
-  workspaceId?: string;       // first workspace to navigate to on step 0 → 1
+  step:         number;       // 0=home  1=editor  2=canvas  3=split  4=tafsir  5=finale
+  workspaceId?: string;       // tutorial workspace id
+  pageId?:      string;       // tutorial page id
 }
 
 function dispatch() {
