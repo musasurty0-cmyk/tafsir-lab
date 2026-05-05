@@ -351,7 +351,13 @@ function LiveStep() {
 // Step 04 — Begin
 // ─────────────────────────────────────────────────────────────────────────────
 
-function BeginStep({ onReplay }: { onReplay: () => void }) {
+function BeginStep({
+  onReplay,
+  onDismiss,
+}: {
+  onReplay:   () => void;
+  onDismiss?: () => void;
+}) {
   return (
     <div className="bt-begin">
       <span className="bt-begin-n">04</span>
@@ -363,12 +369,22 @@ function BeginStep({ onReplay }: { onReplay: () => void }) {
         save automatically, and you can invite your circle any time.
       </p>
       <div className="bt-begin-actions">
-        <Link href="/login" className="bt-cta-primary">
-          Create account →
-        </Link>
-        <Link href="/login" className="bt-cta-ghost">
-          I already have an account
-        </Link>
+        {onDismiss ? (
+          /* In-app overlay: close the tutorial to go back to the app */
+          <button className="bt-cta-primary" onClick={onDismiss}>
+            Start studying →
+          </button>
+        ) : (
+          /* Standalone /beta page: send to login */
+          <>
+            <Link href="/login" className="bt-cta-primary">
+              Create account →
+            </Link>
+            <Link href="/login" className="bt-cta-ghost">
+              I already have an account
+            </Link>
+          </>
+        )}
       </div>
       <button className="bt-replay-btn" onClick={onReplay}>
         ↩ Watch again
@@ -381,11 +397,21 @@ function BeginStep({ onReplay }: { onReplay: () => void }) {
 // Root
 // ─────────────────────────────────────────────────────────────────────────────
 
-export default function BetaTutorial() {
+interface BetaTutorialProps {
+  /** When true, renders inside a parent overlay — skips body-bg mutation and
+   *  shows a close button that calls onDismiss. */
+  overlayMode?: boolean;
+  onDismiss?:   () => void;
+}
+
+export default function BetaTutorial({
+  overlayMode = false,
+  onDismiss,
+}: BetaTutorialProps) {
   const [step, setStep]       = useState(0);
   const [leaving, setLeaving] = useState(false);
 
-  /* Fonts + body background */
+  /* Fonts — always needed. Body background only on the standalone /beta page. */
   useEffect(() => {
     if (!document.getElementById("lp-fonts")) {
       const link = document.createElement("link");
@@ -395,27 +421,20 @@ export default function BetaTutorial() {
         "https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,300;0,400;1,300;1,400&family=Sora:wght@300;400;500&family=Scheherazade+New:wght@400;700&display=swap";
       document.head.appendChild(link);
     }
-    const prev = document.body.style.background;
-    document.body.style.background = "oklch(0.11 0.008 80)";
-    return () => { document.body.style.background = prev; };
+    if (!overlayMode) {
+      const prev = document.body.style.background;
+      document.body.style.background = "oklch(0.11 0.008 80)";
+      return () => { document.body.style.background = prev; };
+    }
+  }, [overlayMode]);
+
+  const transition = useCallback((toStep: number) => {
+    setLeaving(true);
+    setTimeout(() => { setStep(toStep); setLeaving(false); }, 260);
   }, []);
 
-  const next = useCallback(() => {
-    if (step >= TOTAL - 1) return;
-    setLeaving(true);
-    setTimeout(() => {
-      setStep((s) => s + 1);
-      setLeaving(false);
-    }, 260);
-  }, [step]);
-
-  const replay = useCallback(() => {
-    setLeaving(true);
-    setTimeout(() => {
-      setStep(0);
-      setLeaving(false);
-    }, 260);
-  }, []);
+  const next   = useCallback(() => { if (step < TOTAL - 1) transition(step + 1); }, [step, transition]);
+  const replay = useCallback(() => transition(0), [transition]);
 
   return (
     <div className="bt">
@@ -433,9 +452,12 @@ export default function BetaTutorial() {
             />
           ))}
         </div>
-        <span className="bt-step-counter">
-          {step + 1} / {TOTAL}
-        </span>
+        <span className="bt-step-counter">{step + 1} / {TOTAL}</span>
+        {overlayMode && onDismiss && (
+          <button className="bt-close-btn" onClick={onDismiss} aria-label="Close tutorial">
+            ✕
+          </button>
+        )}
       </header>
 
       {/* ── Step body ── */}
@@ -446,7 +468,7 @@ export default function BetaTutorial() {
         {step === 0 && <WriteStep />}
         {step === 1 && <AnnotateStep />}
         {step === 2 && <LiveStep />}
-        {step === 3 && <BeginStep onReplay={replay} />}
+        {step === 3 && <BeginStep onReplay={replay} onDismiss={overlayMode ? onDismiss : undefined} />}
       </div>
 
       {/* ── Footer nav ── */}
