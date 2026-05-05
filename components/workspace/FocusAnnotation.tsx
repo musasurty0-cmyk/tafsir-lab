@@ -158,6 +158,12 @@ export default function FocusAnnotation({ verses, verseKey, wordPos, onClose, on
   const bodyRef               = useRef<HTMLDivElement>(null);
   const rafRef                = useRef<number>(0);
 
+  // ── Text notes state ──────────────────────────────────────────────────
+  const [noteText, setNoteText]   = useState("");
+  const [noteSaved, setNoteSaved] = useState(false);
+  const noteTimerRef              = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const noteSavedTimerRef         = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Sync ref so pointer handlers always see latest strokes
   useEffect(() => { strokesRef.current = strokes; }, [strokes]);
 
@@ -167,6 +173,18 @@ export default function FocusAnnotation({ verses, verseKey, wordPos, onClose, on
     setStrokes(loaded);
     strokesRef.current = loaded;
   }, [verseKey, wordPos]);
+
+  // Load persisted text note
+  useEffect(() => {
+    const key = `tl-note-text-${verseKey}-${wordPos ?? "ayah"}`;
+    setNoteText(localStorage.getItem(key) ?? "");
+  }, [verseKey, wordPos]);
+
+  // Cleanup timers on unmount
+  useEffect(() => () => {
+    if (noteTimerRef.current)      clearTimeout(noteTimerRef.current);
+    if (noteSavedTimerRef.current) clearTimeout(noteSavedTimerRef.current);
+  }, []);
 
   // ── Canvas render ──────────────────────────────────────────────────────
 
@@ -333,6 +351,23 @@ export default function FocusAnnotation({ verses, verseKey, wordPos, onClose, on
     saveStrokes(verseKey, wordPos, []);
   }
 
+  // ── Notes change handler ───────────────────────────────────────────────
+
+  function handleNoteChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
+    const val = e.target.value;
+    setNoteText(val);
+    // Debounce save
+    if (noteTimerRef.current) clearTimeout(noteTimerRef.current);
+    noteTimerRef.current = setTimeout(() => {
+      try {
+        localStorage.setItem(`tl-note-text-${verseKey}-${wordPos ?? "ayah"}`, val);
+      } catch { /* quota */ }
+      setNoteSaved(true);
+      if (noteSavedTimerRef.current) clearTimeout(noteSavedTimerRef.current);
+      noteSavedTimerRef.current = setTimeout(() => setNoteSaved(false), 1600);
+    }, 600);
+  }
+
   // ── Derived ────────────────────────────────────────────────────────────
 
   const focusWord = wordPos != null
@@ -397,40 +432,89 @@ export default function FocusAnnotation({ verses, verseKey, wordPos, onClose, on
         <button className="fa-close-btn" onClick={onClose} title="Close (Esc)">×</button>
       </div>
 
-      {/* ── Drawing body ── */}
-      <div ref={bodyRef} className="fa-body">
-        {/* Arabic text — pointer-events:none so canvas captures all input */}
-        <div className="fa-arabic-display" dir="rtl" style={{ pointerEvents: "none" }}>
-          {verse?.words.map((w) => {
-            if (w.char_type_name === "end") {
+      {/* ── Main row: drawing canvas + notes panel ── */}
+      <div className="fa-main">
+
+        {/* Drawing body */}
+        <div ref={bodyRef} className="fa-body">
+          {/* Arabic text — pointer-events:none so canvas captures all input */}
+          <div className="fa-arabic-display" dir="rtl" style={{ pointerEvents: "none" }}>
+            {verse?.words.map((w) => {
+              if (w.char_type_name === "end") {
+                return (
+                  <span key={`end-${w.position}`} className="fa-ayah-end">
+                    ﴿{ayahNum}﴾{" "}
+                  </span>
+                );
+              }
+              const isTarget = wordPos != null && w.position === wordPos;
               return (
-                <span key={`end-${w.position}`} className="fa-ayah-end">
-                  ﴿{ayahNum}﴾{" "}
+                <span
+                  key={w.position}
+                  className={`fa-word${isTarget ? " fa-word--focus" : ""}`}
+                >
+                  {w.text}{" "}
                 </span>
               );
-            }
-            const isTarget = wordPos != null && w.position === wordPos;
-            return (
-              <span
-                key={w.position}
-                className={`fa-word${isTarget ? " fa-word--focus" : ""}`}
-              >
-                {w.text}{" "}
-              </span>
-            );
-          })}
+            })}
+          </div>
+
+          {/* Drawing canvas — covers entire body */}
+          <canvas
+            ref={canvasRef}
+            className="fa-canvas"
+            style={{ cursor }}
+            onPointerDown={onDown}
+            onPointerMove={onMove}
+            onPointerUp={onUp}
+            onPointerCancel={onUp}
+          />
         </div>
 
-        {/* Drawing canvas — covers entire body */}
-        <canvas
-          ref={canvasRef}
-          className="fa-canvas"
-          style={{ cursor }}
-          onPointerDown={onDown}
-          onPointerMove={onMove}
-          onPointerUp={onUp}
-          onPointerCancel={onUp}
-        />
+        {/* ── Notes panel ── */}
+        <div className="fa-notes">
+          {/* Word info header */}
+          <div className="fa-notes-word">
+            {focusWord ? (
+              <>
+                <span className="fa-notes-ar">{focusWord.text}</span>
+                {focusWord.transliteration?.text && (
+                  <span className="fa-notes-translit">{focusWord.transliteration.text}</span>
+                )}
+                {focusWord.translation?.text && (
+                  <span className="fa-notes-meaning">{focusWord.translation.text}</span>
+                )}
+              </>
+            ) : (
+              <span className="fa-notes-ayah-ref">Ayah {ayahNum} · {verseKey}</span>
+            )}
+          </div>
+
+          {/* Notes label */}
+          <div className="fa-notes-label">Notes</div>
+
+          {/* Text notes textarea */}
+          <textarea
+            className="fa-notes-textarea"
+            placeholder={focusWord
+              ? `Write your notes on "${focusWord.text}"…`
+              : "Write your notes on this ayah…"}
+            value={noteText}
+            onChange={handleNoteChange}
+            spellCheck
+          />
+
+          {/* Saved indicator */}
+          <div className="fa-notes-footer">
+            <span
+              className="fa-notes-saved"
+              data-visible={noteSaved ? "true" : "false"}
+            >
+              Saved
+            </span>
+          </div>
+        </div>
+
       </div>
     </div>
   );

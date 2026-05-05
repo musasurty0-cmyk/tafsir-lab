@@ -17,6 +17,8 @@ import {
   useCallback, useEffect, useLayoutEffect, useMemo,
   useRef, useState,
 } from "react";
+
+const HINT_KEY = "tl-word-tap-hint-dismissed";
 import type { Verse } from "@/lib/types";
 import type { ProgressStatus } from "@/lib/services/progress.service";
 import type { NoteData } from "./NoteCard";
@@ -101,6 +103,16 @@ export default function ModeBPage({
     verseKey: string;
     wordPos:  number | null;
   } | null>(null);
+
+  // ── Word-tap hint chip ────────────────────────────────────────────────
+  const [showHint, setShowHint] = useState(false);
+  useEffect(() => {
+    if (!localStorage.getItem(HINT_KEY)) setShowHint(true);
+  }, []);
+  function dismissHint() {
+    setShowHint(false);
+    localStorage.setItem(HINT_KEY, "1");
+  }
 
   const openFocus = useCallback((verseKey: string, wordPos: number | null) => {
     setFocusAnchor({ verseKey, wordPos });
@@ -416,6 +428,17 @@ export default function ModeBPage({
         <button className="mode-b-zoom-btn" title="Zoom out" onClick={() => { const next = { ...viewportRef.current, zoom: clamp(viewportRef.current.zoom / 1.2, ZOOM_MIN, ZOOM_MAX) }; setViewport(next); patchViewport(next); }}>−</button>
         <button className="mode-b-zoom-btn" title="Reset view" onClick={() => { const next: CanvasViewport = { x: 40, y: 40, zoom: 1 }; setViewport(next); patchViewport(next); }} style={{ fontSize: "0.7rem" }}>↺</button>
       </div>
+
+      {/* ── Word-tap hint chip ── */}
+      {showHint && !focusAnchor && (
+        <div className="mode-b-word-hint">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M12 20h9"/><path d="M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.854z"/>
+          </svg>
+          Tap any Arabic word to open a note space for it
+          <button className="mode-b-word-hint-dismiss" onClick={dismissHint} title="Dismiss">×</button>
+        </div>
+      )}
 
       {/* ── Word/ayah focus annotation (full-screen, shown on demand) ── */}
       {focusAnchor && (

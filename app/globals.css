@@ -2113,17 +2113,67 @@ input, textarea { font: inherit; color: inherit; }
   display: inline;
   cursor: pointer;
   border-radius: 3px;
-  padding: 0 1px;
-  transition: background 0.1s, color 0.1s;
+  padding: 0 2px;
+  /* Dotted underline is the universal "this is interactive" cue */
+  text-decoration-line: underline;
+  text-decoration-style: dotted;
+  text-decoration-color: transparent;
+  text-underline-offset: 4px;
+  transition: background 0.12s, color 0.12s, text-decoration-color 0.12s;
 }
 .mushaf-word:hover {
-  background: oklch(0.75 0.14 285 / 0.18);
-  color: oklch(0.35 0.18 285);
+  background: oklch(0.78 0.10 285 / 0.22);
+  color: oklch(0.28 0.20 285);
+  text-decoration-color: oklch(0.55 0.16 285 / 0.55);
 }
 .mushaf-word:active,
 .mushaf-word[data-active="true"] {
-  background: oklch(0.75 0.14 285 / 0.30);
-  color: oklch(0.30 0.18 285);
+  background: oklch(0.75 0.14 285 / 0.32);
+  color: oklch(0.24 0.20 285);
+}
+
+/* "Tap to annotate" hint bubble — shown via JS data attribute */
+.mushaf-word-wrap {
+  display: inline;
+  position: relative;
+}
+
+/* Canvas-mode hint chip — shown inside ModeBPage */
+.mode-b-word-hint {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--bg-elev);
+  border: 1px solid var(--line-strong);
+  border-radius: 20px;
+  padding: 6px 14px 6px 10px;
+  font-size: 12px;
+  color: var(--ink-2);
+  box-shadow: 0 2px 12px oklch(0 0 0 / 0.10);
+  pointer-events: auto;
+  white-space: nowrap;
+  animation: wh-in 0.3s ease-out;
+}
+.mode-b-word-hint svg { flex-shrink: 0; color: var(--accent); }
+.mode-b-word-hint-dismiss {
+  margin-left: 6px;
+  width: 18px; height: 18px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  font-size: 12px;
+  color: var(--ink-4);
+  cursor: pointer;
+  transition: background .1s, color .1s;
+}
+.mode-b-word-hint-dismiss:hover { background: var(--hover); color: var(--ink); }
+@keyframes wh-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(6px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0);   }
 }
 
 /* Ayah-end medallion ﴿١﴾ */
@@ -2579,6 +2629,14 @@ input, textarea { font: inherit; color: inherit; }
   user-select: none;
 }
 
+/* Row that holds drawing canvas + notes panel */
+.fa-main {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  min-height: 0;
+}
+
 /* ── Toolbar ── */
 .fa-toolbar {
   display: flex;
@@ -2669,15 +2727,120 @@ input, textarea { font: inherit; color: inherit; }
 }
 .fa-close-btn:hover { background: var(--hover); color: var(--ink); }
 
-/* ── Body ── */
+/* ── Body (drawing canvas) ── */
 .fa-body {
   flex: 1;
+  min-width: 0;
   position: relative;
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
 }
+
+/* ── Notes panel ── */
+.fa-notes {
+  width: 260px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid var(--line-strong);
+  background: var(--bg);
+  overflow: hidden;
+}
+
+.fa-notes-word {
+  padding: 18px 16px 12px;
+  border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
+}
+
+.fa-notes-ar {
+  display: block;
+  font-family: "Amiri Quran", serif;
+  font-size: 2rem;
+  color: var(--ink);
+  direction: rtl;
+  text-align: right;
+  line-height: 1.6;
+  margin-bottom: 4px;
+}
+
+.fa-notes-translit {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--accent);
+  letter-spacing: 0.04em;
+  text-transform: lowercase;
+  margin-bottom: 3px;
+}
+
+.fa-notes-meaning {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--ink-2);
+  line-height: 1.4;
+  font-style: italic;
+}
+
+.fa-notes-ayah-ref {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--ink-3);
+}
+
+.fa-notes-label {
+  padding: 10px 16px 6px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  flex-shrink: 0;
+}
+
+.fa-notes-textarea {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  padding: 4px 16px 16px;
+  font-size: 0.875rem;
+  font-family: var(--font-sans);
+  line-height: 1.65;
+  color: var(--ink);
+  background: transparent;
+  border: none;
+  resize: none;
+  outline: none;
+  /* allow pointer events — this is text, not drawing canvas */
+  pointer-events: auto;
+  -webkit-touch-callout: default;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.fa-notes-textarea::placeholder {
+  color: var(--ink-4);
+  font-style: italic;
+}
+
+.fa-notes-footer {
+  padding: 8px 16px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.fa-notes-saved {
+  font-size: 0.7rem;
+  color: var(--ink-4);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.fa-notes-saved[data-visible="true"] { opacity: 1; }
 
 /* ── Arabic text display ── */
 .fa-arabic-display {
