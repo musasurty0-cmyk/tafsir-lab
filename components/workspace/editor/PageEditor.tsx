@@ -43,6 +43,7 @@ import {
 import CommandList, { type CommandListHandle } from "./CommandList";
 import { getUserColor } from "./RemoteCursorsExtension";
 import EditorToolbar from "./EditorToolbar";
+import SelectionToolbar from "./SelectionToolbar";
 
 // ── Constants ─────────────────────────────────────────────────────────────
 
@@ -362,6 +363,7 @@ export default function PageEditor({ pageId, initialContent, currentUserId }: Pr
     <div className="page-editor">
       <EditorToolbar editor={editor} />
       <EditorContent editor={editor} />
+      <SelectionToolbar editor={editor} />
 
       {/* Remote cursor overlays — rendered into document.body so they
           sit above everything at the correct viewport coordinates */}
