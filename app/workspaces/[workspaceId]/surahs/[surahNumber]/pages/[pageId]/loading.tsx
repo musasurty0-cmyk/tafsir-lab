@@ -1,5 +1,5 @@
-import LoadingVerse from "@/components/LoadingVerse";
+import WorkspaceLoadingSkeleton from "@/components/WorkspaceLoadingSkeleton";
 
 export default function WorkspacePageLoading() {
-  return <LoadingVerse />;
+  return <WorkspaceLoadingSkeleton />;
 }

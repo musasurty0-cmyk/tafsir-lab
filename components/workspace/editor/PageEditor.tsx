@@ -26,6 +26,10 @@ import { createPortal } from "react-dom";
 import { useEditor, EditorContent, type Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
+import Underline from "@tiptap/extension-underline";
+import Highlight from "@tiptap/extension-highlight";
+import Color from "@tiptap/extension-color";
+import { TextStyle } from "@tiptap/extension-text-style";
 import type { SuggestionProps, SuggestionKeyDownProps } from "@tiptap/suggestion";
 
 import { AyahBlockExtension } from "./AyahBlockExtension";
@@ -38,6 +42,7 @@ import {
 } from "./SlashCommand";
 import CommandList, { type CommandListHandle } from "./CommandList";
 import { getUserColor } from "./RemoteCursorsExtension";
+import EditorToolbar from "./EditorToolbar";
 
 // ── Constants ─────────────────────────────────────────────────────────────
 
@@ -188,6 +193,11 @@ export default function PageEditor({ pageId, initialContent, currentUserId }: Pr
         },
         includeChildren: true,
       }),
+
+      Underline,
+      Highlight.configure({ multicolor: true }),
+      TextStyle,
+      Color,
 
       AyahBlockExtension,
       TafsirBlockExtension,
@@ -350,6 +360,7 @@ export default function PageEditor({ pageId, initialContent, currentUserId }: Pr
   // ── Render ────────────────────────────────────────────────────────────
   return (
     <div className="page-editor">
+      <EditorToolbar editor={editor} />
       <EditorContent editor={editor} />
 
       {/* Remote cursor overlays — rendered into document.body so they

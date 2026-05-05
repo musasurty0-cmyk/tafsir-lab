@@ -47,6 +47,7 @@ export default function WorkspaceHome({
   }, []);
 
   const [starting,   setStarting]   = useState<number | null>(null);
+  const [navigating, setNavigating] = useState<number | null>(null);
   const [filter,     setFilter]     = useState<"all" | "started" | "not-started">("all");
   const [prevFilter, setPrevFilter] = useState(filter);
   const tabsRef = useRef<Record<string, HTMLButtonElement | null>>({ all: null, started: null, "not-started": null });
@@ -108,8 +109,8 @@ export default function WorkspaceHome({
       const session = startedMap.get(chapter.id);
 
       if (session) {
-        // Already started — navigate to surah pages route.
-        // The surah pages route will show the sidebar with pages.
+        // Already started — show immediate feedback then navigate.
+        setNavigating(chapter.id);
         router.push(`/workspaces/${workspaceId}/surahs/${chapter.id}`);
         return;
       }
@@ -281,8 +282,10 @@ export default function WorkspaceHome({
           })()}
         >
           {visible.map((ch, index) => {
-            const session = startedMap.get(ch.id);
-            const isStarting = starting === ch.id;
+            const session     = startedMap.get(ch.id);
+            const isStarting  = starting   === ch.id;
+            const isOpening   = navigating === ch.id;
+            const isBusy      = isStarting || isOpening;
 
             return (
               <button
@@ -290,10 +293,10 @@ export default function WorkspaceHome({
                 className="ws-surah-card ws-surah-card--animate"
                 style={{ animationDelay: `${Math.min(index * 15, 300)}ms` }}
                 data-started={session ? "true" : "false"}
-                data-loading={isStarting ? "true" : "false"}
+                data-loading={isBusy ? "true" : "false"}
                 onClick={() => handleCardClick(ch)}
-                title={isStarting ? "Starting…" : session ? `Open — ${session.pageCount} page${session.pageCount !== 1 ? "s" : ""}` : "Start studying"}
-                disabled={isStarting}
+                title={isBusy ? "Opening…" : session ? `Open — ${session.pageCount} page${session.pageCount !== 1 ? "s" : ""}` : "Start studying"}
+                disabled={isBusy}
               >
                 {/* Number badge */}
                 <div className="ws-card-num">{ch.id}</div>
@@ -311,7 +314,11 @@ export default function WorkspaceHome({
                     {PLACE[ch.revelation_place] ?? ch.revelation_place} · {ch.verses_count}v
                   </span>
 
-                  {session ? (
+                  {isOpening ? (
+                    <span className="ws-card-badge ws-card-badge--loading">
+                      <span className="ws-card-spinner" />Opening…
+                    </span>
+                  ) : session ? (
                     <span className="ws-card-badge">
                       {session.pageCount > 0
                         ? `${session.publishedCount}/${session.pageCount} pages`

@@ -159,6 +159,16 @@ export function buildCommands(): SlashCommandItem[] {
       },
     },
     {
+      id:          "numbered",
+      title:       "Numbered list",
+      description: "Ordered list",
+      icon:        "1.",
+      aliases:     ["ordered", "ol", "number"],
+      execute(editor, range) {
+        editor.chain().focus().deleteRange(range).toggleOrderedList().run();
+      },
+    },
+    {
       id:          "divider",
       title:       "Divider",
       description: "Horizontal rule",
