@@ -44,11 +44,6 @@ export default function LoadingVerse() {
   const [idx,     setIdx]     = useState(() => Math.floor(Math.random() * VERSES.length));
   const [visible, setVisible] = useState(true);
 
-  // Remove the navigation splash injected by HomeClient so this screen shows through
-  useEffect(() => {
-    document.getElementById("tl-nav-splash")?.remove();
-    document.getElementById("tl-nav-splash-style")?.remove();
-  }, []);
 
   useEffect(() => {
     const timer = setInterval(() => {
