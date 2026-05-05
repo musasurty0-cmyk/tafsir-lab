@@ -116,7 +116,8 @@ export default function TourBubble() {
           body:    JSON.stringify({ name: "Tutorial Workspace", type: "private" }),
         });
         if (!wsRes.ok) throw new Error("Could not create workspace");
-        const { workspace } = await wsRes.json();
+        const wsBody = await wsRes.json();
+        const workspace = wsBody.workspace ?? wsBody; // handle both shapes
 
         // 2. Start surah 1 (idempotent)
         await fetch(`/api/workspaces/${workspace.id}/surahs`, {
@@ -132,7 +133,8 @@ export default function TourBubble() {
           body:    JSON.stringify({ title: "My First Notes" }),
         });
         if (!pgRes.ok) throw new Error("Could not create page");
-        const page = await pgRes.json();
+        const pgBody = await pgRes.json();
+        const page = pgBody.page ?? pgBody; // API returns { page: {...} }
 
         // 4. Store IDs, advance step, navigate
         setTour({ ...t, step: 1, workspaceId: workspace.id, pageId: page.id });
