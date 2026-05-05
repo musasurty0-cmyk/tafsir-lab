@@ -371,7 +371,7 @@ function BeginStep({ onReplay }: { onReplay: () => void }) {
         </Link>
       </div>
       <button className="bt-replay-btn" onClick={onReplay}>
-        ↩ Replay tutorial
+        ↩ Watch again
       </button>
     </div>
   );

@@ -307,6 +307,12 @@ export default function HomeClient({
   const [workspaces, setWorkspaces] = useState(initial);
   const [modalOpen,  setModalOpen]  = useState(false);
   const [joinOpen,   setJoinOpen]   = useState(false);
+  const [tutKey,     setTutKey]     = useState(0);
+
+  function replayTutorial() {
+    localStorage.removeItem("tl-tutorial-done");
+    setTutKey((k) => k + 1);
+  }
 
   // Remove any lingering splash when this page mounts (back-navigation)
   useEffect(() => {
@@ -434,16 +440,19 @@ export default function HomeClient({
           )}
         </section>
 
-        {/* Join */}
+        {/* Join + replay */}
         <div className="home-join-row">
           <button className="home-join-btn" onClick={() => setJoinOpen(true)}>
             Join a workspace with an invite code
+          </button>
+          <button className="home-join-btn" onClick={replayTutorial}>
+            Replay tutorial
           </button>
         </div>
 
       </div>
 
-      <TutorialOverlay />
+      <TutorialOverlay key={tutKey} />
 
       {modalOpen && <NewWorkspaceModal onClose={() => setModalOpen(false)} />}
       {joinOpen && (
