@@ -101,6 +101,19 @@ export default function WorkspacePageView({
   const [showTweaks, setShowTweaks]       = useState(false);
   const [mode, setMode]                   = useState<ViewMode>("editor");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [formattingOpen, setFormattingOpen] = useState(false);
+
+  // Persist formatting toolbar open/closed state
+  useEffect(() => {
+    try { setFormattingOpen(localStorage.getItem("tl-editor-toolbar-open") === "true"); } catch { /* ignore */ }
+  }, []);
+  const handleToggleFormatting = useCallback(() => {
+    setFormattingOpen((prev) => {
+      const next = !prev;
+      try { localStorage.setItem("tl-editor-toolbar-open", String(next)); } catch { /* ignore */ }
+      return next;
+    });
+  }, []);
 
   // ── Tafsir drawer ─────────────────────────────────────────────────────
   const [tafsirOpen, setTafsirOpen]         = useState(false);
@@ -375,6 +388,7 @@ export default function WorkspacePageView({
         groupProgress={groupProgress}
         personalProgress={personalProgress}
         currentUserId={currentUserId}
+        formattingOpen={formattingOpen}
         onOpenTafsir={openTafsir}
         onProgressChange={handleProgressChange}
         onNoteCreated={handleNoteCreated}
@@ -474,6 +488,8 @@ export default function WorkspacePageView({
           }}
           showTweaks={showTweaks}
           onToggleTweaks={() => setShowTweaks((s) => !s)}
+          formattingOpen={formattingOpen}
+          onToggleFormatting={handleToggleFormatting}
         />
         {activePageId && (
           <PresenceBar pageId={activePageId} currentUserId={currentUserId} />

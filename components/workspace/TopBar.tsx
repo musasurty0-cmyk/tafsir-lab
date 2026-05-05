@@ -48,23 +48,34 @@ const BookOpenIcon = ({ size = 14 }: { size?: number }) => (
   </svg>
 );
 
+const FormattingIcon = ({ size = 13 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M4 7V4h16v3"/>
+    <path d="M9 20h6"/>
+    <path d="M12 4v16"/>
+  </svg>
+);
+
 // ── Types ──────────────────────────────────────────────────────────────────
 
 export type ViewMode = "editor" | "canvas" | "split";
 
 interface Props {
-  workspaceId:      string;
-  surahNumber:      number;
-  workspaceName:    string;
-  chapter:          Chapter;
-  activePageTitle:  string | null;
-  mode:             ViewMode;
-  onSetMode:        (mode: ViewMode) => void;
-  progressLoading?: boolean;
-  tafsirOpen:       boolean;
-  onToggleTafsir:   () => void;
-  showTweaks:       boolean;
-  onToggleTweaks:   () => void;
+  workspaceId:        string;
+  surahNumber:        number;
+  workspaceName:      string;
+  chapter:            Chapter;
+  activePageTitle:    string | null;
+  mode:               ViewMode;
+  onSetMode:          (mode: ViewMode) => void;
+  progressLoading?:   boolean;
+  tafsirOpen:         boolean;
+  onToggleTafsir:     () => void;
+  showTweaks:         boolean;
+  onToggleTweaks:     () => void;
+  formattingOpen:     boolean;
+  onToggleFormatting: () => void;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────
@@ -82,6 +93,8 @@ export default function TopBar({
   onToggleTafsir,
   showTweaks,
   onToggleTweaks,
+  formattingOpen,
+  onToggleFormatting,
 }: Props) {
   return (
     <div className="topbar">
@@ -145,6 +158,21 @@ export default function TopBar({
             <SplitIcon /> Split
           </button>
         </div>
+
+        {/* Formatting toggle — only in editor / split mode */}
+        {mode !== "canvas" && (
+          <>
+            <div className="tb-divider" />
+            <button
+              className="tb-btn"
+              data-active={formattingOpen ? "true" : "false"}
+              onClick={onToggleFormatting}
+              title={formattingOpen ? "Hide formatting" : "Show formatting"}
+            >
+              <FormattingIcon /> Formatting
+            </button>
+          </>
+        )}
 
         <div className="tb-divider" />
 

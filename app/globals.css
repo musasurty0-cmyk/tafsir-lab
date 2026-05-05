@@ -5734,30 +5734,13 @@ input, textarea { font: inherit; color: inherit; }
 
 /* ── Collapsible top ribbon ── */
 .et-ribbon {
-  border-bottom: 1px solid var(--line);
   background: var(--bg-elev);
   user-select: none;
 }
-.et-ribbon-toggle {
-  display: flex; align-items: center; gap: 5px;
-  width: 100%; padding: 5px 10px;
-  background: transparent; border: none; cursor: pointer;
-  color: var(--ink-4); font-size: 11px; font-weight: 500;
-  font-family: var(--font-sans); letter-spacing: 0.03em;
-  text-align: left;
-  transition: color var(--dur-fast) ease, background var(--dur-fast) ease;
-}
-.et-ribbon-toggle:hover { color: var(--ink-2); background: var(--hover); }
-.et-ribbon-toggle-label { flex: 1; }
-.et-ribbon-chevron {
-  transition: transform var(--dur-fast) var(--ease-out);
-  flex-shrink: 0;
-}
-.et-ribbon-chevron--up { transform: rotate(180deg); }
 .et-ribbon-strip {
   display: flex; align-items: center; gap: 1px; flex-wrap: wrap;
   padding: 4px 8px 5px;
-  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
   animation: et-ribbon-open var(--dur-fast) var(--ease-out);
 }
 @keyframes et-ribbon-open {
@@ -5771,28 +5754,17 @@ input, textarea { font: inherit; color: inherit; }
   z-index: 9998;
   display: flex; align-items: center; gap: 1px;
   padding: 4px 6px;
-  background: var(--ink);
+  background: var(--bg-elev);
+  border: 1px solid var(--line-strong);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-lg);
   transform: translateX(-50%);
   animation: sel-toolbar-in var(--dur-fast) var(--ease-out);
-  /* Invert button colours for dark background */
-  --sel-ink: oklch(0.94 0.005 80);
-  --sel-hover: oklch(0.94 0.005 80 / 0.12);
-  --sel-active: oklch(0.94 0.005 80 / 0.2);
-  --sel-line: oklch(0.94 0.005 80 / 0.2);
 }
 @keyframes sel-toolbar-in {
   from { opacity: 0; transform: translateX(-50%) translateY(4px); }
   to   { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
-/* Override button colours inside sel-toolbar */
-.sel-toolbar .et-btn        { color: var(--sel-ink); }
-.sel-toolbar .et-btn:hover:not(:disabled) { background: var(--sel-hover); color: #fff; }
-.sel-toolbar .et-btn--active { background: var(--sel-active); color: #fff; }
-.sel-toolbar .et-sep        { background: var(--sel-line); }
-/* Popovers inside sel-toolbar use normal colours (they escape the dark bg) */
-.sel-toolbar .et-popover { color: var(--ink); }
 
 /* ── Content mark styles ── */
 .page-editor-content mark[data-color] { padding: 0.1em 0.05em; border-radius: 2px; }

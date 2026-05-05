@@ -48,6 +48,8 @@ interface Props {
   currentUserId:     string;
   // Split-view: highlighted verse key from Mode B (scroll + flash)
   highlightedVerseKey?: string | null;
+  // Formatting ribbon open state (controlled by TopBar toggle)
+  formattingOpen?: boolean;
   // Callbacks delegated up to WorkspacePageView
   onOpenTafsir:     (verseKey: string) => void;
   onProgressChange: (scope: "personal" | "group", surahNumber: number, ayahNumber: number, status: ProgressStatus) => Promise<void>;
@@ -105,6 +107,7 @@ export default function ModeAPage({
   groupProgress,
   personalProgress,
   currentUserId,
+  formattingOpen = false,
   onOpenTafsir,
   onProgressChange,
   onNoteCreated,
@@ -164,6 +167,7 @@ export default function ModeAPage({
             pageId={pageId}
             initialContent={page.tiptapContent}
             currentUserId={currentUserId}
+            formattingOpen={formattingOpen}
           />
 
         </div>

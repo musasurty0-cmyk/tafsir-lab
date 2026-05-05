@@ -54,9 +54,10 @@ const CURSOR_POLL_MS      = 1800; // ms between polling remote cursors
 // ── Types ──────────────────────────────────────────────────────────────────
 
 interface Props {
-  pageId:         string;
-  initialContent: unknown;
-  currentUserId:  string;
+  pageId:          string;
+  initialContent:  unknown;
+  currentUserId:   string;
+  formattingOpen?: boolean;
 }
 
 interface RemoteCursorData {
@@ -144,7 +145,7 @@ function computeOverlays(
 
 // ── Component ─────────────────────────────────────────────────────────────
 
-export default function PageEditor({ pageId, initialContent, currentUserId }: Props) {
+export default function PageEditor({ pageId, initialContent, currentUserId, formattingOpen = false }: Props) {
   const [palette, setPalette]   = useState<PaletteState | null>(null);
   const commandListRef          = useRef<CommandListHandle>(null);
   const ALL_COMMANDS            = useRef(buildCommands());
@@ -361,7 +362,7 @@ export default function PageEditor({ pageId, initialContent, currentUserId }: Pr
   // ── Render ────────────────────────────────────────────────────────────
   return (
     <div className="page-editor">
-      <EditorToolbar editor={editor} />
+      <EditorToolbar editor={editor} open={formattingOpen} />
       <EditorContent editor={editor} />
       <SelectionToolbar editor={editor} />
 
