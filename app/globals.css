@@ -3428,11 +3428,26 @@ input, textarea { font: inherit; color: inherit; }
 }
 
 /* Lists */
+/* Lists — OneNote style (Tailwind preflight strips list-style, so we restore) */
 .page-editor-content ul,
 .page-editor-content ol {
-  margin: 0.5em 0 1em; padding-left: 26px;
+  margin: 0.4em 0 0.8em; padding-left: 1.6em;
 }
-.page-editor-content li { margin: 0.25em 0; line-height: 1.7; }
+.page-editor-content li { margin: 0.2em 0; line-height: 1.7; }
+/* Bullet levels */
+.page-editor-content ul                 { list-style-type: disc; }
+.page-editor-content ul ul              { list-style-type: circle; }
+.page-editor-content ul ul ul           { list-style-type: square; }
+/* Number levels */
+.page-editor-content ol                 { list-style-type: decimal; }
+.page-editor-content ol ol              { list-style-type: lower-alpha; }
+.page-editor-content ol ol ol           { list-style-type: lower-roman; }
+/* Tiptap wraps list item content in <p> — collapse its vertical margin */
+.page-editor-content li > p             { margin: 0; }
+.page-editor-content li + li            { margin-top: 0.18em; }
+/* Marker colour matches body text */
+.page-editor-content ul, .page-editor-content ol { color: var(--ink-2); }
+.page-editor-content li                 { color: var(--ink); }
 
 /* Horizontal rule */
 .page-editor-content hr {
@@ -5734,17 +5749,20 @@ input, textarea { font: inherit; color: inherit; }
 
 /* ── Collapsible top ribbon ── */
 .et-ribbon {
-  background: var(--bg-elev);
+  position: sticky; top: 48px; z-index: 3;
+  background: color-mix(in oklch, var(--bg) 82%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--line);
   user-select: none;
 }
 .et-ribbon-strip {
   display: flex; align-items: center; gap: 1px; flex-wrap: wrap;
   padding: 4px 8px 5px;
-  border-bottom: 1px solid var(--line);
   animation: et-ribbon-open var(--dur-fast) var(--ease-out);
 }
 @keyframes et-ribbon-open {
-  from { opacity: 0; transform: translateY(-4px); }
+  from { opacity: 0; transform: translateY(-6px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 

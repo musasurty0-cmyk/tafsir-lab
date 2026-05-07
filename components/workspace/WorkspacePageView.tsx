@@ -25,6 +25,8 @@ import { ChevronRight } from "lucide-react";
 import WorkspaceSidebar from "./WorkspaceSidebar";
 import TopBar from "./TopBar";
 import ModeAPage from "./ModeAPage";
+import EditorToolbar from "./editor/EditorToolbar";
+import type { Editor } from "@tiptap/core";
 import ModeBPage, { type PageUserPrefsData } from "./ModeBPage";
 import TafsirDrawer from "./TafsirDrawer";
 import TweaksPanel, { type TweaksState, TWEAKS_DEFAULTS } from "./TweaksPanel";
@@ -102,6 +104,7 @@ export default function WorkspacePageView({
   const [mode, setMode]                   = useState<ViewMode>("editor");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [formattingOpen, setFormattingOpen] = useState(false);
+  const [activeEditor, setActiveEditor]     = useState<Editor | null>(null);
 
   // Persist formatting toolbar open/closed state
   useEffect(() => {
@@ -388,7 +391,7 @@ export default function WorkspacePageView({
         groupProgress={groupProgress}
         personalProgress={personalProgress}
         currentUserId={currentUserId}
-        formattingOpen={formattingOpen}
+        onEditorReady={setActiveEditor}
         onOpenTafsir={openTafsir}
         onProgressChange={handleProgressChange}
         onNoteCreated={handleNoteCreated}
@@ -491,6 +494,8 @@ export default function WorkspacePageView({
           formattingOpen={formattingOpen}
           onToggleFormatting={handleToggleFormatting}
         />
+        <EditorToolbar editor={activeEditor} open={formattingOpen && mode !== "canvas"} />
+
         {activePageId && (
           <PresenceBar pageId={activePageId} currentUserId={currentUserId} />
         )}

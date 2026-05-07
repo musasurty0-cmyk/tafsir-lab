@@ -48,8 +48,8 @@ interface Props {
   currentUserId:     string;
   // Split-view: highlighted verse key from Mode B (scroll + flash)
   highlightedVerseKey?: string | null;
-  // Formatting ribbon open state (controlled by TopBar toggle)
-  formattingOpen?: boolean;
+  // Exposes the TipTap editor instance to the workspace shell
+  onEditorReady?: (editor: import("@tiptap/core").Editor | null) => void;
   // Callbacks delegated up to WorkspacePageView
   onOpenTafsir:     (verseKey: string) => void;
   onProgressChange: (scope: "personal" | "group", surahNumber: number, ayahNumber: number, status: ProgressStatus) => Promise<void>;
@@ -107,7 +107,7 @@ export default function ModeAPage({
   groupProgress,
   personalProgress,
   currentUserId,
-  formattingOpen = false,
+  onEditorReady,
   onOpenTafsir,
   onProgressChange,
   onNoteCreated,
@@ -167,7 +167,7 @@ export default function ModeAPage({
             pageId={pageId}
             initialContent={page.tiptapContent}
             currentUserId={currentUserId}
-            formattingOpen={formattingOpen}
+            onEditorReady={onEditorReady}
           />
 
         </div>

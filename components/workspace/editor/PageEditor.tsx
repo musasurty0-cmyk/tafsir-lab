@@ -42,7 +42,6 @@ import {
 } from "./SlashCommand";
 import CommandList, { type CommandListHandle } from "./CommandList";
 import { getUserColor } from "./RemoteCursorsExtension";
-import EditorToolbar from "./EditorToolbar";
 import SelectionToolbar from "./SelectionToolbar";
 
 // ── Constants ─────────────────────────────────────────────────────────────
@@ -57,7 +56,7 @@ interface Props {
   pageId:          string;
   initialContent:  unknown;
   currentUserId:   string;
-  formattingOpen?: boolean;
+  onEditorReady?:  (editor: Editor | null) => void;
 }
 
 interface RemoteCursorData {
@@ -145,7 +144,7 @@ function computeOverlays(
 
 // ── Component ─────────────────────────────────────────────────────────────
 
-export default function PageEditor({ pageId, initialContent, currentUserId, formattingOpen = false }: Props) {
+export default function PageEditor({ pageId, initialContent, currentUserId, onEditorReady }: Props) {
   const [palette, setPalette]   = useState<PaletteState | null>(null);
   const commandListRef          = useRef<CommandListHandle>(null);
   const ALL_COMMANDS            = useRef(buildCommands());
@@ -280,6 +279,14 @@ export default function PageEditor({ pageId, initialContent, currentUserId, form
     },
   });
 
+  // ── Expose editor to parent via callback ─────────────────────────────
+  const onEditorReadyRef = useRef(onEditorReady);
+  useEffect(() => { onEditorReadyRef.current = onEditorReady; }, [onEditorReady]);
+  useEffect(() => {
+    onEditorReadyRef.current?.(editor);
+    return () => { onEditorReadyRef.current?.(null); };
+  }, [editor]);
+
   // ── Poll remote cursors ───────────────────────────────────────────────
   // This useEffect doesn't depend on `editor` — it runs once on mount
   // and uses a callback ref to access the editor without stale closures.
@@ -362,7 +369,6 @@ export default function PageEditor({ pageId, initialContent, currentUserId, form
   // ── Render ────────────────────────────────────────────────────────────
   return (
     <div className="page-editor">
-      <EditorToolbar editor={editor} open={formattingOpen} />
       <EditorContent editor={editor} />
       <SelectionToolbar editor={editor} />
 
