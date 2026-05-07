@@ -20,10 +20,10 @@ import {
 
 const HINT_KEY        = "tl-word-tap-hint-dismissed";
 const MUSHAF_PAGE_KEY = (pageId: string) => `tl-mushaf-page:${pageId}`;
-import type { Verse, Chapter } from "@/lib/types";
+import type { Verse, Chapter, QCFVerse } from "@/lib/types";
 import type { ProgressStatus } from "@/lib/services/progress.service";
 import type { NoteData } from "./NoteCard";
-import MushafCard from "./MushafCard";
+import QCFMushafPage from "./QCFMushafPage";
 import AnchoredNoteCard from "./AnchoredNoteCard";
 import DrawingCanvas, { type DrawTool, type DrawingCanvasHandle } from "./DrawingCanvas";
 import CanvasToolRail, {
@@ -177,6 +177,33 @@ export default function ModeBPage({
   }, [onAyahSelect]);
 
   const closeFocus = useCallback(() => setFocusAnchor(null), []);
+
+  // ── QCF page data (fetched client-side when the page changes) ─────────
+  const [qcfVerses,  setQcfVerses]  = useState<QCFVerse[]>([]);
+  const [qcfLoading, setQcfLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setQcfLoading(true);
+    setQcfVerses([]);
+
+    fetch(`/api/quran/page/${currentMushafahPage}`)
+      .then((r) => {
+        if (!r.ok) throw new Error(`${r.status}`);
+        return r.json();
+      })
+      .then((data: { verses?: QCFVerse[] }) => {
+        if (!cancelled) {
+          setQcfVerses(data.verses ?? []);
+          setQcfLoading(false);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setQcfLoading(false);
+      });
+
+    return () => { cancelled = true; };
+  }, [currentMushafahPage]);
 
   // ── Viewport ──────────────────────────────────────────────────────────
   const [viewport, setViewport] = useState<CanvasViewport>(() => ({
@@ -438,10 +465,11 @@ export default function ModeBPage({
         className="mode-b-inner"
         style={{ transform: `translate(${viewport.x}px,${viewport.y}px) scale(${viewport.zoom})`, transformOrigin: "0 0", width: MUSHAF_CARD_WIDTH }}
       >
-        <MushafCard
-          verses={pageVerses}
-          chapter={chapter}
+        <QCFMushafPage
+          verses={qcfVerses}
           pageNumber={currentMushafahPage}
+          chapter={chapter}
+          loading={qcfLoading}
           cardRef={mushafCardRef}
           onRegisterAyahRef={registerAyahRef}
           onRegisterWordRef={registerWordRef}

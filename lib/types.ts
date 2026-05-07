@@ -37,6 +37,31 @@ export interface Verse {
   translations: { resource_id: number; text: string }[];
 }
 
+// ---- QCF (Quran Complex Font) page-mode types ----
+// Used for Quran.com-style glyph rendering in Canvas mode.
+// Each word carries glyph codes + the page-font index.
+
+export interface QCFWord {
+  id:             number;
+  position:       number;
+  page_number:    number;
+  v2_page:        number;          // which font file: p{v2_page}-v2
+  line_number?:   number;          // line on the page (used for justified layout)
+  code_v2:        string;          // glyph string — render with font p{v2_page}-v2
+  text_qpc_hafs:  string;          // Unicode fallback while font loads
+  char_type_name: "word" | "end" | "pause";
+  translation?:   { text: string; language_name: string };
+  transliteration?: { text: string };
+}
+
+export interface QCFVerse {
+  id:           number;
+  verse_number: number;
+  verse_key:    string;            // "2:255"
+  page_number:  number;
+  words:        QCFWord[];
+}
+
 export interface VerseResponse {
   verses: Verse[];
   // API may return either `pagination` or `meta` depending on endpoint version

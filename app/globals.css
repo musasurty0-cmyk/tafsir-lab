@@ -2442,6 +2442,191 @@ input, textarea { font: inherit; color: inherit; }
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
+   QCF page-mode rendering
+   Matches Quran.com page-mode visual: cream paper, justified Arabic lines,
+   surah header, page number footer.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Card container ──────────────────────────────────────────────────────── */
+.qcf-page {
+  position:         relative;
+  width:            620px;
+  min-height:       860px;          /* standard mushaf page ratio ≈ 1.39 */
+  background:       oklch(0.965 0.013 80);  /* warm parchment */
+  border-radius:    2px;
+  padding:          44px 60px 52px;
+  box-shadow:
+    0  2px  4px  oklch(0.25 0.05 60 / 0.08),
+    0  6px  18px oklch(0.25 0.05 60 / 0.10),
+    0 20px  48px oklch(0.25 0.05 60 / 0.12),
+    0 40px  80px oklch(0.25 0.05 60 / 0.07);
+  /* Promote to its own GPU layer so CSS scale() stays crisp */
+  transform:         translateZ(0);
+  backface-visibility: hidden;
+  will-change:       transform;
+  display:           flex;
+  flex-direction:    column;
+  gap:               0;
+}
+
+/* ── Surah header ────────────────────────────────────────────────────────── */
+.qcf-surah-header {
+  display:         flex;
+  flex-direction:  column;
+  align-items:     center;
+  gap:             16px;
+  margin-bottom:   24px;
+  direction:       rtl;
+}
+
+.qcf-surah-ornament {
+  position:   relative;
+  width:      100%;
+  text-align: center;
+  padding:    10px 0 12px;
+}
+
+/* Top and bottom rule lines of the cartouche */
+.qcf-surah-ornament::before,
+.qcf-surah-ornament::after {
+  content:    "";
+  position:   absolute;
+  left:       0;
+  right:      0;
+  height:     1.5px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    oklch(0.55 0.06 60 / 0.35) 12%,
+    oklch(0.55 0.06 60 / 0.60) 40%,
+    oklch(0.55 0.06 60 / 0.60) 60%,
+    oklch(0.55 0.06 60 / 0.35) 88%,
+    transparent 100%
+  );
+}
+.qcf-surah-ornament::before { top: 0; }
+.qcf-surah-ornament::after  { bottom: 0; }
+
+.qcf-surah-name {
+  font-family:  var(--font-arabic);
+  font-size:    26px;
+  font-weight:  700;
+  line-height:  1.4;
+  color:        oklch(0.28 0.055 58);
+  display:      inline-block;
+  padding:      0 18px;
+}
+
+.qcf-basmala {
+  font-family:  var(--font-arabic);
+  font-size:    24px;
+  line-height:  1.6;
+  color:        oklch(0.30 0.055 58);
+  text-align:   center;
+  width:        100%;
+}
+
+/* ── Line-by-line text ───────────────────────────────────────────────────── */
+.qcf-lines {
+  flex:           1;
+  display:        flex;
+  flex-direction: column;
+  gap:            0;
+  width:          100%;
+  direction:      rtl;
+}
+
+.qcf-line {
+  display:         flex;
+  direction:       rtl;
+  align-items:     baseline;
+  justify-content: space-between;
+  width:           100%;
+  min-height:      1.8em;        /* prevents collapse on empty lines */
+}
+
+/* Lines with a single word (e.g. last line of a short surah): centre it */
+.qcf-line[data-single="true"] {
+  justify-content: center;
+}
+
+/* ── Individual glyph spans ─────────────────────────────────────────────── */
+.qcf-glyph {
+  display:      inline-block;
+  font-size:    29px;
+  line-height:  2.0;
+  color:        oklch(0.14 0.025 58);
+  white-space:  nowrap;
+  user-select:  none;
+  /* Prevent browser from applying its own Arabic glyph fallbacks */
+  font-variant-ligatures: normal;
+}
+
+.qcf-word {
+  cursor: pointer;
+  border-radius: 3px;
+  transition: background var(--dur-fast) ease, color var(--dur-fast) ease;
+}
+
+.qcf-word:hover {
+  background: oklch(0.88 0.09 80 / 0.46);
+  color:      oklch(0.20 0.06 58);
+}
+
+.qcf-word:active {
+  background: oklch(0.82 0.12 76 / 0.55);
+}
+
+.qcf-end {
+  cursor: pointer;
+  color:  oklch(0.40 0.07 55);
+  border-radius: 3px;
+  transition: color var(--dur-fast) ease;
+}
+
+.qcf-end:hover {
+  color: oklch(0.28 0.10 55);
+}
+
+/* ── Page number ─────────────────────────────────────────────────────────── */
+.qcf-page-num {
+  text-align:      center;
+  margin-top:      20px;
+  font-size:       11px;
+  font-weight:     500;
+  letter-spacing:  0.12em;
+  color:           oklch(0.58 0.032 64);
+  user-select:     none;
+  direction:       ltr;
+}
+
+/* ── Loading skeleton ────────────────────────────────────────────────────── */
+.qcf-page--loading {
+  min-height: 860px;
+}
+
+.qcf-skeleton {
+  display:        flex;
+  flex-direction: column;
+  gap:            22px;
+  padding-top:    8px;
+}
+
+.qcf-skeleton-line {
+  height:        20px;
+  border-radius: 6px;
+  background:    oklch(0.88 0.014 76);
+  margin-left:   auto;
+  margin-right:  auto;
+  animation:     qcf-shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes qcf-shimmer {
+  0%, 100% { opacity: 0.55; }
+  50%       { opacity: 1.00; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
    Phase 6 — SVG connector lines
    ═══════════════════════════════════════════════════════════════════════════ */
 
