@@ -191,13 +191,11 @@ export default function QCFMushafPage({
 
       {/* ── Page text (line by line) ── */}
       <div className="qcf-lines">
-        {sortedLines.map(([lineKey, words]) => {
-          const isSingleWord = words.length === 1;
-          return (
+        {sortedLines.map(([lineKey, words]) => (
             <div
               key={lineKey}
               className="qcf-line"
-              data-single={isSingleWord ? "true" : undefined}
+              data-count={words.length}
             >
               {words.map((word) => {
                 const isWord = word.char_type_name === "word";
@@ -253,8 +251,7 @@ export default function QCFMushafPage({
                 );
               })}
             </div>
-          );
-        })}
+        ))}
       </div>
 
       {/* ── Page number footer ── */}
