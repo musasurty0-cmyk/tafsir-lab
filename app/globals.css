@@ -2516,48 +2516,34 @@ input, textarea { font: inherit; color: inherit; }
   direction:      rtl;
 }
 
-/* Full lines justified exactly like a printed page */
+/*
+ * Each line is a single concatenated glyph block.
+ * The QCF page font handles all inter-glyph spacing internally —
+ * no flex justification, no manual word distribution.
+ */
 .qcf-line {
-  display:         flex;
-  direction:       rtl;
-  align-items:     baseline;
-  justify-content: space-between;
-  width:           100%;
-}
-
-/* Short lines (≤3 words) centred so they don't stretch awkwardly */
-.qcf-line[data-count="1"],
-.qcf-line[data-count="2"],
-.qcf-line[data-count="3"] {
-  justify-content: center;
-  gap:             14px;
-}
-
-/* ── Individual glyph spans ──────────────────────────────────────────────── */
-.qcf-glyph {
-  display:     inline-block;
-  font-size:   30px;
-  line-height: 2.0;
-  color:       #1a1a1a;
-  white-space: nowrap;
-  user-select: none;
-}
-
-.qcf-word {
+  display:       block;
+  width:         100%;
+  direction:     rtl;
   cursor:        pointer;
-  border-radius: 2px;
+  border-radius: 3px;
   transition:    background 80ms ease;
 }
 
-.qcf-word:hover  { background: rgba(255,208,80,0.32); }
-.qcf-word:active { background: rgba(255,185,40,0.50); }
+.qcf-line:hover  { background: rgba(255, 208, 80, 0.18); }
+.qcf-line:active { background: rgba(255, 185, 40, 0.30); }
 
-.qcf-end {
-  cursor:     pointer;
-  transition: opacity 80ms ease;
+/* The glyph text span — fills the line, no user interaction of its own */
+.qcf-line-text {
+  display:     block;
+  direction:   rtl;
+  font-size:   30px;
+  line-height: 2.1;
+  color:       #1a1a1a;
+  white-space: nowrap;
+  user-select: none;
+  pointer-events: none;
 }
-
-.qcf-end:hover { opacity: 0.65; }
 
 /* ── Page number footer ───────────────────────────────────────────────────── */
 .qcf-page-num {

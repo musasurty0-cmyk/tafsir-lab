@@ -3,25 +3,17 @@
 /**
  * QCFMushafPage — renders one Mushaf page using Quran Foundation QCF v2 fonts.
  *
- * Visual model: Quran.com page mode.
+ * Rendering approach (matches Quran.com page mode exactly):
+ *   • Each line is rendered as a SINGLE concatenated string of code_v2 glyphs.
+ *   • The QCF font file handles all glyph spacing/proportions — no manual flex
+ *     justification, no space-between, no word-by-word layout.
+ *   • display: block; direction: rtl  on the line container.
+ *   • The font file is loaded via FontFace API from the QCF CDN.
+ *   • Fallback (before font loads): text_qpc_hafs rendered with Amiri Quran.
  *
- * How QCF rendering works:
- *   • Each page (1–604) has a dedicated font file at:
- *       https://verses.quran.foundation/fonts/quran/hafs/v2/woff2/p{N}.woff2
- *   • The font family name is  p{N}-v2  (e.g. "p2-v2").
- *   • Each word's  code_v2  field is a short glyph-mapped string.
- *     When rendered inside a <span> styled with that font, the browser
- *     resolves the glyphs to the correct, beautifully-typeset Arabic.
- *   • Words are grouped by  line_number  and rendered as RTL flex rows
- *     with space-between so every line fills the full page width —
- *     identical to how Quran.com achieves the justified, printed-Quran look.
- *   • While the font is loading we fall back to  text_qpc_hafs  rendered
- *     with Amiri Quran (already loaded in the app).
- *
- * Interactions (identical to MushafCard):
- *   Click word      → onOpenFocus(verseKey, wordPos)
- *   Click ayah-end  → onOpenFocus(verseKey, null)
- *   Refs registered → onRegisterAyahRef / onRegisterWordRef
+ * Interaction model:
+ *   • Click a line → onOpenFocus(primaryVerseKey, null)  [ayah-level]
+ *   • Refs registered on the line element (not individual words)
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -30,16 +22,15 @@ import type { QCFVerse, Chapter } from "@/lib/types";
 // ── Font loading ────────────────────────────────────────────────────────────
 
 const FONT_CDN   = "https://verses.quran.foundation/fonts/quran/hafs/v2/woff2";
-const fontLoaded = new Set<number>();          // module-level cache across renders
+const fontLoaded = new Set<number>();
 
 async function loadQCFFont(pageNum: number): Promise<void> {
   if (fontLoaded.has(pageNum)) return;
 
   const family = `p${pageNum}-v2`;
 
-  // Check if the browser already has this font registered (hot reload, etc.)
   for (const ff of document.fonts.values()) {
-    const name = ff.family.replace(/^"|"$/g, ""); // strip quotes Chrome adds
+    const name = ff.family.replace(/^"|"$/g, "");
     if (name === family && ff.status === "loaded") {
       fontLoaded.add(pageNum);
       return;
@@ -66,7 +57,7 @@ interface Props {
   onOpenFocus:       (verseKey: string, wordPos: number | null) => void;
 }
 
-// ── Word entry type (word + verse metadata collapsed for line grouping) ─────
+// ── Word entry collapsed for line grouping ──────────────────────────────────
 
 interface WordEntry {
   id:             number;
@@ -75,7 +66,6 @@ interface WordEntry {
   code_v2:        string;
   text_qpc_hafs:  string;
   char_type_name: "word" | "end" | "pause";
-  translation?:   { text: string; language_name: string };
   verseKey:       string;
   ayahNum:        number;
   isFirstInVerse: boolean;
@@ -90,7 +80,6 @@ export default function QCFMushafPage({
 
   const [fontReady, setFontReady] = useState(false);
 
-  // Load all unique page-font files required by words on this page.
   useEffect(() => {
     if (verses.length === 0) return;
 
@@ -104,7 +93,7 @@ export default function QCFMushafPage({
       }
     }
 
-    Promise.all([...pageNums].map((p) => loadQCFFont(p).catch(() => {/* non-fatal */})))
+    Promise.all([...pageNums].map((p) => loadQCFFont(p).catch(() => {})))
       .then(() => { if (!cancelled) setFontReady(true); });
 
     return () => { cancelled = true; };
@@ -113,15 +102,14 @@ export default function QCFMushafPage({
   // ── Build line map ──────────────────────────────────────────────────────
 
   const lineMap = new Map<number, WordEntry[]>();
-  let lineCounter = 0; // fallback line key when line_number absent
+  let lineCounter = 0;
 
   for (const verse of verses) {
     let firstInVerse = true;
     for (const word of verse.words) {
-      // When line_number is present use it; otherwise each verse is its own line
       const lineKey = (word.line_number != null)
         ? word.line_number
-        : --lineCounter; // unique negative key per verse
+        : --lineCounter;
 
       if (!lineMap.has(lineKey)) lineMap.set(lineKey, []);
       lineMap.get(lineKey)!.push({
@@ -131,7 +119,6 @@ export default function QCFMushafPage({
         code_v2:        word.code_v2 ?? "",
         text_qpc_hafs:  word.text_qpc_hafs ?? "",
         char_type_name: word.char_type_name,
-        translation:    word.translation,
         verseKey:       verse.verse_key,
         ayahNum:        verse.verse_number,
         isFirstInVerse: firstInVerse,
@@ -142,7 +129,8 @@ export default function QCFMushafPage({
 
   const sortedLines = [...lineMap.entries()].sort(([a], [b]) => a - b);
 
-  // ── Surah header: show when verse 1 of this chapter appears on the page ──
+  // ── Surah header ────────────────────────────────────────────────────────
+
   const showHeader = verses.some((v) => {
     const [sId, vNum] = v.verse_key.split(":").map(Number);
     return sId === chapter.id && vNum === 1;
@@ -189,69 +177,58 @@ export default function QCFMushafPage({
         </div>
       )}
 
-      {/* ── Page text (line by line) ── */}
+      {/* ── Page lines ── */}
       <div className="qcf-lines">
-        {sortedLines.map(([lineKey, words]) => (
+        {sortedLines.map(([lineKey, words]) => {
+          // Determine the primary verse for this line:
+          // prefer the verse that owns an ayah-end marker, else first word's verse.
+          const endWord  = words.find((w) => w.char_type_name === "end");
+          const primaryVerseKey = (endWord ?? words[0]).verseKey;
+
+          // QCF font for this line (all words on a page share the same v2_page)
+          const v2page     = words[0]?.v2_page ?? pageNumber;
+          const fontFamily = fontReady ? `p${v2page}-v2` : "var(--font-arabic)";
+
+          // Concatenate all glyphs into one string — the font renders everything correctly
+          const lineHtml = words
+            .map((w) => (fontReady && w.code_v2) ? w.code_v2 : w.text_qpc_hafs)
+            .join("");
+
+          return (
             <div
               key={lineKey}
               className="qcf-line"
-              data-count={words.length}
+              role="button"
+              tabIndex={0}
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpenFocus(primaryVerseKey, null);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.stopPropagation();
+                  onOpenFocus(primaryVerseKey, null);
+                }
+              }}
             >
-              {words.map((word) => {
-                const isWord = word.char_type_name === "word";
-                const isEnd  = word.char_type_name === "end";
-
-                const fontFamily = fontReady
-                  ? `p${word.v2_page}-v2`
-                  : "var(--font-arabic)";
-
-                // Use glyph code once font is ready; Unicode fallback until then.
-                const glyphText = (fontReady && word.code_v2)
-                  ? word.code_v2
-                  : word.text_qpc_hafs;
-
-                return (
-                  <span
-                    key={`${word.verseKey}:${word.position}`}
-                    ref={(el) => {
-                      // Register word ref for all words
-                      if (isWord) onRegisterWordRef(word.ayahNum, word.position, el);
-                      // The first word of each verse acts as the ayah anchor
-                      if (word.isFirstInVerse) onRegisterAyahRef(word.ayahNum, el);
-                    }}
-                    className={[
-                      "qcf-glyph",
-                      isWord ? "qcf-word" : "",
-                      isEnd  ? "qcf-end"  : "",
-                    ].join(" ").trim()}
-                    style={{ fontFamily }}
-                    title={isWord ? (word.translation?.text ?? "") : undefined}
-                    role={isWord || isEnd ? "button" : undefined}
-                    tabIndex={isWord || isEnd ? 0 : undefined}
-                    onClick={
-                      isWord
-                        ? (e) => { e.stopPropagation(); onOpenFocus(word.verseKey, word.position); }
-                        : isEnd
-                        ? (e) => { e.stopPropagation(); onOpenFocus(word.verseKey, null); }
-                        : undefined
+              <span
+                className="qcf-line-text"
+                style={{ fontFamily }}
+                ref={(el) => {
+                  // Register refs for every word on this line
+                  for (const word of words) {
+                    if (word.isFirstInVerse) onRegisterAyahRef(word.ayahNum, el);
+                    if (word.char_type_name === "word") {
+                      onRegisterWordRef(word.ayahNum, word.position, el);
                     }
-                    onKeyDown={
-                      isWord || isEnd
-                        ? (e) => {
-                            if (e.key === "Enter") {
-                              e.stopPropagation();
-                              onOpenFocus(word.verseKey, isWord ? word.position : null);
-                            }
-                          }
-                        : undefined
-                    }
-                    // Safe: data from Quran Foundation API only (no user input)
-                    dangerouslySetInnerHTML={{ __html: glyphText }}
-                  />
-                );
-              })}
+                  }
+                }}
+                // Safe: Quran Foundation API data only — no user input
+                dangerouslySetInnerHTML={{ __html: lineHtml }}
+              />
             </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* ── Page number footer ── */}
