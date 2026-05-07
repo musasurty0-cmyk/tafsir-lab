@@ -18,7 +18,8 @@ import {
   useRef, useState,
 } from "react";
 
-const HINT_KEY = "tl-word-tap-hint-dismissed";
+const HINT_KEY        = "tl-word-tap-hint-dismissed";
+const MUSHAF_PAGE_KEY = (pageId: string) => `tl-mushaf-page:${pageId}`;
 import type { Verse, Chapter } from "@/lib/types";
 import type { ProgressStatus } from "@/lib/services/progress.service";
 import type { NoteData } from "./NoteCard";
@@ -114,6 +115,60 @@ export default function ModeBPage({
     setShowHint(false);
     localStorage.setItem(HINT_KEY, "1");
   }
+
+  // ── Mushaf page navigation ────────────────────────────────────────────
+  const availablePages = useMemo(() => {
+    const seen = new Set<number>();
+    const pages: number[] = [];
+    for (const v of verses) {
+      if (v.page_number && !seen.has(v.page_number)) {
+        seen.add(v.page_number);
+        pages.push(v.page_number);
+      }
+    }
+    return pages.sort((a, b) => a - b);
+  }, [verses]);
+
+  const [currentMushafahPage, setCurrentMushafahPage] = useState<number>(
+    () => chapter.pages[0],
+  );
+
+  // Sync from localStorage once on mount, and validate against available pages
+  useEffect(() => {
+    const stored = localStorage.getItem(MUSHAF_PAGE_KEY(pageId));
+    if (stored) {
+      const n = Number(stored);
+      if (!isNaN(n)) { setCurrentMushafahPage(n); return; }
+    }
+    setCurrentMushafahPage(chapter.pages[0]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // If stored page is outside this chapter's range, fall back to first page
+  useEffect(() => {
+    if (availablePages.length > 0 && !availablePages.includes(currentMushafahPage)) {
+      setCurrentMushafahPage(availablePages[0]);
+    }
+  }, [availablePages, currentMushafahPage]);
+
+  const pageVerses = useMemo(
+    () => verses.filter((v) => v.page_number === currentMushafahPage),
+    [verses, currentMushafahPage],
+  );
+
+  const pageAyahSet = useMemo(
+    () => new Set(pageVerses.map((v) => v.verse_number)),
+    [pageVerses],
+  );
+
+  // Show page-anchored notes only on the first page of the chapter
+  const pageNotes = useMemo(
+    () => notes.filter((n) => {
+      if (n.anchorType === "page") return currentMushafahPage === availablePages[0];
+      return n.ayahNumber != null && pageAyahSet.has(n.ayahNumber);
+    }),
+    [notes, pageAyahSet, currentMushafahPage, availablePages],
+  );
 
   const openFocus = useCallback((verseKey: string, wordPos: number | null) => {
     setFocusAnchor({ verseKey, wordPos });
@@ -224,13 +279,13 @@ export default function ModeBPage({
 
   useLayoutEffect(() => {
     const positions = new Map<string, { x: number; y: number }>();
-    for (const note of notes) {
+    for (const note of pageNotes) {
       const pos = resolveNotePosition(note);
       if (pos) positions.set(note.id, pos);
     }
     setNotePositions(positions);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [notes]);
+  }, [pageNotes]);
 
   // ── Connector anchor points ───────────────────────────────────────────
   const anchorPoints = useMemo(() => {
@@ -239,7 +294,7 @@ export default function ModeBPage({
     if (!inner) return map;
     const cardW = mushafCardRef.current?.offsetWidth ?? MUSHAF_CARD_WIDTH;
 
-    for (const note of notes) {
+    for (const note of pageNotes) {
       if (!notePositions.has(note.id)) continue;
       if (note.anchorType === "page") { map.set(note.id, { x: cardW, y: (notePositions.get(note.id)?.y ?? 0) + 16 }); continue; }
       if (note.anchorType === "ayah" && note.ayahNumber != null) {
@@ -253,7 +308,7 @@ export default function ModeBPage({
     }
     return map;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [notes, notePositions]);
+  }, [pageNotes, notePositions]);
 
   // ── Viewport persistence ──────────────────────────────────────────────
   const vDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -267,6 +322,27 @@ export default function ModeBPage({
     }, VIEWPORT_DEBOUNCE_MS);
   }, [pageId]);
   useEffect(() => () => { if (vDebounceRef.current) clearTimeout(vDebounceRef.current); }, []);
+
+  // ── Page navigation callbacks (after patchViewport to avoid TDZ) ──────
+  const goToPage = useCallback((p: number) => {
+    setCurrentMushafahPage(p);
+    localStorage.setItem(MUSHAF_PAGE_KEY(pageId), String(p));
+    setFocusAnchor(null);
+    // Snap viewport back to top-left so the new page starts in view
+    const next: CanvasViewport = { x: 40, y: 40, zoom: viewportRef.current.zoom };
+    setViewport(next);
+    patchViewport(next);
+  }, [pageId, patchViewport]);
+
+  const goToPrevPage = useCallback(() => {
+    const idx = availablePages.indexOf(currentMushafahPage);
+    if (idx > 0) goToPage(availablePages[idx - 1]);
+  }, [availablePages, currentMushafahPage, goToPage]);
+
+  const goToNextPage = useCallback(() => {
+    const idx = availablePages.indexOf(currentMushafahPage);
+    if (idx < availablePages.length - 1) goToPage(availablePages[idx + 1]);
+  }, [availablePages, currentMushafahPage, goToPage]);
 
   // ── Scroll to note (split-view sync) ─────────────────────────────────
   const containerRef = useRef<HTMLDivElement>(null);
@@ -363,8 +439,9 @@ export default function ModeBPage({
         style={{ transform: `translate(${viewport.x}px,${viewport.y}px) scale(${viewport.zoom})`, transformOrigin: "0 0", width: MUSHAF_CARD_WIDTH }}
       >
         <MushafCard
-          verses={verses}
+          verses={pageVerses}
           chapter={chapter}
+          pageNumber={currentMushafahPage}
           cardRef={mushafCardRef}
           onRegisterAyahRef={registerAyahRef}
           onRegisterWordRef={registerWordRef}
@@ -373,7 +450,7 @@ export default function ModeBPage({
 
         {/* SVG connector lines */}
         <svg className="mode-b-connectors" style={{ position: "absolute", top: 0, left: 0, width: 0, height: 0, overflow: "visible", pointerEvents: "none" }} aria-hidden="true">
-          {notes.map((note) => {
+          {pageNotes.map((note) => {
             const notePos  = notePositions.get(note.id);
             const anchorPt = anchorPoints.get(note.id);
             if (!notePos || !anchorPt) return null;
@@ -384,7 +461,7 @@ export default function ModeBPage({
         </svg>
 
         {/* Anchored note cards */}
-        {notes.map((note) => {
+        {pageNotes.map((note) => {
           const pos = notePositions.get(note.id);
           if (!pos) return null;
           return (
@@ -430,6 +507,39 @@ export default function ModeBPage({
         <button className="mode-b-zoom-btn" title="Zoom out" onClick={() => { const next = { ...viewportRef.current, zoom: clamp(viewportRef.current.zoom / 1.2, ZOOM_MIN, ZOOM_MAX) }; setViewport(next); patchViewport(next); }}>−</button>
         <button className="mode-b-zoom-btn" title="Reset view" onClick={() => { const next: CanvasViewport = { x: 40, y: 40, zoom: 1 }; setViewport(next); patchViewport(next); }} style={{ fontSize: "0.7rem" }}>↺</button>
       </div>
+
+      {/* ── Mushaf page navigator ── */}
+      {availablePages.length > 1 && (
+        <div className="mushaf-nav" onPointerDown={(e) => e.stopPropagation()}>
+          <button
+            className="mushaf-nav-btn"
+            disabled={availablePages.indexOf(currentMushafahPage) <= 0}
+            onClick={goToPrevPage}
+            title="Previous Mushaf page"
+            aria-label="Previous page"
+          >
+            ‹
+          </button>
+          <div className="mushaf-nav-info">
+            <span className="mushaf-nav-page">Page {currentMushafahPage}</span>
+            {pageVerses.length > 0 && (
+              <>
+                <span className="mushaf-nav-sep">·</span>
+                <span className="mushaf-nav-surah">{chapter.name_simple}</span>
+              </>
+            )}
+          </div>
+          <button
+            className="mushaf-nav-btn"
+            disabled={availablePages.indexOf(currentMushafahPage) >= availablePages.length - 1}
+            onClick={goToNextPage}
+            title="Next Mushaf page"
+            aria-label="Next page"
+          >
+            ›
+          </button>
+        </div>
+      )}
 
       {/* ── Word-tap hint chip ── */}
       {showHint && !focusAnchor && (

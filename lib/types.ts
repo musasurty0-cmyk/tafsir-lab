@@ -32,6 +32,7 @@ export interface Verse {
   verse_number: number;
   verse_key: string;          // "1:1"
   text_uthmani: string;
+  page_number: number;        // Mushaf page number (1-604)
   words: Word[];
   translations: { resource_id: number; text: string }[];
 }

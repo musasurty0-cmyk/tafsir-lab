@@ -32,6 +32,7 @@ function toArabicIndic(n: number): string {
 interface Props {
   verses:            Verse[];
   chapter:           Chapter;
+  pageNumber?:       number;   // Mushaf page number shown in footer
   cardRef:           React.RefObject<HTMLDivElement | null>;
   onRegisterAyahRef: (ayahNum: number, el: HTMLElement | null) => void;
   onRegisterWordRef: (ayahNum: number, wordPos: number, el: HTMLElement | null) => void;
@@ -42,7 +43,7 @@ interface Props {
 // ── Component ─────────────────────────────────────────────────────────────
 
 export default function MushafCard({
-  verses, chapter, cardRef,
+  verses, chapter, pageNumber, cardRef,
   onRegisterAyahRef, onRegisterWordRef,
   onOpenFocus,
 }: Props) {
@@ -138,6 +139,13 @@ export default function MushafCard({
           );
         })}
       </div>
+
+      {/* ── Page number footer ── */}
+      {pageNumber !== undefined && (
+        <div className="mushaf-page-number">
+          {pageNumber}
+        </div>
+      )}
     </div>
   );
 }

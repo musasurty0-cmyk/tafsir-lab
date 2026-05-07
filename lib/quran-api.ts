@@ -28,7 +28,7 @@ async function _fetchVerses(surahId: number): Promise<Verse[]> {
     language: "en",
     words: "true",
     translations: "20",
-    fields: "text_uthmani",
+    fields: "text_uthmani,page_number",
     word_fields: "text_uthmani,transliteration",
     per_page: "286", // max per page — avoids pagination for all but Al-Baqarah
     page: "1",
