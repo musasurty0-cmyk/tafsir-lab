@@ -415,6 +415,7 @@ export default function WorkspacePageView({
         verses={verses}
         pageId={activePageId}
         surahNumber={surahNumber}
+        chapter={chapter}
         userPrefs={page.userPrefs}
         personalProgress={personalProgress}
         groupProgress={groupProgress}

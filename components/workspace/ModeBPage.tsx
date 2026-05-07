@@ -19,7 +19,7 @@ import {
 } from "react";
 
 const HINT_KEY = "tl-word-tap-hint-dismissed";
-import type { Verse } from "@/lib/types";
+import type { Verse, Chapter } from "@/lib/types";
 import type { ProgressStatus } from "@/lib/services/progress.service";
 import type { NoteData } from "./NoteCard";
 import MushafCard from "./MushafCard";
@@ -73,6 +73,7 @@ interface Props {
   verses:           Verse[];
   pageId:           string;
   surahNumber:      number;
+  chapter:          Chapter;
   userPrefs:        PageUserPrefsData | null;
   personalProgress: Record<string, ProgressStatus>;
   groupProgress:    Record<string, { status: ProgressStatus; lastChangedBy: string }>;
@@ -88,7 +89,7 @@ interface Props {
 // ── Component ─────────────────────────────────────────────────────────────
 
 export default function ModeBPage({
-  verses, pageId,
+  verses, pageId, chapter,
   userPrefs,
   notes,
   onOpenTafsir,
@@ -363,6 +364,7 @@ export default function ModeBPage({
       >
         <MushafCard
           verses={verses}
+          chapter={chapter}
           cardRef={mushafCardRef}
           onRegisterAyahRef={registerAyahRef}
           onRegisterWordRef={registerWordRef}

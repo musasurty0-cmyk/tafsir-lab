@@ -1,24 +1,37 @@
 "use client";
 
 /**
- * MushafCard — flowing Mushaf Arabic text block for Mode B.
+ * MushafCard — continuous Mushaf page display for Mode B.
  *
- * Word interaction:
- *   Click any Arabic word     → calls onOpenFocus(verseKey, wordPos) immediately
- *   Click ﴿١﴾ ayah-end marker → calls onOpenFocus(verseKey, null) immediately
+ * Layout mirrors a printed Quran page:
+ *   • Surah header: Arabic name badge + basmala (if bismillah_pre)
+ *   • All verses flow inline as one continuous RTL block, fully justified
+ *   • Ayah-end markers use U+06DD (Arabic End of Ayah) + Arabic-Indic digits
+ *     so Amiri Quran renders the authentic ornamental roundel
  *
- * Both open FocusAnnotation — a full-screen drawing canvas where the user
- * can annotate the focused word/ayah with freehand strokes.
- * No intermediate popup is shown.
+ * Interaction:
+ *   Click any Arabic word  → onOpenFocus(verseKey, wordPos)
+ *   Click ‎ ayah-end marker → onOpenFocus(verseKey, null)
  */
 
 import { useCallback } from "react";
-import type { Verse } from "@/lib/types";
+import type { Verse, Chapter } from "@/lib/types";
 
-// ── Props ──────────────────────────────────────────────────────────────────
+// ── Helpers ────────────────────────────────────────────────────────────────
+
+/** Convert a western integer to Arabic-Indic digit string (٠١٢٣…). */
+function toArabicIndic(n: number): string {
+  return String(n)
+    .split("")
+    .map((d) => String.fromCharCode(0x0660 + parseInt(d)))
+    .join("");
+}
+
+// Props ──────────────────────────────────────────────────────────────────────
 
 interface Props {
   verses:            Verse[];
+  chapter:           Chapter;
   cardRef:           React.RefObject<HTMLDivElement | null>;
   onRegisterAyahRef: (ayahNum: number, el: HTMLElement | null) => void;
   onRegisterWordRef: (ayahNum: number, wordPos: number, el: HTMLElement | null) => void;
@@ -29,7 +42,7 @@ interface Props {
 // ── Component ─────────────────────────────────────────────────────────────
 
 export default function MushafCard({
-  verses, cardRef,
+  verses, chapter, cardRef,
   onRegisterAyahRef, onRegisterWordRef,
   onOpenFocus,
 }: Props) {
@@ -50,11 +63,22 @@ export default function MushafCard({
   );
 
   return (
-    <div
-      ref={cardRef}
-      className="mushaf-card"
-      onMouseDown={(e) => e.stopPropagation()}
-    >
+    <div ref={cardRef} className="mushaf-card" onMouseDown={(e) => e.stopPropagation()}>
+
+      {/* ── Surah header ── */}
+      <div className="mushaf-surah-header">
+        {/* Arabic name badge */}
+        <span className="mushaf-surah-name" dir="rtl">{chapter.name_arabic}</span>
+
+        {/* Basmala — shown for every surah except At-Tawbah (surah 9) */}
+        {chapter.bismillah_pre && (
+          <div className="mushaf-basmala" dir="rtl">
+            بِسۡمِ ٱللَّهِ ٱلرَّحۡمَـٰنِ ٱلرَّحِيمِ
+          </div>
+        )}
+      </div>
+
+      {/* ── Continuous flowing text ── */}
       <div className="mushaf-text" dir="rtl">
         {verses.map((verse) => {
           const ayahNum = Number(verse.verse_key.split(":")[1]);
@@ -97,7 +121,9 @@ export default function MushafCard({
                       }}
                       aria-label={`End of ayah ${ayahNum}`}
                     >
-                      ﴿{ayahNum}﴾{" "}
+                      {/* U+06DD + Arabic-Indic digits → Amiri Quran renders the
+                          authentic ornamental ayah-end roundel automatically */}
+                      {"۝"}{toArabicIndic(ayahNum)}{" "}
                     </span>
                   );
                 }

@@ -2139,20 +2139,47 @@ input, textarea { font: inherit; color: inherit; }
   position: relative;
   /* Warm parchment — the colour of real Mushaf paper */
   background: oklch(0.975 0.012 82);
-  border-radius: 3px;
+  border-radius: 4px;
   /* Layered shadow: subtle depth + a soft outer glow */
   box-shadow:
     0 1px 3px  oklch(0 0 0 / 0.10),
-    0 6px 28px oklch(0 0 0 / 0.14);
-  padding: 52px 56px 64px;
+    0 8px 32px oklch(0 0 0 / 0.14);
+  padding: 40px 52px 52px;
   border: 1px solid oklch(0.88 0.018 75);
-  /* Prevent text selection while panning — reset inside for selectable content */
   user-select: none;
   -webkit-user-select: none;
   /* Force its own GPU layer so CSS scale() doesn't blur the text */
   transform: translateZ(0);
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
+}
+
+/* ── Surah header — name badge + basmala ── */
+.mushaf-surah-header {
+  text-align: center;
+  padding-bottom: 24px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid oklch(0.82 0.02 75);
+}
+.mushaf-surah-name {
+  display: inline-block;
+  font-family: "Amiri Quran", "Amiri", serif;
+  font-size: 20px;
+  color: oklch(0.28 0.08 60);
+  background: oklch(0.92 0.03 75);
+  border: 1px solid oklch(0.82 0.03 75);
+  padding: 3px 20px 5px;
+  border-radius: 20px;
+  margin-bottom: 14px;
+  letter-spacing: 0.03em;
+}
+.mushaf-basmala {
+  font-family: "Amiri Quran", "Amiri", serif;
+  font-size: 24px;
+  line-height: 2;
+  color: oklch(0.12 0.016 60);
+  text-align: center;
+  -webkit-font-smoothing: antialiased;
 }
 
 /* Flowing Arabic text container — Amiri Quran, authentic Mushaf style */
@@ -2254,19 +2281,22 @@ input, textarea { font: inherit; color: inherit; }
   to   { opacity: 1; transform: translateX(-50%) translateY(0);   }
 }
 
-/* Ayah-end medallion ﴿١﴾  — small, warm ink, unobtrusive like real Mushaf */
+/* Ayah-end ornament — U+06DD + Arabic-Indic digits.
+   Amiri Quran renders U+06DD as the authentic decorative roundel
+   that encircles the number, matching printed Mushaf pages. */
 .mushaf-ayah-end {
   display: inline;
-  font-size: 0.62em;
   font-family: "Amiri Quran", "Amiri", serif;
-  color: oklch(0.45 0.06 60);
+  font-size: 0.78em;
+  color: oklch(0.42 0.09 55);   /* warm brown, like printed Mushaf ink */
   cursor: pointer;
-  margin: 0 3px;
-  vertical-align: middle;
+  padding: 0 2px;
+  vertical-align: baseline;
   transition: color var(--dur-fast) ease;
+  white-space: nowrap;
 }
 .mushaf-ayah-end:hover {
-  color: oklch(0.30 0.12 285);
+  color: oklch(0.28 0.14 285);
 }
 
 /* Other token types (pause marks, etc.) */
@@ -2496,12 +2526,12 @@ input, textarea { font: inherit; color: inherit; }
 .word-popup-save:disabled { opacity: 0.45; cursor: default; }
 .word-popup-save:not(:disabled):hover { opacity: 0.88; }
 
-/* ── Ayah-end marker: cursor affordance (duplicate scoped block) ── */
+/* ── Ayah-end marker: cursor affordance (scoped overrides) ── */
 .mushaf-ayah-end {
   cursor: pointer;
 }
 .mushaf-ayah-end:hover {
-  color: oklch(0.30 0.12 285);
+  color: oklch(0.28 0.14 285);
   text-decoration: underline;
   text-decoration-style: dotted;
 }
