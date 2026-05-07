@@ -1800,8 +1800,8 @@ input, textarea { font: inherit; color: inherit; }
   position: relative;
   flex: 1 1 0;
   overflow: hidden;
-  /* Neutral document-viewer gray — same tone Quran.com uses behind its page */
-  background: #e9e9e9;
+  /* Warm study surface — not a document viewer */
+  background: oklch(0.955 0.010 85);
   cursor: default;
   user-select: none;
   -webkit-user-select: none;
@@ -2444,16 +2444,15 @@ input, textarea { font: inherit; color: inherit; }
    ═══════════════════════════════════════════════════════════════════════════ */
 
 /* ── Page container ───────────────────────────────────────────────────────── */
+/*
+ * No background, no shadow — the Quran sits directly on the canvas surface.
+ * Generous padding gives comfortable reading proportions without looking
+ * like a document card.
+ */
 .qcf-page {
   position:            relative;
-  width:               620px;
-  background:          #fff;
-  border-radius:       0;
-  padding:             52px 60px 44px;
-  box-shadow:
-    0  1px  3px rgba(0,0,0,0.10),
-    0  4px 16px rgba(0,0,0,0.08),
-    0 16px 40px rgba(0,0,0,0.05);
+  /* Width matched by MUSHAF_CARD_WIDTH in ModeBPage.tsx */
+  padding:             64px 64px 56px;
   /* Own compositing layer — keeps glyphs crisp under CSS scale() */
   transform:           translateZ(0);
   backface-visibility: hidden;
@@ -2535,24 +2534,27 @@ input, textarea { font: inherit; color: inherit; }
 
 /* The glyph text span — fills the line, no user interaction of its own */
 .qcf-line-text {
-  display:     block;
-  direction:   rtl;
-  font-size:   30px;
-  line-height: 2.1;
-  color:       #1a1a1a;
-  white-space: nowrap;
-  user-select: none;
+  display:        block;
+  direction:      rtl;
+  font-size:      34px;
+  line-height:    2.05;
+  color:          oklch(0.14 0.010 80);
+  white-space:    nowrap;
+  user-select:    none;
   pointer-events: none;
 }
 
 /* ── Page number footer ───────────────────────────────────────────────────── */
 .qcf-page-num {
   text-align:     center;
-  margin-top:     18px;
+  margin-top:     24px;
+  padding-top:    12px;
+  /* Very thin rule above the page number — the only structural marker */
+  border-top:     1px solid oklch(0.14 0.010 80 / 0.10);
   font-size:      11px;
   font-weight:    500;
-  letter-spacing: 0.1em;
-  color:          rgba(0,0,0,0.35);
+  letter-spacing: 0.08em;
+  color:          oklch(0.14 0.010 80 / 0.32);
   user-select:    none;
   direction:      ltr;
 }
@@ -2570,7 +2572,7 @@ input, textarea { font: inherit; color: inherit; }
 .qcf-skeleton-line {
   height:        15px;
   border-radius: 3px;
-  background:    #e0e0e0;
+  background:    oklch(0.14 0.010 80 / 0.12);
   margin-left:   auto;
   margin-right:  auto;
   animation:     qcf-shimmer 1.5s ease-in-out infinite;
