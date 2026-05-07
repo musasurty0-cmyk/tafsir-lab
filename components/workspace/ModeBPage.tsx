@@ -46,7 +46,7 @@ export interface PageUserPrefsData {
 
 const ZOOM_MIN             = 0.3;
 const ZOOM_MAX             = 2.5;
-const MUSHAF_CARD_WIDTH    = 560;
+const MUSHAF_CARD_WIDTH    = 620;
 const VIEWPORT_DEBOUNCE_MS = 800;
 const NOTE_GAP             = 40;
 

@@ -1800,9 +1800,11 @@ input, textarea { font: inherit; color: inherit; }
   position: relative;
   flex: 1 1 0;
   overflow: hidden;
+  /* Warm linen surface — makes the Mushaf page float as a physical object */
   background:
-    radial-gradient(circle, var(--line-strong) 0.75px, transparent 0.75px) 0 0 / 20px 20px,
-    var(--bg);
+    radial-gradient(circle, oklch(0.76 0.014 78 / 0.55) 0.65px, transparent 0.65px)
+    0 0 / 24px 24px,
+    oklch(0.93 0.011 78);
   cursor: default;
   user-select: none;
   -webkit-user-select: none;
@@ -2134,82 +2136,119 @@ input, textarea { font: inherit; color: inherit; }
    Phase 6 — MushafCard (flowing Arabic text block on the canvas)
    ═══════════════════════════════════════════════════════════════════════════ */
 
-/* ── Mushaf card — physical Quran page aesthetic ── */
+/* ══════════════════════════════════════════════════════════════════════
+   Mushaf page — authentic, immersive, premium
+   The goal: users feel they are touching a real Qurʾān, not a UI card.
+   ══════════════════════════════════════════════════════════════════════ */
+
 .mushaf-card {
   position: relative;
-  /* Warm parchment — the colour of real Mushaf paper */
-  background: oklch(0.975 0.012 82);
-  border-radius: 4px;
-  /* Layered shadow: subtle depth + a soft outer glow */
+  /*
+   * Premium paper: slightly warmer than pure white, like fine cream art paper.
+   * A real Mushaf page has no CSS border — the "edge" is suggested only by shadow.
+   */
+  background: oklch(0.985 0.006 80);
+  border-radius: 2px;
+  /*
+   * Four-layer shadow stack:
+   *   1. hairline inset edge — the physical page boundary
+   *   2. close contact shadow — page lying on surface
+   *   3. medium atmospheric shadow — lift and depth
+   *   4. far ambient glow — warm light around the page
+   */
   box-shadow:
-    0 1px 3px  oklch(0 0 0 / 0.10),
-    0 8px 32px oklch(0 0 0 / 0.14);
-  padding: 40px 52px 52px;
-  border: 1px solid oklch(0.88 0.018 75);
+    0 0 0 1px oklch(0.80 0.016 75 / 0.50),
+    0 2px  8px oklch(0 0 0 / 0.07),
+    0 10px 36px oklch(0 0 0 / 0.11),
+    0 28px 72px oklch(0 0 0 / 0.06);
+  padding: 56px 68px 72px;
   user-select: none;
   -webkit-user-select: none;
-  /* Force its own GPU layer so CSS scale() doesn't blur the text */
+  /* Own GPU layer — keeps text crisp under CSS scale() zoom */
   transform: translateZ(0);
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
 }
 
-/* ── Surah header — name badge + basmala ── */
+/* ── Surah header — ornamental cartouche ── */
+/*
+ * Inspired by the rectangular name frame in printed Mushafs:
+ * a centred surah name between two horizontal rules,
+ * then the basmala below it.
+ */
 .mushaf-surah-header {
   text-align: center;
-  padding-bottom: 24px;
-  margin-bottom: 8px;
-  border-bottom: 1px solid oklch(0.82 0.02 75);
+  padding-bottom: 28px;
+  margin-bottom: 16px;
 }
+/* Decorative horizontal rules above and below the name panel */
+.mushaf-surah-header::before,
+.mushaf-surah-header::after {
+  content: "";
+  display: block;
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    transparent 0%,
+    oklch(0.74 0.03 72) 20%,
+    oklch(0.74 0.03 72) 80%,
+    transparent 100%
+  );
+}
+.mushaf-surah-header::before { margin-bottom: 14px; }
+.mushaf-surah-header::after  { margin-top: 14px; }
+
+/* Name cartouche — rectangular, no border-radius, like a real Mushaf header */
 .mushaf-surah-name {
   display: inline-block;
   font-family: "Amiri Quran", "Amiri", serif;
-  font-size: 20px;
-  color: oklch(0.28 0.08 60);
-  background: oklch(0.92 0.03 75);
-  border: 1px solid oklch(0.82 0.03 75);
-  padding: 3px 20px 5px;
-  border-radius: 20px;
-  margin-bottom: 14px;
-  letter-spacing: 0.03em;
+  font-size: 21px;
+  color: oklch(0.20 0.04 60);
+  border-top: 1.5px solid oklch(0.68 0.04 68);
+  border-bottom: 1.5px solid oklch(0.68 0.04 68);
+  padding: 6px 40px 9px;
+  letter-spacing: 0.05em;
+  background: transparent;
 }
+/* Basmala — large, centred, own breathing room */
 .mushaf-basmala {
   font-family: "Amiri Quran", "Amiri", serif;
-  font-size: 24px;
-  line-height: 2;
-  color: oklch(0.12 0.016 60);
+  font-size: 27px;
+  line-height: 1.9;
+  color: oklch(0.10 0.014 60);
   text-align: center;
   -webkit-font-smoothing: antialiased;
+  margin-top: 4px;
 }
 
-/* Flowing Arabic text container — Amiri Quran, authentic Mushaf style */
+/* ── Flowing text body ── */
 .mushaf-text {
   font-family: "Amiri Quran", "Amiri", serif;
-  font-size: 28px;
-  /* 2.2 matches the line density of a printed Hafs Mushaf at this size */
-  line-height: 2.2;
-  /* Deep warm ink, not cold black */
-  color: oklch(0.10 0.016 60);
+  font-size: 30px;
+  /*
+   * Line-height 2.15: gives Arabic diacritics room to breathe
+   * without opening up too much whitespace between lines.
+   * Real Hafs Mushafs run at roughly this density at 30px.
+   */
+  line-height: 2.15;
+  color: oklch(0.09 0.014 60);   /* deep warm ink, not cold #000 */
   text-align: justify;
-  /* Last line stays right-aligned rather than being stretched to fill */
-  text-align-last: right;
+  text-align-last: right;        /* last line hugs the right margin */
   direction: rtl;
-  word-spacing: 0.05em;
+  word-spacing: 0.04em;
+  /* Ligatures + contextual alternates improve Arabic glyph shaping */
+  font-feature-settings: "liga" 1, "calt" 1, "kern" 1;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
-  /* Allow selection inside the card */
   user-select: text;
   -webkit-user-select: text;
 }
 
-/* Each verse is an inline span — text flows continuously across verses */
-.mushaf-verse {
-  display: inline;
-}
+/* Each verse is inline — text flows continuously, exactly like a printed page */
+.mushaf-verse { display: inline; }
 
-/* Invisible zero-width anchor at the logical start of each ayah.
-   The anchor engine reads its offsetTop to place ayah-anchored notes. */
+/* Zero-width anchor for the note positioning engine */
 .mushaf-ayah-anchor {
   display: inline;
   width: 0;
@@ -2218,23 +2257,25 @@ input, textarea { font: inherit; color: inherit; }
   line-height: 0;
 }
 
-/* Clickable Arabic word — no underline so text looks like a real Mushaf.
-   Hover highlight only appears on interaction. */
+/* ── Clickable word — invisible until interaction ──
+ * No underline, no border, no indicator.
+ * The highlight should feel like a gentle golden lens passing over the text,
+ * not a UI selection rectangle.
+ */
 .mushaf-word {
   display: inline;
   cursor: pointer;
-  border-radius: 2px;
+  border-radius: 3px;
   padding: 0 1px;
-  transition: background var(--dur-fast) ease, color var(--dur-fast) ease;
+  transition: background var(--dur-fast) ease;
 }
+/* Warm golden tint — matches traditional Mushaf highlighting (yellow/amber) */
 .mushaf-word:hover {
-  background: oklch(0.78 0.10 285 / 0.20);
-  color: oklch(0.26 0.20 285);
+  background: oklch(0.88 0.09 80 / 0.48);
 }
 .mushaf-word:active,
 .mushaf-word[data-active="true"] {
-  background: oklch(0.74 0.14 285 / 0.30);
-  color: oklch(0.22 0.20 285);
+  background: oklch(0.82 0.12 76 / 0.55);
 }
 
 /* "Tap to annotate" hint bubble — shown via JS data attribute */
@@ -2281,22 +2322,24 @@ input, textarea { font: inherit; color: inherit; }
   to   { opacity: 1; transform: translateX(-50%) translateY(0);   }
 }
 
-/* Ayah-end ornament — U+06DD + Arabic-Indic digits.
-   Amiri Quran renders U+06DD as the authentic decorative roundel
-   that encircles the number, matching printed Mushaf pages. */
+/* ── Ayah-end ornament ──
+ * U+06DD + Arabic-Indic digits: Amiri Quran renders U+06DD as the
+ * traditional decorative roundel that encircles the ayah number.
+ * Kept at ink-warm brown so it reads as part of the page, not as UI.
+ */
 .mushaf-ayah-end {
   display: inline;
   font-family: "Amiri Quran", "Amiri", serif;
-  font-size: 0.78em;
-  color: oklch(0.42 0.09 55);   /* warm brown, like printed Mushaf ink */
+  font-size: 0.80em;
+  color: oklch(0.38 0.07 55);    /* warm umber — same family as the ink */
   cursor: pointer;
   padding: 0 2px;
   vertical-align: baseline;
-  transition: color var(--dur-fast) ease;
   white-space: nowrap;
+  transition: color var(--dur-fast) ease;
 }
 .mushaf-ayah-end:hover {
-  color: oklch(0.28 0.14 285);
+  color: oklch(0.28 0.10 55);
 }
 
 /* Other token types (pause marks, etc.) */
@@ -2526,12 +2569,12 @@ input, textarea { font: inherit; color: inherit; }
 .word-popup-save:disabled { opacity: 0.45; cursor: default; }
 .word-popup-save:not(:disabled):hover { opacity: 0.88; }
 
-/* ── Ayah-end marker: cursor affordance (scoped overrides) ── */
+/* ── Ayah-end marker: cursor affordance ── */
 .mushaf-ayah-end {
   cursor: pointer;
 }
 .mushaf-ayah-end:hover {
-  color: oklch(0.28 0.14 285);
+  color: oklch(0.28 0.10 55);
   text-decoration: underline;
   text-decoration-style: dotted;
 }
