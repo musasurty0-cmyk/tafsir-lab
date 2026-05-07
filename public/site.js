@@ -75,13 +75,11 @@
 (() => {
   const BETA_PASSWORD = 'READY2027';
 
-  const modal    = document.getElementById('beta-modal');
-  const form     = document.getElementById('beta-modal-form');
-  const input    = document.getElementById('beta-modal-input');
-  const errorEl  = document.getElementById('beta-modal-error');
-  const closeBtn = modal?.querySelector('.beta-modal-close');
-  const submitBtn = modal?.querySelector('.beta-modal-btn');
-  if (!modal || !form || !input) return;
+  const modal   = document.getElementById('beta-modal');
+  const form    = document.getElementById('beta-modal-form');
+  const input   = document.getElementById('beta-modal-input');
+  const errorEl = document.getElementById('beta-modal-error');
+  if (!modal || !form || !input || !errorEl) return;
 
   function openModal() {
     modal.hidden = false;
@@ -94,14 +92,16 @@
     modal.hidden = true;
   }
 
-  document.querySelectorAll('.js-beta-gate').forEach(el => {
-    el.addEventListener('click', e => {
+  // Event delegation — listener lives on document from the moment this
+  // script executes, so clicks before DOMContentLoaded still open the modal.
+  document.addEventListener('click', e => {
+    if (e.target.closest('.js-beta-gate')) {
       e.preventDefault();
       openModal();
-    });
+    }
   });
 
-  closeBtn?.addEventListener('click', closeModal);
+  modal.querySelector('.beta-modal-close')?.addEventListener('click', closeModal);
   modal.querySelector('.beta-modal-backdrop')?.addEventListener('click', closeModal);
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape' && !modal.hidden) closeModal();
@@ -109,7 +109,7 @@
 
   form.addEventListener('submit', e => {
     e.preventDefault();
-    const password = input.value.trim();
+    const password = input.value.trim().toUpperCase();
     if (!password) return;
 
     if (password !== BETA_PASSWORD) {
