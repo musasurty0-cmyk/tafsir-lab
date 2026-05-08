@@ -412,113 +412,111 @@ export default function ModeBPage({
     return () => el.removeEventListener("wheel", onWheel);
   }, [patchViewport, focusAnchor, tool]);
 
-  // ── Pan + pinch-zoom (pointer events — works for mouse, Apple Pencil, touch) ──
+  // ── Touch pan / pinch-zoom — native touch events ─────────────────────────
   //
-  // Routing rules (enforced here + in DrawingCanvas):
-  //   pointerType "touch"  → always pan/pinch, regardless of active tool
-  //   pointerType "pen"    → draw when tool ≠ hand; pan when tool = hand
-  //   pointerType "mouse"  → draw when tool ≠ hand; pan when tool = hand
-  //
-  // Touch events never reach DrawingCanvas draw logic (DrawingCanvas returns
-  // early for pointerType "touch"), so they always bubble here.
+  // DrawingCanvas calls touchstart.preventDefault() to block the iOS callout
+  // and prevent browser gesture recognition from firing pointercancel mid-stroke.
+  // That preventDefault also cancels pointer-event generation for touch input, so
+  // we cannot use pointer events for touch panning — we use native touch events
+  // instead, which still fire after preventDefault on a child element.
+
+  useEffect(() => {
+    const elOrNull = containerRef.current;
+    if (!elOrNull) return;
+    const el = elOrNull; // narrowed; closures below cannot see the earlier null-check
+
+    // Local touch-point map (lives inside the effect, no stale-closure risk)
+    const pts = new Map<number, { x: number; y: number }>();
+    let panStart:   { tx: number; ty: number; vx: number; vy: number } | null = null;
+    let pinchStart: { dist: number; zoom: number; worldX: number; worldY: number } | null = null;
+
+    function startPanFromPts() {
+      if (pts.size !== 1) return;
+      const [p] = pts.values();
+      panStart = { tx: p.x, ty: p.y, vx: viewportRef.current.x, vy: viewportRef.current.y };
+    }
+
+    function startPinchFromPts() {
+      if (pts.size < 2) return;
+      const [a, b] = pts.values();
+      const dist = Math.hypot(b.x - a.x, b.y - a.y);
+      const rect = el.getBoundingClientRect();
+      const cx = (a.x + b.x) / 2 - rect.left;
+      const cy = (a.y + b.y) / 2 - rect.top;
+      const vp = viewportRef.current;
+      pinchStart = { dist, zoom: vp.zoom, worldX: (cx - vp.x) / vp.zoom, worldY: (cy - vp.y) / vp.zoom };
+    }
+
+    function onTouchStart(e: TouchEvent) {
+      e.preventDefault(); // belt-and-suspenders: also prevents iOS callout at this level
+      for (const t of e.changedTouches) pts.set(t.identifier, { x: t.clientX, y: t.clientY });
+      if (pts.size === 1) { pinchStart = null; startPanFromPts(); }
+      else                { panStart  = null; startPinchFromPts(); }
+    }
+
+    function onTouchMove(e: TouchEvent) {
+      e.preventDefault();
+      for (const t of e.changedTouches) pts.set(t.identifier, { x: t.clientX, y: t.clientY });
+
+      if (pts.size >= 2 && pinchStart) {
+        const [a, b] = pts.values();
+        const dist = Math.hypot(b.x - a.x, b.y - a.y);
+        const rect = el.getBoundingClientRect();
+        const cx = (a.x + b.x) / 2 - rect.left;
+        const cy = (a.y + b.y) / 2 - rect.top;
+        const { dist: bd, zoom: bz, worldX: wx, worldY: wy } = pinchStart;
+        const newZoom = clamp(bz * (dist / bd), ZOOM_MIN, ZOOM_MAX);
+        const next: CanvasViewport = { zoom: newZoom, x: cx - wx * newZoom, y: cy - wy * newZoom };
+        setViewport(next); patchViewport(next);
+      } else if (pts.size === 1 && panStart) {
+        const [p] = pts.values();
+        const next: CanvasViewport = {
+          ...viewportRef.current,
+          x: panStart.vx + (p.x - panStart.tx),
+          y: panStart.vy + (p.y - panStart.ty),
+        };
+        setViewport(next); patchViewport(next);
+      }
+    }
+
+    function onTouchEnd(e: TouchEvent) {
+      e.preventDefault();
+      for (const t of e.changedTouches) pts.delete(t.identifier);
+      if (pts.size < 2) { pinchStart = null; }
+      if (pts.size === 1 && panStart === null) startPanFromPts();
+      if (pts.size === 0) { panStart = null; el.removeAttribute("data-panning"); }
+    }
+
+    el.addEventListener("touchstart",  onTouchStart,  { passive: false });
+    el.addEventListener("touchmove",   onTouchMove,   { passive: false });
+    el.addEventListener("touchend",    onTouchEnd,    { passive: false });
+    el.addEventListener("touchcancel", onTouchEnd,    { passive: false });
+    return () => {
+      el.removeEventListener("touchstart",  onTouchStart);
+      el.removeEventListener("touchmove",   onTouchMove);
+      el.removeEventListener("touchend",    onTouchEnd);
+      el.removeEventListener("touchcancel", onTouchEnd);
+    };
+  }, [patchViewport]); // setViewport + viewportRef are stable; patchViewport stable per pageId
+
+  // ── Mouse / Apple Pencil pan (pointer events only — touch handled above) ──
 
   const isDragging = useRef(false);
   const dragStart  = useRef<{ mx: number; my: number; vx: number; vy: number } | null>(null);
-  // Per-pointer tracking for multi-touch pinch
-  const touchPts   = useRef(new Map<number, { x: number; y: number }>());
-  const pinchBase  = useRef<{
-    baseDist: number;
-    baseZoom: number;
-    worldX:   number;  // canvas-world point under the initial pinch midpoint
-    worldY:   number;
-  } | null>(null);
-
-  function startPan(mx: number, my: number) {
-    isDragging.current = true;
-    containerRef.current?.setAttribute("data-panning", "true");
-    dragStart.current = { mx, my, vx: viewportRef.current.x, vy: viewportRef.current.y };
-  }
 
   function onPointerDown(e: React.PointerEvent) {
-    if (focusAnchor) return;
-    // Suppress the iOS "Copy / Search with Google" callout on long stylus press.
-    // Calling preventDefault on pointerdown prevents touchstart from firing,
-    // which is what triggers the system context menu on iOS.
+    if (focusAnchor || e.pointerType === "touch") return;
+    // Prevent iOS long-press callout / compat mouse events for stylus
     if (e.pointerType === "pen") e.preventDefault();
-    const isTouch  = e.pointerType === "touch";
-    const shouldPan = (tool === "hand" && e.button === 0) || isTouch;
-    if (!shouldPan) return;
-
-    // Capture so all subsequent move/up events route here regardless of target
+    if (tool !== "hand" || e.button !== 0) return;
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-
-    if (isTouch) {
-      touchPts.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
-      const pts = [...touchPts.current.values()];
-
-      if (pts.length >= 2) {
-        // Two-finger pinch — record world point under initial midpoint so zoom
-        // keeps that point visually fixed under the pinch center.
-        const [p0, p1] = pts;
-        const dist = Math.hypot(p1.x - p0.x, p1.y - p0.y);
-        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-        const cx   = (p0.x + p1.x) / 2 - rect.left;
-        const cy   = (p0.y + p1.y) / 2 - rect.top;
-        const vp   = viewportRef.current;
-        pinchBase.current = {
-          baseDist: dist,
-          baseZoom: vp.zoom,
-          worldX:   (cx - vp.x) / vp.zoom,
-          worldY:   (cy - vp.y) / vp.zoom,
-        };
-        isDragging.current = false;
-        dragStart.current  = null;
-      } else {
-        // Single touch — start pan
-        pinchBase.current = null;
-        startPan(e.clientX, e.clientY);
-      }
-    } else {
-      // Mouse / stylus hand-tool pan
-      startPan(e.clientX, e.clientY);
-    }
+    isDragging.current = true;
+    containerRef.current?.setAttribute("data-panning", "true");
+    dragStart.current = { mx: e.clientX, my: e.clientY, vx: viewportRef.current.x, vy: viewportRef.current.y };
   }
 
   function onPointerMove(e: React.PointerEvent) {
-    if (e.pointerType === "touch") {
-      if (!touchPts.current.has(e.pointerId)) return;
-      touchPts.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
-      const pts = [...touchPts.current.values()];
-
-      if (pts.length >= 2 && pinchBase.current) {
-        // Pinch: zoom + simultaneous pan (midpoint tracks your fingers)
-        const [p0, p1] = pts;
-        const dist = Math.hypot(p1.x - p0.x, p1.y - p0.y);
-        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-        const cx   = (p0.x + p1.x) / 2 - rect.left;
-        const cy   = (p0.y + p1.y) / 2 - rect.top;
-        const { baseDist, baseZoom, worldX, worldY } = pinchBase.current;
-        const newZoom = clamp(baseZoom * (dist / baseDist), ZOOM_MIN, ZOOM_MAX);
-        const next: CanvasViewport = {
-          zoom: newZoom,
-          x:    cx - worldX * newZoom,
-          y:    cy - worldY * newZoom,
-        };
-        setViewport(next); patchViewport(next);
-      } else if (pts.length === 1 && isDragging.current && dragStart.current) {
-        // Single-touch pan
-        const next: CanvasViewport = {
-          ...viewportRef.current,
-          x: dragStart.current.vx + (e.clientX - dragStart.current.mx),
-          y: dragStart.current.vy + (e.clientY - dragStart.current.my),
-        };
-        setViewport(next); patchViewport(next);
-      }
-      return;
-    }
-
-    // Mouse / stylus pan
-    if (!isDragging.current || !dragStart.current) return;
+    if (e.pointerType === "touch" || !isDragging.current || !dragStart.current) return;
     const next: CanvasViewport = {
       ...viewportRef.current,
       x: dragStart.current.vx + (e.clientX - dragStart.current.mx),
@@ -528,25 +526,9 @@ export default function ModeBPage({
   }
 
   function onPointerUp(e: React.PointerEvent) {
-    // Prevent mouseup / click compat events for stylus (same reason as DrawingCanvas.onUp)
+    // Prevent mouseup / click compat events after each pen stroke
     if (e.pointerType === "pen") e.preventDefault();
-    if (e.pointerType === "touch") {
-      touchPts.current.delete(e.pointerId);
-      const remaining = touchPts.current.size;
-      if (remaining < 2) pinchBase.current = null;
-
-      if (remaining === 0) {
-        isDragging.current = false;
-        dragStart.current  = null;
-        containerRef.current?.removeAttribute("data-panning");
-      } else if (remaining === 1) {
-        // Lifted one finger — transition back to single-touch pan
-        const [pt] = touchPts.current.values();
-        startPan(pt.x, pt.y);
-      }
-      return;
-    }
-
+    if (e.pointerType === "touch") return;
     isDragging.current = false;
     dragStart.current  = null;
     containerRef.current?.removeAttribute("data-panning");

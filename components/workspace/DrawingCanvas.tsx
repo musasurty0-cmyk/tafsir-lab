@@ -352,16 +352,17 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     el.addEventListener("contextmenu", prevent);
     el.addEventListener("selectstart", prevent);
     el.addEventListener("copy",        prevent);
-    // NOTE: touchstart preventDefault intentionally omitted.
-    // Calling preventDefault on touchstart cancels pointer events on iOS/Android,
-    // which breaks touch-pan in ModeBPage (pointer events never bubble up).
-    // palm-rejection and scroll-prevention are handled by:
-    //   • touch-action: none  on this wrapper (pointer events spec)
-    //   • -webkit-touch-callout / user-select: none  (CSS, on mode-b-canvas)
+    // Non-passive touchstart: prevents the iOS "Copy / Search with Google" callout
+    // from appearing on palm rest or pen hold, AND prevents the browser from starting
+    // gesture recognition that would fire pointercancel mid-stroke.
+    // Touch PANNING is handled via native touchstart/touchmove/touchend listeners
+    // on mode-b-canvas (the parent) — those fire even after this preventDefault.
+    el.addEventListener("touchstart", prevent, { passive: false });
     return () => {
       el.removeEventListener("contextmenu", prevent);
       el.removeEventListener("selectstart", prevent);
       el.removeEventListener("copy",        prevent);
+      el.removeEventListener("touchstart",  prevent);
     };
   }, []);
 
