@@ -546,17 +546,6 @@ export default function ModeBPage({
     containerRef.current?.removeAttribute("data-panning");
   }
 
-  // ── Dot-grid background: update CSS vars whenever viewport changes ────────
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const BASE = 24;
-    const sp   = BASE * viewport.zoom;
-    el.style.setProperty("--dot-sp", `${sp}px`);
-    el.style.setProperty("--dot-x",  `${((viewport.x % sp) + sp) % sp}px`);
-    el.style.setProperty("--dot-y",  `${((viewport.y % sp) + sp) % sp}px`);
-  }, [viewport]);
-
   // ── Render ────────────────────────────────────────────────────────────
 
   return (

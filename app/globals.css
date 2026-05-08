@@ -1908,11 +1908,7 @@ input, textarea { font: inherit; color: inherit; }
   position: relative;
   flex: 1 1 0;
   overflow: hidden;
-  /* Dot grid that pans/zooms with the viewport (CSS vars set from ModeBPage) */
-  background-color: #f0f0f0;
-  background-image: radial-gradient(circle, oklch(0.68 0.007 240) 1.5px, transparent 1.5px);
-  background-size: var(--dot-sp, 24px) var(--dot-sp, 24px);
-  background-position: var(--dot-x, 0px) var(--dot-y, 0px);
+  background: #f0f0f0;
   cursor: default;
   user-select: none;
   -webkit-user-select: none;
