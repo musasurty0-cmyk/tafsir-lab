@@ -441,6 +441,10 @@ export default function ModeBPage({
 
   function onPointerDown(e: React.PointerEvent) {
     if (focusAnchor) return;
+    // Suppress the iOS "Copy / Search with Google" callout on long stylus press.
+    // Calling preventDefault on pointerdown prevents touchstart from firing,
+    // which is what triggers the system context menu on iOS.
+    if (e.pointerType === "pen") e.preventDefault();
     const isTouch  = e.pointerType === "touch";
     const shouldPan = (tool === "hand" && e.button === 0) || isTouch;
     if (!shouldPan) return;
