@@ -458,6 +458,13 @@ export default function ModeBPage({
 
     function onTouchStart(e: TouchEvent) {
       if (isInteractive(e)) return; // let click fire normally
+      // Apple Pencil on iOS 13+ fires touchType:"stylus" touch events alongside
+      // its pointer events.  If we preventDefault here, the companion pointer
+      // event (pointerType:"pen") is cancelled and DrawingCanvas never draws.
+      // Skip the whole touch event for stylus — pointer events handle drawing.
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        if ((e.changedTouches[i] as Touch & { touchType?: string }).touchType === "stylus") return;
+      }
       e.preventDefault();
       for (const t of e.changedTouches) pts.set(t.identifier, { x: t.clientX, y: t.clientY });
       if (pts.size === 1) { pinchStart = null; startPanFromPts(); }
@@ -531,7 +538,7 @@ export default function ModeBPage({
   }
 
   function onPointerMove(e: React.PointerEvent) {
-    if (e.pointerType === "touch" || !isDragging.current || !dragStart.current) return;
+    if (e.pointerType === "touch" || tool !== "hand" || !isDragging.current || !dragStart.current) return;
     const next: CanvasViewport = {
       ...viewportRef.current,
       x: dragStart.current.vx + (e.clientX - dragStart.current.mx),

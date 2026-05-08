@@ -352,17 +352,27 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     el.addEventListener("contextmenu", prevent);
     el.addEventListener("selectstart", prevent);
     el.addEventListener("copy",        prevent);
-    // Non-passive touchstart: prevents the iOS "Copy / Search with Google" callout
-    // from appearing on palm rest or pen hold, AND prevents the browser from starting
-    // gesture recognition that would fire pointercancel mid-stroke.
-    // Touch PANNING is handled via native touchstart/touchmove/touchend listeners
-    // on mode-b-canvas (the parent) — those fire even after this preventDefault.
-    el.addEventListener("touchstart", prevent, { passive: false });
+    // Non-passive touchstart: blocks iOS callout on palm/finger rest and stops
+    // browser gesture recognition from firing pointercancel mid-stroke.
+    // IMPORTANT: only call preventDefault for FINGER touches, never for stylus.
+    // On iOS 13+, Apple Pencil generates both TouchEvent (touchType:"stylus") and
+    // PointerEvent (pointerType:"pen"). Calling preventDefault on the stylus
+    // TouchEvent cancels the companion PointerEvent — DrawingCanvas never sees the
+    // stroke and drawing stops working entirely.
+    const preventFingerTouch = (e: TouchEvent) => {
+      let hasFingerTouch = false;
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        const t = e.changedTouches[i] as Touch & { touchType?: string };
+        if (t.touchType !== "stylus") { hasFingerTouch = true; break; }
+      }
+      if (hasFingerTouch) e.preventDefault();
+    };
+    el.addEventListener("touchstart", preventFingerTouch, { passive: false });
     return () => {
-      el.removeEventListener("contextmenu", prevent);
-      el.removeEventListener("selectstart", prevent);
-      el.removeEventListener("copy",        prevent);
-      el.removeEventListener("touchstart",  prevent);
+      el.removeEventListener("contextmenu",  prevent);
+      el.removeEventListener("selectstart",  prevent);
+      el.removeEventListener("copy",         prevent);
+      el.removeEventListener("touchstart",   preventFingerTouch);
     };
   }, []);
 
