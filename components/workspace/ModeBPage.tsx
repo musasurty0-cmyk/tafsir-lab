@@ -447,8 +447,18 @@ export default function ModeBPage({
       pinchStart = { dist, zoom: vp.zoom, worldX: (cx - vp.x) / vp.zoom, worldY: (cy - vp.y) / vp.zoom };
     }
 
+    // A touch on a button / role=button / link must NOT have preventDefault called —
+    // that would kill the browser's click event and break tool-rail buttons and
+    // Quran word taps.  We skip both preventDefault and pan-state setup for those.
+    function isInteractive(e: TouchEvent) {
+      return !!(e.target as HTMLElement).closest(
+        'button, a, input, select, textarea, [role="button"]',
+      );
+    }
+
     function onTouchStart(e: TouchEvent) {
-      e.preventDefault(); // belt-and-suspenders: also prevents iOS callout at this level
+      if (isInteractive(e)) return; // let click fire normally
+      e.preventDefault();
       for (const t of e.changedTouches) pts.set(t.identifier, { x: t.clientX, y: t.clientY });
       if (pts.size === 1) { pinchStart = null; startPanFromPts(); }
       else                { panStart  = null; startPinchFromPts(); }
@@ -456,7 +466,10 @@ export default function ModeBPage({
 
     function onTouchMove(e: TouchEvent) {
       e.preventDefault();
-      for (const t of e.changedTouches) pts.set(t.identifier, { x: t.clientX, y: t.clientY });
+      // Only update pts entries that were registered on touchstart (i.e. non-interactive)
+      for (const t of e.changedTouches) {
+        if (pts.has(t.identifier)) pts.set(t.identifier, { x: t.clientX, y: t.clientY });
+      }
 
       if (pts.size >= 2 && pinchStart) {
         const [a, b] = pts.values();
@@ -480,7 +493,9 @@ export default function ModeBPage({
     }
 
     function onTouchEnd(e: TouchEvent) {
-      e.preventDefault();
+      // Don't preventDefault for interactive-element taps — the browser needs to
+      // fire a click event for tool buttons and Quran word taps to work.
+      if (!isInteractive(e)) e.preventDefault();
       for (const t of e.changedTouches) pts.delete(t.identifier);
       if (pts.size < 2) { pinchStart = null; }
       if (pts.size === 1 && panStart === null) startPanFromPts();
