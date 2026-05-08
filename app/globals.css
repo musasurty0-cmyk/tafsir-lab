@@ -2615,19 +2615,42 @@ input, textarea { font: inherit; color: inherit; }
 }
 
 /* ── Line-by-line text ────────────────────────────────────────────────────── */
+/*
+ * All typography is set here, on the block container, NOT on individual
+ * glyph spans.  Setting font-size / line-height per-span creates
+ * independent inline boxes whose metrics can differ, which is what causes
+ * harakat (diacritic) bleed between lines.
+ *
+ * Sizing rationale (QCF v2 font metrics):
+ *   font-size  20px — QCF v2 glyphs are designed for ~20 px on a ~600 px
+ *                     content column.  34 px made harakat from adjacent
+ *                     lines overlap.
+ *   line-height 3.0 — Arabic diacritics in the QCF font extend ≈1 em
+ *                     above/below the base glyph.  ×3 gives enough air
+ *                     (60 px between baselines at 20 px) to prevent overlap.
+ *   letter-spacing 0 / word-spacing 0 — any non-zero value distorts the
+ *                     advance widths the font designer encoded.
+ */
 .qcf-lines {
   flex:           1;
   display:        flex;
   flex-direction: column;
   width:          100%;
   direction:      rtl;
+  /* QCF typography — do not override on child elements */
+  font-size:      20px;
+  line-height:    3.0;
+  letter-spacing: 0;
+  word-spacing:   0;
+  font-kerning:   none;       /* PUA glyphs have no kern pairs; skip the lookup */
+  text-rendering: optimizeSpeed; /* don't apply Unicode ligature / kerning logic */
 }
 
 /*
  * Line container — display:block direction:rtl.
- * Child spans are display:inline; React renders arrays with no DOM
- * whitespace between them, so they form one continuous glyph run.
- * The QCF font handles all shaping — no manual justification.
+ * Children are display:inline; React array elements have no DOM whitespace
+ * between them, forming one continuous glyph run identical to a
+ * concatenated string — with per-word click targets.
  */
 .qcf-line {
   display:   block;
@@ -2635,10 +2658,13 @@ input, textarea { font: inherit; color: inherit; }
 }
 
 /* ── Individual glyph spans ─────────────────────────────────────────────── */
+/*
+ * Spans inherit ALL metrics from .qcf-lines — no font-size or line-height
+ * here.  Only font-family is set per-span (via inline style) since words
+ * at page-turn boundaries can belong to different v2_page font files.
+ */
 .qcf-glyph {
   display:     inline;
-  font-size:   34px;
-  line-height: 2.05;
   color:       #1a1a1a;
   user-select: none;
 }
@@ -2648,7 +2674,7 @@ input, textarea { font: inherit; color: inherit; }
   transition: background 80ms ease;
 }
 
-/* Amber word highlight — appears on hover, doesn't shift layout */
+/* Amber word highlight — no layout shift */
 .qcf-word:hover  { background: rgba(255, 208, 80, 0.32); }
 .qcf-word:active { background: rgba(255, 185, 40, 0.50); }
 
@@ -2658,6 +2684,41 @@ input, textarea { font: inherit; color: inherit; }
 }
 
 .qcf-end:hover { opacity: 0.60; }
+
+/* ── Font-error state ─────────────────────────────────────────────────────── */
+.qcf-page--error {
+  min-height:      500px;
+  display:         flex;
+  align-items:     center;
+  justify-content: center;
+}
+
+.qcf-error {
+  display:        flex;
+  flex-direction: column;
+  align-items:    center;
+  gap:            14px;
+  text-align:     center;
+}
+
+.qcf-error-msg {
+  font-size:   14px;
+  color:       var(--ink-3);
+  margin:      0;
+}
+
+.qcf-error-retry {
+  font-size:     13px;
+  font-weight:   500;
+  color:         var(--accent-ink);
+  background:    var(--accent-soft);
+  border:        none;
+  border-radius: 7px;
+  padding:       8px 18px;
+  cursor:        pointer;
+  transition:    background .12s;
+}
+.qcf-error-retry:hover { background: oklch(0.55 0.08 160 / 0.18); }
 
 /* ── Page number footer ───────────────────────────────────────────────────── */
 .qcf-page-num {
