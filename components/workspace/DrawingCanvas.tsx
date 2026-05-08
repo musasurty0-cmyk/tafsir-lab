@@ -477,7 +477,13 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     rafRef.current = requestAnimationFrame(render);
   }
 
-  function onUp() {
+  function onUp(e: React.PointerEvent) {
+    // Prevent the browser from generating mouseup / click compatibility events
+    // after each pen stroke ends.  Without this, iOS fires synthetic clicks that
+    // land on text nodes and trigger the "Copy / Search with Google" callout —
+    // especially noticeable with rapid lift-and-replace strokes in handwriting.
+    // pointercancel is non-cancelable so the call is a safe no-op there.
+    if (e.pointerType !== "touch") e.preventDefault();
     if (!isDrawingRef.current || !activeStrokeRef.current) return;
     isDrawingRef.current = false;
     const done = activeStrokeRef.current;
@@ -525,8 +531,8 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
           onDown(e);
         }}
         onPointerMove={onMove}
-        onPointerUp={onUp}
-        onPointerCancel={onUp}
+        onPointerUp={(e)      => onUp(e)}
+        onPointerCancel={(e)  => onUp(e)}
       />
     </div>
   );

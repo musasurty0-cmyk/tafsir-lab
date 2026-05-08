@@ -528,6 +528,8 @@ export default function ModeBPage({
   }
 
   function onPointerUp(e: React.PointerEvent) {
+    // Prevent mouseup / click compat events for stylus (same reason as DrawingCanvas.onUp)
+    if (e.pointerType === "pen") e.preventDefault();
     if (e.pointerType === "touch") {
       touchPts.current.delete(e.pointerId);
       const remaining = touchPts.current.size;
