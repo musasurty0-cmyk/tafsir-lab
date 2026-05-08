@@ -412,18 +412,108 @@ export default function ModeBPage({
     return () => el.removeEventListener("wheel", onWheel);
   }, [patchViewport, focusAnchor, tool]);
 
-  // ── Drag to pan (pointer events so Apple Pencil works in hand mode) ───
+  // ── Pan + pinch-zoom (pointer events — works for mouse, Apple Pencil, touch) ──
+  //
+  // Routing rules (enforced here + in DrawingCanvas):
+  //   pointerType "touch"  → always pan/pinch, regardless of active tool
+  //   pointerType "pen"    → draw when tool ≠ hand; pan when tool = hand
+  //   pointerType "mouse"  → draw when tool ≠ hand; pan when tool = hand
+  //
+  // Touch events never reach DrawingCanvas draw logic (DrawingCanvas returns
+  // early for pointerType "touch"), so they always bubble here.
+
   const isDragging = useRef(false);
   const dragStart  = useRef<{ mx: number; my: number; vx: number; vy: number } | null>(null);
+  // Per-pointer tracking for multi-touch pinch
+  const touchPts   = useRef(new Map<number, { x: number; y: number }>());
+  const pinchBase  = useRef<{
+    baseDist: number;
+    baseZoom: number;
+    worldX:   number;  // canvas-world point under the initial pinch midpoint
+    worldY:   number;
+  } | null>(null);
 
-  function onPointerDown(e: React.PointerEvent) {
-    if (tool !== "hand" || e.button !== 0 || focusAnchor) return;
+  function startPan(mx: number, my: number) {
     isDragging.current = true;
     containerRef.current?.setAttribute("data-panning", "true");
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
-    dragStart.current = { mx: e.clientX, my: e.clientY, vx: viewport.x, vy: viewport.y };
+    dragStart.current = { mx, my, vx: viewportRef.current.x, vy: viewportRef.current.y };
   }
+
+  function onPointerDown(e: React.PointerEvent) {
+    if (focusAnchor) return;
+    const isTouch  = e.pointerType === "touch";
+    const shouldPan = (tool === "hand" && e.button === 0) || isTouch;
+    if (!shouldPan) return;
+
+    // Capture so all subsequent move/up events route here regardless of target
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+
+    if (isTouch) {
+      touchPts.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      const pts = [...touchPts.current.values()];
+
+      if (pts.length >= 2) {
+        // Two-finger pinch — record world point under initial midpoint so zoom
+        // keeps that point visually fixed under the pinch center.
+        const [p0, p1] = pts;
+        const dist = Math.hypot(p1.x - p0.x, p1.y - p0.y);
+        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+        const cx   = (p0.x + p1.x) / 2 - rect.left;
+        const cy   = (p0.y + p1.y) / 2 - rect.top;
+        const vp   = viewportRef.current;
+        pinchBase.current = {
+          baseDist: dist,
+          baseZoom: vp.zoom,
+          worldX:   (cx - vp.x) / vp.zoom,
+          worldY:   (cy - vp.y) / vp.zoom,
+        };
+        isDragging.current = false;
+        dragStart.current  = null;
+      } else {
+        // Single touch — start pan
+        pinchBase.current = null;
+        startPan(e.clientX, e.clientY);
+      }
+    } else {
+      // Mouse / stylus hand-tool pan
+      startPan(e.clientX, e.clientY);
+    }
+  }
+
   function onPointerMove(e: React.PointerEvent) {
+    if (e.pointerType === "touch") {
+      if (!touchPts.current.has(e.pointerId)) return;
+      touchPts.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      const pts = [...touchPts.current.values()];
+
+      if (pts.length >= 2 && pinchBase.current) {
+        // Pinch: zoom + simultaneous pan (midpoint tracks your fingers)
+        const [p0, p1] = pts;
+        const dist = Math.hypot(p1.x - p0.x, p1.y - p0.y);
+        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+        const cx   = (p0.x + p1.x) / 2 - rect.left;
+        const cy   = (p0.y + p1.y) / 2 - rect.top;
+        const { baseDist, baseZoom, worldX, worldY } = pinchBase.current;
+        const newZoom = clamp(baseZoom * (dist / baseDist), ZOOM_MIN, ZOOM_MAX);
+        const next: CanvasViewport = {
+          zoom: newZoom,
+          x:    cx - worldX * newZoom,
+          y:    cy - worldY * newZoom,
+        };
+        setViewport(next); patchViewport(next);
+      } else if (pts.length === 1 && isDragging.current && dragStart.current) {
+        // Single-touch pan
+        const next: CanvasViewport = {
+          ...viewportRef.current,
+          x: dragStart.current.vx + (e.clientX - dragStart.current.mx),
+          y: dragStart.current.vy + (e.clientY - dragStart.current.my),
+        };
+        setViewport(next); patchViewport(next);
+      }
+      return;
+    }
+
+    // Mouse / stylus pan
     if (!isDragging.current || !dragStart.current) return;
     const next: CanvasViewport = {
       ...viewportRef.current,
@@ -432,11 +522,40 @@ export default function ModeBPage({
     };
     setViewport(next); patchViewport(next);
   }
-  function onPointerUp() {
+
+  function onPointerUp(e: React.PointerEvent) {
+    if (e.pointerType === "touch") {
+      touchPts.current.delete(e.pointerId);
+      const remaining = touchPts.current.size;
+      if (remaining < 2) pinchBase.current = null;
+
+      if (remaining === 0) {
+        isDragging.current = false;
+        dragStart.current  = null;
+        containerRef.current?.removeAttribute("data-panning");
+      } else if (remaining === 1) {
+        // Lifted one finger — transition back to single-touch pan
+        const [pt] = touchPts.current.values();
+        startPan(pt.x, pt.y);
+      }
+      return;
+    }
+
     isDragging.current = false;
     dragStart.current  = null;
     containerRef.current?.removeAttribute("data-panning");
   }
+
+  // ── Dot-grid background: update CSS vars whenever viewport changes ────────
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const BASE = 24;
+    const sp   = BASE * viewport.zoom;
+    el.style.setProperty("--dot-sp", `${sp}px`);
+    el.style.setProperty("--dot-x",  `${((viewport.x % sp) + sp) % sp}px`);
+    el.style.setProperty("--dot-y",  `${((viewport.y % sp) + sp) % sp}px`);
+  }, [viewport]);
 
   // ── Render ────────────────────────────────────────────────────────────
 

@@ -349,16 +349,19 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     const el = containerRef.current;
     if (!el) return;
     const prevent = (e: Event) => e.preventDefault();
-    el.addEventListener("contextmenu",  prevent);
-    el.addEventListener("selectstart",  prevent);
-    el.addEventListener("copy",         prevent);
-    // Non-passive touchstart lets us block palm-resting copy on iOS
-    el.addEventListener("touchstart",   prevent, { passive: false });
+    el.addEventListener("contextmenu", prevent);
+    el.addEventListener("selectstart", prevent);
+    el.addEventListener("copy",        prevent);
+    // NOTE: touchstart preventDefault intentionally omitted.
+    // Calling preventDefault on touchstart cancels pointer events on iOS/Android,
+    // which breaks touch-pan in ModeBPage (pointer events never bubble up).
+    // palm-rejection and scroll-prevention are handled by:
+    //   • touch-action: none  on this wrapper (pointer events spec)
+    //   • -webkit-touch-callout / user-select: none  (CSS, on mode-b-canvas)
     return () => {
-      el.removeEventListener("contextmenu",  prevent);
-      el.removeEventListener("selectstart",  prevent);
-      el.removeEventListener("copy",         prevent);
-      el.removeEventListener("touchstart",   prevent);
+      el.removeEventListener("contextmenu", prevent);
+      el.removeEventListener("selectstart", prevent);
+      el.removeEventListener("copy",        prevent);
     };
   }, []);
 
@@ -429,6 +432,8 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
 
   function onDown(e: React.PointerEvent) {
     if (tool === "hand") return;
+    // Touch always pans the canvas — let event bubble to ModeBPage; never draw.
+    if (e.pointerType === "touch") return;
     e.preventDefault();
     e.stopPropagation();
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
@@ -451,6 +456,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
 
   function onMove(e: React.PointerEvent) {
     if (tool === "hand" || !isDrawingRef.current || !activeStrokeRef.current) return;
+    if (e.pointerType === "touch") return; // touch pans — never draws
     e.stopPropagation();
     const pt = toCanvas(e);
     if (tool === "eraser") { if (e.buttons & 1) eraseAt(pt.x, pt.y); return; }
@@ -500,11 +506,11 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
       ref={containerRef}
       className="drawing-canvas-wrap"
       style={{
-        pointerEvents:          tool === "hand" ? "none" : "auto",
-        touchAction:            tool === "hand" ? "pan-x pan-y" : "none",
-        WebkitTouchCallout:     "none",
-        WebkitUserSelect:       "none",
-        userSelect:             "none",
+        pointerEvents:      tool === "hand" ? "none" : "auto",
+        touchAction:        "none", // always none — pointer events handle all gestures
+        WebkitTouchCallout: "none",
+        WebkitUserSelect:   "none",
+        userSelect:         "none",
       }}
     >
       <canvas
@@ -512,9 +518,10 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
         className="drawing-canvas-el"
         style={{ cursor }}
         onPointerDown={(e) => {
-          // Prevent iOS from converting any drawing touch into a text-selection
-          // gesture (which triggers the copy popup when palm is resting on screen).
-          if (tool !== "hand") e.preventDefault();
+          // Prevent default for mouse/pen drawing tools (blocks text-selection gestures).
+          // Skip for touch — calling preventDefault here would cancel pointer-event
+          // propagation to ModeBPage's touch-pan handler.
+          if (tool !== "hand" && e.pointerType !== "touch") e.preventDefault();
           onDown(e);
         }}
         onPointerMove={onMove}

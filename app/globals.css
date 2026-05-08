@@ -1908,12 +1908,17 @@ input, textarea { font: inherit; color: inherit; }
   position: relative;
   flex: 1 1 0;
   overflow: hidden;
-  /* Clean neutral surface */
-  background: #f0f0f0;
+  /* Dot grid that pans/zooms with the viewport (CSS vars set from ModeBPage) */
+  background-color: #f0f0f0;
+  background-image: radial-gradient(circle, oklch(0.68 0.007 240) 1.5px, transparent 1.5px);
+  background-size: var(--dot-sp, 24px) var(--dot-sp, 24px);
+  background-position: var(--dot-x, 0px) var(--dot-y, 0px);
   cursor: default;
   user-select: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;
+  /* Prevent native browser scroll/zoom on touch — all gestures handled via pointer events */
+  touch-action: none;
 }
 /* Cursor driven by data-tool set from JS — no stale inline styles */
 .mode-b-canvas[data-tool="hand"]      { cursor: grab; }
