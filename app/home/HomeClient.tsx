@@ -105,6 +105,7 @@ function WelcomeHero({
   lastPage,
   surahNames,
   totalSurahs,
+  isNavigating,
   onCreateWorkspace,
   onNavigate,
 }: {
@@ -112,17 +113,17 @@ function WelcomeHero({
   lastPage:          LastPage | null;
   surahNames:        Record<number, SurahName>;
   totalSurahs:       number;
+  isNavigating:      boolean;
   onCreateWorkspace: () => void;
   onNavigate:        (href: string) => void;
 }) {
 
   const name = user?.name ? firstName(user.name) : null;
 
-  // Subtitle: last surah context or generic
-  let subtitle = "Your personal Qur\u2019an study space.";
+  let subtitle = "Your personal Qur’an study space.";
   if (lastPage) {
     const sn = surahNames[lastPage.workspaceSurah.surahNumber];
-    subtitle  = sn ? `Studying ${sn.name} \u00b7 ${lastPage.workspaceSurah.workspace.name}` : subtitle;
+    subtitle  = sn ? `Studying ${sn.name} · ${lastPage.workspaceSurah.workspace.name}` : subtitle;
   } else if (totalSurahs > 0) {
     subtitle = `${totalSurahs} surah${totalSurahs > 1 ? "s" : ""} in progress.`;
   }
@@ -144,11 +145,12 @@ function WelcomeHero({
 
         {/* Resume card */}
         <div
-          className="hw-resume"
+          className={`hw-resume${isNavigating ? " hw-resume--loading" : ""}`}
           role="button"
-          tabIndex={0}
-          onClick={() => onNavigate(href)}
-          onKeyDown={(e) => { if (e.key === "Enter") onNavigate(href); }}
+          tabIndex={isNavigating ? -1 : 0}
+          aria-disabled={isNavigating}
+          onClick={() => { if (!isNavigating) onNavigate(href); }}
+          onKeyDown={(e) => { if (e.key === "Enter" && !isNavigating) onNavigate(href); }}
         >
           <div className="hw-resume-accent" />
           <div className="hw-resume-body">
@@ -167,10 +169,19 @@ function WelcomeHero({
             <p className="hw-resume-ws">{ws.workspace.name}</p>
           </div>
           <button
-            className="hw-resume-btn"
-            onClick={(e) => { e.stopPropagation(); onNavigate(href); }}
+            className={`hw-resume-btn${isNavigating ? " hw-resume-btn--loading" : ""}`}
+            disabled={isNavigating}
+            onClick={(e) => { e.stopPropagation(); if (!isNavigating) onNavigate(href); }}
+            aria-label={isNavigating ? "Opening workspace…" : "Resume Study"}
           >
-            Resume Study <ArrowIcon />
+            {isNavigating ? (
+              <>
+                <span className="hw-nav-spinner" aria-hidden="true" />
+                Opening…
+              </>
+            ) : (
+              <>Resume Study <ArrowIcon /></>
+            )}
           </button>
         </div>
       </section>
@@ -200,15 +211,17 @@ function WelcomeHero({
 function WorkspaceCard({
   ws,
   surahNames,
+  isNavigating,
   onRenamed,
   onDeleted,
   onNavigate,
 }: {
-  ws:         WorkspaceItem;
-  surahNames: Record<number, SurahName>;
-  onRenamed:  (id: string, name: string) => void;
-  onDeleted:  (id: string) => void;
-  onNavigate: (href: string) => void;
+  ws:           WorkspaceItem;
+  surahNames:   Record<number, SurahName>;
+  isNavigating: boolean;
+  onRenamed:    (id: string, name: string) => void;
+  onDeleted:    (id: string) => void;
+  onNavigate:   (href: string) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const isOwner  = ws.role === "owner";
@@ -273,13 +286,17 @@ function WorkspaceCard({
   const surahText   = ws._count.surahs === 1 ? "1 surah" : `${ws._count.surahs} surahs`;
   const lastDate    = ws.lastStudiedAt ? relativeDate(ws.lastStudiedAt) : null;
 
+  const href        = `/workspaces/${ws.id}`;
+  const blocked     = isNavigating || editing;
+
   return (
     <div
-      className="hw-ws-card"
+      className={`hw-ws-card${isNavigating ? " hw-ws-card--nav-busy" : ""}`}
       role="button"
-      tabIndex={0}
-      onClick={() => !editing && onNavigate(`/workspaces/${ws.id}`)}
-      onKeyDown={(e) => { if (e.key === "Enter" && !editing) onNavigate(`/workspaces/${ws.id}`); }}
+      tabIndex={blocked ? -1 : 0}
+      aria-disabled={isNavigating}
+      onClick={() => !blocked && onNavigate(href)}
+      onKeyDown={(e) => { if (e.key === "Enter" && !blocked) onNavigate(href); }}
     >
       {/* Card header */}
       <div className="hw-ws-card-header">
@@ -360,6 +377,8 @@ function WorkspaceCard({
 
 // ── Main ───────────────────────────────────────────────────────────────────
 
+const NAV_TIMEOUT_MS = 12000; // reset loading if navigation takes this long
+
 export default function HomeClient({
   workspaces: initial,
   lastPage,
@@ -368,10 +387,18 @@ export default function HomeClient({
   totalSurahs,
 }: Props) {
   const router = useRouter();
-  const [workspaces, setWorkspaces] = useState(initial);
-  const [modalOpen,  setModalOpen]  = useState(false);
-  const [joinOpen,   setJoinOpen]   = useState(false);
-  const [tutKey,     setTutKey]     = useState(0);
+  const [workspaces,   setWorkspaces]   = useState(initial);
+  const [modalOpen,    setModalOpen]    = useState(false);
+  const [joinOpen,     setJoinOpen]     = useState(false);
+  const [tutKey,       setTutKey]       = useState(0);
+  const [isNavigating, setIsNavigating] = useState(false);
+  const [navError,     setNavError]     = useState<string | null>(null);
+  const navTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Clear any pending timeout on unmount
+  useEffect(() => () => {
+    if (navTimerRef.current) clearTimeout(navTimerRef.current);
+  }, []);
 
   function replayTutorial() {
     localStorage.removeItem("tl-tutorial-done");
@@ -379,10 +406,28 @@ export default function HomeClient({
     setTutKey((k) => k + 1);
   }
 
-
   const navigate = useCallback((href: string) => {
-    router.push(href);
-  }, [router]);
+    if (isNavigating) return;
+
+    // Show loading feedback immediately — before router.push
+    setIsNavigating(true);
+    setNavError(null);
+
+    // Safety valve: if the new route doesn't load within NAV_TIMEOUT_MS,
+    // reset the UI so the user can try again.
+    navTimerRef.current = setTimeout(() => {
+      setIsNavigating(false);
+      setNavError("Could not open workspace. Please try again.");
+    }, NAV_TIMEOUT_MS);
+
+    try {
+      router.push(href);
+    } catch {
+      clearTimeout(navTimerRef.current);
+      setIsNavigating(false);
+      setNavError("Could not open workspace. Please try again.");
+    }
+  }, [router, isNavigating]);
 
   const userInitials = user?.name
     ? user.name.split(" ").map((p) => p[0]).join("").slice(0, 2).toUpperCase()
@@ -405,6 +450,30 @@ export default function HomeClient({
 
   return (
     <div className="home-page">
+      {/* ── Navigation overlay — shown immediately on click ── */}
+      {isNavigating && (
+        <div className="hw-nav-overlay" role="status" aria-live="polite">
+          <div className="hw-nav-overlay-content">
+            <div className="hw-nav-overlay-spinner" aria-hidden="true" />
+            <p className="hw-nav-overlay-text">Opening your workspace…</p>
+          </div>
+        </div>
+      )}
+
+      {/* ── Error toast ── */}
+      {navError && (
+        <div className="hw-nav-toast" role="alert">
+          <span>{navError}</span>
+          <button
+            className="hw-nav-toast-close"
+            onClick={() => setNavError(null)}
+            aria-label="Dismiss"
+          >
+            ×
+          </button>
+        </div>
+      )}
+
       {/* Top bar */}
       <header className="home-topbar">
         <div className="home-brand">
@@ -431,6 +500,7 @@ export default function HomeClient({
           lastPage={lastPage}
           surahNames={surahNames}
           totalSurahs={totalSurahs}
+          isNavigating={isNavigating}
           onCreateWorkspace={() => setModalOpen(true)}
           onNavigate={navigate}
         />
@@ -458,6 +528,7 @@ export default function HomeClient({
                   <WorkspaceCard
                     ws={ws}
                     surahNames={surahNames}
+                    isNavigating={isNavigating}
                     onRenamed={handleRenamed}
                     onDeleted={handleDeleted}
                     onNavigate={navigate}
