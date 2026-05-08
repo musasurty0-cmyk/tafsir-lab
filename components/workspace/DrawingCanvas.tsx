@@ -1,37 +1,41 @@
 "use client";
 
 /**
- * DrawingCanvas — high-quality freehand annotation overlay for Mode B.
+ * DrawingCanvas — smooth freehand annotation overlay for Mode B.
  *
- * Rendering engine:
- *   • perfect-freehand converts raw pointer points (with pressure) into a
- *     smooth, tapered SVG-style outline path, rendered as a filled shape on
- *     a <canvas>.  This produces Miro/GoodNotes-quality ink.
- *   • Arrow and eraser tools fall back to simple 2D canvas paths.
- *   • Highlight uses the freehand engine at fixed pressure (no taper) with
- *     semi-transparent fill and a single batch compositing pass so overlapping
- *     strokes don't compound opacity.
+ * Rendering strategy
+ * ──────────────────
+ * Every active stroke is stored as an array of [x, y, pressure] world-space
+ * points in a ref.  On every RAF tick we CLEAR the canvas and redraw the
+ * entire accumulated path from scratch using the midpoint-quadratic algorithm:
  *
- * Performance:
- *   • Active stroke points are stored in a ref (never React state) so zero
- *     React re-renders happen during drawing.
- *   • A single RAF loop drives rendering while a stroke is in progress.
- *   • getCoalescedEvents() is used to capture every OS-level sample the
- *     digitiser provides, not just the ones that survived event batching.
- *   • Completed strokes are committed to React state (and saved) only on
- *     pointerup — one state update per stroke.
+ *   moveTo(p[0])
+ *   for i = 1 … n-2:  quadraticCurveTo(p[i], mid(p[i], p[i+1]))
+ *   lineTo(p[n-1])
  *
- * Input rules (unchanged from previous version):
- *   pointerType "touch"  → returns immediately (touch pans canvas)
- *   pointerType "pen"    → draws with pressure
- *   pointerType "mouse"  → draws at constant pressure 0.5
+ * Each pointer sample is a bezier CONTROL point, and each midpoint is the
+ * through-point.  This chains quadratic arcs into one continuous smooth curve
+ * with no visible joints between samples — identical to Miro/GoodNotes.
+ *
+ * Performance
+ * ───────────
+ * • All active-stroke data lives in refs → zero React re-renders during drawing.
+ * • scheduleRender() = cancelAnimationFrame + requestAnimationFrame(render).
+ *   Only one paint per browser frame regardless of pointer-event frequency.
+ * • getCoalescedEvents() collects every OS digitiser sample between events.
+ * • React state is updated exactly once per stroke, on pointerup.
+ *
+ * Input routing (unchanged)
+ * ─────────────────────────
+ * • touch  → returns immediately; ModeBPage handles panning via touch events
+ * • pen    → draws (real pressure from e.pressure)
+ * • mouse  → draws (constant pressure 0.5)
  */
 
 import {
   forwardRef, useCallback, useEffect, useImperativeHandle,
   useRef, useState,
 } from "react";
-import getStroke from "perfect-freehand";
 import type { CanvasViewport } from "./ModeBPage";
 
 // ── Public types ───────────────────────────────────────────────────────────
@@ -44,17 +48,15 @@ export interface DrawingCanvasHandle {
   clear: () => void;
 }
 
-// ── Stroke data model ──────────────────────────────────────────────────────
-// Each point is [x, y, pressure] in world (canvas) coordinates.
-
-type FreehandPoint = [number, number, number];
+// [x, y, pressure] in world (canvas) coordinates
+type Pt = [number, number, number];
 
 export interface Stroke {
   id:      string;
   tool:    "pen" | "highlight" | "arrow";
-  points:  FreehandPoint[];
+  points:  Pt[];
   color:   string;
-  width:   number;       // base width (before pressure scaling)
+  width:   number;
   opacity: number;
 }
 
@@ -64,56 +66,105 @@ interface DrawingLayer {
   strokes:    Stroke[];
 }
 
-// ── perfect-freehand options per tool ─────────────────────────────────────
+// ── Constants ──────────────────────────────────────────────────────────────
 
-function freehandOpts(tool: "pen" | "highlight", width: number) {
-  if (tool === "highlight") {
-    return {
-      size:        width,
-      thinning:    0,          // flat, no taper
-      smoothing:   0.5,
-      streamline:  0.5,
-      easing:      (t: number) => t,
-      simulatePressure: true,
-      last:        true,
-    };
-  }
-  // pen
-  return {
-    size:        width,
-    thinning:    0.55,         // pressure taper
-    smoothing:   0.5,
-    streamline:  0.45,
-    easing:      (t: number) => Math.sin((t * Math.PI) / 2),
-    simulatePressure: false,   // use real pressure from digitiser
-    last:        true,
-  };
+const TOOL_OPACITY: Record<"pen" | "highlight" | "arrow", number> = {
+  pen:       1.00,
+  highlight: 0.40,
+  arrow:     1.00,
+};
+
+const ERASER_RADIUS = 20;
+const SAVE_DEBOUNCE = 1200;
+
+// ── Backwards compatibility ────────────────────────────────────────────────
+// Old strokes were stored as {x, y} objects; new ones as [x, y, pressure].
+
+function normPts(raw: unknown[]): Pt[] {
+  if (!raw.length) return [];
+  if (Array.isArray(raw[0])) return raw as Pt[];
+  return (raw as { x: number; y: number }[]).map(p => [p.x, p.y, 0.5]);
 }
 
-// ── Convert perfect-freehand outline → canvas path ─────────────────────────
+// ── Geometry helpers ───────────────────────────────────────────────────────
 
-function outlineToPath(pts: number[][]): Path2D {
-  const path = new Path2D();
-  if (!pts.length) return path;
-  path.moveTo(pts[0][0], pts[0][1]);
-  for (let i = 1; i < pts.length - 1; i++) {
-    const mx = (pts[i][0] + pts[i + 1][0]) / 2;
-    const my = (pts[i][1] + pts[i + 1][1]) / 2;
-    path.quadraticCurveTo(pts[i][0], pts[i][1], mx, my);
-  }
-  if (pts.length > 1) {
-    const last = pts[pts.length - 1];
-    path.lineTo(last[0], last[1]);
-  }
-  path.closePath();
-  return path;
+function distToSeg(
+  px: number, py: number,
+  ax: number, ay: number,
+  bx: number, by: number,
+): number {
+  const dx = bx - ax, dy = by - ay;
+  const len2 = dx * dx + dy * dy;
+  if (len2 === 0) return Math.hypot(px - ax, py - ay);
+  const t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / len2));
+  return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
 }
 
-// ── Arrow (simple begin→end line with arrowhead) ───────────────────────────
+function hitTest(pts: Pt[], cx: number, cy: number, r: number): boolean {
+  if (!pts.length) return false;
+  if (pts.length === 1) return Math.hypot(cx - pts[0][0], cy - pts[0][1]) < r;
+  for (let i = 0; i < pts.length - 1; i++) {
+    if (distToSeg(cx, cy, pts[i][0], pts[i][1], pts[i + 1][0], pts[i + 1][1]) < r) return true;
+  }
+  return false;
+}
+
+// ── Core rendering ─────────────────────────────────────────────────────────
+//
+// drawSmooth: renders pts as one continuous smooth curve using the midpoint-
+// quadratic technique.  lineCap/lineJoin = "round" ensures seamless joins.
+// This is the only rendering path for pen and highlight — no segment-by-segment
+// drawing, no incremental appending.
+
+function drawSmooth(
+  ctx:     CanvasRenderingContext2D,
+  pts:     Pt[],
+  color:   string,
+  width:   number,
+  opacity: number,
+) {
+  if (!pts.length) return;
+  ctx.save();
+  ctx.globalAlpha   = opacity;
+  ctx.strokeStyle   = color;
+  ctx.fillStyle     = color;
+  ctx.lineWidth     = width;
+  ctx.lineCap       = "round";
+  ctx.lineJoin      = "round";
+  ctx.imageSmoothingEnabled = true;
+
+  if (pts.length === 1) {
+    // Isolated tap → filled circle so it's visible
+    ctx.beginPath();
+    ctx.arc(pts[0][0], pts[0][1], width / 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    return;
+  }
+
+  ctx.beginPath();
+  ctx.moveTo(pts[0][0], pts[0][1]);
+
+  if (pts.length === 2) {
+    ctx.lineTo(pts[1][0], pts[1][1]);
+  } else {
+    // Chain quadratic arcs: control = pts[i], through-point = mid(pts[i], pts[i+1])
+    // This makes the line pass smoothly THROUGH every midpoint with no joints.
+    for (let i = 1; i < pts.length - 1; i++) {
+      const mx = (pts[i][0] + pts[i + 1][0]) / 2;
+      const my = (pts[i][1] + pts[i + 1][1]) / 2;
+      ctx.quadraticCurveTo(pts[i][0], pts[i][1], mx, my);
+    }
+    ctx.lineTo(pts[pts.length - 1][0], pts[pts.length - 1][1]);
+  }
+
+  ctx.stroke();
+  ctx.restore();
+}
 
 function drawArrow(
-  ctx: CanvasRenderingContext2D,
-  pts: FreehandPoint[],
+  ctx:   CanvasRenderingContext2D,
+  pts:   Pt[],
   color: string,
   width: number,
 ) {
@@ -137,65 +188,11 @@ function drawArrow(
   ctx.restore();
 }
 
-// ── Render a single committed stroke ──────────────────────────────────────
-
-function renderStroke(
-  ctx: CanvasRenderingContext2D,
-  stroke: Stroke,
-  alpha = 1,
-) {
-  if (!stroke.points.length) return;
-  if (stroke.tool === "arrow") {
-    ctx.save();
-    ctx.globalAlpha = alpha;
-    drawArrow(ctx, stroke.points, stroke.color, stroke.width);
-    ctx.restore();
-    return;
-  }
-  const outline = getStroke(stroke.points, freehandOpts(stroke.tool, stroke.width));
-  const path    = outlineToPath(outline);
-  ctx.save();
-  ctx.globalAlpha = alpha;
-  ctx.fillStyle   = stroke.color;
-  ctx.fill(path);
-  ctx.restore();
+function paintStroke(ctx: CanvasRenderingContext2D, s: Stroke, alphaScale = 1) {
+  const pts = normPts(s.points as unknown[]);
+  if (s.tool === "arrow") { drawArrow(ctx, pts, s.color, s.width); return; }
+  drawSmooth(ctx, pts, s.color, s.width, s.opacity * alphaScale);
 }
-
-// ── Eraser ─────────────────────────────────────────────────────────────────
-
-const ERASER_RADIUS = 18;
-
-function distToSegment(
-  px: number, py: number,
-  ax: number, ay: number,
-  bx: number, by: number,
-): number {
-  const dx = bx - ax, dy = by - ay;
-  const lenSq = dx * dx + dy * dy;
-  if (lenSq === 0) return Math.hypot(px - ax, py - ay);
-  const t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / lenSq));
-  return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
-}
-
-function strokeHit(stroke: Stroke, cx: number, cy: number, r: number): boolean {
-  const pts = stroke.points;
-  if (!pts.length) return false;
-  if (pts.length === 1) return Math.hypot(cx - pts[0][0], cy - pts[0][1]) < r;
-  for (let i = 0; i < pts.length - 1; i++) {
-    if (distToSegment(cx, cy, pts[i][0], pts[i][1], pts[i + 1][0], pts[i + 1][1]) < r) return true;
-  }
-  return false;
-}
-
-// ── Constants ──────────────────────────────────────────────────────────────
-
-const TOOL_OPACITY: Record<"pen" | "highlight" | "arrow", number> = {
-  pen:       1.00,
-  highlight: 0.38,
-  arrow:     1.00,
-};
-
-const SAVE_DEBOUNCE = 1200; // ms
 
 // ── Props ──────────────────────────────────────────────────────────────────
 
@@ -214,44 +211,44 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
   { pageId, tool, strokeColor, strokeWidth, viewport, onHistoryChange },
   ref,
 ) {
-  const containerRef    = useRef<HTMLDivElement>(null);
-  const canvasRef       = useRef<HTMLCanvasElement>(null);
-  const hlCanvasRef     = useRef<HTMLCanvasElement | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const canvasRef    = useRef<HTMLCanvasElement>(null);
+  const hlCanvasRef  = useRef<HTMLCanvasElement | null>(null);
+  const rafRef       = useRef<number>(0);
 
-  // Active stroke — lives entirely in refs; zero re-renders during drawing
-  const isDrawingRef    = useRef(false);
-  const activePtsRef    = useRef<FreehandPoint[]>([]);  // world-space [x,y,pressure]
-  const activeToolRef   = useRef<"pen" | "highlight" | "arrow">("pen");
-  const activeColorRef  = useRef(strokeColor);
-  const activeWidthRef  = useRef(strokeWidth);
+  // ── Active stroke — entirely in refs, zero re-renders during drawing ──
+  const isDrawingRef   = useRef(false);
+  const activePtsRef   = useRef<Pt[]>([]);
+  const activeToolRef  = useRef<"pen" | "highlight" | "arrow">("pen");
+  const activeColorRef = useRef(strokeColor);
+  const activeWidthRef = useRef(strokeWidth);
 
-  // RAF handle
-  const rafRef          = useRef<number>(0);
-  const dirtyRef        = useRef(false); // true when activePts changed since last paint
+  // ── Committed strokes ─────────────────────────────────────────────────
+  const viewportRef    = useRef(viewport);
+  useEffect(() => { viewportRef.current = viewport; }, [viewport]);
 
-  // Committed strokes
-  const viewportRef     = useRef(viewport);
-  const myStrokesRef    = useRef<Stroke[]>([]);
-  const redoStackRef    = useRef<Stroke[]>([]);
-  const saveTimerRef    = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const myStrokesRef   = useRef<Stroke[]>([]);
+  const [myStrokes, setMyStrokes] = useState<Stroke[]>([]);
+  useEffect(() => { myStrokesRef.current = myStrokes; }, [myStrokes]);
+
+  const otherLayersRef = useRef<DrawingLayer[]>([]);
+  const [otherLayers, setOtherLayers] = useState<DrawingLayer[]>([]);
+  useEffect(() => { otherLayersRef.current = otherLayers; }, [otherLayers]);
+
+  const redoStackRef = useRef<Stroke[]>([]);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const onHistoryRef = useRef(onHistoryChange);
   useEffect(() => { onHistoryRef.current = onHistoryChange; }, [onHistoryChange]);
 
-  const [myStrokes,   setMyStrokes]   = useState<Stroke[]>([]);
-  const [otherLayers, setOtherLayers] = useState<DrawingLayer[]>([]);
-
-  useEffect(() => { viewportRef.current = viewport; }, [viewport]);
-  useEffect(() => { myStrokesRef.current = myStrokes; }, [myStrokes]);
-
-  function notifyHistory() {
-    onHistoryRef.current?.(
-      myStrokesRef.current.length > 0,
-      redoStackRef.current.length > 0,
-    );
-  }
-
-  // ── Render loop ───────────────────────────────────────────────────────
+  // ── render — stable, reads only from refs ─────────────────────────────
+  //
+  // Called via scheduleRender (RAF) so it never runs more than once per frame.
+  // Redraws the entire scene from scratch:
+  //   1. Other users' strokes (faded)
+  //   2. My non-highlight strokes + active non-highlight stroke
+  //   3. All highlight strokes (mine + active) composited via offscreen canvas
+  //      at TOOL_OPACITY.highlight to prevent opacity compounding at overlaps
 
   const render = useCallback(() => {
     const canvas    = canvasRef.current;
@@ -272,111 +269,94 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     if (!ctx) return;
     const vp = viewportRef.current;
 
+    // Helper: apply DPR + viewport transform onto any context
+    function applyVP(c: CanvasRenderingContext2D) {
+      c.scale(dpr, dpr);
+      c.translate(vp.x, vp.y);
+      c.scale(vp.zoom, vp.zoom);
+    }
+
     ctx.clearRect(0, 0, w, h);
-    ctx.save();
-    ctx.scale(dpr, dpr);
-    ctx.translate(vp.x, vp.y);
-    ctx.scale(vp.zoom, vp.zoom);
 
-    // ── Other users' strokes (faded) ──────────────────────────────────
-    for (const layer of otherLayers) {
-      for (const s of layer.strokes) {
-        renderStroke(ctx, s, s.opacity * 0.7);
-      }
+    // ── Pass 1: other users' strokes ──────────────────────────────────
+    ctx.save(); applyVP(ctx);
+    for (const layer of otherLayersRef.current) {
+      for (const s of layer.strokes) paintStroke(ctx, s, 0.7);
     }
+    ctx.restore();
 
-    // ── My committed strokes ──────────────────────────────────────────
-    const allMine     = myStrokesRef.current;
-    const highlights  = allMine.filter((s) => s.tool === "highlight");
-    const nonHL       = allMine.filter((s) => s.tool !== "highlight");
-
-    for (const s of nonHL) renderStroke(ctx, s, s.opacity);
-
-    // Highlights: batch onto an offscreen canvas at full opacity,
-    // then composite at 0.38 to prevent compounding at intersections.
-    if (highlights.length > 0) {
-      if (!hlCanvasRef.current) hlCanvasRef.current = document.createElement("canvas");
-      const hl = hlCanvasRef.current;
-      if (hl.width !== w || hl.height !== h) { hl.width = w; hl.height = h; }
-      const hlCtx = hl.getContext("2d");
-      if (hlCtx) {
-        hlCtx.clearRect(0, 0, w, h);
-        hlCtx.save();
-        hlCtx.scale(dpr, dpr);
-        hlCtx.translate(vp.x, vp.y);
-        hlCtx.scale(vp.zoom, vp.zoom);
-        for (const s of highlights) renderStroke(hlCtx, s, 1);
-        hlCtx.restore();
-        ctx.restore();
-        ctx.globalAlpha = TOOL_OPACITY.highlight;
-        ctx.drawImage(hl, 0, 0);
-        ctx.globalAlpha = 1;
-        // Active highlight stroke below (re-save transform)
-        ctx.save();
-        ctx.scale(dpr, dpr);
-        ctx.translate(vp.x, vp.y);
-        ctx.scale(vp.zoom, vp.zoom);
-      }
+    // ── Pass 2: my non-highlight strokes + active non-highlight ───────
+    ctx.save(); applyVP(ctx);
+    for (const s of myStrokesRef.current) {
+      if (s.tool !== "highlight") paintStroke(ctx, s);
     }
-
-    // ── Active (in-progress) stroke ───────────────────────────────────
-    if (isDrawingRef.current && activePtsRef.current.length > 0) {
+    if (
+      isDrawingRef.current &&
+      activeToolRef.current !== "highlight" &&
+      activePtsRef.current.length > 0
+    ) {
       const t = activeToolRef.current;
       if (t === "arrow") {
         drawArrow(ctx, activePtsRef.current, activeColorRef.current, activeWidthRef.current);
-      } else if (t === "highlight") {
-        // Highlight active stroke: draw on top of the composited layer
-        const outline = getStroke(activePtsRef.current, freehandOpts("highlight", activeWidthRef.current));
-        const path    = outlineToPath(outline);
-        ctx.save();
-        ctx.globalAlpha = TOOL_OPACITY.highlight;
-        ctx.fillStyle   = activeColorRef.current;
-        ctx.fill(path);
-        ctx.restore();
       } else {
-        const outline = getStroke(activePtsRef.current, freehandOpts("pen", activeWidthRef.current));
-        const path    = outlineToPath(outline);
-        ctx.fillStyle = activeColorRef.current;
-        ctx.fill(path);
+        drawSmooth(ctx, activePtsRef.current, activeColorRef.current, activeWidthRef.current, TOOL_OPACITY[t]);
       }
     }
-
     ctx.restore();
-  }, [otherLayers]);
 
-  // Continuous RAF loop while drawing, static redraw otherwise
-  const rafLoop = useCallback(() => {
-    if (dirtyRef.current) {
-      dirtyRef.current = false;
-      render();
+    // ── Pass 3: highlight composite ───────────────────────────────────
+    // All highlight strokes (committed + active) go onto an offscreen canvas
+    // at full opacity, then the whole thing is composited at 0.40 alpha.
+    // This prevents consecutive highlight strokes from compounding opacity.
+    const hlStrokes = myStrokesRef.current.filter(s => s.tool === "highlight");
+    const activeIsHL = isDrawingRef.current && activeToolRef.current === "highlight" && activePtsRef.current.length > 0;
+
+    if (hlStrokes.length > 0 || activeIsHL) {
+      if (!hlCanvasRef.current) hlCanvasRef.current = document.createElement("canvas");
+      const hl = hlCanvasRef.current;
+      if (hl.width !== w || hl.height !== h) { hl.width = w; hl.height = h; }
+      const hCtx = hl.getContext("2d");
+      if (hCtx) {
+        hCtx.clearRect(0, 0, w, h);
+        hCtx.save(); applyVP(hCtx);
+        for (const s of hlStrokes) {
+          const pts = normPts(s.points as unknown[]);
+          drawSmooth(hCtx, pts, s.color, s.width, 1);
+        }
+        if (activeIsHL) {
+          drawSmooth(hCtx, activePtsRef.current, activeColorRef.current, activeWidthRef.current, 1);
+        }
+        hCtx.restore();
+        ctx.globalAlpha = TOOL_OPACITY.highlight;
+        ctx.drawImage(hl, 0, 0);
+        ctx.globalAlpha = 1;
+      }
     }
-    if (isDrawingRef.current) {
-      rafRef.current = requestAnimationFrame(rafLoop);
-    }
+  }, []); // empty deps — reads only from refs, never stale
+
+  // scheduleRender: deduplicates; at most one paint per animation frame
+  const scheduleRender = useCallback(() => {
+    cancelAnimationFrame(rafRef.current);
+    rafRef.current = requestAnimationFrame(render);
   }, [render]);
 
-  // Non-drawing re-render (viewport change, stroke committed, etc.)
-  useEffect(() => {
-    cancelAnimationFrame(rafRef.current);
-    if (!isDrawingRef.current) render();
-  }, [render, viewport, myStrokes, otherLayers]);
+  // Re-render when committed strokes, viewport or other layers change
+  useEffect(() => { scheduleRender(); }, [viewport, myStrokes, otherLayers, scheduleRender]);
 
   // ResizeObserver
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-    const ro = new ResizeObserver(() => {
-      if (!isDrawingRef.current) render();
-    });
+    const ro = new ResizeObserver(scheduleRender);
     ro.observe(el);
-    return () => { ro.disconnect(); };
-  }, [render]);
+    return () => { ro.disconnect(); cancelAnimationFrame(rafRef.current); };
+  }, [scheduleRender]);
 
-  // ── Data loading ──────────────────────────────────────────────────────
+  // ── Data loading ───────────────────────────────────────────────────────
 
   useEffect(() => {
     fetch(`/api/pages/${pageId}/drawings`)
-      .then((r) => r.ok ? r.json() : null)
+      .then(r => r.ok ? r.json() : null)
       .then((d: { myStrokes?: Stroke[]; otherLayers?: DrawingLayer[] } | null) => {
         if (!d) return;
         if (d.myStrokes) {
@@ -394,7 +374,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     const id = setInterval(() => {
       if (document.visibilityState !== "visible") return;
       fetch(`/api/pages/${pageId}/drawings`)
-        .then((r) => r.ok ? r.json() : null)
+        .then(r => r.ok ? r.json() : null)
         .then((d: { myStrokes?: Stroke[]; otherLayers?: DrawingLayer[] } | null) => {
           if (d?.otherLayers) setOtherLayers(d.otherLayers);
         })
@@ -403,7 +383,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     return () => clearInterval(id);
   }, [pageId]);
 
-  // ── Debounced save ────────────────────────────────────────────────────
+  // ── Debounced save ─────────────────────────────────────────────────────
 
   const scheduleSave = useCallback(() => {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
@@ -421,7 +401,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     cancelAnimationFrame(rafRef.current);
   }, []);
 
-  // ── Suppress iOS long-press / copy / context-menu ─────────────────────
+  // ── iOS suppression ────────────────────────────────────────────────────
 
   useEffect(() => {
     const el = containerRef.current;
@@ -430,21 +410,15 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     el.addEventListener("contextmenu", prevent);
     el.addEventListener("selectstart", prevent);
     el.addEventListener("copy",        prevent);
-
-    // Only preventDefault on finger touches, NOT stylus.
-    // On iOS 13+, Apple Pencil fires TouchEvent (touchType:"stylus") alongside
-    // PointerEvent (pointerType:"pen"). Preventing the stylus touchstart cancels
-    // its companion pointer events and breaks drawing entirely.
     const preventFingerTouch = (e: TouchEvent) => {
-      let hasFingerTouch = false;
+      let hasFinger = false;
       for (let i = 0; i < e.changedTouches.length; i++) {
         const t = e.changedTouches[i] as Touch & { touchType?: string };
-        if (t.touchType !== "stylus") { hasFingerTouch = true; break; }
+        if (t.touchType !== "stylus") { hasFinger = true; break; }
       }
-      if (hasFingerTouch) e.preventDefault();
+      if (hasFinger) e.preventDefault();
     };
     el.addEventListener("touchstart", preventFingerTouch, { passive: false });
-
     return () => {
       el.removeEventListener("contextmenu",  prevent);
       el.removeEventListener("selectstart",  prevent);
@@ -453,19 +427,24 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     };
   }, []);
 
-  // ── Imperative handle ─────────────────────────────────────────────────
+  // ── Imperative handle ──────────────────────────────────────────────────
+
+  function notifyHistory() {
+    onHistoryRef.current?.(
+      myStrokesRef.current.length > 0,
+      redoStackRef.current.length > 0,
+    );
+  }
 
   useImperativeHandle(ref, () => ({
     undo() {
       const prev = myStrokesRef.current;
       if (!prev.length) return;
-      const last = prev[prev.length - 1];
+      redoStackRef.current = [...redoStackRef.current, prev[prev.length - 1]];
       const next = prev.slice(0, -1);
-      redoStackRef.current = [...redoStackRef.current, last];
       myStrokesRef.current = next;
       setMyStrokes(next);
-      scheduleSave();
-      notifyHistory();
+      scheduleSave(); notifyHistory();
     },
     redo() {
       const stack = redoStackRef.current;
@@ -475,8 +454,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
       const next = [...myStrokesRef.current, stroke];
       myStrokesRef.current = next;
       setMyStrokes(next);
-      scheduleSave();
-      notifyHistory();
+      scheduleSave(); notifyHistory();
     },
     clear() {
       redoStackRef.current = [];
@@ -487,11 +465,10 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     },
   }), [scheduleSave]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── World-space coordinate transform ─────────────────────────────────
+  // ── Coordinate helpers ─────────────────────────────────────────────────
 
   function toWorld(clientX: number, clientY: number): [number, number] {
-    const el = containerRef.current;
-    if (!el) return [0, 0];
+    const el = containerRef.current!;
     const rect = el.getBoundingClientRect();
     const vp   = viewportRef.current;
     return [
@@ -500,25 +477,24 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     ];
   }
 
-  // ── Eraser ────────────────────────────────────────────────────────────
+  // ── Eraser ─────────────────────────────────────────────────────────────
 
   function eraseAt(wx: number, wy: number) {
+    const r    = ERASER_RADIUS / viewportRef.current.zoom;
     const prev = myStrokesRef.current;
-    const next = prev.filter((s) => !strokeHit(s, wx, wy, ERASER_RADIUS / viewportRef.current.zoom));
+    const next = prev.filter(s => !hitTest(normPts(s.points as unknown[]), wx, wy, r));
     if (next.length !== prev.length) {
       redoStackRef.current = [];
       myStrokesRef.current = next;
       setMyStrokes(next);
-      scheduleSave();
-      notifyHistory();
+      scheduleSave(); notifyHistory();
     }
   }
 
-  // ── Pointer event handlers ────────────────────────────────────────────
+  // ── Pointer handlers ───────────────────────────────────────────────────
 
   function onDown(e: React.PointerEvent) {
-    if (tool === "hand") return;
-    if (e.pointerType === "touch") return;
+    if (tool === "hand" || e.pointerType === "touch") return;
     e.preventDefault();
     e.stopPropagation();
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
@@ -526,27 +502,21 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     const [wx, wy] = toWorld(e.clientX, e.clientY);
     if (tool === "eraser") { eraseAt(wx, wy); return; }
 
-    const drawTool = tool as "pen" | "highlight" | "arrow";
-    // Real pressure from digitiser; fall back to 0.5 for mouse
     const pressure = e.pointerType === "pen" ? Math.max(0.1, e.pressure) : 0.5;
-
     isDrawingRef.current   = true;
-    activeToolRef.current  = drawTool;
+    activeToolRef.current  = tool as "pen" | "highlight" | "arrow";
     activeColorRef.current = strokeColor;
     activeWidthRef.current = strokeWidth;
     activePtsRef.current   = [[wx, wy, pressure]];
-    dirtyRef.current       = true;
-
-    cancelAnimationFrame(rafRef.current);
-    rafRef.current = requestAnimationFrame(rafLoop);
+    scheduleRender();
   }
 
   function onMove(e: React.PointerEvent) {
-    if (tool === "hand" || !isDrawingRef.current) return;
-    if (e.pointerType === "touch") return;
+    if (tool === "hand" || e.pointerType === "touch") return;
+    if (!isDrawingRef.current) return;
     e.stopPropagation();
 
-    // Collect all coalesced samples the OS buffered since last event
+    // Collect every OS digitiser sample buffered between pointer events
     const events = e.nativeEvent.getCoalescedEvents?.() ?? [e.nativeEvent];
     for (const ev of events) {
       const [wx, wy] = toWorld(ev.clientX, ev.clientY);
@@ -554,7 +524,8 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
       const pressure = ev.pointerType === "pen" ? Math.max(0.1, ev.pressure) : 0.5;
       activePtsRef.current.push([wx, wy, pressure]);
     }
-    dirtyRef.current = true;
+
+    scheduleRender(); // redraws full accumulated stroke on next frame
   }
 
   function onUp(e: React.PointerEvent) {
@@ -562,8 +533,6 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     if (!isDrawingRef.current) return;
 
     isDrawingRef.current = false;
-    cancelAnimationFrame(rafRef.current);
-
     const pts = activePtsRef.current;
     activePtsRef.current = [];
 
@@ -580,15 +549,14 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
       redoStackRef.current = [];
       const next = [...myStrokesRef.current, done];
       myStrokesRef.current = next;
-      setMyStrokes(next);   // one React update per stroke
+      setMyStrokes(next); // one React update per completed stroke
       scheduleSave();
       notifyHistory();
     }
-    // Final render with committed stroke
-    render();
+
+    scheduleRender();
   }
 
-  // Cursor
   const cursor =
     tool === "pen" || tool === "arrow" ? "crosshair"
     : tool === "highlight"             ? "cell"
@@ -611,13 +579,13 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
         ref={canvasRef}
         className="drawing-canvas-el"
         style={{ cursor }}
-        onPointerDown={(e) => {
+        onPointerDown={e => {
           if (tool !== "hand" && e.pointerType !== "touch") e.preventDefault();
           onDown(e);
         }}
         onPointerMove={onMove}
-        onPointerUp={(e)     => onUp(e)}
-        onPointerCancel={(e) => onUp(e)}
+        onPointerUp={e     => onUp(e)}
+        onPointerCancel={e => onUp(e)}
       />
     </div>
   );
