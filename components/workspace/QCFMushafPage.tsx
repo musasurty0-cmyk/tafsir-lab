@@ -3,20 +3,24 @@
 /**
  * QCFMushafPage — renders one Mushaf page using Quran Foundation QCF v2 fonts.
  *
- * Rendering approach (matches Quran.com page mode exactly):
- *   • Each line is rendered as a SINGLE concatenated string of code_v2 glyphs.
- *   • The QCF font file handles all glyph spacing/proportions — no manual flex
- *     justification, no space-between, no word-by-word layout.
- *   • display: block; direction: rtl  on the line container.
- *   • The font file is loaded via FontFace API from the QCF CDN.
- *   • Fallback (before font loads): text_qpc_hafs rendered with Amiri Quran.
+ * Rendering approach:
+ *   • Each line's words are rendered as adjacent inline <span> elements
+ *     inside a direction:rtl block container.
+ *   • React array children have NO whitespace text nodes between them,
+ *     so the browser treats them as one continuous glyph run — visually
+ *     identical to a concatenated string, but each word is individually
+ *     clickable.
+ *   • The QCF page font (p{N}-v2) handles all glyph shaping and spacing.
+ *     No manual justification or flex distribution.
  *
- * Interaction model:
- *   • Click a line → onOpenFocus(primaryVerseKey, null)  [ayah-level]
- *   • Refs registered on the line element (not individual words)
+ * Interaction:
+ *   • Click word      → onOpenFocus(verseKey, wordPos)
+ *   • Click ayah-end  → onOpenFocus(verseKey, null)
+ *   • Hover word      → amber highlight via CSS
+ *   • Refs registered → onRegisterAyahRef / onRegisterWordRef
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import type { QCFVerse, Chapter } from "@/lib/types";
 
 // ── Font loading ────────────────────────────────────────────────────────────
@@ -66,6 +70,7 @@ interface WordEntry {
   code_v2:        string;
   text_qpc_hafs:  string;
   char_type_name: "word" | "end" | "pause";
+  translation?:   { text: string; language_name: string };
   verseKey:       string;
   ayahNum:        number;
   isFirstInVerse: boolean;
@@ -119,6 +124,7 @@ export default function QCFMushafPage({
         code_v2:        word.code_v2 ?? "",
         text_qpc_hafs:  word.text_qpc_hafs ?? "",
         char_type_name: word.char_type_name,
+        translation:    word.translation,
         verseKey:       verse.verse_key,
         ayahNum:        verse.verse_number,
         isFirstInVerse: firstInVerse,
@@ -180,52 +186,66 @@ export default function QCFMushafPage({
       {/* ── Page lines ── */}
       <div className="qcf-lines">
         {sortedLines.map(([lineKey, words]) => {
-          // Determine the primary verse for this line:
-          // prefer the verse that owns an ayah-end marker, else first word's verse.
-          const endWord  = words.find((w) => w.char_type_name === "end");
-          const primaryVerseKey = (endWord ?? words[0]).verseKey;
-
-          // QCF font for this line (all words on a page share the same v2_page)
+          // All words on a Mushaf line share the same font file
           const v2page     = words[0]?.v2_page ?? pageNumber;
           const fontFamily = fontReady ? `p${v2page}-v2` : "var(--font-arabic)";
 
-          // Concatenate all glyphs into one string — the font renders everything correctly
-          const lineHtml = words
-            .map((w) => (fontReady && w.code_v2) ? w.code_v2 : w.text_qpc_hafs)
-            .join("");
-
           return (
-            <div
-              key={lineKey}
-              className="qcf-line"
-              role="button"
-              tabIndex={0}
-              onClick={(e) => {
-                e.stopPropagation();
-                onOpenFocus(primaryVerseKey, null);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.stopPropagation();
-                  onOpenFocus(primaryVerseKey, null);
-                }
-              }}
-            >
-              <span
-                className="qcf-line-text"
-                style={{ fontFamily }}
-                ref={(el) => {
-                  // Register refs for every word on this line
-                  for (const word of words) {
-                    if (word.isFirstInVerse) onRegisterAyahRef(word.ayahNum, el);
-                    if (word.char_type_name === "word") {
-                      onRegisterWordRef(word.ayahNum, word.position, el);
+            /*
+             * The line container is display:block direction:rtl.
+             * Children are display:inline — adjacent with no DOM whitespace
+             * between them, so the browser renders them as one continuous
+             * right-to-left glyph run.  Visually identical to a concatenated
+             * string, but each word span is individually interactive.
+             */
+            <div key={lineKey} className="qcf-line">
+              {words.map((word) => {
+                const isWord = word.char_type_name === "word";
+                const isEnd  = word.char_type_name === "end";
+
+                // Use QCF glyph once font is ready; Unicode fallback until then
+                const glyph = (fontReady && word.code_v2)
+                  ? word.code_v2
+                  : word.text_qpc_hafs;
+
+                return (
+                  <span
+                    key={`${word.verseKey}:${word.position}`}
+                    ref={(el) => {
+                      if (isWord) onRegisterWordRef(word.ayahNum, word.position, el);
+                      if (word.isFirstInVerse) onRegisterAyahRef(word.ayahNum, el);
+                    }}
+                    className={[
+                      "qcf-glyph",
+                      isWord ? "qcf-word" : "",
+                      isEnd  ? "qcf-end"  : "",
+                    ].join(" ").trim()}
+                    style={{ fontFamily }}
+                    title={isWord ? (word.translation?.text ?? "") : undefined}
+                    role={isWord || isEnd ? "button" : undefined}
+                    tabIndex={isWord || isEnd ? 0 : undefined}
+                    onClick={
+                      isWord
+                        ? (e) => { e.stopPropagation(); onOpenFocus(word.verseKey, word.position); }
+                        : isEnd
+                        ? (e) => { e.stopPropagation(); onOpenFocus(word.verseKey, null); }
+                        : undefined
                     }
-                  }
-                }}
-                // Safe: Quran Foundation API data only — no user input
-                dangerouslySetInnerHTML={{ __html: lineHtml }}
-              />
+                    onKeyDown={
+                      isWord || isEnd
+                        ? (e) => {
+                            if (e.key === "Enter") {
+                              e.stopPropagation();
+                              onOpenFocus(word.verseKey, isWord ? word.position : null);
+                            }
+                          }
+                        : undefined
+                    }
+                    // Safe: Quran Foundation API data only — no user input
+                    dangerouslySetInnerHTML={{ __html: glyph }}
+                  />
+                );
+              })}
             </div>
           );
         })}

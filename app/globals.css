@@ -1800,8 +1800,8 @@ input, textarea { font: inherit; color: inherit; }
   position: relative;
   flex: 1 1 0;
   overflow: hidden;
-  /* Warm study surface — not a document viewer */
-  background: oklch(0.955 0.010 85);
+  /* Clean neutral surface */
+  background: #f0f0f0;
   cursor: default;
   user-select: none;
   -webkit-user-select: none;
@@ -2516,33 +2516,40 @@ input, textarea { font: inherit; color: inherit; }
 }
 
 /*
- * Each line is a single concatenated glyph block.
- * The QCF page font handles all inter-glyph spacing internally —
- * no flex justification, no manual word distribution.
+ * Line container — display:block direction:rtl.
+ * Child spans are display:inline; React renders arrays with no DOM
+ * whitespace between them, so they form one continuous glyph run.
+ * The QCF font handles all shaping — no manual justification.
  */
 .qcf-line {
-  display:       block;
-  width:         100%;
-  direction:     rtl;
-  cursor:        pointer;
-  border-radius: 3px;
-  transition:    background 80ms ease;
+  display:   block;
+  direction: rtl;
 }
 
-.qcf-line:hover  { background: rgba(255, 208, 80, 0.18); }
-.qcf-line:active { background: rgba(255, 185, 40, 0.30); }
-
-/* The glyph text span — fills the line, no user interaction of its own */
-.qcf-line-text {
-  display:        block;
-  direction:      rtl;
-  font-size:      34px;
-  line-height:    2.05;
-  color:          oklch(0.14 0.010 80);
-  white-space:    nowrap;
-  user-select:    none;
-  pointer-events: none;
+/* ── Individual glyph spans ─────────────────────────────────────────────── */
+.qcf-glyph {
+  display:     inline;
+  font-size:   34px;
+  line-height: 2.05;
+  color:       #1a1a1a;
+  user-select: none;
 }
+
+.qcf-word {
+  cursor:     pointer;
+  transition: background 80ms ease;
+}
+
+/* Amber word highlight — appears on hover, doesn't shift layout */
+.qcf-word:hover  { background: rgba(255, 208, 80, 0.32); }
+.qcf-word:active { background: rgba(255, 185, 40, 0.50); }
+
+.qcf-end {
+  cursor:     pointer;
+  transition: opacity 80ms ease;
+}
+
+.qcf-end:hover { opacity: 0.60; }
 
 /* ── Page number footer ───────────────────────────────────────────────────── */
 .qcf-page-num {
@@ -2550,11 +2557,11 @@ input, textarea { font: inherit; color: inherit; }
   margin-top:     24px;
   padding-top:    12px;
   /* Very thin rule above the page number — the only structural marker */
-  border-top:     1px solid oklch(0.14 0.010 80 / 0.10);
+  border-top:     1px solid rgba(0,0,0,0.10);
   font-size:      11px;
   font-weight:    500;
   letter-spacing: 0.08em;
-  color:          oklch(0.14 0.010 80 / 0.32);
+  color:          rgba(0,0,0,0.30);
   user-select:    none;
   direction:      ltr;
 }
@@ -2572,7 +2579,7 @@ input, textarea { font: inherit; color: inherit; }
 .qcf-skeleton-line {
   height:        15px;
   border-radius: 3px;
-  background:    oklch(0.14 0.010 80 / 0.12);
+  background:    rgba(0,0,0,0.10);
   margin-left:   auto;
   margin-right:  auto;
   animation:     qcf-shimmer 1.5s ease-in-out infinite;
