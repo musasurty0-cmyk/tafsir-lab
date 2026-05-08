@@ -2625,9 +2625,10 @@ input, textarea { font: inherit; color: inherit; }
  *   font-size  20px — QCF v2 glyphs are designed for ~20 px on a ~600 px
  *                     content column.  34 px made harakat from adjacent
  *                     lines overlap.
- *   line-height 3.0 — Arabic diacritics in the QCF font extend ≈1 em
- *                     above/below the base glyph.  ×3 gives enough air
- *                     (60 px between baselines at 20 px) to prevent overlap.
+ *   line-height 2.5 — Arabic diacritics in the QCF font extend ≈0.8–1 em
+ *                     above the base glyph.  ×2.5 gives 50 px between
+ *                     baselines at 20 px — enough clearance for harakat
+ *                     without exaggerated inter-line gaps.
  *   letter-spacing 0 / word-spacing 0 — any non-zero value distorts the
  *                     advance widths the font designer encoded.
  */
@@ -2639,7 +2640,7 @@ input, textarea { font: inherit; color: inherit; }
   direction:      rtl;
   /* QCF typography — do not override on child elements */
   font-size:      20px;
-  line-height:    3.0;
+  line-height:    2.5;
   letter-spacing: 0;
   word-spacing:   0;
   font-kerning:   none;       /* PUA glyphs have no kern pairs; skip the lookup */
