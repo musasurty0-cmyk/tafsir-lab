@@ -8,6 +8,9 @@
  * with the specific word highlighted if this is a word-level focus.
  * The user can draw freely on top with pen/highlight/arrow/eraser.
  *
+ * Tool settings (colour + stroke width) are fully configurable, matching
+ * the same options available on the main canvas tool rail.
+ *
  * Annotations are saved to localStorage keyed per word or ayah so they
  * persist between sessions without a DB round-trip.
  *
@@ -21,8 +24,14 @@
  *   Escape          — close
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import type { Verse } from "@/lib/types";
+import {
+  PEN_COLORS,
+  HIGHLIGHT_COLORS,
+  PEN_WIDTHS,
+  HIGHLIGHT_WIDTHS,
+} from "./CanvasToolRail";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -39,22 +48,82 @@ interface Stroke {
   opacity: number;
 }
 
-// ── Config ─────────────────────────────────────────────────────────────────
-
-const TOOL_CFG = {
-  pen:       { color: "#1a1a2e", width: 2,  opacity: 1.00 },
-  highlight: { color: "#fbbf24", width: 14, opacity: 0.35 },
-  arrow:     { color: "#1a1a2e", width: 2,  opacity: 1.00 },
-} as const;
-
-const FOCUS_TOOLS: { id: FocusTool; label: string; title: string }[] = [
-  { id: "pen",       label: "✏️", title: "Pen (P)"      },
-  { id: "highlight", label: "🟡", title: "Highlight (L)" },
-  { id: "arrow",     label: "→",  title: "Arrow (A)"    },
-  { id: "eraser",    label: "◻",  title: "Eraser (E)"   },
-];
+// ── Constants ──────────────────────────────────────────────────────────────
 
 const ERASER_RADIUS = 15;
+
+// ── Icons ──────────────────────────────────────────────────────────────────
+
+const PenIcon = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="18" y1="2" x2="22" y2="6" />
+    <path d="M7.5 20.5 19 9l-4-4L3.5 16.5 2 22z" />
+  </svg>
+);
+
+const HighlighterIcon = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <path d="m9 11-6 6v3h9l3-3" />
+    <path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4" />
+  </svg>
+);
+
+const ArrowIcon = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="5" y1="19" x2="19" y2="5" />
+    <polyline points="9 5 19 5 19 15" />
+  </svg>
+);
+
+const EraserIcon = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20 20H7L3 16a2 2 0 0 1 0-2.83l10-10a2 2 0 0 1 2.83 0L21 8.17a2 2 0 0 1 0 2.83z" />
+    <line x1="7" y1="20" x2="7.01" y2="20" />
+  </svg>
+);
+
+const UndoIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 7v6h6" />
+    <path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13" />
+  </svg>
+);
+
+const ClearIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="3 6 5 6 21 6" />
+    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+  </svg>
+);
+
+// Tool descriptors
+const FOCUS_TOOLS: Array<{ id: FocusTool; Icon: () => React.ReactElement; title: string }> = [
+  { id: "pen",       Icon: PenIcon,         title: "Pen (P)"       },
+  { id: "highlight", Icon: HighlighterIcon, title: "Highlight (L)" },
+  { id: "arrow",     Icon: ArrowIcon,       title: "Arrow (A)"     },
+  { id: "eraser",    Icon: EraserIcon,      title: "Eraser (E)"    },
+];
+
+// Width preview bar — matches the bar style used in the main canvas tool rail
+function WidthBar({ value, isHighlight }: { value: number; isHighlight: boolean }) {
+  const h = isHighlight ? Math.min(value * 0.55, 11) : Math.min(value * 0.85, 4.5);
+  return (
+    <span style={{
+      display:      "block",
+      width:        18,
+      height:       Math.max(h, 1.5),
+      borderRadius: 99,
+      background:   "currentColor",
+      opacity:      isHighlight ? 0.55 : 0.85,
+    }} />
+  );
+}
 
 // ── Storage ────────────────────────────────────────────────────────────────
 
@@ -148,8 +217,27 @@ export default function FocusAnnotation({ verses, verseKey, wordPos, onClose, on
   const ayahNum = Number(ayahNumStr);
   const verse   = verses.find((v) => v.verse_key === verseKey) ?? verses[0];
 
-  // ── Drawing state ──────────────────────────────────────────────────────
-  const [tool, setTool]       = useState<FocusTool>("pen");
+  // ── Drawing tool state ────────────────────────────────────────────────
+  const [tool, setTool] = useState<FocusTool>("pen");
+
+  // Per-tool colour and width — pen settings also apply to arrow
+  const [penColor, setPenColor] = useState(PEN_COLORS[0].hex);
+  const [penWidth, setPenWidth] = useState(PEN_WIDTHS[1].value);   // M
+  const [hlColor,  setHlColor]  = useState(HIGHLIGHT_COLORS[0].hex);
+  const [hlWidth,  setHlWidth]  = useState(HIGHLIGHT_WIDTHS[1].value); // M
+
+  // Derived values for the currently selected tool
+  const showPalette  = tool === "pen" || tool === "highlight";
+  const isHighlight  = tool === "highlight";
+  const paletteColors = isHighlight ? HIGHLIGHT_COLORS : PEN_COLORS;
+  const paletteWidths = isHighlight ? HIGHLIGHT_WIDTHS : PEN_WIDTHS;
+  const activeColor   = isHighlight ? hlColor  : penColor;
+  const activeWidth   = isHighlight ? hlWidth  : penWidth;
+
+  function handleColor(c: string) { isHighlight ? setHlColor(c)  : setPenColor(c); }
+  function handleWidth(w: number) { isHighlight ? setHlWidth(w)  : setPenWidth(w); }
+
+  // ── Stroke state ──────────────────────────────────────────────────────
   const [strokes, setStrokes] = useState<Stroke[]>([]);
   const strokesRef            = useRef<Stroke[]>([]);
   const activeStroke          = useRef<Stroke | null>(null);
@@ -292,11 +380,14 @@ export default function FocusAnnotation({ verses, verseKey, wordPos, onClose, on
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
     const pt = toCanvas(e);
     if (tool === "eraser") { eraseAt(pt.x, pt.y); return; }
-    const cfg = TOOL_CFG[tool as keyof typeof TOOL_CFG];
+
+    // Colour/width: highlight uses its own settings; pen and arrow share pen settings
+    const color   = isHighlight ? hlColor : penColor;
+    const width   = isHighlight ? hlWidth : penWidth;
+    const opacity = isHighlight ? 0.35    : 1.0;
+
     isDrawing.current    = true;
-    activeStroke.current = {
-      id: crypto.randomUUID(), tool, points: [pt], ...cfg,
-    };
+    activeStroke.current = { id: crypto.randomUUID(), tool, points: [pt], color, width, opacity };
     cancelAnimationFrame(rafRef.current);
     rafRef.current = requestAnimationFrame(render);
   }
@@ -356,7 +447,6 @@ export default function FocusAnnotation({ verses, verseKey, wordPos, onClose, on
   function handleNoteChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
     const val = e.target.value;
     setNoteText(val);
-    // Debounce save
     if (noteTimerRef.current) clearTimeout(noteTimerRef.current);
     noteTimerRef.current = setTimeout(() => {
       try {
@@ -380,16 +470,22 @@ export default function FocusAnnotation({ verses, verseKey, wordPos, onClose, on
 
   return (
     <div className="fa-overlay">
+
       {/* ── Toolbar ── */}
       <div className="fa-toolbar">
+
+        {/* Label: focused word or ayah reference */}
         <div className="fa-toolbar-label">
           {focusWord
-            ? <><span dir="rtl" className="fa-label-ar">{focusWord.text}</span> <span className="fa-label-ref">· {verseKey}</span></>
-            : <><span className="fa-label-ref">Ayah {ayahNum} · {verseKey}</span></>
+            ? <><span dir="rtl" className="fa-label-ar">{focusWord.text}</span><span className="fa-label-ref">· {verseKey}</span></>
+            : <span className="fa-label-ref">Ayah {ayahNum} · {verseKey}</span>
           }
         </div>
 
+        {/* Tool buttons + inline palette */}
         <div className="fa-toolbar-tools">
+
+          {/* Tool icons */}
           {FOCUS_TOOLS.map((t) => (
             <button
               key={t.id}
@@ -398,17 +494,59 @@ export default function FocusAnnotation({ verses, verseKey, wordPos, onClose, on
               title={t.title}
               onClick={() => setTool(t.id)}
             >
-              {t.label}
+              <t.Icon />
             </button>
           ))}
+
+          {/* Colour + width palette — shown only for pen and highlight */}
+          {showPalette && (
+            <>
+              <div className="fa-toolbar-sep" />
+
+              {/* Colour swatches */}
+              <div className="fa-palette">
+                {paletteColors.map((c) => (
+                  <button
+                    key={c.hex}
+                    className="fa-palette-swatch"
+                    title={c.label}
+                    data-active={activeColor === c.hex ? "true" : "false"}
+                    style={{ background: c.hex }}
+                    onClick={() => handleColor(c.hex)}
+                  />
+                ))}
+              </div>
+
+              <div className="fa-toolbar-sep" />
+
+              {/* Width buttons */}
+              <div className="fa-palette-widths">
+                {paletteWidths.map((w) => (
+                  <button
+                    key={w.value}
+                    className="fa-palette-width-btn"
+                    title={`${w.label} — ${w.value}px`}
+                    data-active={activeWidth === w.value ? "true" : "false"}
+                    style={{ color: isHighlight ? "#ca8a04" : "#374151" }}
+                    onClick={() => handleWidth(w.value)}
+                  >
+                    <WidthBar value={w.value} isHighlight={isHighlight} />
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+
           <div className="fa-toolbar-sep" />
+
+          {/* Undo / clear */}
           <button
             className="fa-tool-btn"
             title="Undo last stroke (⌘Z)"
             disabled={strokes.length === 0}
             onClick={undo}
           >
-            ↩
+            <UndoIcon />
           </button>
           <button
             className="fa-tool-btn fa-tool-btn--danger"
@@ -416,10 +554,11 @@ export default function FocusAnnotation({ verses, verseKey, wordPos, onClose, on
             disabled={strokes.length === 0}
             onClick={clearAll}
           >
-            ✕
+            <ClearIcon />
           </button>
         </div>
 
+        {/* Tafsir shortcut */}
         {onOpenTafsir && (
           <button
             className="fa-tafsir-btn"
@@ -429,6 +568,7 @@ export default function FocusAnnotation({ verses, verseKey, wordPos, onClose, on
             Tafsir
           </button>
         )}
+
         <button className="fa-close-btn" onClick={onClose} title="Close (Esc)">×</button>
       </div>
 

@@ -2655,8 +2655,12 @@ input, textarea { font: inherit; color: inherit; }
  * concatenated string — with per-word click targets.
  */
 .qcf-line {
-  display:   block;
-  direction: rtl;
+  display:    block;
+  direction:  rtl;
+  /* Centre each line's glyph run.  Full lines are naturally near full-width so
+     centering is invisible; short lines (short surahs, single-ayah pages) are
+     centred rather than pushed to the right edge — matching a printed Mushaf. */
+  text-align: center;
 }
 
 /* ── Individual glyph spans ─────────────────────────────────────────────── */
@@ -3300,6 +3304,57 @@ input, textarea { font: inherit; color: inherit; }
   margin: 0 2px;
   flex-shrink: 0;
 }
+
+/* ── Inline colour + width palette (pen / highlight) ── */
+
+/* Flex row holding the colour swatches */
+.fa-palette {
+  display:     flex;
+  align-items: center;
+  gap:         5px;
+  flex-shrink: 0;
+}
+
+/* Colour swatch circle */
+.fa-palette-swatch {
+  width:         16px;
+  height:        16px;
+  border-radius: 50%;
+  border:        2px solid transparent;
+  cursor:        pointer;
+  flex-shrink:   0;
+  transition:    transform 0.1s ease, border-color 0.1s ease;
+  box-shadow:    0 0 0 1px rgba(0, 0, 0, 0.14);
+}
+.fa-palette-swatch:hover { transform: scale(1.22); }
+.fa-palette-swatch[data-active="true"] {
+  border-color: var(--ink);
+  box-shadow:   0 0 0 1px oklch(0.22 0.012 80 / 0.22);
+}
+
+/* Flex row holding the width options */
+.fa-palette-widths {
+  display:     flex;
+  align-items: center;
+  gap:         2px;
+  flex-shrink: 0;
+}
+
+/* Individual width option button — shows a bar preview */
+.fa-palette-width-btn {
+  width:           28px;
+  height:          28px;
+  border-radius:   6px;
+  border:          none;
+  background:      transparent;
+  cursor:          pointer;
+  display:         flex;
+  align-items:     center;
+  justify-content: center;
+  transition:      background 0.1s ease, color 0.1s ease;
+}
+.fa-palette-width-btn:hover          { background: var(--hover); }
+.fa-palette-width-btn[data-active="true"] { background: var(--active); }
 
 .fa-close-btn {
   width: 32px;
