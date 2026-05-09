@@ -4,19 +4,18 @@
  * CanvasToolRail — premium vertical left-side tool rail for Mode B canvas.
  *
  * Layout: fixed to the left of .mode-b-canvas, vertically centred.
- * When Pen or Highlighter is active a compact popover slides out to the right
- * showing the colour palette and three stroke-width options.
  *
- * Props are flat — no nested ToolSettings object.  The parent tracks penColor,
- * penSize, highlightColor, highlightSize separately and passes the right
- * strokeSize (and size-change handler) for whichever tool is active.
- *
- * Optional onClear adds a "Clear all" trash button at the bottom of the rail.
- *
- * This component is pure presentation — all state lives in the parent.
+ * Popover behaviour (Miro / Figma style):
+ *  • Appears when the user selects or hovers the active pen / highlight button.
+ *  • Auto-hides after ~1.25 s of inactivity (timer resets on any interaction).
+ *  • Stays open while the mouse is anywhere in the rail + popover zone.
+ *  • Closes immediately when switching to a non-palette tool.
+ *  • Smooth 160 ms fade + slide transition in both directions.
+ *  • The popover is always in the DOM (not unmounted) so the exit transition
+ *    plays correctly; `pointer-events:none` keeps it fully inert when hidden.
  */
 
-import React from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import type { DrawTool } from "./DrawingCanvas";
 
 // ── Palette configuration ─────────────────────────────────────────────────
@@ -53,6 +52,8 @@ export const DEFAULT_PEN_COLOR       = "#18181b";
 export const DEFAULT_PEN_SIZE        = 2.5;
 export const DEFAULT_HIGHLIGHT_COLOR = "#fbbf24";
 export const DEFAULT_HIGHLIGHT_SIZE  = 14;
+
+const HIDE_DELAY_MS = 1250;
 
 // ── Icons ─────────────────────────────────────────────────────────────────
 
@@ -138,60 +139,6 @@ function WidthBar({ value, isHighlight }: { value: number; isHighlight: boolean 
   );
 }
 
-// ── Colour + size popover ─────────────────────────────────────────────────
-
-interface PopoverProps {
-  colors:        { label: string; hex: string }[];
-  widths:        { label: string; value: number }[];
-  activeColor:   string;
-  activeWidth:   number;
-  isHighlight:   boolean;
-  onColor:       (c: string) => void;
-  onWidth:       (w: number) => void;
-}
-
-function ColorPopover({
-  colors, widths, activeColor, activeWidth, isHighlight, onColor, onWidth,
-}: PopoverProps) {
-  return (
-    <div
-      className="ctr-popover"
-      onPointerDown={(e) => e.stopPropagation()}
-      onPointerUp={(e) => e.stopPropagation()}
-    >
-      <p className="ctr-popover-label">Colour</p>
-      <div className="ctr-swatches">
-        {colors.map((c) => (
-          <button
-            key={c.hex}
-            className="ctr-swatch"
-            title={c.label}
-            data-active={activeColor === c.hex ? "true" : "false"}
-            style={{ background: c.hex }}
-            onClick={() => onColor(c.hex)}
-          />
-        ))}
-      </div>
-
-      <p className="ctr-popover-label">Size</p>
-      <div className="ctr-widths">
-        {widths.map((w) => (
-          <button
-            key={w.value}
-            className="ctr-width-btn"
-            title={`${w.label} — ${w.value}px`}
-            data-active={activeWidth === w.value ? "true" : "false"}
-            style={{ color: isHighlight ? "#ca8a04" : "#374151" }}
-            onClick={() => onWidth(w.value)}
-          >
-            <WidthBar value={w.value} isHighlight={isHighlight} />
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 // ── Rail tool descriptors ─────────────────────────────────────────────────
 
 const RAIL_TOOLS: { id: DrawTool; Icon: () => React.ReactElement; title: string }[] = [
@@ -211,7 +158,7 @@ interface Props {
   onPenColorChange:       (c: string) => void;
   highlightColor:         string;
   onHighlightColorChange: (c: string) => void;
-  /** The size for whichever tool is currently active (pen or highlight). */
+  /** Size for whichever tool is currently active (pen or highlight). */
   strokeSize:             number;
   onStrokeSizeChange:     (s: number) => void;
   canUndo:                boolean;
@@ -234,22 +181,97 @@ export default function CanvasToolRail({
   onClear,
 }: Props) {
 
-  const showPopover = activeTool === "pen" || activeTool === "highlight";
-  const isHighlight = activeTool === "highlight";
+  // ── Popover open / closed state ─────────────────────────────────────────
+  // The popover is always present in the DOM so its CSS exit transition plays.
+  // `pointer-events: none` when closed keeps it fully inert.
+
+  const [popoverOpen, setPopoverOpen] = useState(false);
+
+  // Track the last pen/highlight tool so the popover shows correct content
+  // while fading out after the user switches to eraser / arrow / hand.
+  const lastPaletteToolRef = useRef<"pen" | "highlight">("pen");
+  const isCurrentlyPalette = activeTool === "pen" || activeTool === "highlight";
+  if (isCurrentlyPalette) lastPaletteToolRef.current = activeTool;
+
+  const popoverTool = lastPaletteToolRef.current;
+  const isHighlight = popoverTool === "highlight";
   const colors      = isHighlight ? HIGHLIGHT_COLORS : PEN_COLORS;
   const widths      = isHighlight ? HIGHLIGHT_WIDTHS  : PEN_WIDTHS;
   const activeColor = isHighlight ? highlightColor : penColor;
 
+  // ── Timer helpers ───────────────────────────────────────────────────────
+
+  const hideTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isFirstRender = useRef(true);
+
+  const cancelHide = useCallback(() => {
+    if (hideTimerRef.current) { clearTimeout(hideTimerRef.current); hideTimerRef.current = null; }
+  }, []);
+
+  const scheduleHide = useCallback(() => {
+    if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+    hideTimerRef.current = setTimeout(() => setPopoverOpen(false), HIDE_DELAY_MS);
+  }, []);
+
+  const openAndSchedule = useCallback(() => {
+    cancelHide();
+    setPopoverOpen(true);
+    // schedule auto-hide from the moment of opening
+    hideTimerRef.current = setTimeout(() => setPopoverOpen(false), HIDE_DELAY_MS);
+  }, [cancelHide]);
+
+  // Cleanup on unmount
+  useEffect(() => () => { if (hideTimerRef.current) clearTimeout(hideTimerRef.current); }, []);
+
+  // When activeTool changes externally (keyboard shortcut etc.), update popover
+  useEffect(() => {
+    if (isFirstRender.current) { isFirstRender.current = false; return; }
+    if (activeTool === "pen" || activeTool === "highlight") {
+      openAndSchedule();
+    } else {
+      cancelHide();
+      setPopoverOpen(false);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTool]);
+
+  // ── Colour / size handlers ──────────────────────────────────────────────
+
   function handleColor(c: string) {
     if (isHighlight) onHighlightColorChange(c);
     else             onPenColorChange(c);
+    scheduleHide(); // interaction resets the auto-hide clock
   }
+  function handleWidth(w: number) {
+    onStrokeSizeChange(w);
+    scheduleHide();
+  }
+
+  // ── Rail mouse zone handlers ────────────────────────────────────────────
+  // onMouseEnter: hovering the rail while pen/highlight is active → keep open.
+  // onMouseLeave: mouse exits the rail (including moving through the gap into
+  //              the popover) → start the hide timer. The popover's own
+  //              onMouseEnter cancels it if the user bridges the gap.
+
+  function onRailEnter() {
+    if (isCurrentlyPalette) {
+      cancelHide();
+      setPopoverOpen(true);
+    }
+  }
+  function onRailLeave() {
+    if (popoverOpen) scheduleHide();
+  }
+
+  // ── Render ────────────────────────────────────────────────────────────
 
   return (
     <div
       className="canvas-tool-rail"
       onPointerDown={(e) => e.stopPropagation()}
       onPointerUp={(e) => e.stopPropagation()}
+      onMouseEnter={onRailEnter}
+      onMouseLeave={onRailLeave}
     >
 
       {/* ── Tool buttons ── */}
@@ -259,21 +281,20 @@ export default function CanvasToolRail({
           className="ctr-btn"
           data-active={activeTool === id ? "true" : "false"}
           title={title}
-          onClick={() => onToolChange(id)}
+          onClick={() => {
+            onToolChange(id);
+            // Re-clicking an already-active palette tool: re-open and reset timer
+            if ((id === "pen" || id === "highlight") && id === activeTool) {
+              openAndSchedule();
+            }
+          }}
         >
           <Icon />
-          {/* Colour dot — shown on the icon when this tool is active */}
           {id === "pen" && (
-            <span
-              className="ctr-color-dot"
-              style={{ background: penColor }}
-            />
+            <span className="ctr-color-dot" style={{ background: penColor }} />
           )}
           {id === "highlight" && (
-            <span
-              className="ctr-color-dot"
-              style={{ background: highlightColor }}
-            />
+            <span className="ctr-color-dot" style={{ background: highlightColor }} />
           )}
         </button>
       ))}
@@ -312,18 +333,49 @@ export default function CanvasToolRail({
         </>
       )}
 
-      {/* ── Colour + size popover (pen / highlight only) ── */}
-      {showPopover && (
-        <ColorPopover
-          colors={colors}
-          widths={widths}
-          activeColor={activeColor}
-          activeWidth={strokeSize}
-          isHighlight={isHighlight}
-          onColor={handleColor}
-          onWidth={onStrokeSizeChange}
-        />
-      )}
+      {/* ── Colour + size popover ─────────────────────────────────────────
+          Always in the DOM so the CSS exit transition plays correctly.
+          pointer-events:none when closed keeps it fully inert.
+          Content is keyed to `popoverTool` (the last palette tool used)
+          so the fade-out shows the right palette even after switching away. */}
+      <div
+        className="ctr-popover"
+        data-open={popoverOpen ? "true" : "false"}
+        onPointerDown={(e) => e.stopPropagation()}
+        onPointerUp={(e) => e.stopPropagation()}
+        onMouseEnter={cancelHide}
+        onMouseLeave={scheduleHide}
+      >
+        <p className="ctr-popover-label">Colour</p>
+        <div className="ctr-swatches">
+          {colors.map((c) => (
+            <button
+              key={c.hex}
+              className="ctr-swatch"
+              title={c.label}
+              data-active={activeColor === c.hex ? "true" : "false"}
+              style={{ background: c.hex }}
+              onClick={() => handleColor(c.hex)}
+            />
+          ))}
+        </div>
+
+        <p className="ctr-popover-label">Size</p>
+        <div className="ctr-widths">
+          {widths.map((w) => (
+            <button
+              key={w.value}
+              className="ctr-width-btn"
+              title={`${w.label} — ${w.value}px`}
+              data-active={strokeSize === w.value ? "true" : "false"}
+              style={{ color: isHighlight ? "#ca8a04" : "#374151" }}
+              onClick={() => handleWidth(w.value)}
+            >
+              <WidthBar value={w.value} isHighlight={isHighlight} />
+            </button>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

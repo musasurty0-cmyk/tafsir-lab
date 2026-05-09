@@ -3155,9 +3155,8 @@ input, textarea { font: inherit; color: inherit; }
 /* ── Colour + size popover ── */
 .ctr-popover {
   position: absolute;
-  left: calc(100% + 10px);
+  left: calc(100% + 8px);
   top: 50%;
-  transform: translateY(-50%);
 
   background: var(--bg-elev);
   border-radius: var(--radius-lg);
@@ -3169,13 +3168,19 @@ input, textarea { font: inherit; color: inherit; }
   flex-direction: column;
   gap: 9px;
   min-width: 136px;
-  pointer-events: auto;
 
-  animation: ctr-pop-in 0.13s cubic-bezier(0.16, 1, 0.3, 1);
+  /* Closed state — inert and invisible */
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-50%) translateX(-5px);
+  transition:
+    opacity 160ms ease,
+    transform 160ms cubic-bezier(0.16, 1, 0.3, 1);
 }
-@keyframes ctr-pop-in {
-  from { opacity: 0; transform: translateY(-50%) translateX(-6px); }
-  to   { opacity: 1; transform: translateY(-50%) translateX(0);   }
+.ctr-popover[data-open="true"] {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(-50%) translateX(0);
 }
 
 .ctr-popover-label {
