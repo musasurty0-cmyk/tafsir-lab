@@ -3265,96 +3265,30 @@ input, textarea { font: inherit; color: inherit; }
   font-weight: 400;
 }
 
-.fa-toolbar-tools {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  background: var(--panel);
-  border: 1px solid var(--line-strong);
-  border-radius: var(--radius);
-  padding: 3px;
-}
-
-.fa-tool-btn {
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 6px;
-  font-size: 15px;
-  color: var(--ink-3);
-  transition: background .1s, color .1s;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-}
-.fa-tool-btn:hover:not(:disabled) { background: var(--hover); color: var(--ink); }
-.fa-tool-btn[data-active="true"] { background: var(--active); color: var(--ink); }
-.fa-tool-btn:disabled { opacity: 0.35; cursor: default; }
-.fa-tool-btn--danger:not(:disabled):hover {
-  background: oklch(0.97 0.04 25);
-  color: oklch(0.5 0.18 25);
-}
-
-.fa-toolbar-sep {
-  width: 1px;
-  height: 20px;
-  background: var(--line-strong);
-  margin: 0 2px;
-  flex-shrink: 0;
-}
-
-/* ── Inline colour + width palette (pen / highlight) ── */
-
-/* Flex row holding the colour swatches */
-.fa-palette {
-  display:     flex;
-  align-items: center;
-  gap:         5px;
-  flex-shrink: 0;
-}
-
-/* Colour swatch circle */
-.fa-palette-swatch {
-  width:         16px;
-  height:        16px;
-  border-radius: 50%;
-  border:        2px solid transparent;
-  cursor:        pointer;
-  flex-shrink:   0;
-  transition:    transform 0.1s ease, border-color 0.1s ease;
-  box-shadow:    0 0 0 1px rgba(0, 0, 0, 0.14);
-}
-.fa-palette-swatch:hover { transform: scale(1.22); }
-.fa-palette-swatch[data-active="true"] {
-  border-color: var(--ink);
-  box-shadow:   0 0 0 1px oklch(0.22 0.012 80 / 0.22);
-}
-
-/* Flex row holding the width options */
-.fa-palette-widths {
-  display:     flex;
-  align-items: center;
-  gap:         2px;
-  flex-shrink: 0;
-}
-
-/* Individual width option button — shows a bar preview */
-.fa-palette-width-btn {
-  width:           28px;
-  height:          28px;
-  border-radius:   6px;
-  border:          none;
-  background:      transparent;
-  cursor:          pointer;
+/* ── Clear-all button (top toolbar) ── */
+/* CanvasToolRail doesn't expose a "clear all" action, so we keep one
+   compact button in the top bar for clearing all strokes on this canvas. */
+.fa-clear-btn {
   display:         flex;
   align-items:     center;
-  justify-content: center;
-  transition:      background 0.1s ease, color 0.1s ease;
+  gap:             5px;
+  padding:         5px 10px;
+  border-radius:   var(--radius);
+  border:          1px solid var(--line-strong);
+  background:      var(--bg-elev);
+  font-size:       0.75rem;
+  font-weight:     500;
+  color:           var(--ink-3);
+  cursor:          pointer;
+  transition:      background var(--dur-fast) ease, color var(--dur-fast) ease;
+  white-space:     nowrap;
 }
-.fa-palette-width-btn:hover          { background: var(--hover); }
-.fa-palette-width-btn[data-active="true"] { background: var(--active); }
+.fa-clear-btn:hover:not(:disabled) {
+  background: oklch(0.97 0.04 25);
+  color:      oklch(0.5 0.18 25);
+  border-color: oklch(0.88 0.06 25);
+}
+.fa-clear-btn:disabled { opacity: 0.35; cursor: default; }
 
 .fa-close-btn {
   width: 32px;
@@ -3378,7 +3312,9 @@ input, textarea { font: inherit; color: inherit; }
   flex: 1;
   min-width: 0;
   position: relative;
-  overflow: hidden;
+  /* overflow must stay visible so the CanvasToolRail colour/width popover
+     (which extends to the right of the rail) is not clipped */
+  overflow: visible;
   display: flex;
   align-items: center;
   justify-content: center;
