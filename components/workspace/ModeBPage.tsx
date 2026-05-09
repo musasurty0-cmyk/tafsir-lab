@@ -601,8 +601,16 @@ export default function ModeBPage({
   }
 
   function onPointerUp(e: React.PointerEvent) {
-    // Prevent mouseup / click compat events after each pen stroke
-    if (e.pointerType === "pen") e.preventDefault();
+    // Don't preventDefault for interactive elements (tool-rail buttons, word spans,
+    // links) — that would kill click synthesis and break onClick handlers.
+    // Belt-and-suspenders: CanvasToolRail already stops pointer-up propagation,
+    // but guard here too in case any interactive child bubbles through.
+    const isInteractiveTarget = !!(e.target as HTMLElement).closest(
+      'button, a, input, select, textarea, [role="button"]',
+    );
+    // Prevent mouseup / click compat events after each pen stroke,
+    // but only when the pointer-up is on the canvas surface itself.
+    if (!isInteractiveTarget && e.pointerType === "pen") e.preventDefault();
     if (e.pointerType === "touch") return;
     isDragging.current = false;
     dragStart.current  = null;

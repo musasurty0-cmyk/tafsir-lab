@@ -145,7 +145,11 @@ function ColorPopover({
   colors, widths, activeColor, activeWidth, isHighlight, onColor, onWidth,
 }: PopoverProps) {
   return (
-    <div className="ctr-popover" onPointerDown={(e) => e.stopPropagation()}>
+    <div
+      className="ctr-popover"
+      onPointerDown={(e) => e.stopPropagation()}
+      onPointerUp={(e) => e.stopPropagation()}
+    >
       <p className="ctr-popover-label">Colour</p>
       <div className="ctr-swatches">
         {colors.map((c) => (
@@ -234,7 +238,11 @@ export default function CanvasToolRail({
   }
 
   return (
-    <div className="canvas-tool-rail" onPointerDown={(e) => e.stopPropagation()}>
+    <div
+      className="canvas-tool-rail"
+      onPointerDown={(e) => e.stopPropagation()}
+      onPointerUp={(e) => e.stopPropagation()}
+    >
 
       {/* ── Tool buttons ── */}
       {RAIL_TOOLS.map(({ id, Icon, title }) => (
