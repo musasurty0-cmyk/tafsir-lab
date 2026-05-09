@@ -3018,7 +3018,26 @@ input, textarea { font: inherit; color: inherit; }
   display: block;
   width: 100%;
   height: 100%;
-  /* width/height CSS props are overridden in JS for DPR-aware sizing */
+  /*
+   * Own GPU compositing layer — critical for iOS Safari.
+   *
+   * Without this, Safari rasterises the canvas in the parent's shared
+   * backing store at 1× screen resolution (ignoring devicePixelRatio),
+   * producing pixelated strokes even though canvas.width is set to
+   * cssWidth × dpr in JS.
+   *
+   * transform: translateZ(0) forces immediate promotion to a separate
+   * Metal-backed compositing layer so the canvas bitmap is rasterised
+   * at full device resolution, matching what .qcf-page already does.
+   *
+   * Identical pattern used on .qcf-page (see line ~2566) and the
+   * mushaf card wrapper element.
+   */
+  transform: translateZ(0);
+  will-change: transform;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  /* JS no longer overrides width/height style — CSS 100% owns display size */
   -webkit-touch-callout: none;
   -webkit-user-select: none;
   user-select: none;

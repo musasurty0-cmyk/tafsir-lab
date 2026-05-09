@@ -253,10 +253,26 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
   const onHistoryRef = useRef(onHistoryChange);
   useEffect(() => { onHistoryRef.current = onHistoryChange; }, [onHistoryChange]);
 
-  // Filter strokes for the current Mushaf page (fix #8)
-  // Strokes without mushafPage (legacy) are shown on every page.
+  // Filter strokes for the current Mushaf page.
+  // Strokes without mushafPage (legacy, pre-migration) pass through so they
+  // remain visible until the migration tags them.
   function filterForPage(strokes: Stroke[], page: number): Stroke[] {
     return strokes.filter(s => s.mushafPage === undefined || s.mushafPage === page);
+  }
+
+  // Silently tag + re-save any strokes that lack mushafPage.
+  // Called once on initial load.  Fire-and-forget — no UI feedback needed.
+  function migrateLegacyStrokes(strokes: Stroke[], toPage: number): {
+    migrated: Stroke[];
+    changed: boolean;
+  } {
+    let changed = false;
+    const migrated = strokes.map((s) => {
+      if (s.mushafPage !== undefined) return s;
+      changed = true;
+      return { ...s, mushafPage: toPage };
+    });
+    return { migrated, changed };
   }
 
   // ── render — stable, reads only from refs ─────────────────────────────
@@ -390,13 +406,34 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
       .then(r => r.ok ? r.json() : null)
       .then((d: { myStrokes?: Stroke[]; otherLayers?: DrawingLayer[] } | null) => {
         if (!d) return;
+
         if (d.myStrokes) {
-          allMyStrokesRef.current = d.myStrokes;
-          const filtered = filterForPage(d.myStrokes, mushafPageRef.current);
+          const curPage = mushafPageRef.current;
+
+          // ── Legacy migration (one-time, silent) ────────────────────────
+          // Strokes saved before the mushafPage scoping fix have no
+          // mushafPage field.  Tag them to whichever Mushaf page is open
+          // now (always the first page of the surah on a fresh load).
+          // Re-save immediately — after this the strokes are permanently
+          // scoped and will never bleed across pages again.
+          const { migrated, changed } = migrateLegacyStrokes(d.myStrokes, curPage);
+
+          allMyStrokesRef.current = migrated;
+          const filtered = filterForPage(migrated, curPage);
           setMyStrokes(filtered);
           myStrokesRef.current = filtered;
           onHistoryRef.current?.(filtered.length > 0, false);
+
+          if (changed) {
+            // Fire-and-forget — intentionally no error handling / loading state
+            fetch(`/api/pages/${pageId}/drawings`, {
+              method:  "PUT",
+              headers: { "Content-Type": "application/json" },
+              body:    JSON.stringify({ strokes: migrated }),
+            }).catch(() => {});
+          }
         }
+
         if (d.otherLayers) setOtherLayers(d.otherLayers);
       })
       .catch(() => {});
