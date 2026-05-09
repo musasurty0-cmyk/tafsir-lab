@@ -4,23 +4,14 @@
  * FocusAnnotation — full-screen word/ayah annotation canvas (Phase 7).
  *
  * Opens instantly when a word or ayah-end marker is clicked in Mode B.
- * Shows the Arabic text of the focused ayah centred on a blank canvas,
+ * Shows the Arabic text of the focused ayah centred as a fixed overlay,
  * with the specific word highlighted if this is a word-level focus.
  *
- * Tool selection, colour, and stroke width are handled by the SAME
- * CanvasToolRail component used on the main canvas — giving one consistent
- * toolbar experience across both surfaces.  The rail sits on the left of the
- * drawing area, identical to its position in Mode B.
+ * The drawing canvas is infinite — the hand tool pans freely so the user
+ * can write and draw beyond the initial visible area.
  *
- * The "hand" tool has no pan action here (the view is fixed), but selecting
- * it still suppresses accidental drawing, which is useful.
- *
- * Annotations are saved to localStorage keyed per word or ayah so they
- * persist between sessions without a DB round-trip.
- *
- * Storage key format:
- *   word-level:  tl-focus-<verseKey>-<wordPos>  (e.g. "tl-focus-1:1-1")
- *   ayah-level:  tl-focus-<verseKey>-ayah        (e.g. "tl-focus-1:1-ayah")
+ * The word-info block in the notes panel (Arabic + transliteration + meaning)
+ * is collapsible via a chevron so more space can be given to the textarea.
  *
  * Keyboard:
  *   H / P / L / A / E  — switch tool
@@ -123,7 +114,6 @@ function drawStroke(ctx: CanvasRenderingContext2D, stroke: Stroke) {
     ctx.lineTo(p1.x - hl * Math.cos(ang + 0.38), p1.y - hl * Math.sin(ang + 0.38));
     ctx.closePath(); ctx.fill();
   } else {
-    // Midpoint-quadratic smooth curve (same algorithm as the main canvas)
     ctx.beginPath();
     ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
     if (stroke.points.length === 1) {
@@ -146,29 +136,58 @@ function drawStroke(ctx: CanvasRenderingContext2D, stroke: Stroke) {
   ctx.restore();
 }
 
+// ── Chevron icon ───────────────────────────────────────────────────────────
+
+function ChevronIcon({ open }: { open: boolean }) {
+  return (
+    <svg
+      width="11" height="11" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+      style={{
+        transform: open ? "rotate(0deg)" : "rotate(-90deg)",
+        transition: "transform 220ms cubic-bezier(0.16,1,0.3,1)",
+        display: "block",
+        flexShrink: 0,
+      }}
+    >
+      <polyline points="18 15 12 9 6 15" />
+    </svg>
+  );
+}
+
 // ── Props ──────────────────────────────────────────────────────────────────
 
 interface Props {
   verses:         Verse[];
-  verseKey:       string;        // e.g. "1:1"
-  wordPos:        number | null; // null → ayah-level focus
+  verseKey:       string;
+  wordPos:        number | null;
   onClose:        () => void;
-  onOpenTafsir?:  (verseKey: string) => void;
+  onOpenTafsir?:  (verseKey: string) => void; // kept in interface but button removed
 }
 
 // ── Component ─────────────────────────────────────────────────────────────
 
-export default function FocusAnnotation({ verses, verseKey, wordPos, onClose, onOpenTafsir }: Props) {
+export default function FocusAnnotation({ verses, verseKey, wordPos, onClose }: Props) {
   const [, ayahNumStr] = verseKey.split(":");
   const ayahNum = Number(ayahNumStr);
   const verse   = verses.find((v) => v.verse_key === verseKey) ?? verses[0];
 
-  // ── Tool + settings — same flat state as the main canvas ────────────
+  // ── Tool + settings ───────────────────────────────────────────────────
   const [tool,     setTool]     = useState<DrawTool>("pen");
   const [penColor, setPenColor] = useState(DEFAULT_PEN_COLOR);
   const [penSize,  setPenSize]  = useState(DEFAULT_PEN_SIZE);
   const [hlColor,  setHlColor]  = useState(DEFAULT_HIGHLIGHT_COLOR);
   const [hlSize,   setHlSize]   = useState(DEFAULT_HIGHLIGHT_SIZE);
+
+  // ── Word-info collapse ────────────────────────────────────────────────
+  const [wordInfoOpen, setWordInfoOpen] = useState(true);
+
+  // ── Infinite canvas — viewport pan ───────────────────────────────────
+  // viewportRef is used in render() and event handlers without stale closure risk.
+  // viewportState drives the Arabic overlay CSS transform.
+  const viewportRef   = useRef({ x: 0, y: 0 });
+  const isPanning     = useRef(false);
+  const panStartRef   = useRef<{ mx: number; my: number; vx: number; vy: number } | null>(null);
 
   // ── Stroke state ──────────────────────────────────────────────────────
   const [strokes, setStrokes] = useState<Stroke[]>([]);
@@ -187,14 +206,14 @@ export default function FocusAnnotation({ verses, verseKey, wordPos, onClose, on
 
   useEffect(() => { strokesRef.current = strokes; }, [strokes]);
 
-  // Load persisted strokes on mount or when focus target changes
   useEffect(() => {
     const loaded = loadStrokes(verseKey, wordPos);
     setStrokes(loaded);
     strokesRef.current = loaded;
+    // Reset viewport when switching focus target
+    viewportRef.current = { x: 0, y: 0 };
   }, [verseKey, wordPos]);
 
-  // Load persisted text note
   useEffect(() => {
     const key = `tl-note-text-${verseKey}-${wordPos ?? "ayah"}`;
     setNoteText(localStorage.getItem(key) ?? "");
@@ -226,6 +245,8 @@ export default function FocusAnnotation({ verses, verseKey, wordPos, onClose, on
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.save();
     ctx.scale(dpr, dpr);
+    // Apply viewport pan — all strokes are stored in world coords
+    ctx.translate(viewportRef.current.x, viewportRef.current.y);
     for (const s of strokesRef.current) drawStroke(ctx, s);
     if (activeStroke.current) drawStroke(ctx, activeStroke.current);
     ctx.restore();
@@ -280,13 +301,17 @@ export default function FocusAnnotation({ verses, verseKey, wordPos, onClose, on
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose, verseKey, wordPos]);
 
-  // ── Pointer coordinate helper ──────────────────────────────────────────
+  // ── Pointer coordinate helper (screen → world) ─────────────────────────
 
   function toCanvas(e: React.PointerEvent): Point {
     const canvas = canvasRef.current;
     if (!canvas) return { x: 0, y: 0 };
     const rect = canvas.getBoundingClientRect();
-    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    const vp   = viewportRef.current;
+    return {
+      x: (e.clientX - rect.left) - vp.x,
+      y: (e.clientY - rect.top)  - vp.y,
+    };
   }
 
   // ── Eraser ─────────────────────────────────────────────────────────────
@@ -305,13 +330,22 @@ export default function FocusAnnotation({ verses, verseKey, wordPos, onClose, on
   // ── Pointer events ─────────────────────────────────────────────────────
 
   function onDown(e: React.PointerEvent) {
-    if (tool === "hand") return; // hand suppresses drawing; no panning needed here
+    // Hand tool — pan the viewport
+    if (tool === "hand") {
+      isPanning.current = true;
+      panStartRef.current = {
+        mx: e.clientX, my: e.clientY,
+        vx: viewportRef.current.x, vy: viewportRef.current.y,
+      };
+      (e.target as HTMLElement).setPointerCapture(e.pointerId);
+      return;
+    }
+
     e.preventDefault();
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
     const pt = toCanvas(e);
     if (tool === "eraser") { eraseAt(pt.x, pt.y); return; }
 
-    // Mirror ModeBPage: highlight has its own colour/width; pen+arrow share pen settings
     const color   = tool === "highlight" ? hlColor : penColor;
     const width   = tool === "highlight" ? hlSize  : penSize;
     const opacity = TOOL_OPACITY[tool as "pen" | "highlight" | "arrow"] ?? 1.0;
@@ -330,6 +364,17 @@ export default function FocusAnnotation({ verses, verseKey, wordPos, onClose, on
   }
 
   function onMove(e: React.PointerEvent) {
+    // Pan mode
+    if (isPanning.current && panStartRef.current) {
+      const ps = panStartRef.current;
+      const nx = ps.vx + (e.clientX - ps.mx);
+      const ny = ps.vy + (e.clientY - ps.my);
+      viewportRef.current = { x: nx, y: ny };
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = requestAnimationFrame(render);
+      return;
+    }
+
     if (!isDrawing.current || !activeStroke.current) return;
     const pt = toCanvas(e);
     if (tool === "eraser") { if (e.buttons & 1) eraseAt(pt.x, pt.y); return; }
@@ -346,6 +391,13 @@ export default function FocusAnnotation({ verses, verseKey, wordPos, onClose, on
   }
 
   function onUp() {
+    // End panning
+    if (isPanning.current) {
+      isPanning.current   = false;
+      panStartRef.current = null;
+      return;
+    }
+
     if (!isDrawing.current || !activeStroke.current) return;
     isDrawing.current = false;
     const done = activeStroke.current;
@@ -401,42 +453,33 @@ export default function FocusAnnotation({ verses, verseKey, wordPos, onClose, on
     ? verse?.words.find((w) => w.char_type_name === "word" && w.position === wordPos)
     : null;
 
-  const cursor = tool === "hand" ? "default" : tool === "eraser" ? "cell" : "crosshair";
+  const cursor =
+    tool === "hand"   ? (isPanning.current ? "grabbing" : "grab")
+    : tool === "eraser" ? "cell"
+    : "crosshair";
+
+  const hasWordDetail = !!(focusWord?.transliteration?.text || focusWord?.translation?.text);
 
   // ── Render ─────────────────────────────────────────────────────────────
 
   return (
     <div className="fa-overlay">
 
-      {/* ── Top bar: label + utility actions + close ── */}
+      {/* ── Top bar: label + close only (Tafsir button removed) ── */}
       <div className="fa-toolbar">
-
         <div className="fa-toolbar-label">
           {focusWord
             ? <><span dir="rtl" className="fa-label-ar">{focusWord.text}</span><span className="fa-label-ref">· {verseKey}</span></>
             : <span className="fa-label-ref">Ayah {ayahNum} · {verseKey}</span>
           }
         </div>
-
-        {onOpenTafsir && (
-          <button
-            className="fa-tafsir-btn"
-            title="Open Tafsir for this verse"
-            onClick={() => { onOpenTafsir(verseKey); onClose(); }}
-          >
-            Tafsir
-          </button>
-        )}
-
         <button className="fa-close-btn" onClick={onClose} title="Close (Esc)">×</button>
       </div>
 
       {/* ── Main row ── */}
       <div className="fa-main">
 
-        {/* Left column: the same CanvasToolRail as the main canvas.
-            Wrapped in .fa-rail which resets the rail's absolute positioning
-            so it flows as a normal flex item rather than overlaying the canvas. */}
+        {/* Left tool rail */}
         <div className="fa-rail">
           <CanvasToolRail
             activeTool={tool}
@@ -455,10 +498,10 @@ export default function FocusAnnotation({ verses, verseKey, wordPos, onClose, on
           />
         </div>
 
-        {/* Drawing body */}
+        {/* Infinite drawing body */}
         <div ref={bodyRef} className="fa-body">
 
-          {/* Arabic text — pointer-events:none so canvas captures all input */}
+          {/* Arabic verse overlay — fixed in viewport, does not pan */}
           <div className="fa-arabic-display" dir="rtl" style={{ pointerEvents: "none" }}>
             {verse?.words.map((w) => {
               if (w.char_type_name === "end") {
@@ -480,7 +523,7 @@ export default function FocusAnnotation({ verses, verseKey, wordPos, onClose, on
             })}
           </div>
 
-          {/* Drawing canvas — covers entire body */}
+          {/* Infinite drawing canvas */}
           <canvas
             ref={canvasRef}
             className="fa-canvas"
@@ -492,21 +535,38 @@ export default function FocusAnnotation({ verses, verseKey, wordPos, onClose, on
           />
         </div>
 
-        {/* ── Notes panel ── */}
+        {/* Notes panel */}
         <div className="fa-notes">
-          <div className="fa-notes-word">
-            {focusWord ? (
-              <>
-                <span className="fa-notes-ar">{focusWord.text}</span>
-                {focusWord.transliteration?.text && (
-                  <span className="fa-notes-translit">{focusWord.transliteration.text}</span>
-                )}
-                {focusWord.translation?.text && (
-                  <span className="fa-notes-meaning">{focusWord.translation.text}</span>
-                )}
-              </>
-            ) : (
-              <span className="fa-notes-ayah-ref">Ayah {ayahNum} · {verseKey}</span>
+
+          {/* ── Collapsible word info ── */}
+          <div className="fa-notes-word" data-open={wordInfoOpen ? "true" : "false"}>
+
+            {/* Header — always visible, click to toggle */}
+            <button
+              className="fa-notes-word-header"
+              onClick={() => setWordInfoOpen((v) => !v)}
+              disabled={!hasWordDetail && !focusWord}
+            >
+              {focusWord ? (
+                <span className="fa-notes-ar" dir="rtl">{focusWord.text}</span>
+              ) : (
+                <span className="fa-notes-ayah-ref">Ayah {ayahNum} · {verseKey}</span>
+              )}
+              {(hasWordDetail || !focusWord) && <ChevronIcon open={wordInfoOpen} />}
+            </button>
+
+            {/* Collapsible body — transliteration + meaning */}
+            {hasWordDetail && (
+              <div className="fa-notes-word-body">
+                <div className="fa-notes-word-inner">
+                  {focusWord?.transliteration?.text && (
+                    <span className="fa-notes-translit">{focusWord.transliteration.text}</span>
+                  )}
+                  {focusWord?.translation?.text && (
+                    <span className="fa-notes-meaning">{focusWord.translation.text}</span>
+                  )}
+                </div>
+              </div>
             )}
           </div>
 

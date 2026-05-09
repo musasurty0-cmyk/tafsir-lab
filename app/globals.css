@@ -1588,20 +1588,6 @@ input, textarea { font: inherit; color: inherit; }
 }
 .sidebar-expand-btn:hover { background: var(--hover); color: var(--ink); }
 
-/* ── FocusAnnotation Tafsir button ── */
-.fa-tafsir-btn {
-  font-size: 12px;
-  font-weight: 500;
-  padding: 4px 10px;
-  border-radius: 5px;
-  background: var(--accent);
-  color: var(--bg);
-  cursor: pointer;
-  border: none;
-  margin-right: 6px;
-  transition: opacity 0.12s;
-}
-.fa-tafsir-btn:hover { opacity: 0.85; }
 
 /* ── Sidebar page list enhancements ── */
 .page-row-meta {
@@ -3369,15 +3355,12 @@ input, textarea { font: inherit; color: inherit; }
   z-index:   auto;
 }
 
-/* ── Body (drawing canvas) ── */
+/* ── Body (drawing canvas) — infinite pan surface ── */
 .fa-body {
   flex: 1;
   min-width: 0;
   position: relative;
   overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 /* ── Notes panel ── */
@@ -3391,21 +3374,55 @@ input, textarea { font: inherit; color: inherit; }
   overflow: hidden;
 }
 
+/* ── Collapsible word-info block ── */
 .fa-notes-word {
-  padding: 18px 16px 12px;
   border-bottom: 1px solid var(--line);
   flex-shrink: 0;
+}
+
+/* Clickable header: Arabic word + chevron toggle */
+.fa-notes-word-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 14px 16px 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  color: var(--ink-3);
+  transition: color var(--dur-fast) ease;
+}
+.fa-notes-word-header:hover { color: var(--ink-2); }
+.fa-notes-word-header:disabled { cursor: default; }
+
+/* Collapsible body — grid-row trick for smooth height animation */
+.fa-notes-word-body {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.fa-notes-word[data-open="false"] .fa-notes-word-body {
+  grid-template-rows: 0fr;
+}
+.fa-notes-word-inner {
+  overflow: hidden;
+  padding: 0 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
 }
 
 .fa-notes-ar {
   display: block;
   font-family: "Amiri Quran", serif;
-  font-size: 2rem;
+  font-size: 1.75rem;
   color: var(--ink);
   direction: rtl;
   text-align: right;
-  line-height: 1.6;
-  margin-bottom: 4px;
+  line-height: 1.55;
 }
 
 .fa-notes-translit {
@@ -3414,7 +3431,6 @@ input, textarea { font: inherit; color: inherit; }
   color: var(--accent);
   letter-spacing: 0.04em;
   text-transform: lowercase;
-  margin-bottom: 3px;
 }
 
 .fa-notes-meaning {
@@ -3484,10 +3500,14 @@ input, textarea { font: inherit; color: inherit; }
 }
 .fa-notes-saved[data-visible="true"] { opacity: 1; }
 
-/* ── Arabic text display ── */
+/* ── Arabic text display — fixed reference overlay at top of canvas body ── */
 .fa-arabic-display {
-  position: relative;
-  z-index: 1;
+  position: absolute;
+  top: 32px;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  text-align: center;
   font-family: "Amiri Quran", serif;
   font-size: 2.8rem;
   line-height: 2.5;
