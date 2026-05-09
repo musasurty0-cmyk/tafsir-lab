@@ -764,33 +764,36 @@ export default function FocusAnnotation({
         {/* ── Collapsible notes sidebar ── */}
         <div className="fa-notes" data-open={sidebarOpen ? "true" : "false"}>
 
-          {/* Collapsible word info */}
+          {/* Collapsible word info — the toggle header stays slim;
+              EVERYTHING (Arabic + translit + meaning) is in the collapsible body */}
           <div className="fa-notes-word" data-open={wordInfoOpen ? "true" : "false"}>
-            <button
-              className="fa-notes-word-header"
-              onClick={() => setWordInfoOpen((v) => !v)}
-              disabled={!hasWordDetail}
-            >
-              {focusWord ? (
-                <span className="fa-notes-ar" dir="rtl">{focusWord.text}</span>
-              ) : (
-                <span className="fa-notes-ayah-ref">Ayah {ayahNum} · {verseKey}</span>
-              )}
-              {hasWordDetail && <ChevronIcon open={wordInfoOpen} />}
+
+            {/* Slim toggle row */}
+            <button className="fa-notes-word-header" onClick={() => setWordInfoOpen((v) => !v)}>
+              <span className="fa-notes-word-label">
+                {focusWord ? "Word" : `Ayah ${ayahNum}`}
+              </span>
+              <ChevronIcon open={wordInfoOpen} />
             </button>
 
-            {hasWordDetail && (
-              <div className="fa-notes-word-body">
-                <div className="fa-notes-word-inner">
-                  {focusWord?.transliteration?.text && (
-                    <span className="fa-notes-translit">{focusWord.transliteration.text}</span>
-                  )}
-                  {focusWord?.translation?.text && (
-                    <span className="fa-notes-meaning">{focusWord.translation.text}</span>
-                  )}
-                </div>
+            {/* Everything collapses */}
+            <div className="fa-notes-word-body">
+              <div className="fa-notes-word-inner">
+                {focusWord ? (
+                  <>
+                    <span className="fa-notes-ar" dir="rtl">{focusWord.text}</span>
+                    {focusWord.transliteration?.text && (
+                      <span className="fa-notes-translit">{focusWord.transliteration.text}</span>
+                    )}
+                    {focusWord.translation?.text && (
+                      <span className="fa-notes-meaning">{focusWord.translation.text}</span>
+                    )}
+                  </>
+                ) : (
+                  <span className="fa-notes-ayah-ref">Ayah {ayahNum} · {verseKey}</span>
+                )}
               </div>
-            )}
+            </div>
           </div>
 
           <div className="fa-notes-label">Notes</div>

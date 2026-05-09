@@ -3433,23 +3433,28 @@ input, textarea { font: inherit; color: inherit; }
   flex-shrink: 0;
 }
 
-/* Clickable header: Arabic word + chevron toggle */
+/* Slim toggle row — always visible, contains only the label + chevron */
 .fa-notes-word-header {
   width: 100%;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 14px 16px 10px;
+  padding: 9px 16px 8px;
   background: none;
   border: none;
   cursor: pointer;
-  text-align: left;
-  color: var(--ink-3);
+  color: var(--ink-4);
   transition: color var(--dur-fast) ease;
 }
 .fa-notes-word-header:hover { color: var(--ink-2); }
-.fa-notes-word-header:disabled { cursor: default; }
+
+.fa-notes-word-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
 
 /* Collapsible body — grid-row trick for smooth height animation */
 .fa-notes-word-body {
