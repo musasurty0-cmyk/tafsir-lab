@@ -2649,18 +2649,32 @@ input, textarea { font: inherit; color: inherit; }
 }
 
 /*
- * Line container — display:block direction:rtl.
- * Children are display:inline; React array elements have no DOM whitespace
- * between them, forming one continuous glyph run identical to a
- * concatenated string — with per-word click targets.
+ * Line container — flex row, RTL, centred.
+ *
+ * WHY flex instead of display:block + text-align:center:
+ *   .qcf-line is itself a flex ITEM inside .qcf-lines (a column flexbox).
+ *   text-align has no effect on flex items in some layout paths, so it
+ *   cannot reliably centre inline content here.
+ *
+ *   Making .qcf-line a flex CONTAINER with justify-content:center is the
+ *   only approach that works unconditionally:
+ *     • direction:rtl makes main-axis flow right→left — correct Arabic order.
+ *     • justify-content:center groups all word glyphs and centres them.
+ *     • For full Mushaf lines (total glyph width ≈ container width) the
+ *       centring is invisible — visually identical to before.
+ *     • For short lines (short surahs, last line of a surah, etc.) the
+ *       words are centred, matching a printed Mushaf.
+ *
+ * QCF glyph rendering is unaffected: each span holds one PUA character
+ * that the QCF page font maps to a word image; the font shaper operates
+ * per-character and does not care whether the span is inline or a flex item.
  */
 .qcf-line {
-  display:    block;
-  direction:  rtl;
-  /* Centre each line's glyph run.  Full lines are naturally near full-width so
-     centering is invisible; short lines (short surahs, single-ayah pages) are
-     centred rather than pushed to the right edge — matching a printed Mushaf. */
-  text-align: center;
+  display:         flex;
+  direction:       rtl;
+  justify-content: center;
+  align-items:     center;
+  gap:             0;          /* no extra space between glyph spans */
 }
 
 /* ── Individual glyph spans ─────────────────────────────────────────────── */
@@ -2670,9 +2684,14 @@ input, textarea { font: inherit; color: inherit; }
  * at page-turn boundaries can belong to different v2_page font files.
  */
 .qcf-glyph {
-  display:     inline;
+  /* .qcf-line is now a flex container; flex items are blockified regardless
+     of their declared display.  We set block explicitly to be unambiguous.
+     All metrics (font-size, line-height, letter/word-spacing) are still
+     inherited from .qcf-lines — do not add them here. */
+  display:     block;
   color:       #1a1a1a;
   user-select: none;
+  flex-shrink: 0;   /* glyphs must not compress — their advance width is exact */
 }
 
 .qcf-word {
