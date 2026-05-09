@@ -3326,14 +3326,43 @@ input, textarea { font: inherit; color: inherit; }
 }
 .fa-close-btn:hover { background: var(--hover); color: var(--ink); }
 
+/* ── Left rail column — hosts the CanvasToolRail as a flow item ── */
+/*
+ * The CanvasToolRail uses position:absolute by default so it can float
+ * over the main canvas in ModeBPage.  In FocusAnnotation we want it as a
+ * proper flex column, so we wrap it in .fa-rail and reset those properties.
+ *
+ * overflow:visible lets the colour/width popover (which extends to the
+ * right of the rail) appear over the drawing area without being clipped.
+ * z-index:1 ensures the popover paints above .fa-body content.
+ */
+.fa-rail {
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+  padding: 12px 6px;
+  border-right: 1px solid var(--line-strong);
+  background: var(--bg-elev);
+}
+/* Reset the absolute-float CSS so the rail sits in normal document flow */
+.fa-rail .canvas-tool-rail {
+  position: relative;
+  left:      auto;
+  top:       auto;
+  transform: none;
+  z-index:   auto;
+}
+
 /* ── Body (drawing canvas) ── */
 .fa-body {
   flex: 1;
   min-width: 0;
   position: relative;
-  /* overflow must stay visible so the CanvasToolRail colour/width popover
-     (which extends to the right of the rail) is not clipped */
-  overflow: visible;
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;

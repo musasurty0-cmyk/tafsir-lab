@@ -452,11 +452,10 @@ export default function FocusAnnotation({ verses, verseKey, wordPos, onClose, on
       {/* ── Main row ── */}
       <div className="fa-main">
 
-        {/* Drawing body — CanvasToolRail is absolutely positioned inside here,
-            mirroring exactly how it sits inside mode-b-canvas in ModeBPage */}
-        <div ref={bodyRef} className="fa-body">
-
-          {/* The same CanvasToolRail used on the main canvas */}
+        {/* Left column: the same CanvasToolRail as the main canvas.
+            Wrapped in .fa-rail which resets the rail's absolute positioning
+            so it flows as a normal flex item rather than overlaying the canvas. */}
+        <div className="fa-rail">
           <CanvasToolRail
             tool={tool}
             onToolChange={setTool}
@@ -467,6 +466,10 @@ export default function FocusAnnotation({ verses, verseKey, wordPos, onClose, on
             onUndo={undo}
             onRedo={() => {}}
           />
+        </div>
+
+        {/* Drawing body */}
+        <div ref={bodyRef} className="fa-body">
 
           {/* Arabic text — pointer-events:none so canvas captures all input */}
           <div className="fa-arabic-display" dir="rtl" style={{ pointerEvents: "none" }}>
