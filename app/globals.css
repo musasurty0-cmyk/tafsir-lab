@@ -3122,6 +3122,13 @@ input, textarea { font: inherit; color: inherit; }
   opacity: 0.28;
   cursor: not-allowed;
 }
+.ctr-btn--danger {
+  color: oklch(0.5 0.18 20);
+}
+.ctr-btn--danger:hover:not(:disabled) {
+  background: oklch(0.96 0.03 20);
+  color: oklch(0.44 0.2 20);
+}
 
 /* ── Separator ── */
 .ctr-sep {

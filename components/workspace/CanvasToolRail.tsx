@@ -7,7 +7,13 @@
  * When Pen or Highlighter is active a compact popover slides out to the right
  * showing the colour palette and three stroke-width options.
  *
- * This component is pure presentation — all state lives in ModeBPage.
+ * Props are flat — no nested ToolSettings object.  The parent tracks penColor,
+ * penSize, highlightColor, highlightSize separately and passes the right
+ * strokeSize (and size-change handler) for whichever tool is active.
+ *
+ * Optional onClear adds a "Clear all" trash button at the bottom of the rail.
+ *
+ * This component is pure presentation — all state lives in the parent.
  */
 
 import React from "react";
@@ -41,17 +47,12 @@ export const HIGHLIGHT_WIDTHS = [
   { label: "L", value: 24 },
 ];
 
-// ── ToolSettings (exported so ModeBPage can build defaults) ───────────────
+// ── Exported defaults ─────────────────────────────────────────────────────
 
-export interface ToolSettings {
-  pen:       { color: string; width: number };
-  highlight: { color: string; width: number };
-}
-
-export const DEFAULT_TOOL_SETTINGS: ToolSettings = {
-  pen:       { color: "#18181b", width: 2.5 },
-  highlight: { color: "#fbbf24", width: 14  },
-};
+export const DEFAULT_PEN_COLOR       = "#18181b";
+export const DEFAULT_PEN_SIZE        = 2.5;
+export const DEFAULT_HIGHLIGHT_COLOR = "#fbbf24";
+export const DEFAULT_HIGHLIGHT_SIZE  = 14;
 
 // ── Icons ─────────────────────────────────────────────────────────────────
 
@@ -108,6 +109,14 @@ const RedoIcon = () => (
     stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
     <path d="M21 7v6h-6"/>
     <path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3L21 13"/>
+  </svg>
+);
+
+const ClearIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="3 6 5 6 21 6"/>
+    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
   </svg>
 );
 
@@ -196,45 +205,44 @@ const RAIL_TOOLS: { id: DrawTool; Icon: () => React.ReactElement; title: string 
 // ── Props ─────────────────────────────────────────────────────────────────
 
 interface Props {
-  tool:         DrawTool;
-  onToolChange: (t: DrawTool) => void;
-  settings:     ToolSettings;
-  onSettings:   (s: ToolSettings) => void;
-  canUndo:      boolean;
-  canRedo:      boolean;
-  onUndo:       () => void;
-  onRedo:       () => void;
+  activeTool:             DrawTool;
+  onToolChange:           (t: DrawTool) => void;
+  penColor:               string;
+  onPenColorChange:       (c: string) => void;
+  highlightColor:         string;
+  onHighlightColorChange: (c: string) => void;
+  /** The size for whichever tool is currently active (pen or highlight). */
+  strokeSize:             number;
+  onStrokeSizeChange:     (s: number) => void;
+  canUndo:                boolean;
+  canRedo:                boolean;
+  onUndo:                 () => void;
+  onRedo:                 () => void;
+  /** When provided, a trash button appears at the bottom of the rail. */
+  onClear?:               () => void;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────
 
 export default function CanvasToolRail({
-  tool, onToolChange,
-  settings, onSettings,
+  activeTool, onToolChange,
+  penColor, onPenColorChange,
+  highlightColor, onHighlightColorChange,
+  strokeSize, onStrokeSizeChange,
   canUndo, canRedo,
   onUndo, onRedo,
+  onClear,
 }: Props) {
 
-  const showPopover = tool === "pen" || tool === "highlight";
-  const isHighlight = tool === "highlight";
+  const showPopover = activeTool === "pen" || activeTool === "highlight";
+  const isHighlight = activeTool === "highlight";
   const colors      = isHighlight ? HIGHLIGHT_COLORS : PEN_COLORS;
   const widths      = isHighlight ? HIGHLIGHT_WIDTHS  : PEN_WIDTHS;
-  const activeColor = isHighlight ? settings.highlight.color : settings.pen.color;
-  const activeWidth = isHighlight ? settings.highlight.width : settings.pen.width;
+  const activeColor = isHighlight ? highlightColor : penColor;
 
   function handleColor(c: string) {
-    onSettings(
-      isHighlight
-        ? { ...settings, highlight: { ...settings.highlight, color: c } }
-        : { ...settings, pen:       { ...settings.pen,       color: c } }
-    );
-  }
-  function handleWidth(w: number) {
-    onSettings(
-      isHighlight
-        ? { ...settings, highlight: { ...settings.highlight, width: w } }
-        : { ...settings, pen:       { ...settings.pen,       width: w } }
-    );
+    if (isHighlight) onHighlightColorChange(c);
+    else             onPenColorChange(c);
   }
 
   return (
@@ -249,7 +257,7 @@ export default function CanvasToolRail({
         <button
           key={id}
           className="ctr-btn"
-          data-active={tool === id ? "true" : "false"}
+          data-active={activeTool === id ? "true" : "false"}
           title={title}
           onClick={() => onToolChange(id)}
         >
@@ -258,13 +266,13 @@ export default function CanvasToolRail({
           {id === "pen" && (
             <span
               className="ctr-color-dot"
-              style={{ background: settings.pen.color }}
+              style={{ background: penColor }}
             />
           )}
           {id === "highlight" && (
             <span
               className="ctr-color-dot"
-              style={{ background: settings.highlight.color }}
+              style={{ background: highlightColor }}
             />
           )}
         </button>
@@ -290,16 +298,30 @@ export default function CanvasToolRail({
         <RedoIcon />
       </button>
 
+      {/* ── Clear all (optional) ── */}
+      {onClear && (
+        <>
+          <div className="ctr-sep" />
+          <button
+            className="ctr-btn ctr-btn--danger"
+            title="Clear all strokes"
+            onClick={onClear}
+          >
+            <ClearIcon />
+          </button>
+        </>
+      )}
+
       {/* ── Colour + size popover (pen / highlight only) ── */}
       {showPopover && (
         <ColorPopover
           colors={colors}
           widths={widths}
           activeColor={activeColor}
-          activeWidth={activeWidth}
+          activeWidth={strokeSize}
           isHighlight={isHighlight}
           onColor={handleColor}
-          onWidth={handleWidth}
+          onWidth={onStrokeSizeChange}
         />
       )}
     </div>

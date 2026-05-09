@@ -27,8 +27,10 @@ import QCFMushafPage from "./QCFMushafPage";
 import AnchoredNoteCard from "./AnchoredNoteCard";
 import DrawingCanvas, { type DrawTool, type DrawingCanvasHandle } from "./DrawingCanvas";
 import CanvasToolRail, {
-  type ToolSettings,
-  DEFAULT_TOOL_SETTINGS,
+  DEFAULT_PEN_COLOR,
+  DEFAULT_PEN_SIZE,
+  DEFAULT_HIGHLIGHT_COLOR,
+  DEFAULT_HIGHLIGHT_SIZE,
 } from "./CanvasToolRail";
 import FocusAnnotation from "./FocusAnnotation";
 
@@ -257,19 +259,18 @@ export default function ModeBPage({
   }, []); // run once after first paint
 
   // ── Drawing tool + per-tool colour/width settings ────────────────────
-  const [tool, setTool]         = useState<DrawTool>("hand");
-  const [settings, setSettings] = useState<ToolSettings>(DEFAULT_TOOL_SETTINGS);
+  const [tool,     setTool]     = useState<DrawTool>("hand");
+  const [penColor, setPenColor] = useState(DEFAULT_PEN_COLOR);
+  const [penSize,  setPenSize]  = useState(DEFAULT_PEN_SIZE);
+  const [hlColor,  setHlColor]  = useState(DEFAULT_HIGHLIGHT_COLOR);
+  const [hlSize,   setHlSize]   = useState(DEFAULT_HIGHLIGHT_SIZE);
   const [canUndo, setCanUndo]   = useState(false);
   const [canRedo, setCanRedo]   = useState(false);
   const drawingRef              = useRef<DrawingCanvasHandle>(null);
 
   // Active stroke params forwarded to DrawingCanvas
-  const strokeColor =
-    tool === "highlight" ? settings.highlight.color : settings.pen.color;
-  const strokeWidth =
-    tool === "highlight" ? settings.highlight.width
-    : tool === "arrow"   ? settings.pen.width        // arrow inherits pen width
-    : settings.pen.width;
+  const strokeColor = tool === "highlight" ? hlColor : penColor;
+  const strokeWidth = tool === "highlight" ? hlSize : penSize; // arrow inherits pen width
 
   const handleHistory = useCallback((u: boolean, r: boolean) => {
     setCanUndo(u);
@@ -700,10 +701,14 @@ export default function ModeBPage({
 
       {/* ── Vertical tool rail (left side) ── */}
       <CanvasToolRail
-        tool={tool}
+        activeTool={tool}
         onToolChange={setTool}
-        settings={settings}
-        onSettings={setSettings}
+        penColor={penColor}
+        onPenColorChange={setPenColor}
+        highlightColor={hlColor}
+        onHighlightColorChange={setHlColor}
+        strokeSize={tool === "highlight" ? hlSize : penSize}
+        onStrokeSizeChange={tool === "highlight" ? setHlSize : setPenSize}
         canUndo={canUndo}
         canRedo={canRedo}
         onUndo={() => drawingRef.current?.undo()}

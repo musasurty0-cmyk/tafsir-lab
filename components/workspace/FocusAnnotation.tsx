@@ -32,8 +32,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { Verse } from "@/lib/types";
 import type { DrawTool } from "./DrawingCanvas";
 import CanvasToolRail, {
-  type ToolSettings,
-  DEFAULT_TOOL_SETTINGS,
+  DEFAULT_PEN_COLOR,
+  DEFAULT_PEN_SIZE,
+  DEFAULT_HIGHLIGHT_COLOR,
+  DEFAULT_HIGHLIGHT_SIZE,
 } from "./CanvasToolRail";
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -154,18 +156,6 @@ interface Props {
   onOpenTafsir?:  (verseKey: string) => void;
 }
 
-// ── Trash icon (clear-all button in the header bar) ───────────────────────
-
-function TrashIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-      stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="3 6 5 6 21 6" />
-      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-    </svg>
-  );
-}
-
 // ── Component ─────────────────────────────────────────────────────────────
 
 export default function FocusAnnotation({ verses, verseKey, wordPos, onClose, onOpenTafsir }: Props) {
@@ -173,9 +163,12 @@ export default function FocusAnnotation({ verses, verseKey, wordPos, onClose, on
   const ayahNum = Number(ayahNumStr);
   const verse   = verses.find((v) => v.verse_key === verseKey) ?? verses[0];
 
-  // ── Tool + settings — same types as the main canvas ──────────────────
-  const [tool, setTool]         = useState<DrawTool>("pen");
-  const [settings, setSettings] = useState<ToolSettings>(DEFAULT_TOOL_SETTINGS);
+  // ── Tool + settings — same flat state as the main canvas ────────────
+  const [tool,     setTool]     = useState<DrawTool>("pen");
+  const [penColor, setPenColor] = useState(DEFAULT_PEN_COLOR);
+  const [penSize,  setPenSize]  = useState(DEFAULT_PEN_SIZE);
+  const [hlColor,  setHlColor]  = useState(DEFAULT_HIGHLIGHT_COLOR);
+  const [hlSize,   setHlSize]   = useState(DEFAULT_HIGHLIGHT_SIZE);
 
   // ── Stroke state ──────────────────────────────────────────────────────
   const [strokes, setStrokes] = useState<Stroke[]>([]);
@@ -319,8 +312,8 @@ export default function FocusAnnotation({ verses, verseKey, wordPos, onClose, on
     if (tool === "eraser") { eraseAt(pt.x, pt.y); return; }
 
     // Mirror ModeBPage: highlight has its own colour/width; pen+arrow share pen settings
-    const color   = tool === "highlight" ? settings.highlight.color : settings.pen.color;
-    const width   = tool === "highlight" ? settings.highlight.width : settings.pen.width;
+    const color   = tool === "highlight" ? hlColor : penColor;
+    const width   = tool === "highlight" ? hlSize  : penSize;
     const opacity = TOOL_OPACITY[tool as "pen" | "highlight" | "arrow"] ?? 1.0;
 
     isDrawing.current    = true;
@@ -425,17 +418,6 @@ export default function FocusAnnotation({ verses, verseKey, wordPos, onClose, on
           }
         </div>
 
-        {/* Clear-all button — in the top bar since CanvasToolRail doesn't have one */}
-        <button
-          className="fa-clear-btn"
-          title="Clear all strokes"
-          disabled={strokes.length === 0}
-          onClick={clearAll}
-        >
-          <TrashIcon />
-          Clear
-        </button>
-
         {onOpenTafsir && (
           <button
             className="fa-tafsir-btn"
@@ -457,14 +439,19 @@ export default function FocusAnnotation({ verses, verseKey, wordPos, onClose, on
             so it flows as a normal flex item rather than overlaying the canvas. */}
         <div className="fa-rail">
           <CanvasToolRail
-            tool={tool}
+            activeTool={tool}
             onToolChange={setTool}
-            settings={settings}
-            onSettings={setSettings}
+            penColor={penColor}
+            onPenColorChange={setPenColor}
+            highlightColor={hlColor}
+            onHighlightColorChange={setHlColor}
+            strokeSize={tool === "highlight" ? hlSize : penSize}
+            onStrokeSizeChange={tool === "highlight" ? setHlSize : setPenSize}
             canUndo={strokes.length > 0}
             canRedo={false}
             onUndo={undo}
             onRedo={() => {}}
+            onClear={clearAll}
           />
         </div>
 
