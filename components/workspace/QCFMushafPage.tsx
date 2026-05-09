@@ -67,6 +67,9 @@ interface Props {
   onRegisterAyahRef: (ayahNum: number, el: HTMLElement | null) => void;
   onRegisterWordRef: (ayahNum: number, wordPos: number, el: HTMLElement | null) => void;
   onOpenFocus:       (verseKey: string, wordPos: number | null) => void;
+  /** Words that have at least one note — shown with a persistent highlight.
+   *  Format: "${ayahNumber}:${wordPosition}"  (fix #7) */
+  notedWordKeys?:    ReadonlySet<string>;
 }
 
 // ── Word entry collapsed for line grouping ──────────────────────────────────
@@ -107,6 +110,7 @@ function Skeleton({ cardRef }: { cardRef: React.RefObject<HTMLDivElement | null>
 export default function QCFMushafPage({
   verses, pageNumber, chapter, loading = false,
   cardRef, onRegisterAyahRef, onRegisterWordRef, onOpenFocus,
+  notedWordKeys,
 }: Props) {
 
   const [fontReady, setFontReady] = useState(false);
@@ -263,6 +267,8 @@ export default function QCFMushafPage({
                       "qcf-glyph",
                       isWord ? "qcf-word" : "",
                       isEnd  ? "qcf-end"  : "",
+                      isWord && notedWordKeys?.has(`${word.ayahNum}:${word.position}`)
+                        ? "qcf-word--noted" : "",
                     ].join(" ").trim()}
                     // font-family is the only per-span style — font-size and
                     // line-height are inherited from .qcf-lines to avoid any

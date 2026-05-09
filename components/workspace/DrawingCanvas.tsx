@@ -17,19 +17,27 @@
  * through-point.  This chains quadratic arcs into one continuous smooth curve
  * with no visible joints between samples — identical to Miro/GoodNotes.
  *
- * Performance
- * ───────────
- * • All active-stroke data lives in refs → zero React re-renders during drawing.
- * • scheduleRender() = cancelAnimationFrame + requestAnimationFrame(render).
- *   Only one paint per browser frame regardless of pointer-event frequency.
- * • getCoalescedEvents() collects every OS digitiser sample between events.
- * • React state is updated exactly once per stroke, on pointerup.
+ * Canvas sizing (fix #4 — pixelation)
+ * ────────────────────────────────────
+ * Canvas physical dimensions = container.offsetWidth/Height × devicePixelRatio.
+ * offsetWidth/Height are always integer CSS pixels → no fractional rounding.
+ * We never set canvas.style.width/height from JS — CSS width:100%;height:100%
+ * handles display size.  After setting width/height attributes the context is
+ * reset automatically; applyVP re-applies the DPR + viewport transform each frame.
  *
- * Input routing (unchanged)
- * ─────────────────────────
+ * Page-scoped drawings (fix #8)
+ * ─────────────────────────────
+ * Each Stroke now carries an optional `mushafPage` field.  On render, only
+ * strokes whose mushafPage === currentMushafahPage (or whose mushafPage is
+ * absent, for legacy data) are shown.  New strokes are tagged with the current
+ * page on creation.
+ *
+ * Input routing (fix #6)
+ * ──────────────────────
  * • touch  → returns immediately; ModeBPage handles panning via touch events
  * • pen    → draws (real pressure from e.pressure)
  * • mouse  → draws (constant pressure 0.5)
+ * • hand tool → always returns early regardless of pointer type
  */
 
 import {
@@ -52,12 +60,13 @@ export interface DrawingCanvasHandle {
 type Pt = [number, number, number];
 
 export interface Stroke {
-  id:      string;
-  tool:    "pen" | "highlight" | "arrow";
-  points:  Pt[];
-  color:   string;
-  width:   number;
-  opacity: number;
+  id:          string;
+  tool:        "pen" | "highlight" | "arrow";
+  points:      Pt[];
+  color:       string;
+  width:       number;
+  opacity:     number;
+  mushafPage?: number; // which Mushaf page this stroke belongs to (fix #8)
 }
 
 interface DrawingLayer {
@@ -113,8 +122,6 @@ function hitTest(pts: Pt[], cx: number, cy: number, r: number): boolean {
 //
 // drawSmooth: renders pts as one continuous smooth curve using the midpoint-
 // quadratic technique.  lineCap/lineJoin = "round" ensures seamless joins.
-// This is the only rendering path for pen and highlight — no segment-by-segment
-// drawing, no incremental appending.
 
 function drawSmooth(
   ctx:     CanvasRenderingContext2D,
@@ -131,10 +138,8 @@ function drawSmooth(
   ctx.lineWidth     = width;
   ctx.lineCap       = "round";
   ctx.lineJoin      = "round";
-  ctx.imageSmoothingEnabled = true;
 
   if (pts.length === 1) {
-    // Isolated tap → filled circle so it's visible
     ctx.beginPath();
     ctx.arc(pts[0][0], pts[0][1], width / 2, 0, Math.PI * 2);
     ctx.fill();
@@ -148,8 +153,6 @@ function drawSmooth(
   if (pts.length === 2) {
     ctx.lineTo(pts[1][0], pts[1][1]);
   } else {
-    // Chain quadratic arcs: control = pts[i], through-point = mid(pts[i], pts[i+1])
-    // This makes the line pass smoothly THROUGH every midpoint with no joints.
     for (let i = 1; i < pts.length - 1; i++) {
       const mx = (pts[i][0] + pts[i + 1][0]) / 2;
       const my = (pts[i][1] + pts[i + 1][1]) / 2;
@@ -197,24 +200,29 @@ function paintStroke(ctx: CanvasRenderingContext2D, s: Stroke, alphaScale = 1) {
 // ── Props ──────────────────────────────────────────────────────────────────
 
 interface Props {
-  pageId:           string;
-  tool:             DrawTool;
-  strokeColor:      string;
-  strokeWidth:      number;
-  viewport:         CanvasViewport;
-  onHistoryChange?: (canUndo: boolean, canRedo: boolean) => void;
+  pageId:            string;
+  mushafPage:        number;  // current Mushaf page — used to scope drawings (fix #8)
+  tool:              DrawTool;
+  strokeColor:       string;
+  strokeWidth:       number;
+  viewport:          CanvasViewport;
+  onHistoryChange?:  (canUndo: boolean, canRedo: boolean) => void;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────
 
 const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCanvas(
-  { pageId, tool, strokeColor, strokeWidth, viewport, onHistoryChange },
+  { pageId, mushafPage, tool, strokeColor, strokeWidth, viewport, onHistoryChange },
   ref,
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef    = useRef<HTMLCanvasElement>(null);
   const hlCanvasRef  = useRef<HTMLCanvasElement | null>(null);
   const rafRef       = useRef<number>(0);
+
+  // ── tool ref — always current, safe in event-handler closures (fix #6) ──
+  const toolRef = useRef(tool);
+  useEffect(() => { toolRef.current = tool; }, [tool]);
 
   // ── Active stroke — entirely in refs, zero re-renders during drawing ──
   const isDrawingRef   = useRef(false);
@@ -227,7 +235,11 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
   const viewportRef    = useRef(viewport);
   useEffect(() => { viewportRef.current = viewport; }, [viewport]);
 
-  const myStrokesRef   = useRef<Stroke[]>([]);
+  const mushafPageRef  = useRef(mushafPage);
+  useEffect(() => { mushafPageRef.current = mushafPage; }, [mushafPage]);
+
+  const allMyStrokesRef = useRef<Stroke[]>([]);  // all strokes including other pages
+  const myStrokesRef    = useRef<Stroke[]>([]);   // filtered to current mushafPage
   const [myStrokes, setMyStrokes] = useState<Stroke[]>([]);
   useEffect(() => { myStrokesRef.current = myStrokes; }, [myStrokes]);
 
@@ -241,35 +253,52 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
   const onHistoryRef = useRef(onHistoryChange);
   useEffect(() => { onHistoryRef.current = onHistoryChange; }, [onHistoryChange]);
 
+  // Filter strokes for the current Mushaf page (fix #8)
+  // Strokes without mushafPage (legacy) are shown on every page.
+  function filterForPage(strokes: Stroke[], page: number): Stroke[] {
+    return strokes.filter(s => s.mushafPage === undefined || s.mushafPage === page);
+  }
+
   // ── render — stable, reads only from refs ─────────────────────────────
   //
-  // Called via scheduleRender (RAF) so it never runs more than once per frame.
-  // Redraws the entire scene from scratch:
-  //   1. Other users' strokes (faded)
-  //   2. My non-highlight strokes + active non-highlight stroke
-  //   3. All highlight strokes (mine + active) composited via offscreen canvas
-  //      at TOOL_OPACITY.highlight to prevent opacity compounding at overlaps
+  // Fix #4 (pixelation): use canvas.offsetWidth/Height (always integer CSS
+  // pixels) instead of getBoundingClientRect (can return fractions).  Never
+  // set canvas.style.width/height from JS — the CSS width:100%;height:100%
+  // handles display size.  After setting canvas.width the context transform
+  // is reset; applyVP then scales by dpr so all drawing is in CSS-px space.
 
   const render = useCallback(() => {
     const canvas    = canvasRef.current;
     const container = containerRef.current;
     if (!canvas || !container) return;
 
-    const dpr = window.devicePixelRatio || 1;
-    const { width, height } = container.getBoundingClientRect();
-    const w = Math.round(width * dpr), h = Math.round(height * dpr);
+    // Use integer CSS pixel dimensions to avoid sub-pixel rounding (fix #4)
+    const dpr  = window.devicePixelRatio || 1;
+    const cssW = canvas.offsetWidth  || container.offsetWidth;
+    const cssH = canvas.offsetHeight || container.offsetHeight;
+    if (!cssW || !cssH) return;
+
+    const w = Math.round(cssW * dpr);
+    const h = Math.round(cssH * dpr);
+
+    // Resize canvas buffer only when dimensions change.
+    // Setting .width/.height resets the context — applyVP re-applies transform.
     if (canvas.width !== w || canvas.height !== h) {
-      canvas.width        = w;
-      canvas.height       = h;
-      canvas.style.width  = `${Math.round(width)}px`;
-      canvas.style.height = `${Math.round(height)}px`;
+      canvas.width  = w;
+      canvas.height = h;
+      // DO NOT set canvas.style.width/height — CSS width:100%;height:100% owns it
     }
 
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
+
+    // Global quality settings (affect drawImage for highlight composite)
+    ctx.imageSmoothingEnabled = true;
+    (ctx as CanvasRenderingContext2D & { imageSmoothingQuality?: string }).imageSmoothingQuality = "high";
+
     const vp = viewportRef.current;
 
-    // Helper: apply DPR + viewport transform onto any context
+    // Apply DPR + viewport transform onto any context
     function applyVP(c: CanvasRenderingContext2D) {
       c.scale(dpr, dpr);
       c.translate(vp.x, vp.y);
@@ -278,14 +307,19 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
 
     ctx.clearRect(0, 0, w, h);
 
-    // ── Pass 1: other users' strokes ──────────────────────────────────
+    // ── Pass 1: other users' strokes (filtered to current page) ──────────
     ctx.save(); applyVP(ctx);
+    const curPage = mushafPageRef.current;
     for (const layer of otherLayersRef.current) {
-      for (const s of layer.strokes) paintStroke(ctx, s, 0.7);
+      for (const s of layer.strokes) {
+        if (s.mushafPage === undefined || s.mushafPage === curPage) {
+          paintStroke(ctx, s, 0.7);
+        }
+      }
     }
     ctx.restore();
 
-    // ── Pass 2: my non-highlight strokes + active non-highlight ───────
+    // ── Pass 2: my non-highlight strokes + active non-highlight ───────────
     ctx.save(); applyVP(ctx);
     for (const s of myStrokesRef.current) {
       if (s.tool !== "highlight") paintStroke(ctx, s);
@@ -304,11 +338,8 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     }
     ctx.restore();
 
-    // ── Pass 3: highlight composite ───────────────────────────────────
-    // All highlight strokes (committed + active) go onto an offscreen canvas
-    // at full opacity, then the whole thing is composited at 0.40 alpha.
-    // This prevents consecutive highlight strokes from compounding opacity.
-    const hlStrokes = myStrokesRef.current.filter(s => s.tool === "highlight");
+    // ── Pass 3: highlight composite ───────────────────────────────────────
+    const hlStrokes  = myStrokesRef.current.filter(s => s.tool === "highlight");
     const activeIsHL = isDrawingRef.current && activeToolRef.current === "highlight" && activePtsRef.current.length > 0;
 
     if (hlStrokes.length > 0 || activeIsHL) {
@@ -340,10 +371,10 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     rafRef.current = requestAnimationFrame(render);
   }, [render]);
 
-  // Re-render when committed strokes, viewport or other layers change
-  useEffect(() => { scheduleRender(); }, [viewport, myStrokes, otherLayers, scheduleRender]);
+  // Re-render when committed strokes, viewport, mushafPage, or other layers change
+  useEffect(() => { scheduleRender(); }, [viewport, myStrokes, otherLayers, mushafPage, scheduleRender]);
 
-  // ResizeObserver
+  // ResizeObserver — re-render on container resize
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -360,14 +391,25 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
       .then((d: { myStrokes?: Stroke[]; otherLayers?: DrawingLayer[] } | null) => {
         if (!d) return;
         if (d.myStrokes) {
-          setMyStrokes(d.myStrokes);
-          myStrokesRef.current = d.myStrokes;
-          onHistoryRef.current?.(d.myStrokes.length > 0, false);
+          allMyStrokesRef.current = d.myStrokes;
+          const filtered = filterForPage(d.myStrokes, mushafPageRef.current);
+          setMyStrokes(filtered);
+          myStrokesRef.current = filtered;
+          onHistoryRef.current?.(filtered.length > 0, false);
         }
         if (d.otherLayers) setOtherLayers(d.otherLayers);
       })
       .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pageId]);
+
+  // Re-filter when mushaf page changes (fix #8)
+  useEffect(() => {
+    const filtered = filterForPage(allMyStrokesRef.current, mushafPage);
+    setMyStrokes(filtered);
+    myStrokesRef.current = filtered;
+    onHistoryRef.current?.(filtered.length > 0, redoStackRef.current.length > 0);
+  }, [mushafPage]);
 
   useEffect(() => {
     if (!pageId) return;
@@ -391,7 +433,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
       fetch(`/api/pages/${pageId}/drawings`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ strokes: myStrokesRef.current }),
+        body:    JSON.stringify({ strokes: allMyStrokesRef.current }),
       }).catch(() => {});
     }, SAVE_DEBOUNCE);
   }, [pageId]);
@@ -401,7 +443,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     cancelAnimationFrame(rafRef.current);
   }, []);
 
-  // ── iOS suppression ────────────────────────────────────────────────────
+  // ── iOS / browser interference suppression (fix #6) ────────────────────
 
   useEffect(() => {
     const el = containerRef.current;
@@ -410,7 +452,14 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     el.addEventListener("contextmenu", prevent);
     el.addEventListener("selectstart", prevent);
     el.addEventListener("copy",        prevent);
+
+    // Prevent finger touches from generating pointer events (which could
+    // accidentally trigger draw).  Apple Pencil fires touchType:"stylus" —
+    // skip preventDefault for those so their companion PointerEvents still fire.
     const preventFingerTouch = (e: TouchEvent) => {
+      // If the current tool is "hand", let ModeBPage's touch handler manage panning
+      // without interference.  We only block touch→pointer promotion for drawing tools.
+      if (toolRef.current === "hand") return;
       let hasFinger = false;
       for (let i = 0; i < e.changedTouches.length; i++) {
         const t = e.changedTouches[i] as Touch & { touchType?: string };
@@ -438,12 +487,16 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
 
   useImperativeHandle(ref, () => ({
     undo() {
+      // Operate on the current-page view; rebuild allMyStrokes around it
       const prev = myStrokesRef.current;
       if (!prev.length) return;
-      redoStackRef.current = [...redoStackRef.current, prev[prev.length - 1]];
-      const next = prev.slice(0, -1);
-      myStrokesRef.current = next;
-      setMyStrokes(next);
+      const removed = prev[prev.length - 1];
+      redoStackRef.current = [...redoStackRef.current, removed];
+      const nextPage = prev.slice(0, -1);
+      // Remove from allMyStrokes too
+      allMyStrokesRef.current = allMyStrokesRef.current.filter(s => s.id !== removed.id);
+      myStrokesRef.current = nextPage;
+      setMyStrokes(nextPage);
       scheduleSave(); notifyHistory();
     },
     redo() {
@@ -451,12 +504,18 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
       if (!stack.length) return;
       const stroke = stack[stack.length - 1];
       redoStackRef.current = stack.slice(0, -1);
-      const next = [...myStrokesRef.current, stroke];
-      myStrokesRef.current = next;
-      setMyStrokes(next);
+      allMyStrokesRef.current = [...allMyStrokesRef.current, stroke];
+      const nextPage = [...myStrokesRef.current, stroke];
+      myStrokesRef.current = nextPage;
+      setMyStrokes(nextPage);
       scheduleSave(); notifyHistory();
     },
     clear() {
+      // Clear only strokes belonging to the current Mushaf page
+      const curPage = mushafPageRef.current;
+      allMyStrokesRef.current = allMyStrokesRef.current.filter(
+        s => s.mushafPage !== undefined && s.mushafPage !== curPage,
+      );
       redoStackRef.current = [];
       myStrokesRef.current = [];
       setMyStrokes([]);
@@ -484,6 +543,9 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     const prev = myStrokesRef.current;
     const next = prev.filter(s => !hitTest(normPts(s.points as unknown[]), wx, wy, r));
     if (next.length !== prev.length) {
+      // Sync erasures back to allMyStrokes
+      const survivingIds = new Set(next.map(s => s.id));
+      allMyStrokesRef.current = allMyStrokesRef.current.filter(s => survivingIds.has(s.id) || s.mushafPage !== mushafPageRef.current);
       redoStackRef.current = [];
       myStrokesRef.current = next;
       setMyStrokes(next);
@@ -491,20 +553,23 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     }
   }
 
-  // ── Pointer handlers ───────────────────────────────────────────────────
+  // ── Pointer handlers (fix #6 — touch is always rejected) ──────────────
 
   function onDown(e: React.PointerEvent) {
-    if (tool === "hand" || e.pointerType === "touch") return;
+    // touch → always handled by ModeBPage native touch handlers (panning)
+    if (e.pointerType === "touch") return;
+    // hand tool → never draw
+    if (toolRef.current === "hand") return;
     e.preventDefault();
     e.stopPropagation();
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
 
     const [wx, wy] = toWorld(e.clientX, e.clientY);
-    if (tool === "eraser") { eraseAt(wx, wy); return; }
+    if (toolRef.current === "eraser") { eraseAt(wx, wy); return; }
 
     const pressure = e.pointerType === "pen" ? Math.max(0.1, e.pressure) : 0.5;
     isDrawingRef.current   = true;
-    activeToolRef.current  = tool as "pen" | "highlight" | "arrow";
+    activeToolRef.current  = toolRef.current as "pen" | "highlight" | "arrow";
     activeColorRef.current = strokeColor;
     activeWidthRef.current = strokeWidth;
     activePtsRef.current   = [[wx, wy, pressure]];
@@ -512,44 +577,47 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
   }
 
   function onMove(e: React.PointerEvent) {
-    if (tool === "hand" || e.pointerType === "touch") return;
+    if (e.pointerType === "touch") return;
+    if (toolRef.current === "hand") return;
     if (!isDrawingRef.current) return;
     e.stopPropagation();
 
-    // Collect every OS digitiser sample buffered between pointer events
     const events = e.nativeEvent.getCoalescedEvents?.() ?? [e.nativeEvent];
     for (const ev of events) {
       const [wx, wy] = toWorld(ev.clientX, ev.clientY);
-      if (tool === "eraser") { if (e.buttons & 1) eraseAt(wx, wy); continue; }
+      if (toolRef.current === "eraser") { if (e.buttons & 1) eraseAt(wx, wy); continue; }
       const pressure = ev.pointerType === "pen" ? Math.max(0.1, ev.pressure) : 0.5;
       activePtsRef.current.push([wx, wy, pressure]);
     }
 
-    scheduleRender(); // redraws full accumulated stroke on next frame
+    scheduleRender();
   }
 
   function onUp(e: React.PointerEvent) {
-    if (e.pointerType !== "touch") e.preventDefault();
+    if (e.pointerType === "touch") return;
+    e.preventDefault();
     if (!isDrawingRef.current) return;
 
     isDrawingRef.current = false;
     const pts = activePtsRef.current;
     activePtsRef.current = [];
 
-    if (pts.length >= 1 && tool !== "eraser") {
+    if (pts.length >= 1 && toolRef.current !== "eraser") {
       const drawTool = activeToolRef.current;
       const done: Stroke = {
-        id:      crypto.randomUUID(),
-        tool:    drawTool,
-        points:  pts,
-        color:   activeColorRef.current,
-        width:   activeWidthRef.current,
-        opacity: TOOL_OPACITY[drawTool],
+        id:         crypto.randomUUID(),
+        tool:       drawTool,
+        points:     pts,
+        color:      activeColorRef.current,
+        width:      activeWidthRef.current,
+        opacity:    TOOL_OPACITY[drawTool],
+        mushafPage: mushafPageRef.current, // tag with current page (fix #8)
       };
       redoStackRef.current = [];
+      allMyStrokesRef.current = [...allMyStrokesRef.current, done];
       const next = [...myStrokesRef.current, done];
       myStrokesRef.current = next;
-      setMyStrokes(next); // one React update per completed stroke
+      setMyStrokes(next);
       scheduleSave();
       notifyHistory();
     }
@@ -557,17 +625,12 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     scheduleRender();
   }
 
-  const cursor =
-    tool === "pen" || tool === "arrow" ? "crosshair"
-    : tool === "highlight"             ? "cell"
-    : tool === "eraser"                ? "cell"
-    : "default";
-
   return (
     <div
       ref={containerRef}
       className="drawing-canvas-wrap"
       style={{
+        // hand tool: let pointer events fall through to the Mushaf page below
         pointerEvents:      tool === "hand" ? "none" : "auto",
         touchAction:        "none",
         WebkitTouchCallout: "none",
@@ -578,9 +641,15 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
       <canvas
         ref={canvasRef}
         className="drawing-canvas-el"
-        style={{ cursor }}
+        style={{
+          cursor: tool === "pen" || tool === "arrow" ? "crosshair"
+                : tool === "highlight"               ? "cell"
+                : tool === "eraser"                  ? "cell"
+                : "default",
+        }}
         onPointerDown={e => {
-          if (tool !== "hand" && e.pointerType !== "touch") e.preventDefault();
+          // Don't intercept touch or hand-tool gestures
+          if (e.pointerType !== "touch" && tool !== "hand") e.preventDefault();
           onDown(e);
         }}
         onPointerMove={onMove}

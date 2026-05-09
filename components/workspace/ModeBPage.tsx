@@ -117,6 +117,8 @@ export default function ModeBPage({
   }
 
   // ── Mushaf page navigation ────────────────────────────────────────────
+  // availablePages contains only pages that have at least one verse from
+  // THIS surah — so navigation never lands on a page with no surah content.
   const availablePages = useMemo(() => {
     const seen = new Set<number>();
     const pages: number[] = [];
@@ -170,6 +172,20 @@ export default function ModeBPage({
     [notes, pageAyahSet, currentMushafahPage, availablePages],
   );
 
+  // ── Word highlight for notes (fix #7) ────────────────────────────────
+  // Any word with at least one note gets a persistent subtle highlight in
+  // QCFMushafPage.  We use ALL notes (not just pageNotes) so the set is
+  // stable across page changes; QCFMushafPage only renders the current page.
+  const notedWordKeys = useMemo<ReadonlySet<string>>(() => {
+    const keys = new Set<string>();
+    for (const note of notes) {
+      if (note.anchorType === "word" && note.ayahNumber != null && note.wordPosition != null) {
+        keys.add(`${note.ayahNumber}:${note.wordPosition}`);
+      }
+    }
+    return keys;
+  }, [notes]);
+
   const openFocus = useCallback((verseKey: string, wordPos: number | null) => {
     setFocusAnchor({ verseKey, wordPos });
     // Signal Mode A to highlight this verse when in split view
@@ -179,6 +195,9 @@ export default function ModeBPage({
   const closeFocus = useCallback(() => setFocusAnchor(null), []);
 
   // ── QCF page data (fetched client-side when the page changes) ─────────
+  // Fix #1 — surah page filtering: the page API returns ALL verses on a
+  // Mushaf page (potentially from multiple surahs). We filter to only the
+  // current chapter so that border pages show only this surah's content.
   const [qcfVerses,  setQcfVerses]  = useState<QCFVerse[]>([]);
   const [qcfLoading, setQcfLoading] = useState(true);
 
@@ -194,7 +213,12 @@ export default function ModeBPage({
       })
       .then((data: { verses?: QCFVerse[] }) => {
         if (!cancelled) {
-          setQcfVerses(data.verses ?? []);
+          // Keep only verses that belong to this surah (fix #1)
+          const surahPrefix = `${chapter.id}:`;
+          const filtered = (data.verses ?? []).filter(
+            (v) => v.verse_key.startsWith(surahPrefix),
+          );
+          setQcfVerses(filtered);
           setQcfLoading(false);
         }
       })
@@ -203,7 +227,8 @@ export default function ModeBPage({
       });
 
     return () => { cancelled = true; };
-  }, [currentMushafahPage]);
+  // chapter.id is stable per workspace page — safe to include
+  }, [currentMushafahPage, chapter.id]);
 
   // ── Viewport ──────────────────────────────────────────────────────────
   const [viewport, setViewport] = useState<CanvasViewport>(() => ({
@@ -213,6 +238,23 @@ export default function ModeBPage({
   }));
   const viewportRef = useRef(viewport);
   useEffect(() => { viewportRef.current = viewport; }, [viewport]);
+
+  // ── Centering helper (fix #2) ─────────────────────────────────────────
+  // Returns the viewport x that centres the Mushaf card (720 px wide) in
+  // the canvas container, with at least 20 px padding on each side.
+  const centeredX = useCallback((zoom = 1) => {
+    const el = containerRef.current;
+    const containerW = el ? el.getBoundingClientRect().width : 800;
+    return Math.max(20, Math.round((containerW - MUSHAF_CARD_WIDTH * zoom) / 2));
+  }, []);
+
+  // Centre the page on first load (if no saved viewport) (fix #2)
+  useLayoutEffect(() => {
+    if (userPrefs?.canvasViewport) return; // honour saved position
+    const x = centeredX(1);
+    setViewport({ x, y: 40, zoom: 1 });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // run once after first paint
 
   // ── Drawing tool + per-tool colour/width settings ────────────────────
   const [tool, setTool]         = useState<DrawTool>("hand");
@@ -355,11 +397,12 @@ export default function ModeBPage({
     setCurrentMushafahPage(p);
     localStorage.setItem(MUSHAF_PAGE_KEY(pageId), String(p));
     setFocusAnchor(null);
-    // Snap viewport back to top-left so the new page starts in view
-    const next: CanvasViewport = { x: 40, y: 40, zoom: viewportRef.current.zoom };
+    // Centre the new page (fix #2)
+    const z    = viewportRef.current.zoom;
+    const next: CanvasViewport = { x: centeredX(z), y: 40, zoom: z };
     setViewport(next);
     patchViewport(next);
-  }, [pageId, patchViewport]);
+  }, [pageId, patchViewport, centeredX]);
 
   const goToPrevPage = useCallback(() => {
     const idx = availablePages.indexOf(currentMushafahPage);
@@ -527,6 +570,16 @@ export default function ModeBPage({
   const dragStart  = useRef<{ mx: number; my: number; vx: number; vy: number } | null>(null);
 
   function onPointerDown(e: React.PointerEvent) {
+    // Fix #3 — pen tool selection bug:
+    // If the pointer lands on a button / link / interactive element, do NOT
+    // call preventDefault or setPointerCapture. preventDefault on pen events
+    // prevents the browser from generating click events, so tool-rail buttons
+    // would never fire their onClick and the tool change would be lost.
+    const isInteractiveTarget = !!(e.target as HTMLElement).closest(
+      'button, a, input, select, textarea, [role="button"]',
+    );
+    if (isInteractiveTarget) return;
+
     if (focusAnchor || e.pointerType === "touch") return;
     // Prevent iOS long-press callout / compat mouse events for stylus
     if (e.pointerType === "pen") e.preventDefault();
@@ -592,6 +645,7 @@ export default function ModeBPage({
           onRegisterAyahRef={registerAyahRef}
           onRegisterWordRef={registerWordRef}
           onOpenFocus={openFocus}
+          notedWordKeys={notedWordKeys}
         />
 
         {/* SVG connector lines */}
@@ -624,9 +678,11 @@ export default function ModeBPage({
       </div>
 
       {/* ── Drawing canvas overlay ── */}
+      {/* mushafPage scopes drawings to the current Mushaf page (fix #8) */}
       <DrawingCanvas
         ref={drawingRef}
         pageId={pageId}
+        mushafPage={currentMushafahPage}
         tool={tool}
         strokeColor={strokeColor}
         strokeWidth={strokeWidth}
@@ -651,7 +707,7 @@ export default function ModeBPage({
         <button className="mode-b-zoom-btn" title="Zoom in"  onClick={() => { const next = { ...viewportRef.current, zoom: clamp(viewportRef.current.zoom * 1.2, ZOOM_MIN, ZOOM_MAX) }; setViewport(next); patchViewport(next); }}>+</button>
         <span className="mode-b-zoom-label">{Math.round(viewport.zoom * 100)}%</span>
         <button className="mode-b-zoom-btn" title="Zoom out" onClick={() => { const next = { ...viewportRef.current, zoom: clamp(viewportRef.current.zoom / 1.2, ZOOM_MIN, ZOOM_MAX) }; setViewport(next); patchViewport(next); }}>−</button>
-        <button className="mode-b-zoom-btn" title="Reset view" onClick={() => { const next: CanvasViewport = { x: 40, y: 40, zoom: 1 }; setViewport(next); patchViewport(next); }} style={{ fontSize: "0.7rem" }}>↺</button>
+        <button className="mode-b-zoom-btn" title="Reset view" onClick={() => { const next: CanvasViewport = { x: centeredX(1), y: 40, zoom: 1 }; setViewport(next); patchViewport(next); }} style={{ fontSize: "0.7rem" }}>↺</button>
       </div>
 
       {/* ── Mushaf page navigator ── */}
