@@ -3071,7 +3071,7 @@ input, textarea { font: inherit; color: inherit; }
    Canvas Tool Rail  — vertical left-side toolbar for Mode B
    ═══════════════════════════════════════════════════════════════════════════ */
 
-/* ── Rail container ── */
+/* ── Rail container — bare float, no panel chrome ── */
 .canvas-tool-rail {
   position: absolute;
   left: 14px;
@@ -3082,15 +3082,9 @@ input, textarea { font: inherit; color: inherit; }
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
-  padding: 6px;
+  gap: 3px;
 
-  background: var(--bg-elev);
-  border-radius: var(--radius-xl);
-  border: 1px solid var(--line-strong);
-  box-shadow: var(--shadow-md);
-
-  /* Ensure popover children can overflow to the right */
+  /* No background, border, or shadow — icons float free */
   overflow: visible;
 }
 
@@ -3107,16 +3101,21 @@ input, textarea { font: inherit; color: inherit; }
   align-items: center;
   justify-content: center;
   color: var(--ink-3);
-  transition: background var(--dur-fast) ease, color var(--dur-fast) ease;
+  transition:
+    background var(--dur-fast) ease,
+    color     var(--dur-fast) ease,
+    box-shadow var(--dur-fast) ease;
   flex-shrink: 0;
 }
 .ctr-btn:hover:not(:disabled) {
-  background: var(--hover);
+  background: var(--bg-elev);
   color: var(--ink);
+  box-shadow: var(--shadow-sm);
 }
 .ctr-btn[data-active="true"] {
-  background: var(--accent-soft);
+  background: var(--bg-elev);
   color: var(--accent-ink);
+  box-shadow: var(--shadow-sm);
 }
 .ctr-btn:disabled {
   opacity: 0.28;
@@ -3132,11 +3131,12 @@ input, textarea { font: inherit; color: inherit; }
 
 /* ── Separator ── */
 .ctr-sep {
-  width: 22px;
+  width: 16px;
   height: 1px;
   background: var(--line);
-  margin: 3px 0;
+  margin: 2px 0;
   flex-shrink: 0;
+  opacity: 0.5;
 }
 
 /* ── Colour indicator dot (pen / highlight icons) ── */
@@ -3356,9 +3356,9 @@ input, textarea { font: inherit; color: inherit; }
   align-items: center;
   justify-content: center;
   overflow: visible;
-  padding: 12px 6px;
+  padding: 12px 10px;
   border-right: 1px solid var(--line-strong);
-  background: var(--bg-elev);
+  background: var(--bg);
 }
 /* Reset the absolute-float CSS so the rail sits in normal document flow */
 .fa-rail .canvas-tool-rail {
