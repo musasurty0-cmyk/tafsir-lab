@@ -32,6 +32,12 @@ interface Props {
   onClose:  () => void;
 }
 
+// ── Helpers ───────────────────────────────────────────────────────────────
+
+function stripTags(html: string): string {
+  return html.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
+}
+
 // ── Static lists ───────────────────────────────────────────────────────────
 
 const TRANSLATIONS_LIST = [
@@ -235,7 +241,7 @@ export default function TafsirDrawer({ open, verseKey, verses, onClose }: Props)
               <div className="drawer-verse-arabic">{activeVerse.text_uthmani}</div>
               {activeVerse.translations?.[0]?.text && (
                 <div className="drawer-verse-translation">
-                  {activeVerse.translations[0].text}
+                  {stripTags(activeVerse.translations[0].text)}
                 </div>
               )}
             </div>
