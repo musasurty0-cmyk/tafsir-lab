@@ -134,13 +134,29 @@ function AnnotateStep() {
   const colorRef = useRef(color);
   useEffect(() => { colorRef.current = color; }, [color]);
 
-  function toCanvasXY(e: React.PointerEvent<HTMLCanvasElement>) {
-    const c = canvasRef.current!;
-    const r = c.getBoundingClientRect();
-    return {
-      x: (e.clientX - r.left) * (c.width  / r.width),
-      y: (e.clientY - r.top)  * (c.height / r.height),
+  // Match canvas buffer to its CSS display size × DPR so the transparent
+  // overlay isn't scaled — a mismatched buffer blurs the text underneath
+  // via GPU compositing.
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const resize = () => {
+      const rect = canvas.getBoundingClientRect();
+      const dpr  = window.devicePixelRatio || 1;
+      canvas.width  = Math.round(rect.width  * dpr);
+      canvas.height = Math.round(rect.height * dpr);
+      canvas.getContext("2d")?.scale(dpr, dpr);
     };
+    resize();
+    const ro = new ResizeObserver(resize);
+    ro.observe(canvas);
+    return () => ro.disconnect();
+  }, []);
+
+  function toCanvasXY(e: React.PointerEvent<HTMLCanvasElement>) {
+    const r = canvasRef.current!.getBoundingClientRect();
+    // Return CSS-pixel coordinates; context is pre-scaled by DPR.
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
   }
 
   function onDown(e: React.PointerEvent<HTMLCanvasElement>) {
@@ -174,7 +190,11 @@ function AnnotateStep() {
   function clearCanvas() {
     const c = canvasRef.current;
     if (!c) return;
-    c.getContext("2d")!.clearRect(0, 0, c.width, c.height);
+    const ctx = c.getContext("2d")!;
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, c.width, c.height);
+    ctx.restore();
   }
 
   return (
@@ -213,8 +233,6 @@ function AnnotateStep() {
         {/* Transparent drawing canvas on top */}
         <canvas
           ref={canvasRef}
-          width={700}
-          height={420}
           className="bt-draw-canvas"
           style={{ touchAction: "none" }}
           onPointerDown={onDown}
