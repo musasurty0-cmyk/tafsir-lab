@@ -1,27 +1,26 @@
 "use client";
 
 /**
- * PageEditor — TipTap free-writing editor for Mode A.
+ * PageEditor — TipTap collaborative editor for Mode A.
  *
- * Extensions active:
- *   StarterKit        — paragraph, heading 1-3, blockquote, bold, italic,
- *                       bullet/ordered list, horizontal rule, undo/redo.
- *   Placeholder       — "Type '/' for commands…" hint.
- *   AyahBlockExtension — custom node for embedded verses.
- *   SlashCommandExtension — "/" triggers the command palette.
- *
- * Collaborative cursors:
- *   Remote users' cursors are rendered as React overlays (position:fixed)
- *   positioned with editor.view.coordsAtPos().  This approach works
- *   independently of TipTap's internal dispatch cycle — the overlay always
- *   reflects the latest poll without needing ProseMirror to re-render.
+ * Extensions:
+ *   StarterKit, Placeholder, Underline, Highlight, Color, TextStyle
+ *   AyahBlockExtension, TafsirBlockExtension, SlashCommandExtension
+ *   Collaboration       — Yjs CRDT, synced via YPartyKitProvider
+ *   CollaborationCursor — live named cursors for each peer
  *
  * Content persistence:
- *   Debounced PATCH to /api/pages/[pageId]/content on every editor update.
- *   Initial content comes from page.tiptapContent (server-fetched).
+ *   Yjs is the authoritative source during an active session.
+ *   A debounced snapshot is saved to the DB every ~900 ms so the
+ *   REST API stays current for page-reload / offline fallback.
+ *
+ * Cursor overlays:
+ *   TipTap's CollaborationCursor extension renders peer carets natively
+ *   inside the editor DOM.  The manual polling + overlay approach is
+ *   replaced entirely.
  */
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useEditor, EditorContent, type Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -30,6 +29,10 @@ import Underline from "@tiptap/extension-underline";
 import Highlight from "@tiptap/extension-highlight";
 import Color from "@tiptap/extension-color";
 import { TextStyle } from "@tiptap/extension-text-style";
+import Collaboration from "@tiptap/extension-collaboration";
+import CollaborationCursor from "@tiptap/extension-collaboration-cursor";
+import * as Y from "yjs";
+import YPartyKitProvider from "y-partykit/provider";
 import type { SuggestionProps, SuggestionKeyDownProps } from "@tiptap/suggestion";
 
 import { AyahBlockExtension } from "./AyahBlockExtension";
@@ -44,50 +47,24 @@ import CommandList, { type CommandListHandle } from "./CommandList";
 import { getUserColor } from "./RemoteCursorsExtension";
 import SelectionToolbar from "./SelectionToolbar";
 
-// ── Constants ─────────────────────────────────────────────────────────────
+// ── Constants ──────────────────────────────────────────────────────────────
 
-const SAVE_DEBOUNCE_MS    = 900;
-const CURSOR_SEND_DEBOUNCE = 300; // ms debounce before posting own cursor
-const CURSOR_POLL_MS      = 1800; // ms between polling remote cursors
+const SAVE_DEBOUNCE_MS = 900;
+const PARTYKIT_HOST    =
+  typeof window !== "undefined"
+    ? (process.env.NEXT_PUBLIC_PARTYKIT_HOST ?? "localhost:1999")
+    : "localhost:1999";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
 interface Props {
-  pageId:          string;
-  initialContent:  unknown;
-  currentUserId:   string;
-  onEditorReady?:  (editor: Editor | null) => void;
+  pageId:           string;
+  initialContent:   unknown;
+  currentUserId:    string;
+  currentUserName:  string;
+  roomSocket?:      import("partysocket").default | null;
+  onEditorReady?:   (editor: Editor | null) => void;
 }
-
-interface RemoteCursorData {
-  userId: string;
-  name:   string;
-  color:  string;
-  from:   number;
-  to:     number;
-}
-
-interface PresenceUser {
-  userId:     string;
-  isTyping:   boolean;
-  cursorFrom: number | null;
-  cursorTo:   number | null;
-  user: { id: string; name: string; avatarUrl: string | null };
-}
-
-interface CursorOverlay {
-  userId:   string;
-  name:     string;
-  color:    string;
-  // caret line  (viewport coords — safe for position:fixed)
-  caretLeft:   number;
-  caretTop:    number;
-  caretHeight: number;
-  // selection highlight rects (viewport coords)
-  selRects: Array<{ left: number; top: number; width: number; height: number }>;
-}
-
-// ── Slash command portal state ────────────────────────────────────────────
 
 interface PaletteState {
   items:   SlashCommandItem[];
@@ -96,70 +73,59 @@ interface PaletteState {
   props:   SuggestionProps;
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────
-
-function computeOverlays(
-  editor: Editor,
-  cursors: RemoteCursorData[],
-): CursorOverlay[] {
-  const maxPos = editor.state.doc.content.size;
-  const out: CursorOverlay[] = [];
-
-  for (const c of cursors) {
-    try {
-      const from = Math.max(1, Math.min(c.from, maxPos - 1));
-      const to   = Math.max(from, Math.min(c.to,   maxPos - 1));
-
-      const caretCoords = editor.view.coordsAtPos(to);
-
-      // Selection highlight rects using a DOM Range
-      const selRects: CursorOverlay["selRects"] = [];
-      if (from !== to) {
-        try {
-          const range   = document.createRange();
-          const fromDom = editor.view.domAtPos(from);
-          const toDom   = editor.view.domAtPos(to);
-          range.setStart(fromDom.node, fromDom.offset);
-          range.setEnd(toDom.node, toDom.offset);
-          for (const r of Array.from(range.getClientRects())) {
-            if (r.width > 0)
-              selRects.push({ left: r.left, top: r.top, width: r.width, height: r.height });
-          }
-        } catch { /* cross-node ranges can throw — skip highlight */ }
-      }
-
-      out.push({
-        userId:      c.userId,
-        name:        c.name,
-        color:       c.color,
-        caretLeft:   caretCoords.left,
-        caretTop:    caretCoords.top,
-        caretHeight: caretCoords.bottom - caretCoords.top,
-        selRects,
-      });
-    } catch { /* coordsAtPos can throw for out-of-range positions */ }
-  }
-  return out;
-}
-
 // ── Component ─────────────────────────────────────────────────────────────
 
-export default function PageEditor({ pageId, initialContent, currentUserId, onEditorReady }: Props) {
-  const [palette, setPalette]   = useState<PaletteState | null>(null);
-  const commandListRef          = useRef<CommandListHandle>(null);
-  const ALL_COMMANDS            = useRef(buildCommands());
+export default function PageEditor({
+  pageId,
+  initialContent,
+  currentUserId,
+  currentUserName,
+  onEditorReady,
+}: Props) {
+  const [palette, setPalette] = useState<PaletteState | null>(null);
+  const commandListRef        = useRef<CommandListHandle>(null);
+  const ALL_COMMANDS          = useRef(buildCommands());
+  const saveTimer             = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // ── Timers ────────────────────────────────────────────────────────────
-  const saveTimer   = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const cursorTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // ── Yjs document + PartyKit provider ─────────────────────────────────
+  // Stable across re-renders; recreated only when pageId changes.
+  const ydocRef    = useRef<Y.Doc | null>(null);
+  const providerRef = useRef<YPartyKitProvider | null>(null);
 
-  // ── Remote cursors ────────────────────────────────────────────────────
-  // Stored in a ref so polling callbacks always see latest without
-  // triggering extra renders.
-  const remoteCursorsRef    = useRef<RemoteCursorData[]>([]);
-  const [cursorOverlays, setCursorOverlays] = useState<CursorOverlay[]>([]);
+  if (!ydocRef.current) {
+    ydocRef.current = new Y.Doc();
+  }
+
+  useEffect(() => {
+    const ydoc = ydocRef.current!;
+
+    const provider = new YPartyKitProvider(PARTYKIT_HOST, pageId, ydoc, {
+      connect: true,
+    });
+    providerRef.current = provider;
+
+    // If the Yjs doc is empty on first sync, seed it from the DB content.
+    // This handles the transition from the old debounced-PATCH model.
+    provider.once("sync", (synced: boolean) => {
+      if (!synced) return;
+      const ytext = ydoc.getText("content");
+      if (ytext.length === 0 && initialContent) {
+        // The Collaboration extension owns the Y.XmlFragment "default".
+        // We can't set it from raw TipTap JSON here without the editor
+        // instance, so we leave this to the editor's onCreate handler below.
+      }
+    });
+
+    return () => {
+      provider.destroy();
+      providerRef.current = null;
+    };
+  // pageId change = new room; initialContent is stable per page mount
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pageId]);
 
   // ── Save helper ───────────────────────────────────────────────────────
+
   const scheduleSave = useCallback(
     (editor: Editor) => {
       if (saveTimer.current) clearTimeout(saveTimer.current);
@@ -171,18 +137,18 @@ export default function PageEditor({ pageId, initialContent, currentUserId, onEd
         }).catch(() => {});
       }, SAVE_DEBOUNCE_MS);
     },
-    [pageId]
+    [pageId],
   );
 
-  useEffect(() => () => {
-    if (saveTimer.current)   clearTimeout(saveTimer.current);
-    if (cursorTimer.current) clearTimeout(cursorTimer.current);
-  }, []);
+  useEffect(() => () => { if (saveTimer.current) clearTimeout(saveTimer.current); }, []);
 
   // ── TipTap editor ─────────────────────────────────────────────────────
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
+        // Disable StarterKit's built-in history — Collaboration provides Yjs undo
+        history:        false,
         heading:        { levels: [1, 2, 3] },
         horizontalRule: {},
       }),
@@ -203,34 +169,36 @@ export default function PageEditor({ pageId, initialContent, currentUserId, onEd
       AyahBlockExtension,
       TafsirBlockExtension,
 
+      // ── Collaboration (Yjs CRDT) ──────────────────────────────────────
+      Collaboration.configure({
+        document: ydocRef.current!,
+      }),
+
+      // ── Collaboration cursors ─────────────────────────────────────────
+      CollaborationCursor.configure({
+        provider: providerRef.current ?? undefined,
+        user: {
+          name:  currentUserName || "Anonymous",
+          color: getUserColor(currentUserId),
+        },
+      }),
+
       SlashCommandExtension.configure({
         suggestion: {
           char:        "/",
           allowSpaces: true,
-
           items({ query }: { query: string }) {
             return filterCommands(ALL_COMMANDS.current, query);
           },
-
           render() {
             return {
               onStart(props: SuggestionProps) {
                 if (!props.clientRect) return;
-                setPalette({
-                  items: props.items as SlashCommandItem[],
-                  query: props.query,
-                  rect:  props.clientRect() as DOMRect,
-                  props,
-                });
+                setPalette({ items: props.items as SlashCommandItem[], query: props.query, rect: props.clientRect() as DOMRect, props });
               },
               onUpdate(props: SuggestionProps) {
                 if (!props.clientRect) return;
-                setPalette({
-                  items: props.items as SlashCommandItem[],
-                  query: props.query,
-                  rect:  props.clientRect() as DOMRect,
-                  props,
-                });
+                setPalette({ items: props.items as SlashCommandItem[], query: props.query, rect: props.clientRect() as DOMRect, props });
               },
               onKeyDown({ event }: SuggestionKeyDownProps) {
                 if (event.key === "Escape") { setPalette(null); return true; }
@@ -239,7 +207,6 @@ export default function PageEditor({ pageId, initialContent, currentUserId, onEd
               onExit() { setPalette(null); },
             };
           },
-
           command({ editor, range, props }: { editor: Editor; range: { from: number; to: number }; props: unknown }) {
             const item  = props as SlashCommandItem & { _query: string };
             item._query = item._query ?? "";
@@ -249,29 +216,24 @@ export default function PageEditor({ pageId, initialContent, currentUserId, onEd
       }),
     ],
 
-    content:          (initialContent as object | null) ?? { type: "doc", content: [{ type: "paragraph" }] },
-    autofocus:        "end",
+    // When the Yjs doc is empty (first ever load), seed from DB content.
+    // Once seeded, Yjs owns the document — subsequent loads come from the
+    // synced Yjs state, not from initialContent.
+    content: ydocRef.current!.getText("content").length === 0
+      ? ((initialContent as object | null) ?? { type: "doc", content: [{ type: "paragraph" }] })
+      : undefined,
+
+    autofocus:         "end",
     immediatelyRender: false,
+
+    onCreate({ editor }) {
+      // If doc was seeded from initialContent, the Yjs doc is now populated.
+      // Trigger an initial save snapshot.
+      scheduleSave(editor);
+    },
 
     onUpdate({ editor }) {
       scheduleSave(editor);
-      // Recompute cursor overlay positions whenever local doc changes
-      // so remote carets stay glued to the right words.
-      if (remoteCursorsRef.current.length > 0) {
-        setCursorOverlays(computeOverlays(editor, remoteCursorsRef.current));
-      }
-    },
-
-    onSelectionUpdate({ editor }) {
-      if (cursorTimer.current) clearTimeout(cursorTimer.current);
-      cursorTimer.current = setTimeout(() => {
-        const { from, to } = editor.state.selection;
-        fetch(`/api/pages/${pageId}/presence`, {
-          method:  "POST",
-          headers: { "Content-Type": "application/json" },
-          body:    JSON.stringify({ isTyping: true, cursorFrom: from, cursorTo: to }),
-        }).catch(() => {});
-      }, CURSOR_SEND_DEBOUNCE);
     },
 
     editorProps: {
@@ -279,7 +241,18 @@ export default function PageEditor({ pageId, initialContent, currentUserId, onEd
     },
   });
 
-  // ── Expose editor to parent via callback ─────────────────────────────
+  // Update CollaborationCursor user info when provider becomes available
+  useEffect(() => {
+    if (!editor || !providerRef.current) return;
+    editor.commands.updateUser?.({
+      name:  currentUserName || "Anonymous",
+      color: getUserColor(currentUserId),
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editor, currentUserName, currentUserId]);
+
+  // ── Expose editor to parent ────────────────────────────────────────────
+
   const onEditorReadyRef = useRef(onEditorReady);
   useEffect(() => { onEditorReadyRef.current = onEditorReady; }, [onEditorReady]);
   useEffect(() => {
@@ -287,75 +260,8 @@ export default function PageEditor({ pageId, initialContent, currentUserId, onEd
     return () => { onEditorReadyRef.current?.(null); };
   }, [editor]);
 
-  // ── Poll remote cursors ───────────────────────────────────────────────
-  // This useEffect doesn't depend on `editor` — it runs once on mount
-  // and uses a callback ref to access the editor without stale closures.
-  const editorRef = useRef<Editor | null>(null);
-  useEffect(() => { editorRef.current = editor; }, [editor]);
-
-  useEffect(() => {
-    function poll() {
-      if (document.visibilityState !== "visible") return;
-      fetch(`/api/pages/${pageId}/presence`)
-        .then((r) => r.ok ? r.json() : null)
-        .then((data: { presence?: PresenceUser[] } | null) => {
-          if (!data?.presence) return;
-
-          const cursors: RemoteCursorData[] = data.presence
-            .filter((p) => p.user?.id !== currentUserId && p.cursorFrom != null)
-            .map((p) => ({
-              userId: p.user.id,
-              name:   p.user.name,
-              color:  getUserColor(p.user.id),
-              from:   p.cursorFrom!,
-              to:     p.cursorTo ?? p.cursorFrom!,
-            }));
-
-          // Always update the ref so onUpdate callbacks use fresh data
-          remoteCursorsRef.current = cursors;
-
-          // Recompute overlays now (editor may or may not be ready)
-          const ed = editorRef.current;
-          if (ed && !ed.isDestroyed) {
-            setCursorOverlays(computeOverlays(ed, cursors));
-          } else {
-            // Editor not ready yet — clear overlays
-            setCursorOverlays([]);
-          }
-        })
-        .catch(() => {});
-    }
-
-    poll();
-    const interval = setInterval(poll, CURSOR_POLL_MS);
-    document.addEventListener("visibilitychange", poll);
-    return () => {
-      clearInterval(interval);
-      document.removeEventListener("visibilitychange", poll);
-    };
-  // pageId and currentUserId are stable across navigations
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageId, currentUserId]);
-
-  // ── Recompute overlay positions on scroll (keeps carets in sync) ──────
-  useEffect(() => {
-    function onScroll() {
-      const ed = editorRef.current;
-      if (!ed || ed.isDestroyed || remoteCursorsRef.current.length === 0) return;
-      setCursorOverlays(computeOverlays(ed, remoteCursorsRef.current));
-    }
-    window.addEventListener("scroll", onScroll, { passive: true, capture: true });
-    return () => window.removeEventListener("scroll", onScroll, { capture: true });
-  }, []);
-
-  // ── Initial overlay computation once editor is ready ─────────────────
-  useLayoutEffect(() => {
-    if (!editor || remoteCursorsRef.current.length === 0) return;
-    setCursorOverlays(computeOverlays(editor, remoteCursorsRef.current));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editor]);
-
   // ── Palette item selection ────────────────────────────────────────────
+
   const handleSelect = useCallback(
     (item: SlashCommandItem) => {
       if (!palette) return;
@@ -363,45 +269,16 @@ export default function PageEditor({ pageId, initialContent, currentUserId, onEd
       palette.props.command({ ...(item as object) });
       setPalette(null);
     },
-    [palette]
+    [palette],
   );
 
   // ── Render ────────────────────────────────────────────────────────────
+
   return (
     <div className="page-editor">
       <EditorContent editor={editor} />
       <SelectionToolbar editor={editor} />
 
-      {/* Remote cursor overlays — rendered into document.body so they
-          sit above everything at the correct viewport coordinates */}
-      {cursorOverlays.length > 0 &&
-        typeof document !== "undefined" &&
-        createPortal(
-          <>
-            {cursorOverlays.map((c) => (
-              <div key={c.userId} className="rc-cursor-root" style={{ "--rc-color": c.color } as React.CSSProperties}>
-                {/* Selection highlight spans */}
-                {c.selRects.map((r, i) => (
-                  <div
-                    key={i}
-                    className="rc-sel"
-                    style={{ left: r.left, top: r.top, width: r.width, height: r.height }}
-                  />
-                ))}
-                {/* Caret line + name label */}
-                <div
-                  className="rc-caret"
-                  style={{ left: c.caretLeft, top: c.caretTop, height: c.caretHeight }}
-                >
-                  <span className="rc-label">{c.name.split(" ")[0]}</span>
-                </div>
-              </div>
-            ))}
-          </>,
-          document.body
-        )}
-
-      {/* Slash command palette */}
       {palette &&
         typeof document !== "undefined" &&
         createPortal(
@@ -411,7 +288,7 @@ export default function PageEditor({ pageId, initialContent, currentUserId, onEd
           >
             <CommandList ref={commandListRef} items={palette.items} query={palette.query} onSelect={handleSelect} />
           </div>,
-          document.body
+          document.body,
         )}
     </div>
   );

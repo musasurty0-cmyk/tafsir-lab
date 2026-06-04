@@ -16,7 +16,9 @@
     "db:studio": "prisma studio",
     "db:generate": "prisma generate",
     "tafsir:ingest": "npx tsx scripts/ingest-tafsir.ts",
-    "tafsir:sources": "npx tsx scripts/ingest-tafsir.ts --list-sources"
+    "tafsir:sources": "npx tsx scripts/ingest-tafsir.ts --list-sources",
+    "party:dev": "partykit dev",
+    "party:deploy": "partykit deploy"
   },
   "engines": {
     "node": ">=20.0.0 <21.0.0"
@@ -27,6 +29,8 @@
   "dependencies": {
     "@prisma/client": "^5.22.0",
     "@tiptap/core": "^2.10.3",
+    "@tiptap/extension-collaboration": "^3.25.0",
+    "@tiptap/extension-collaboration-cursor": "^2.26.2",
     "@tiptap/extension-color": "^3.22.5",
     "@tiptap/extension-highlight": "^3.22.5",
     "@tiptap/extension-placeholder": "^2.10.3",
@@ -42,11 +46,15 @@
     "jose": "^6.2.2",
     "lucide-react": "^0.468.0",
     "next": "^16.2.4",
+    "partykit": "^0.0.115",
+    "partysocket": "^1.1.19",
     "pdf-parse": "^2.4.5",
     "perfect-freehand": "^1.2.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "tldraw": "^4.5.9",
+    "y-partykit": "^0.0.33",
+    "yjs": "^13.6.31",
     "zustand": "^5.0.2"
   },
   "devDependencies": {

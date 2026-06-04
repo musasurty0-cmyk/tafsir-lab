@@ -11,6 +11,8 @@
 import Link from "next/link";
 import { Sliders } from "lucide-react";
 import type { Chapter } from "@/lib/types";
+import PresenceBar from "./PresenceBar";
+import type { PresenceData } from "@/lib/collab/usePresence";
 
 // ── Icons ──────────────────────────────────────────────────────────────────
 
@@ -76,6 +78,8 @@ interface Props {
   onToggleTweaks:     () => void;
   formattingOpen:     boolean;
   onToggleFormatting: () => void;
+  /** Live collaborators — provided by WorkspacePageView via usePresence */
+  presenceOthers?:    PresenceData[];
 }
 
 // ── Component ─────────────────────────────────────────────────────────────
@@ -95,6 +99,7 @@ export default function TopBar({
   onToggleTweaks,
   formattingOpen,
   onToggleFormatting,
+  presenceOthers = [],
 }: Props) {
   return (
     <div className="topbar">
@@ -127,6 +132,9 @@ export default function TopBar({
           </span>
         )}
       </div>
+
+      {/* ── Live presence ── */}
+      <PresenceBar others={presenceOthers} />
 
       {/* ── Actions ── */}
       <div className="topbar-actions">

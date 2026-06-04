@@ -30,8 +30,9 @@ import type { Editor } from "@tiptap/core";
 import ModeBPage, { type PageUserPrefsData } from "./ModeBPage";
 import TafsirDrawer from "./TafsirDrawer";
 import TweaksPanel, { type TweaksState, TWEAKS_DEFAULTS } from "./TweaksPanel";
-import PresenceBar from "./PresenceBar";
 import TourBubble  from "@/components/TourBubble";
+import { useRoom } from "@/lib/collab/useRoom";
+import { usePresence } from "@/lib/collab/usePresence";
 
 // ── Shared types ──────────────────────────────────────────────────────────
 
@@ -141,35 +142,28 @@ export default function WorkspacePageView({
     }
   }, [page]);
 
-  // ── Typing signal (declared early so handleNote* can reference it) ────
-  const typingTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  // ── PartyKit room + presence ──────────────────────────────────────────
+  const room = useRoom(activePageId);
+  const { others: presenceOthers, updatePresence } = usePresence({
+    socket:     room.socket,
+    userId:     currentUserId,
+    name:       "", // WorkspacePageView doesn't have the name — PageEditor fills it in
+    mode,
+    mushafPage: null,
+  });
 
-  const signalTyping = useCallback(() => {
-    if (!activePageId) return;
-    fetch(`/api/pages/${activePageId}/presence`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ isTyping: true }),
-    }).catch(() => {});
-    clearTimeout(typingTimerRef.current);
-    typingTimerRef.current = setTimeout(() => {
-      fetch(`/api/pages/${activePageId}/presence`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isTyping: false }),
-      }).catch(() => {});
-    }, 3000);
-  }, [activePageId]);
+  // Keep presence mode in sync whenever the user switches views
+  useEffect(() => {
+    updatePresence({ mode });
+  }, [mode, updatePresence]);
 
   const handleNoteCreated = useCallback((note: NoteData) => {
     setNotes((prev) => [...prev, note]);
-    signalTyping();
-  }, [signalTyping]);
+  }, []);
 
   const handleNoteUpdated = useCallback((updated: NoteData) => {
     setNotes((prev) => prev.map((n) => (n.id === updated.id ? { ...n, ...updated } : n)));
-    signalTyping();
-  }, [signalTyping]);
+  }, []);
 
   const handleNoteDeleted = useCallback((noteId: string) => {
     setNotes((prev) => prev.filter((n) => n.id !== noteId));
@@ -391,6 +385,7 @@ export default function WorkspacePageView({
         groupProgress={groupProgress}
         personalProgress={personalProgress}
         currentUserId={currentUserId}
+        roomSocket={room.socket}
         onEditorReady={setActiveEditor}
         onOpenTafsir={openTafsir}
         onProgressChange={handleProgressChange}
@@ -420,6 +415,7 @@ export default function WorkspacePageView({
         personalProgress={personalProgress}
         groupProgress={groupProgress}
         notes={notes}
+        roomSocket={room.socket}
         onOpenTafsir={openTafsir}
         onNoteUpdated={handleNoteUpdated}
         onNoteDeleted={handleNoteDeleted}
@@ -494,12 +490,9 @@ export default function WorkspacePageView({
           onToggleTweaks={() => setShowTweaks((s) => !s)}
           formattingOpen={formattingOpen}
           onToggleFormatting={handleToggleFormatting}
+          presenceOthers={presenceOthers}
         />
         <EditorToolbar editor={activeEditor} open={formattingOpen && mode !== "canvas"} />
-
-        {activePageId && (
-          <PresenceBar pageId={activePageId} currentUserId={currentUserId} />
-        )}
 
         <div className={`study-layout${mode === "split" ? " study-layout--split" : ""}`}>
 

@@ -206,13 +206,14 @@ interface Props {
   strokeColor:       string;
   strokeWidth:       number;
   viewport:          CanvasViewport;
+  roomSocket?:       import("partysocket").default | null;
   onHistoryChange?:  (canUndo: boolean, canRedo: boolean) => void;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────
 
 const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCanvas(
-  { pageId, mushafPage, tool, strokeColor, strokeWidth, viewport, onHistoryChange },
+  { pageId, mushafPage, tool, strokeColor, strokeWidth, viewport, roomSocket, onHistoryChange },
   ref,
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -246,6 +247,9 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
   const otherLayersRef = useRef<DrawingLayer[]>([]);
   const [otherLayers, setOtherLayers] = useState<DrawingLayer[]>([]);
   useEffect(() => { otherLayersRef.current = otherLayers; }, [otherLayers]);
+
+  // In-progress strokes from remote peers: { connectionId → Pt[] }
+  const remoteActiveRef = useRef<Map<string, Pt[]>>(new Map());
 
   const redoStackRef = useRef<Stroke[]>([]);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -323,7 +327,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
 
     ctx.clearRect(0, 0, w, h);
 
-    // ── Pass 1: other users' strokes (filtered to current page) ──────────
+    // ── Pass 1: other users' committed strokes (filtered to current page) ──
     ctx.save(); applyVP(ctx);
     const curPage = mushafPageRef.current;
     for (const layer of otherLayersRef.current) {
@@ -331,6 +335,12 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
         if (s.mushafPage === undefined || s.mushafPage === curPage) {
           paintStroke(ctx, s, 0.7);
         }
+      }
+    }
+    // ── Pass 1b: remote peers' in-progress strokes (live, translucent) ───
+    for (const pts of remoteActiveRef.current.values()) {
+      if (pts.length > 0) {
+        drawSmooth(ctx, pts, "#3b82f6", 3, 0.5);
       }
     }
     ctx.restore();
@@ -448,19 +458,52 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     onHistoryRef.current?.(filtered.length > 0, redoStackRef.current.length > 0);
   }, [mushafPage]);
 
+  // ── Real-time remote strokes via PartyKit socket ──────────────────────
+  // • stroke-segment: peer is actively drawing — update remoteActiveRef
+  // • stroke-complete: peer finished a stroke — add to otherLayers, clear active
+  // Falls back gracefully when no socket is provided (solo / offline).
   useEffect(() => {
-    if (!pageId) return;
-    const id = setInterval(() => {
-      if (document.visibilityState !== "visible") return;
-      fetch(`/api/pages/${pageId}/drawings`)
-        .then(r => r.ok ? r.json() : null)
-        .then((d: { myStrokes?: Stroke[]; otherLayers?: DrawingLayer[] } | null) => {
-          if (d?.otherLayers) setOtherLayers(d.otherLayers);
-        })
-        .catch(() => {});
-    }, 6000);
-    return () => clearInterval(id);
-  }, [pageId]);
+    if (!roomSocket) return;
+
+    function onMessage(evt: MessageEvent) {
+      if (typeof evt.data !== "string") return;
+      let msg: { type: string; connectionId?: string; points?: Pt[]; stroke?: Stroke; authorId?: string; authorName?: string } = { type: "" };
+      try { msg = JSON.parse(evt.data); } catch { return; }
+
+      if (msg.type === "stroke-segment" && msg.connectionId && msg.points) {
+        remoteActiveRef.current.set(msg.connectionId, msg.points);
+        scheduleRender();
+        return;
+      }
+
+      if (msg.type === "stroke-complete" && msg.connectionId && msg.stroke) {
+        remoteActiveRef.current.delete(msg.connectionId);
+        setOtherLayers((prev) => {
+          const connId     = msg.connectionId!;
+          const authorId   = msg.authorId   ?? connId;
+          const authorName = msg.authorName ?? "Peer";
+          const existing = prev.find((l) => l.authorId === authorId);
+          if (existing) {
+            return prev.map((l) =>
+              l.authorId === authorId
+                ? { ...l, strokes: [...l.strokes, msg.stroke!] }
+                : l
+            );
+          }
+          return [...prev, { authorId, authorName, strokes: [msg.stroke!] }];
+        });
+        return;
+      }
+
+      if (msg.type === "presence-leave" && msg.connectionId) {
+        remoteActiveRef.current.delete(msg.connectionId);
+        scheduleRender();
+      }
+    }
+
+    roomSocket.addEventListener("message", onMessage);
+    return () => roomSocket.removeEventListener("message", onMessage);
+  }, [roomSocket, scheduleRender]);
 
   // ── Debounced save ─────────────────────────────────────────────────────
 
@@ -627,6 +670,14 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
       activePtsRef.current.push([wx, wy, pressure]);
     }
 
+    // Broadcast active points to peers so they see the stroke in real time
+    if (roomSocket?.readyState === WebSocket.OPEN) {
+      roomSocket.send(JSON.stringify({
+        type:   "stroke-segment",
+        points: activePtsRef.current,
+      }));
+    }
+
     scheduleRender();
   }
 
@@ -648,7 +699,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
         color:      activeColorRef.current,
         width:      activeWidthRef.current,
         opacity:    TOOL_OPACITY[drawTool],
-        mushafPage: mushafPageRef.current, // tag with current page (fix #8)
+        mushafPage: mushafPageRef.current,
       };
       redoStackRef.current = [];
       allMyStrokesRef.current = [...allMyStrokesRef.current, done];
@@ -657,6 +708,14 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
       setMyStrokes(next);
       scheduleSave();
       notifyHistory();
+
+      // Broadcast completed stroke to peers
+      if (roomSocket?.readyState === WebSocket.OPEN) {
+        roomSocket.send(JSON.stringify({
+          type:   "stroke-complete",
+          stroke: done,
+        }));
+      }
     }
 
     scheduleRender();

@@ -46,6 +46,7 @@ interface Props {
   groupProgress:     Record<string, { status: ProgressStatus; lastChangedBy: string }>;
   personalProgress:  Record<string, ProgressStatus>;
   currentUserId:     string;
+  roomSocket?:       import("partysocket").default | null;
   // Split-view: highlighted verse key from Mode B (scroll + flash)
   highlightedVerseKey?: string | null;
   // Exposes the TipTap editor instance to the workspace shell
@@ -107,6 +108,7 @@ export default function ModeAPage({
   groupProgress,
   personalProgress,
   currentUserId,
+  roomSocket,
   onEditorReady,
   onOpenTafsir,
   onProgressChange,
@@ -167,6 +169,8 @@ export default function ModeAPage({
             pageId={pageId}
             initialContent={page.tiptapContent}
             currentUserId={currentUserId}
+            currentUserName={page.createdBy.name}
+            roomSocket={roomSocket ?? null}
             onEditorReady={onEditorReady}
           />
 

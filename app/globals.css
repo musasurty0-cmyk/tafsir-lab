@@ -4947,39 +4947,83 @@ input, textarea { font: inherit; color: inherit; }
   border-color: oklch(0.60 0.14 60 / 0.2);
 }
 
-/* ── Presence bar ── */
+/* ── Presence bar (PartyKit-backed) ── */
 .presence-bar {
-  display: flex;
+  display:     flex;
   align-items: center;
-  gap: 8px;
-  padding: 0 20px 6px;
-}
-.presence-avatars {
-  display: flex;
-  align-items: center;
-}
-.presence-avatar {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: var(--accent-soft);
-  color: var(--accent-ink);
-  font-size: 9px;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 2px solid var(--bg);
-  margin-left: -6px;
-  overflow: hidden;
+  gap:         2px;
   flex-shrink: 0;
 }
-.presence-avatar:first-child { margin-left: 0; }
-.presence-avatar img { width: 100%; height: 100%; object-fit: cover; }
-.presence-typing {
-  font-size: 11px;
-  color: var(--ink-3);
-  font-style: italic;
+
+.presence-avatar-wrap {
+  position: relative;
+}
+
+.presence-avatar {
+  position:        relative;
+  width:           28px;
+  height:          28px;
+  border-radius:   50%;
+  color:           #fff;
+  font-size:       10px;
+  font-weight:     700;
+  display:         flex;
+  align-items:     center;
+  justify-content: center;
+  border:          2.5px solid var(--bg);
+  margin-left:     -7px;
+  flex-shrink:     0;
+  cursor:          default;
+  transition:      transform 0.15s;
+}
+.presence-avatar-wrap:first-child .presence-avatar { margin-left: 0; }
+.presence-avatar-wrap:hover .presence-avatar { transform: translateY(-2px); z-index: 20 !important; }
+
+.presence-avatar--overflow {
+  background: var(--panel-2);
+  color:      var(--ink-2);
+  font-size:  9px;
+}
+
+.presence-mode-badge {
+  position:        absolute;
+  bottom:          -2px;
+  right:           -2px;
+  width:           13px;
+  height:          13px;
+  background:      var(--bg);
+  border-radius:   50%;
+  display:         flex;
+  align-items:     center;
+  justify-content: center;
+  color:           var(--ink-2);
+}
+
+.presence-tooltip {
+  position:     absolute;
+  bottom:       calc(100% + 7px);
+  left:         50%;
+  transform:    translateX(-50%);
+  background:   var(--panel);
+  border:       1px solid var(--line-strong);
+  border-radius: var(--radius-md);
+  padding:      5px 9px;
+  white-space:  nowrap;
+  box-shadow:   var(--shadow-md);
+  z-index:      9999;
+  pointer-events: none;
+  display:      flex;
+  flex-direction: column;
+  gap:          2px;
+}
+.presence-tooltip-name {
+  font-size:   12px;
+  font-weight: 600;
+  color:       var(--ink);
+}
+.presence-tooltip-mode {
+  font-size:  10.5px;
+  color:      var(--ink-3);
 }
 
 /* ── Remote cursors — collaborative Google-Docs-style overlay ─────���──────
@@ -5041,6 +5085,33 @@ input, textarea { font: inherit; color: inherit; }
   border-radius: 1px;
   pointer-events: none;
   z-index: 9997;
+}
+
+/* ── TipTap CollaborationCursor (replaces manual rc-* overlay) ──────────── */
+.collaboration-cursor__caret {
+  border-left:  2px solid;
+  border-right: none;
+  margin-left:  -1px;
+  margin-right: -1px;
+  pointer-events: none;
+  position:     relative;
+  word-break:   normal;
+}
+.collaboration-cursor__label {
+  border-radius:    3px 3px 3px 0;
+  color:            #fff;
+  font-size:        10px;
+  font-style:       normal;
+  font-weight:      600;
+  font-family:      system-ui, sans-serif;
+  left:             -1px;
+  line-height:      normal;
+  padding:          1px 6px 2px;
+  pointer-events:   none;
+  position:         absolute;
+  top:              -1.5em;
+  user-select:      none;
+  white-space:      nowrap;
 }
 
 /* ─────────────────────────────────────────────────────────────

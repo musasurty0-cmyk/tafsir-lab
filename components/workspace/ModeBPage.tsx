@@ -81,6 +81,7 @@ interface Props {
   personalProgress: Record<string, ProgressStatus>;
   groupProgress:    Record<string, { status: ProgressStatus; lastChangedBy: string }>;
   notes:            NoteData[];
+  roomSocket?:      import("partysocket").default | null;
   onOpenTafsir:     (verseKey: string) => void;
   onNoteUpdated:    (note: NoteData) => void;
   onNoteDeleted:    (noteId: string) => void;
@@ -95,6 +96,7 @@ export default function ModeBPage({
   verses, pageId, chapter,
   userPrefs,
   notes,
+  roomSocket,
   onOpenTafsir,
   onNoteUpdated,
   onNoteDeleted,
@@ -696,6 +698,7 @@ export default function ModeBPage({
         strokeColor={strokeColor}
         strokeWidth={strokeWidth}
         viewport={viewport}
+        roomSocket={roomSocket ?? null}
         onHistoryChange={handleHistory}
       />
 
