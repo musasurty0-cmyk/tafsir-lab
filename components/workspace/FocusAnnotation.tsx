@@ -160,36 +160,6 @@ function drawStroke(ctx: CanvasRenderingContext2D, s: Stroke) {
   ctx.restore();
 }
 
-// ── Icons ──────────────────────────────────────────────────────────────────
-
-function ChevronIcon({ open }: { open: boolean }) {
-  return (
-    <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
-      stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
-      style={{ transform: open ? "rotate(0deg)" : "rotate(-90deg)", transition: "transform 220ms cubic-bezier(0.16,1,0.3,1)", display: "block", flexShrink: 0 }}>
-      <polyline points="18 15 12 9 6 15" />
-    </svg>
-  );
-}
-
-function PanelIcon({ open }: { open: boolean }) {
-  // Two-rectangle icon that shows panel is open or closed
-  return open ? (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-      stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="3" width="18" height="18" rx="2"/>
-      <line x1="15" y1="3" x2="15" y2="21"/>
-    </svg>
-  ) : (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-      stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="3" width="18" height="18" rx="2"/>
-      <line x1="15" y1="3" x2="15" y2="21"/>
-      <path d="m17 9 3 3-3 3"/>
-    </svg>
-  );
-}
-
 // ── Props ──────────────────────────────────────────────────────────────────
 
 interface Props {
@@ -218,12 +188,6 @@ export default function FocusAnnotation({
   const toolRef = useRef(tool);
   useEffect(() => { toolRef.current = tool; }, [tool]);
 
-  // ── Sidebar collapse ───────────────────────────────────────────────────
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-
-  // ── Word-info collapse ────────────────────────────────────────────────
-  const [wordInfoOpen, setWordInfoOpen] = useState(true);
-
   // ── Viewport (world-coordinate transform) ─────────────────────────────
   // viewportRef is used directly in render() and event handlers.
   // viewport state drives the CSS transform on fa-world and triggers React renders.
@@ -244,12 +208,6 @@ export default function FocusAnnotation({
   const isPanning    = useRef(false);
   const panStartRef  = useRef<{ mx: number; my: number; vx: number; vy: number } | null>(null);
 
-  // ── Text notes ─────────────────────────────────────────────────────────
-  const [noteText, setNoteText]   = useState("");
-  const [noteSaved, setNoteSaved] = useState(false);
-  const noteTimerRef              = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const noteSavedTimerRef         = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   // ── Stroke ↔ ref sync ──────────────────────────────────────────────────
   useEffect(() => { strokesRef.current = strokes; }, [strokes]);
 
@@ -259,16 +217,6 @@ export default function FocusAnnotation({
     setStrokes(loaded);
     strokesRef.current = loaded;
   }, [verseKey, wordPos]);
-
-  useEffect(() => {
-    const key = `tl-note-text-${verseKey}-${wordPos ?? "ayah"}`;
-    setNoteText(localStorage.getItem(key) ?? "");
-  }, [verseKey, wordPos]);
-
-  useEffect(() => () => {
-    if (noteTimerRef.current)      clearTimeout(noteTimerRef.current);
-    if (noteSavedTimerRef.current) clearTimeout(noteSavedTimerRef.current);
-  }, []);
 
   // ── Viewport initialisation — centre world origin in canvas area ───────
   // The Arabic display is centred around world (0,0) via CSS transform(-50%,-50%).
@@ -284,20 +232,6 @@ export default function FocusAnnotation({
   // run once after the first paint; bodyRef is stable
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // Re-centre whenever sidebarOpen changes (canvas area width changes)
-  useEffect(() => {
-    // Small delay to let the CSS transition finish before measuring
-    const t = setTimeout(() => {
-      const el = bodyRef.current;
-      if (!el) return;
-      const { width, height } = el.getBoundingClientRect();
-      const init: Viewport = { x: width / 2, y: height / 2, zoom: 1 };
-      viewportRef.current = init;
-      setViewport(init);
-    }, 260);
-    return () => clearTimeout(t);
-  }, [sidebarOpen]);
 
   // ── Canvas render ──────────────────────────────────────────────────────
   // viewportRef is read directly so the RAF always sees the freshest value.
@@ -638,21 +572,6 @@ export default function FocusAnnotation({
     saveStrokes(verseKey, wordPos, []);
   }
 
-  // ── Notes handler ──────────────────────────────────────────────────────
-
-  function handleNoteChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
-    const val = e.target.value;
-    setNoteText(val);
-    if (noteTimerRef.current) clearTimeout(noteTimerRef.current);
-    noteTimerRef.current = setTimeout(() => {
-      try { localStorage.setItem(`tl-note-text-${verseKey}-${wordPos ?? "ayah"}`, val); }
-      catch { /* quota */ }
-      setNoteSaved(true);
-      if (noteSavedTimerRef.current) clearTimeout(noteSavedTimerRef.current);
-      noteSavedTimerRef.current = setTimeout(() => setNoteSaved(false), 1600);
-    }, 600);
-  }
-
   // ── Derived ────────────────────────────────────────────────────────────
 
   const focusWord = wordPos != null
@@ -663,8 +582,6 @@ export default function FocusAnnotation({
     tool === "hand"   ? (isPanning.current ? "grabbing" : "grab")
     : tool === "eraser" ? "cell"
     : "crosshair";
-
-  const hasWordDetail = !!(focusWord?.transliteration?.text || focusWord?.translation?.text);
 
   // CSS transform that maps world → screen (applied to fa-world div)
   const worldTransform = `translate(${viewport.x}px,${viewport.y}px) scale(${viewport.zoom})`;
@@ -750,70 +667,8 @@ export default function FocusAnnotation({
             onPointerUp={onUp}
             onPointerCancel={onUp}
           />
-
-          {/* Sidebar toggle — floats at the right edge of the canvas area */}
-          <button
-            className="fa-sidebar-toggle"
-            title={sidebarOpen ? "Collapse notes" : "Open notes"}
-            onClick={() => setSidebarOpen((v) => !v)}
-          >
-            <PanelIcon open={sidebarOpen} />
-          </button>
         </div>
 
-        {/* ── Collapsible notes sidebar ── */}
-        <div className="fa-notes" data-open={sidebarOpen ? "true" : "false"}>
-
-          {/* Collapsible word info — the toggle header stays slim;
-              EVERYTHING (Arabic + translit + meaning) is in the collapsible body */}
-          <div className="fa-notes-word" data-open={wordInfoOpen ? "true" : "false"}>
-
-            {/* Slim toggle row */}
-            <button className="fa-notes-word-header" onClick={() => setWordInfoOpen((v) => !v)}>
-              <span className="fa-notes-word-label">
-                {focusWord ? "Word" : `Ayah ${ayahNum}`}
-              </span>
-              <ChevronIcon open={wordInfoOpen} />
-            </button>
-
-            {/* Everything collapses */}
-            <div className="fa-notes-word-body">
-              <div className="fa-notes-word-inner">
-                {focusWord ? (
-                  <>
-                    <span className="fa-notes-ar" dir="rtl">{focusWord.text}</span>
-                    {focusWord.transliteration?.text && (
-                      <span className="fa-notes-translit">{focusWord.transliteration.text}</span>
-                    )}
-                    {focusWord.translation?.text && (
-                      <span className="fa-notes-meaning">{focusWord.translation.text}</span>
-                    )}
-                  </>
-                ) : (
-                  <span className="fa-notes-ayah-ref">Ayah {ayahNum} · {verseKey}</span>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="fa-notes-label">Notes</div>
-
-          <textarea
-            className="fa-notes-textarea"
-            placeholder={focusWord
-              ? `Write your notes on "${focusWord.text}"…`
-              : "Write your notes on this ayah…"}
-            value={noteText}
-            onChange={handleNoteChange}
-            spellCheck
-          />
-
-          <div className="fa-notes-footer">
-            <span className="fa-notes-saved" data-visible={noteSaved ? "true" : "false"}>
-              Saved
-            </span>
-          </div>
-        </div>
       </div>
     </div>
   );
