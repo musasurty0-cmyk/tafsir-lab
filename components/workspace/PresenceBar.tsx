@@ -31,7 +31,8 @@ function CanvasIcon() {
 
 function Avatar({ user, index }: { user: PresenceData; index: number }) {
   const [hovered, setHovered] = useState(false);
-  const initials = user.name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
+  const initials =
+    user.name.trim().split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase() || "?";
 
   return (
     <div

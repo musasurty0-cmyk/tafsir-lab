@@ -88,41 +88,37 @@ export default function PageEditor({
   const saveTimer             = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Yjs document + PartyKit provider ─────────────────────────────────
-  // Stable across re-renders; recreated only when pageId changes.
-  const ydocRef    = useRef<Y.Doc | null>(null);
-  const providerRef = useRef<YPartyKitProvider | null>(null);
+  // Created synchronously on first render so the Collaboration and
+  // CollaborationCursor extensions receive a real document + provider at
+  // configuration time (an effect would run too late).  The component is
+  // keyed by pageId in ModeAPage, so one instance = one room for its
+  // whole lifetime.
+  const collabRef  = useRef<{ ydoc: Y.Doc; provider: YPartyKitProvider } | null>(null);
+  const mountedRef = useRef(false);
 
-  if (!ydocRef.current) {
-    ydocRef.current = new Y.Doc();
-  }
-
-  useEffect(() => {
-    const ydoc = ydocRef.current!;
-
-    const provider = new YPartyKitProvider(PARTYKIT_HOST, pageId, ydoc, {
-      connect: true,
-    });
-    providerRef.current = provider;
-
-    // If the Yjs doc is empty on first sync, seed it from the DB content.
-    // This handles the transition from the old debounced-PATCH model.
-    provider.once("sync", (synced: boolean) => {
-      if (!synced) return;
-      const ytext = ydoc.getText("content");
-      if (ytext.length === 0 && initialContent) {
-        // The Collaboration extension owns the Y.XmlFragment "default".
-        // We can't set it from raw TipTap JSON here without the editor
-        // instance, so we leave this to the editor's onCreate handler below.
-      }
-    });
-
-    return () => {
-      provider.destroy();
-      providerRef.current = null;
+  if (!collabRef.current) {
+    const ydoc = new Y.Doc();
+    collabRef.current = {
+      ydoc,
+      provider: new YPartyKitProvider(PARTYKIT_HOST, pageId, ydoc, { connect: true }),
     };
-  // pageId change = new room; initialContent is stable per page mount
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageId]);
+  }
+  const { ydoc, provider } = collabRef.current;
+
+  // Connection lifecycle. Survives React Strict Mode's dev double-mount:
+  // cleanup only disconnects; the delayed destroy is skipped if the same
+  // instance re-mounted in the meantime.
+  useEffect(() => {
+    mountedRef.current = true;
+    provider.connect();
+    return () => {
+      mountedRef.current = false;
+      provider.disconnect();
+      setTimeout(() => {
+        if (!mountedRef.current) provider.destroy();
+      }, 1000);
+    };
+  }, [provider]);
 
   // ── Save helper ───────────────────────────────────────────────────────
 
@@ -171,12 +167,12 @@ export default function PageEditor({
 
       // ── Collaboration (Yjs CRDT) ──────────────────────────────────────
       Collaboration.configure({
-        document: ydocRef.current!,
+        document: ydoc,
       }),
 
       // ── Collaboration cursors ─────────────────────────────────────────
       CollaborationCursor.configure({
-        provider: providerRef.current ?? undefined,
+        provider,
         user: {
           name:  currentUserName || "Anonymous",
           color: getUserColor(currentUserId),
@@ -216,21 +212,13 @@ export default function PageEditor({
       }),
     ],
 
-    // When the Yjs doc is empty (first ever load), seed from DB content.
-    // Once seeded, Yjs owns the document — subsequent loads come from the
-    // synced Yjs state, not from initialContent.
-    content: ydocRef.current!.getText("content").length === 0
-      ? ((initialContent as object | null) ?? { type: "doc", content: [{ type: "paragraph" }] })
-      : undefined,
+    // NO `content` option here. With the Collaboration extension, passing
+    // content would inject it into the Yjs doc on EVERY mount — before the
+    // provider has synced — duplicating the document each load.  Seeding
+    // from DB content happens once, after first sync, in the effect below.
 
     autofocus:         "end",
     immediatelyRender: false,
-
-    onCreate({ editor }) {
-      // If doc was seeded from initialContent, the Yjs doc is now populated.
-      // Trigger an initial save snapshot.
-      scheduleSave(editor);
-    },
 
     onUpdate({ editor }) {
       scheduleSave(editor);
@@ -241,15 +229,29 @@ export default function PageEditor({
     },
   });
 
-  // Update CollaborationCursor user info when provider becomes available
+  // ── One-time content seeding ──────────────────────────────────────────
+  // After the provider completes its first sync: if the shared Yjs doc is
+  // still empty but the DB has content (pages created before live collab,
+  // or PartyKit storage was cleared), seed the doc from the DB snapshot.
+  const seededRef = useRef(false);
   useEffect(() => {
-    if (!editor || !providerRef.current) return;
-    editor.commands.updateUser?.({
-      name:  currentUserName || "Anonymous",
-      color: getUserColor(currentUserId),
-    });
+    if (!editor) return;
+
+    function seed() {
+      if (seededRef.current || !editor || editor.isDestroyed) return;
+      seededRef.current = true;
+      const fragment = ydoc.getXmlFragment("default");
+      if (fragment.length === 0 && initialContent) {
+        editor.commands.setContent(initialContent as object);
+      }
+    }
+
+    if (provider.synced) seed();
+    else provider.on("synced", seed);
+    return () => { provider.off("synced", seed); };
+  // initialContent is stable for the lifetime of this mount (keyed by pageId)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editor, currentUserName, currentUserId]);
+  }, [editor, provider]);
 
   // ── Expose editor to parent ────────────────────────────────────────────
 

@@ -68,6 +68,7 @@ interface Props {
   page:          FullPage | null;
   groupProgress: Record<string, { status: ProgressStatus; lastChangedBy: string }>;
   currentUserId: string;
+  currentUserName: string;
 }
 
 // ── Tweaks helpers ────────────────────────────────────────────────────────
@@ -96,6 +97,7 @@ export default function WorkspacePageView({
   page,
   groupProgress: initialGroupProgress,
   currentUserId,
+  currentUserName,
 }: Props) {
   const router = useRouter();
 
@@ -147,7 +149,7 @@ export default function WorkspacePageView({
   const { others: presenceOthers, updatePresence } = usePresence({
     socket:     room.socket,
     userId:     currentUserId,
-    name:       "", // WorkspacePageView doesn't have the name — PageEditor fills it in
+    name:       currentUserName,
     mode,
     mushafPage: null,
   });
@@ -385,6 +387,7 @@ export default function WorkspacePageView({
         groupProgress={groupProgress}
         personalProgress={personalProgress}
         currentUserId={currentUserId}
+        currentUserName={currentUserName}
         roomSocket={room.socket}
         onEditorReady={setActiveEditor}
         onOpenTafsir={openTafsir}

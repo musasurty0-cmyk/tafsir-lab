@@ -95,8 +95,12 @@ export default class TafsirRoom implements Party.Server {
     }
 
     if (msg.type === "stroke-segment" || msg.type === "stroke-complete") {
-      // Relay canvas strokes to all other peers.
-      this.room.broadcast(message, [sender.id]);
+      // Relay canvas strokes to all other peers, tagged with the sender's
+      // connection id so receivers can track per-peer in-progress strokes.
+      this.room.broadcast(
+        JSON.stringify({ ...msg, connectionId: sender.id }),
+        [sender.id],
+      );
       return;
     }
   }

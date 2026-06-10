@@ -46,6 +46,7 @@ interface Props {
   groupProgress:     Record<string, { status: ProgressStatus; lastChangedBy: string }>;
   personalProgress:  Record<string, ProgressStatus>;
   currentUserId:     string;
+  currentUserName:   string;
   roomSocket?:       import("partysocket").default | null;
   // Split-view: highlighted verse key from Mode B (scroll + flash)
   highlightedVerseKey?: string | null;
@@ -108,6 +109,7 @@ export default function ModeAPage({
   groupProgress,
   personalProgress,
   currentUserId,
+  currentUserName,
   roomSocket,
   onEditorReady,
   onOpenTafsir,
@@ -166,10 +168,11 @@ export default function ModeAPage({
 
           {/* ── Free editor ────────────────────────────────────────── */}
           <PageEditor
+            key={pageId}
             pageId={pageId}
             initialContent={page.tiptapContent}
             currentUserId={currentUserId}
-            currentUserName={page.createdBy.name}
+            currentUserName={currentUserName}
             roomSocket={roomSocket ?? null}
             onEditorReady={onEditorReady}
           />

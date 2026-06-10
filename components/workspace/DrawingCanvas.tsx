@@ -248,8 +248,13 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
   const [otherLayers, setOtherLayers] = useState<DrawingLayer[]>([]);
   useEffect(() => { otherLayersRef.current = otherLayers; }, [otherLayers]);
 
-  // In-progress strokes from remote peers: { connectionId → Pt[] }
-  const remoteActiveRef = useRef<Map<string, Pt[]>>(new Map());
+  // In-progress strokes from remote peers, keyed by connection id
+  const remoteActiveRef = useRef<Map<string, {
+    points:      Pt[];
+    mushafPage?: number;
+    color:       string;
+    width:       number;
+  }>>(new Map());
 
   const redoStackRef = useRef<Stroke[]>([]);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -338,9 +343,10 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
       }
     }
     // ── Pass 1b: remote peers' in-progress strokes (live, translucent) ───
-    for (const pts of remoteActiveRef.current.values()) {
-      if (pts.length > 0) {
-        drawSmooth(ctx, pts, "#3b82f6", 3, 0.5);
+    for (const seg of remoteActiveRef.current.values()) {
+      const onThisPage = seg.mushafPage === undefined || seg.mushafPage === curPage;
+      if (onThisPage && seg.points.length > 0) {
+        drawSmooth(ctx, seg.points, seg.color, seg.width, 0.55);
       }
     }
     ctx.restore();
@@ -458,6 +464,24 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     onHistoryRef.current?.(filtered.length > 0, redoStackRef.current.length > 0);
   }, [mushafPage]);
 
+  // ── Reconciliation poll (slow) ────────────────────────────────────────
+  // Live additions arrive via the socket, but erasures / undo / clear by
+  // peers are only persisted to the DB — this poll picks those up and also
+  // heals any missed socket messages.
+  useEffect(() => {
+    if (!pageId) return;
+    const id = setInterval(() => {
+      if (document.visibilityState !== "visible") return;
+      fetch(`/api/pages/${pageId}/drawings`)
+        .then(r => r.ok ? r.json() : null)
+        .then((d: { otherLayers?: DrawingLayer[] } | null) => {
+          if (d?.otherLayers) setOtherLayers(d.otherLayers);
+        })
+        .catch(() => {});
+    }, 15000);
+    return () => clearInterval(id);
+  }, [pageId]);
+
   // ── Real-time remote strokes via PartyKit socket ──────────────────────
   // • stroke-segment: peer is actively drawing — update remoteActiveRef
   // • stroke-complete: peer finished a stroke — add to otherLayers, clear active
@@ -467,11 +491,20 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
 
     function onMessage(evt: MessageEvent) {
       if (typeof evt.data !== "string") return;
-      let msg: { type: string; connectionId?: string; points?: Pt[]; stroke?: Stroke; authorId?: string; authorName?: string } = { type: "" };
+      let msg: {
+        type: string; connectionId?: string; points?: Pt[]; stroke?: Stroke;
+        authorId?: string; authorName?: string;
+        mushafPage?: number; color?: string; width?: number;
+      } = { type: "" };
       try { msg = JSON.parse(evt.data); } catch { return; }
 
       if (msg.type === "stroke-segment" && msg.connectionId && msg.points) {
-        remoteActiveRef.current.set(msg.connectionId, msg.points);
+        remoteActiveRef.current.set(msg.connectionId, {
+          points:     msg.points,
+          mushafPage: msg.mushafPage,
+          color:      msg.color ?? "#3b82f6",
+          width:      msg.width ?? 3,
+        });
         scheduleRender();
         return;
       }
@@ -673,8 +706,11 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     // Broadcast active points to peers so they see the stroke in real time
     if (roomSocket?.readyState === WebSocket.OPEN) {
       roomSocket.send(JSON.stringify({
-        type:   "stroke-segment",
-        points: activePtsRef.current,
+        type:       "stroke-segment",
+        points:     activePtsRef.current,
+        mushafPage: mushafPageRef.current,
+        color:      activeColorRef.current,
+        width:      activeWidthRef.current,
       }));
     }
 

@@ -49,6 +49,7 @@ export default async function PageViewPage({
     activePage,
     userPrefs,
     progressRecords,
+    currentUser,
   ] = await Promise.all([
     // Access control
     db.workspace.findUnique({
@@ -106,6 +107,11 @@ export default async function PageViewPage({
     db.groupAyahProgress.findMany({
       where:  { pageId },
       select: { surahNumber: true, ayahNumber: true, status: true, lastChangedBy: true },
+    }),
+    // Current user (for live-collab presence + cursor labels)
+    db.user.findUnique({
+      where:  { id: userId },
+      select: { name: true },
     }),
   ]);
 
@@ -167,6 +173,7 @@ export default async function PageViewPage({
       page={normalizedPage}
       groupProgress={groupProgress}
       currentUserId={userId}
+      currentUserName={currentUser?.name ?? "Anonymous"}
     />
   );
 }
