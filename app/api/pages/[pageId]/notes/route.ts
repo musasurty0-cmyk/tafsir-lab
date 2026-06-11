@@ -68,6 +68,10 @@ export async function POST(
       content?:     unknown;
       color?:       unknown;
       visibility?:  unknown;
+      offsetX?:     unknown;
+      offsetY?:     unknown;
+      width?:       unknown;
+      height?:      unknown;
     };
 
     // Basic validation — service validates anchor logic and membership.
@@ -89,6 +93,10 @@ export async function POST(
       visibility:  (body.visibility === "private" || body.visibility === "workspace" || body.visibility === "admin")
                      ? body.visibility
                      : undefined,
+      offsetX:     typeof body.offsetX === "number" ? body.offsetX : undefined,
+      offsetY:     typeof body.offsetY === "number" ? body.offsetY : undefined,
+      width:       typeof body.width   === "number" ? body.width   : undefined,
+      height:      typeof body.height  === "number" ? body.height  : undefined,
     });
 
     return NextResponse.json({ note }, { status: 201 });

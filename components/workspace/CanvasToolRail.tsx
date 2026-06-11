@@ -97,6 +97,15 @@ const EraserIcon = () => (
   </svg>
 );
 
+const TextIcon = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="4 7 4 4 20 4 20 7"/>
+    <line x1="9" y1="20" x2="15" y2="20"/>
+    <line x1="12" y1="4" x2="12" y2="20"/>
+  </svg>
+);
+
 const UndoIcon = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
     stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
@@ -146,6 +155,7 @@ const RAIL_TOOLS: { id: DrawTool; Icon: () => React.ReactElement; title: string 
   { id: "pen",       Icon: PenIcon,         title: "Pen  P"       },
   { id: "highlight", Icon: HighlighterIcon, title: "Highlight  L" },
   { id: "arrow",     Icon: ArrowIcon,       title: "Arrow  A"     },
+  { id: "text",      Icon: TextIcon,        title: "Text box  T"  },
   { id: "eraser",    Icon: EraserIcon,      title: "Eraser  E"    },
 ];
 

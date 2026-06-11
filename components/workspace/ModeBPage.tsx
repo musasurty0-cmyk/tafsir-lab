@@ -25,6 +25,7 @@ import type { ProgressStatus } from "@/lib/services/progress.service";
 import type { NoteData } from "./NoteCard";
 import QCFMushafPage from "./QCFMushafPage";
 import AnchoredNoteCard from "./AnchoredNoteCard";
+import FreeTextBox from "./FreeTextBox";
 import DrawingCanvas, { type DrawTool, type DrawingCanvasHandle } from "./DrawingCanvas";
 import CanvasToolRail, {
   DEFAULT_PEN_COLOR,
@@ -67,7 +68,7 @@ function clamp(v: number, lo: number, hi: number) { return Math.max(lo, Math.min
 // ── Keyboard → tool map ───────────────────────────────────────────────────
 
 const TOOL_HOTKEYS: Record<string, DrawTool> = {
-  h: "hand", p: "pen", l: "highlight", a: "arrow", e: "eraser",
+  h: "hand", p: "pen", l: "highlight", a: "arrow", e: "eraser", t: "text",
 };
 
 // ── Props ──────────────────────────────────────────────────────────────────
@@ -83,6 +84,7 @@ interface Props {
   notes:            NoteData[];
   roomSocket?:      import("partysocket").default | null;
   onOpenTafsir:     (verseKey: string) => void;
+  onNoteCreated?:   (note: NoteData) => void;
   onNoteUpdated:    (note: NoteData) => void;
   onNoteDeleted:    (noteId: string) => void;
   // Split-view sync
@@ -98,6 +100,7 @@ export default function ModeBPage({
   notes,
   roomSocket,
   onOpenTafsir,
+  onNoteCreated,
   onNoteUpdated,
   onNoteDeleted,
   onAyahSelect,
@@ -167,9 +170,17 @@ export default function ModeBPage({
     [pageVerses],
   );
 
+  // Free text boxes live in canvas space — visible on every Mushaf page
+  const textBoxNotes = useMemo(
+    () => notes.filter((n) => n.noteType === "textbox"),
+    [notes],
+  );
+
   // Show page-anchored notes only on the first page of the chapter
+  // (free text boxes are rendered separately as FreeTextBox)
   const pageNotes = useMemo(
     () => notes.filter((n) => {
+      if (n.noteType === "textbox") return false;
       if (n.anchorType === "page") return currentMushafahPage === availablePages[0];
       return n.ayahNumber != null && pageAyahSet.has(n.ayahNumber);
     }),
@@ -273,6 +284,35 @@ export default function ModeBPage({
   // Active stroke params forwarded to DrawingCanvas
   const strokeColor = tool === "highlight" ? hlColor : penColor;
   const strokeWidth = tool === "highlight" ? hlSize : penSize; // arrow inherits pen width
+
+  // ── Free text box placement (text tool) ───────────────────────────────
+  // Click with the text tool → create a "textbox" note at the click's
+  // world coordinates, switch back to hand so the new box is editable,
+  // and open it in edit mode immediately.
+  const [freshTextBoxId, setFreshTextBoxId] = useState<string | null>(null);
+
+  const placeTextBox = useCallback((wx: number, wy: number) => {
+    fetch(`/api/pages/${pageId}/notes`, {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({
+        noteType:   "textbox",
+        anchorType: "page",
+        content:    { type: "doc", content: [{ type: "paragraph" }] },
+        offsetX:    Math.round(wx),
+        offsetY:    Math.round(wy),
+        width:      220,
+      }),
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { note?: NoteData } | null) => {
+        if (!d?.note) return;
+        onNoteCreated?.(d.note);
+        setFreshTextBoxId(d.note.id);
+        setTool("hand"); // hand mode lets clicks reach the new box for editing
+      })
+      .catch(() => {});
+  }, [pageId, onNoteCreated]);
 
   const handleHistory = useCallback((u: boolean, r: boolean) => {
     setCanUndo(u);
@@ -686,6 +726,20 @@ export default function ModeBPage({
             />
           );
         })}
+
+        {/* Free text boxes — write anywhere on the canvas */}
+        {textBoxNotes.map((note) => (
+          <FreeTextBox
+            key={note.id}
+            note={note}
+            startEditing={note.id === freshTextBoxId}
+            onUpdated={onNoteUpdated}
+            onDeleted={(id) => {
+              if (id === freshTextBoxId) setFreshTextBoxId(null);
+              onNoteDeleted(id);
+            }}
+          />
+        ))}
       </div>
 
       {/* ── Drawing canvas overlay ── */}
@@ -700,6 +754,7 @@ export default function ModeBPage({
         viewport={viewport}
         roomSocket={roomSocket ?? null}
         onHistoryChange={handleHistory}
+        onTextPlace={placeTextBox}
       />
 
       {/* ── Vertical tool rail (left side) ── */}

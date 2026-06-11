@@ -420,6 +420,7 @@ export default function WorkspacePageView({
         notes={notes}
         roomSocket={room.socket}
         onOpenTafsir={openTafsir}
+        onNoteCreated={handleNoteCreated}
         onNoteUpdated={handleNoteUpdated}
         onNoteDeleted={handleNoteDeleted}
         onAyahSelect={handleAyahSelect}

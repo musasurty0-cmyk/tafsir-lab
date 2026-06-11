@@ -48,7 +48,7 @@ import type { CanvasViewport } from "./ModeBPage";
 
 // ── Public types ───────────────────────────────────────────────────────────
 
-export type DrawTool = "hand" | "pen" | "highlight" | "arrow" | "eraser";
+export type DrawTool = "hand" | "pen" | "highlight" | "arrow" | "eraser" | "text";
 
 export interface DrawingCanvasHandle {
   undo:  () => void;
@@ -208,12 +208,15 @@ interface Props {
   viewport:          CanvasViewport;
   roomSocket?:       import("partysocket").default | null;
   onHistoryChange?:  (canUndo: boolean, canRedo: boolean) => void;
+  /** Text tool: called with world-space coordinates when the user clicks
+   *  the canvas to place a free text box. */
+  onTextPlace?:      (worldX: number, worldY: number) => void;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────
 
 const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCanvas(
-  { pageId, mushafPage, tool, strokeColor, strokeWidth, viewport, roomSocket, onHistoryChange },
+  { pageId, mushafPage, tool, strokeColor, strokeWidth, viewport, roomSocket, onHistoryChange, onTextPlace },
   ref,
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -678,6 +681,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
 
     const [wx, wy] = toWorld(e.clientX, e.clientY);
+    if (toolRef.current === "text")   { onTextPlace?.(wx, wy); return; }
     if (toolRef.current === "eraser") { eraseAt(wx, wy); return; }
 
     const pressure = e.pointerType === "pen" ? Math.max(0.1, e.pressure) : 0.5;
@@ -777,6 +781,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
           cursor: tool === "pen" || tool === "arrow" ? "crosshair"
                 : tool === "highlight"               ? "cell"
                 : tool === "eraser"                  ? "cell"
+                : tool === "text"                    ? "text"
                 : "default",
         }}
         onPointerDown={e => {

@@ -37,6 +37,7 @@ import type { SuggestionProps, SuggestionKeyDownProps } from "@tiptap/suggestion
 
 import { AyahBlockExtension } from "./AyahBlockExtension";
 import { TafsirBlockExtension } from "./TafsirBlockExtension";
+import { ToggleListExtension } from "./ToggleListExtension";
 import {
   SlashCommandExtension,
   buildCommands,
@@ -154,7 +155,9 @@ export default function PageEditor({
           if (node.type.name === "heading") return "Heading…";
           return "Type '/' for commands, or start writing…";
         },
-        includeChildren: true,
+        // includeChildren stacked a placeholder on the list, the list item,
+        // AND the inner paragraph at once — rendering doubled ghost text.
+        includeChildren: false,
       }),
 
       Underline,
@@ -164,6 +167,7 @@ export default function PageEditor({
 
       AyahBlockExtension,
       TafsirBlockExtension,
+      ToggleListExtension,
 
       // ── Collaboration (Yjs CRDT) ──────────────────────────────────────
       Collaboration.configure({
@@ -277,19 +281,42 @@ export default function PageEditor({
   // ── Render ────────────────────────────────────────────────────────────
 
   return (
-    <div className="page-editor">
+    <div
+      className="page-editor"
+      onMouseDown={(e) => {
+        // Clicking the empty runway below the last block continues writing
+        // at the end of the document — the page feels infinitely long.
+        if (e.target === e.currentTarget && editor && !editor.isDestroyed) {
+          e.preventDefault();
+          editor.chain().focus("end").run();
+        }
+      }}
+    >
       <EditorContent editor={editor} />
       <SelectionToolbar editor={editor} />
 
       {palette &&
         typeof document !== "undefined" &&
         createPortal(
-          <div
-            className="slash-palette-anchor"
-            style={{ position: "fixed", top: palette.rect.bottom + 6, left: palette.rect.left, zIndex: 9999 }}
-          >
-            <CommandList ref={commandListRef} items={palette.items} query={palette.query} onSelect={handleSelect} />
-          </div>,
+          (() => {
+            // Keep the palette fully on-screen: flip above the caret when
+            // there isn't enough room below, and clamp horizontally.
+            const MAX_H = 324;
+            const MIN_W = 280;
+            const vh = window.innerHeight;
+            const vw = window.innerWidth;
+            const left = Math.max(8, Math.min(palette.rect.left, vw - MIN_W - 12));
+            const spaceBelow = vh - palette.rect.bottom;
+            const openUp = spaceBelow < MAX_H + 12 && palette.rect.top > spaceBelow;
+            const pos: React.CSSProperties = openUp
+              ? { position: "fixed", bottom: vh - palette.rect.top + 6, left, zIndex: 9999 }
+              : { position: "fixed", top: palette.rect.bottom + 6, left, zIndex: 9999 };
+            return (
+              <div className="slash-palette-anchor" data-open-up={openUp ? "true" : "false"} style={pos}>
+                <CommandList ref={commandListRef} items={palette.items} query={palette.query} onSelect={handleSelect} />
+              </div>
+            );
+          })(),
           document.body,
         )}
     </div>

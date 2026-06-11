@@ -1909,6 +1909,7 @@ input, textarea { font: inherit; color: inherit; }
 .mode-b-canvas[data-tool="arrow"]     { cursor: crosshair; }
 .mode-b-canvas[data-tool="highlight"] { cursor: cell; }
 .mode-b-canvas[data-tool="eraser"]    { cursor: cell; }
+.mode-b-canvas[data-tool="text"]      { cursor: text; }
 .mode-b-canvas--empty {
   display: flex; align-items: center; justify-content: center;
 }
@@ -2544,15 +2545,18 @@ input, textarea { font: inherit; color: inherit; }
  * like a document card.
  */
 .qcf-page {
-  position:            relative;
+  position:       relative;
   /* Width matched by MUSHAF_CARD_WIDTH in ModeBPage.tsx */
-  padding:             64px 64px 56px;
-  /* Own compositing layer — keeps glyphs crisp under CSS scale() */
-  transform:           translateZ(0);
-  backface-visibility: hidden;
-  will-change:         transform;
-  display:             flex;
-  flex-direction:      column;
+  padding:        64px 64px 56px;
+  /* NO transform/will-change here — promoting this element to its own
+     GPU layer rasterizes the glyphs once and stretches the cached texture
+     under the parent zoom scale(), making the text grainy.  Without layer
+     promotion the browser re-renders text at native resolution. */
+  display:        flex;
+  flex-direction: column;
+  -webkit-font-smoothing:  antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 /* ── Surah header ─────────────────────────────────────────────────────────── */
@@ -3009,6 +3013,102 @@ input, textarea { font: inherit; color: inherit; }
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
+   Free text boxes — write anywhere on the Mode B canvas
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.free-textbox {
+  position: absolute;
+  z-index: 12;
+  min-height: 28px;
+  padding: 6px 8px 14px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  animation: textbox-in 0.18s cubic-bezier(0.22, 1, 0.36, 1) both;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+}
+@keyframes textbox-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: none; }
+}
+.free-textbox:hover,
+.free-textbox:focus-within {
+  border-color: var(--line-strong);
+  background: color-mix(in oklch, var(--bg-elev) 88%, transparent);
+  box-shadow: var(--shadow-sm);
+}
+
+.free-textbox-chrome {
+  position: absolute;
+  top: -22px;
+  left: 0;
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
+}
+.free-textbox-chrome[data-visible="true"] {
+  opacity: 1;
+  pointer-events: auto;
+}
+.free-textbox-grip {
+  cursor: grab;
+  font-size: 11px;
+  color: var(--ink-3);
+  background: var(--bg-elev);
+  border: 1px solid var(--line-strong);
+  border-radius: 5px;
+  padding: 1px 6px;
+  user-select: none;
+  touch-action: none;
+}
+.free-textbox-grip:active { cursor: grabbing; }
+.free-textbox-delete {
+  font-size: 10px;
+  color: var(--ink-3);
+  background: var(--bg-elev);
+  border: 1px solid var(--line-strong);
+  border-radius: 5px;
+  padding: 1px 6px;
+  cursor: pointer;
+  transition: color 0.12s, border-color 0.12s;
+}
+.free-textbox-delete:hover { color: oklch(0.55 0.18 25); border-color: oklch(0.55 0.18 25 / 0.4); }
+
+.free-textbox-text,
+.free-textbox-input {
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--ink);
+  white-space: pre-wrap;
+  word-break: break-word;
+  cursor: text;
+}
+.free-textbox-input {
+  width: 100%;
+  resize: none;
+  background: transparent;
+  border: none;
+  outline: none;
+  overflow: hidden;
+  font-family: inherit;
+  padding: 0;
+}
+.free-textbox-placeholder { color: var(--ink-4); font-style: italic; }
+.free-textbox-author {
+  position: absolute;
+  bottom: 2px;
+  right: 8px;
+  font-size: 9px;
+  color: var(--ink-4);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.free-textbox:hover .free-textbox-author { opacity: 1; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
    Phase 6b — Drawing canvas overlay
    ═══════════════════════════════════════════════════════════════════════════ */
 
@@ -3373,7 +3473,7 @@ input, textarea { font: inherit; color: inherit; }
   left: 0;
   transform-origin: 0 0;
   pointer-events: none;
-  will-change: transform;
+  /* no will-change — GPU layer promotion blurs the Arabic text under zoom */
 }
 
 /* ── Arabic text display — lives inside fa-world at world origin (0,0).
@@ -3853,9 +3953,12 @@ input, textarea { font: inherit; color: inherit; }
 
 /* ── Editor shell ── */
 .page-editor {
-  /* fills the doc canvas below the cover */
-  min-height: 320px;
-  padding-bottom: 120px; /* room to click below last block */
+  /* Infinite-feeling canvas: always at least a viewport of writable space,
+     and a deep clickable runway below the last block. Clicking the runway
+     focuses the end of the document (handled in PageEditor). */
+  min-height: calc(100vh - 260px);
+  padding-bottom: 50vh;
+  cursor: text;
 }
 
 /* The ProseMirror contenteditable region */
@@ -3928,6 +4031,56 @@ input, textarea { font: inherit; color: inherit; }
 .page-editor-content hr {
   border: none; border-top: 1px solid var(--line-strong);
   margin: 2em 0;
+}
+
+/* ── Toggle list (collapsible block) ── */
+.toggle-list {
+  position: relative;
+  margin: 0.35em 0;
+  padding-left: 26px;
+  border-radius: 6px;
+}
+.toggle-list-chevron {
+  position: absolute;
+  left: 0;
+  top: 0.32em;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 5px;
+  color: var(--ink-3);
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  padding: 0;
+  transition: background 0.14s, color 0.14s;
+}
+.toggle-list-chevron:hover { background: var(--hover); color: var(--ink); }
+.toggle-list-chevron svg {
+  transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.toggle-list[data-open="true"] .toggle-list-chevron svg { transform: rotate(90deg); }
+
+/* Summary line (first paragraph) is always visible and slightly emphasised */
+.toggle-list-content > p:first-child {
+  font-weight: 550;
+  color: var(--ink);
+}
+
+/* Collapsed: hide everything after the summary line */
+.toggle-list[data-open="false"] .toggle-list-content > *:not(:first-child) {
+  display: none;
+}
+
+/* Re-opened body fades in */
+.toggle-list[data-open="true"] .toggle-list-content > *:not(:first-child) {
+  animation: toggle-body-in 0.22s ease both;
+}
+@keyframes toggle-body-in {
+  from { opacity: 0; transform: translateY(-3px); }
+  to   { opacity: 1; transform: none; }
 }
 
 /* Bold / italic */
@@ -4229,10 +4382,20 @@ input, textarea { font: inherit; color: inherit; }
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
   min-width: 240px; max-width: 320px;
-  max-height: 320px;
+  max-height: 324px;
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 4px;
   display: flex; flex-direction: column; gap: 1px;
+  animation: slash-pop 0.16s cubic-bezier(0.22, 1, 0.36, 1) both;
+  transform-origin: top left;
+}
+.slash-palette-anchor[data-open-up="true"] .slash-palette {
+  transform-origin: bottom left;
+}
+@keyframes slash-pop {
+  from { opacity: 0; transform: scale(0.96) translateY(-4px); }
+  to   { opacity: 1; transform: none; }
 }
 .slash-palette-empty {
   padding: 12px 14px;
@@ -4244,12 +4407,14 @@ input, textarea { font: inherit; color: inherit; }
   border-radius: 7px;
   text-align: left;
   width: 100%;
-  transition: background .08s;
+  transition: background 0.16s ease, transform 0.16s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .slash-palette-item[data-active="true"],
 .slash-palette-item:hover {
   background: var(--hover);
+  transform: translateX(3px);
 }
+.slash-palette-item:active { transform: translateX(3px) scale(0.985); }
 .slash-palette-icon {
   width: 28px; height: 28px;
   display: flex; align-items: center; justify-content: center;
@@ -4259,6 +4424,11 @@ input, textarea { font: inherit; color: inherit; }
   font-size: 13px; flex-shrink: 0;
   font-family: var(--font-mono); font-weight: 700;
   color: var(--ink-2);
+  transition: border-color 0.16s, color 0.16s;
+}
+.slash-palette-item[data-active="true"] .slash-palette-icon {
+  border-color: var(--accent);
+  color: var(--accent-ink);
 }
 .slash-palette-text {
   display: flex; flex-direction: column; gap: 1px; min-width: 0;
@@ -6334,3 +6504,63 @@ input, textarea { font: inherit; color: inherit; }
 .page-editor-content mark[data-color] { padding: 0.1em 0.05em; border-radius: 2px; }
 .page-editor-content u { text-underline-offset: 3px; }
 .page-editor-content s { color: var(--ink-3); }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Subtle motion polish — restrained micro-interactions across the app
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Document pane eases in on page load / page switch */
+.doc {
+  animation: doc-enter 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes doc-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* Canvas pane fades in when entering Mode B / split */
+.mode-b-canvas {
+  animation: pane-fade 0.26s ease both;
+}
+@keyframes pane-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Top bar buttons — gentle press feedback */
+.tb-btn,
+.mode-btn,
+.mode-b-zoom-btn {
+  transition: background 0.15s, color 0.15s, transform 0.12s ease;
+}
+.tb-btn:active,
+.mode-btn:active,
+.mode-b-zoom-btn:active { transform: scale(0.95); }
+
+/* Anchored note cards lift slightly on hover */
+.anc-note {
+  transition: box-shadow 0.18s ease, transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.anc-note:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+/* Sidebar page rows ease their hover state */
+.sb-page-row,
+.ws-surah-card {
+  transition: background 0.14s, border-color 0.14s, transform 0.14s ease;
+}
+
+/* Tool rail buttons */
+.ctr-btn { transition: background 0.14s, color 0.14s, transform 0.12s ease; }
+.ctr-btn:active { transform: scale(0.92); }
+
+/* Respect reduced-motion preferences everywhere */
+@media (prefers-reduced-motion: reduce) {
+  .doc, .mode-b-canvas, .slash-palette, .free-textbox,
+  .toggle-list[data-open="true"] .toggle-list-content > *:not(:first-child) {
+    animation: none !important;
+  }
+  * { transition-duration: 0.01ms !important; }
+}

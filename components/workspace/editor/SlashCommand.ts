@@ -169,6 +169,16 @@ export function buildCommands(): SlashCommandItem[] {
       },
     },
     {
+      id:          "toggle",
+      title:       "Toggle list",
+      description: "Collapsible section — click the chevron to fold",
+      icon:        "▸",
+      aliases:     ["collapse", "fold", "details", "dropdown"],
+      execute(editor, range) {
+        editor.chain().focus().deleteRange(range).setToggleList().run();
+      },
+    },
+    {
       id:          "divider",
       title:       "Divider",
       description: "Horizontal rule",
