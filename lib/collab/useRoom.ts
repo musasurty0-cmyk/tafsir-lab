@@ -16,6 +16,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import PartySocket from "partysocket";
+import { PARTYKIT_HOST } from "./config";
 
 export type RoomStatus = "connecting" | "connected" | "disconnected";
 
@@ -24,11 +25,6 @@ export interface Room {
   status:  RoomStatus;
   send:    (msg: object | ArrayBuffer) => void;
 }
-
-const PARTYKIT_HOST =
-  typeof window !== "undefined"
-    ? (process.env.NEXT_PUBLIC_PARTYKIT_HOST ?? "localhost:1999")
-    : "localhost:1999";
 
 export function useRoom(pageId: string): Room {
   const [socket, setSocket] = useState<PartySocket | null>(null);

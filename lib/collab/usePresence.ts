@@ -57,8 +57,12 @@ export function usePresence({
 }: UsePresenceOptions): UsePresenceReturn {
   const [presenceMap, setPresenceMap] = useState<PresenceMap>({});
 
-  // Track own connectionId so we can exclude self from "others"
+  // Track own connectionId so we can exclude self from "others".
+  // PartySocket generates its id client-side, so it's available immediately.
   const ownConnId = useRef<string | null>(null);
+  useEffect(() => {
+    ownConnId.current = (socket as (PartySocket & { id?: string }) | null)?.id ?? null;
+  }, [socket]);
 
   // Current own presence — keep in ref so the send closure stays fresh
   const ownPresenceRef = useRef<PresenceData>({
@@ -86,8 +90,6 @@ export function usePresence({
     if (!socket) return;
 
     function onOpen() {
-      // PartySocket exposes the underlying connection id via socket.id
-      ownConnId.current = (socket as PartySocket & { id?: string }).id ?? null;
       socket!.send(JSON.stringify({
         type: "presence-update",
         data: ownPresenceRef.current,
@@ -146,9 +148,11 @@ export function usePresence({
     [socket],
   );
 
-  // Exclude own connection from "others"
+  // Exclude ONLY our own connection — other tabs/devices of the same user
+  // still count as collaborators (Google-Docs behaviour). The old userId
+  // filter made same-account testing in two windows show nothing.
   const others = Object.entries(presenceMap)
-    .filter(([connId, p]) => connId !== ownConnId.current && p.userId !== userId)
+    .filter(([connId]) => connId !== ownConnId.current)
     .map(([, p]) => p);
 
   return { others, updatePresence };

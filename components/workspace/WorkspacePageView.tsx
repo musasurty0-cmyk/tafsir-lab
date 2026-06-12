@@ -495,6 +495,7 @@ export default function WorkspacePageView({
           formattingOpen={formattingOpen}
           onToggleFormatting={handleToggleFormatting}
           presenceOthers={presenceOthers}
+          liveStatus={room.status}
         />
         <EditorToolbar editor={activeEditor} open={formattingOpen && mode !== "canvas"} />
 

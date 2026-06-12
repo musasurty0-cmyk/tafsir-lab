@@ -35,6 +35,7 @@ import * as Y from "yjs";
 import YPartyKitProvider from "y-partykit/provider";
 import type { SuggestionProps, SuggestionKeyDownProps } from "@tiptap/suggestion";
 
+import { PARTYKIT_HOST } from "@/lib/collab/config";
 import { AyahBlockExtension } from "./AyahBlockExtension";
 import { TafsirBlockExtension } from "./TafsirBlockExtension";
 import { ToggleListExtension } from "./ToggleListExtension";
@@ -51,10 +52,6 @@ import SelectionToolbar from "./SelectionToolbar";
 // ── Constants ──────────────────────────────────────────────────────────────
 
 const SAVE_DEBOUNCE_MS = 900;
-const PARTYKIT_HOST    =
-  typeof window !== "undefined"
-    ? (process.env.NEXT_PUBLIC_PARTYKIT_HOST ?? "localhost:1999")
-    : "localhost:1999";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 

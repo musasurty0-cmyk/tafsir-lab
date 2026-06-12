@@ -5117,6 +5117,52 @@ input, textarea { font: inherit; color: inherit; }
   border-color: oklch(0.60 0.14 60 / 0.2);
 }
 
+/* ── Live status pill ── */
+.live-pill {
+  display:       inline-flex;
+  align-items:   center;
+  gap:           5px;
+  font-size:     10.5px;
+  font-weight:   600;
+  letter-spacing: 0.02em;
+  padding:       3px 9px;
+  border-radius: 999px;
+  border:        1px solid var(--line-strong);
+  color:         var(--ink-3);
+  background:    var(--bg-elev);
+  flex-shrink:   0;
+  margin-right:  8px;
+  cursor:        default;
+  transition:    color 0.2s, border-color 0.2s;
+}
+.live-pill-dot {
+  width:         6px;
+  height:        6px;
+  border-radius: 50%;
+  background:    var(--ink-4);
+  transition:    background 0.2s;
+}
+.live-pill[data-status="connected"] {
+  color:        oklch(0.5 0.13 155);
+  border-color: oklch(0.5 0.13 155 / 0.35);
+}
+.live-pill[data-status="connected"] .live-pill-dot {
+  background: oklch(0.62 0.17 155);
+  animation:  live-dot-pulse 2.2s ease-in-out infinite;
+}
+.live-pill[data-status="connecting"] {
+  color: oklch(0.6 0.12 70);
+  border-color: oklch(0.6 0.12 70 / 0.35);
+}
+.live-pill[data-status="connecting"] .live-pill-dot {
+  background: oklch(0.7 0.14 70);
+  animation:  live-dot-pulse 0.9s ease-in-out infinite;
+}
+@keyframes live-dot-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.35; }
+}
+
 /* ── Presence bar (PartyKit-backed) ── */
 .presence-bar {
   display:     flex;

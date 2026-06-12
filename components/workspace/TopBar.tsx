@@ -80,6 +80,8 @@ interface Props {
   onToggleFormatting: () => void;
   /** Live collaborators — provided by WorkspacePageView via usePresence */
   presenceOthers?:    PresenceData[];
+  /** Realtime room connection state — drives the Live indicator */
+  liveStatus?:        "connecting" | "connected" | "disconnected";
 }
 
 // ── Component ─────────────────────────────────────────────────────────────
@@ -100,6 +102,7 @@ export default function TopBar({
   formattingOpen,
   onToggleFormatting,
   presenceOthers = [],
+  liveStatus,
 }: Props) {
   return (
     <div className="topbar">
@@ -133,7 +136,17 @@ export default function TopBar({
         )}
       </div>
 
-      {/* ── Live presence ── */}
+      {/* ── Live status + presence ── */}
+      {liveStatus && (
+        <span className="live-pill" data-status={liveStatus} title={
+          liveStatus === "connected"  ? "Real-time sync active"
+        : liveStatus === "connecting" ? "Connecting to live session…"
+        :                               "Offline — changes save to the server but won't sync live"
+        }>
+          <span className="live-pill-dot" />
+          {liveStatus === "connected" ? "Live" : liveStatus === "connecting" ? "Connecting" : "Offline"}
+        </span>
+      )}
       <PresenceBar others={presenceOthers} />
 
       {/* ── Actions ── */}
