@@ -39,6 +39,14 @@
   --dur-mid:    160ms;
   --dur-slow:   260ms;
 
+  /* Refined motion — smooth, no overshoot, gentle settle.
+     --ease-flow is a calm decelerating curve for entrances/hovers;
+     --ease-soft is near-linear for opacity cross-fades. */
+  --ease-flow:  cubic-bezier(0.33, 0.1, 0.25, 1);
+  --ease-soft:  cubic-bezier(0.4, 0, 0.2, 1);
+  --dur-enter:  520ms;
+  --dur-hover:  280ms;
+
   /* Spacing scale */
   --sp-1:  4px;
   --sp-2:  8px;
@@ -3024,11 +3032,13 @@ input, textarea { font: inherit; color: inherit; }
   border-radius: 8px;
   border: 1px solid transparent;
   background: transparent;
-  animation: textbox-in 0.18s cubic-bezier(0.22, 1, 0.36, 1) both;
-  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+  animation: textbox-in 0.34s var(--ease-flow) both;
+  transition: border-color var(--dur-hover) var(--ease-soft),
+              background    var(--dur-hover) var(--ease-soft),
+              box-shadow    var(--dur-hover) var(--ease-soft);
 }
 @keyframes textbox-in {
-  from { opacity: 0; transform: scale(0.96); }
+  from { opacity: 0; transform: scale(0.985); }
   to   { opacity: 1; transform: none; }
 }
 .free-textbox:hover,
@@ -4055,11 +4065,12 @@ input, textarea { font: inherit; color: inherit; }
   background: transparent;
   border: none;
   padding: 0;
-  transition: background 0.14s, color 0.14s;
+  transition: background var(--dur-hover) var(--ease-soft),
+              color      var(--dur-hover) var(--ease-soft);
 }
 .toggle-list-chevron:hover { background: var(--hover); color: var(--ink); }
 .toggle-list-chevron svg {
-  transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: transform 0.32s var(--ease-flow);
 }
 .toggle-list[data-open="true"] .toggle-list-chevron svg { transform: rotate(90deg); }
 
@@ -4076,10 +4087,10 @@ input, textarea { font: inherit; color: inherit; }
 
 /* Re-opened body fades in */
 .toggle-list[data-open="true"] .toggle-list-content > *:not(:first-child) {
-  animation: toggle-body-in 0.22s ease both;
+  animation: toggle-body-in 0.38s var(--ease-flow) both;
 }
 @keyframes toggle-body-in {
-  from { opacity: 0; transform: translateY(-3px); }
+  from { opacity: 0; transform: translateY(-2px); }
   to   { opacity: 1; transform: none; }
 }
 
@@ -4387,14 +4398,14 @@ input, textarea { font: inherit; color: inherit; }
   overscroll-behavior: contain;
   padding: 4px;
   display: flex; flex-direction: column; gap: 1px;
-  animation: slash-pop 0.16s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: slash-pop 0.26s var(--ease-flow) both;
   transform-origin: top left;
 }
 .slash-palette-anchor[data-open-up="true"] .slash-palette {
   transform-origin: bottom left;
 }
 @keyframes slash-pop {
-  from { opacity: 0; transform: scale(0.96) translateY(-4px); }
+  from { opacity: 0; transform: scale(0.98) translateY(-2px); }
   to   { opacity: 1; transform: none; }
 }
 .slash-palette-empty {
@@ -4407,14 +4418,12 @@ input, textarea { font: inherit; color: inherit; }
   border-radius: 7px;
   text-align: left;
   width: 100%;
-  transition: background 0.16s ease, transform 0.16s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: background var(--dur-hover) var(--ease-soft);
 }
 .slash-palette-item[data-active="true"],
 .slash-palette-item:hover {
   background: var(--hover);
-  transform: translateX(3px);
 }
-.slash-palette-item:active { transform: translateX(3px) scale(0.985); }
 .slash-palette-icon {
   width: 28px; height: 28px;
   display: flex; align-items: center; justify-content: center;
@@ -4424,7 +4433,8 @@ input, textarea { font: inherit; color: inherit; }
   font-size: 13px; flex-shrink: 0;
   font-family: var(--font-mono); font-weight: 700;
   color: var(--ink-2);
-  transition: border-color 0.16s, color 0.16s;
+  transition: border-color var(--dur-hover) var(--ease-soft),
+              color        var(--dur-hover) var(--ease-soft);
 }
 .slash-palette-item[data-active="true"] .slash-palette-icon {
   border-color: var(--accent);
@@ -5312,9 +5322,15 @@ input, textarea { font: inherit; color: inherit; }
   pointer-events: none;
   position:     relative;
   word-break:   normal;
+  /* Soft breathing so a live caret reads as "present" without flicker */
+  animation: collab-caret-breathe 2.4s var(--ease-soft) infinite;
+}
+@keyframes collab-caret-breathe {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.55; }
 }
 .collaboration-cursor__label {
-  border-radius:    3px 3px 3px 0;
+  border-radius:    4px 4px 4px 1px;
   color:            #fff;
   font-size:        10px;
   font-style:       normal;
@@ -5328,6 +5344,17 @@ input, textarea { font: inherit; color: inherit; }
   top:              -1.5em;
   user-select:      none;
   white-space:      nowrap;
+  /* Label appears when the peer moves/types, holds briefly, then fades
+     out and stays hidden while their cursor is idle. render() re-runs on
+     every awareness change, restarting this animation. */
+  animation: collab-label-fade 2.8s var(--ease-soft) forwards;
+  transform-origin: bottom left;
+}
+@keyframes collab-label-fade {
+  0%   { opacity: 0; transform: translateY(3px) scale(0.92); }
+  10%  { opacity: 1; transform: translateY(0)   scale(1); }
+  70%  { opacity: 1; transform: translateY(0)   scale(1); }
+  100% { opacity: 0; transform: translateY(0)   scale(1); }
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -6552,40 +6579,40 @@ input, textarea { font: inherit; color: inherit; }
 .page-editor-content s { color: var(--ink-3); }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   Subtle motion polish — restrained micro-interactions across the app
+   Motion polish — clean, refined, flowy. Opacity-led with minimal travel,
+   long calm easing, and no overshoot or snap.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 /* Document pane eases in on page load / page switch */
 .doc {
-  animation: doc-enter 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: doc-enter var(--dur-enter) var(--ease-flow) both;
 }
 @keyframes doc-enter {
-  from { opacity: 0; transform: translateY(8px); }
+  from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: none; }
 }
 
 /* Canvas pane fades in when entering Mode B / split */
 .mode-b-canvas {
-  animation: pane-fade 0.26s ease both;
+  animation: pane-fade 0.5s var(--ease-soft) both;
 }
 @keyframes pane-fade {
   from { opacity: 0; }
   to   { opacity: 1; }
 }
 
-/* Top bar buttons — gentle press feedback */
+/* Top bar buttons — colour-only feedback, no scale snap */
 .tb-btn,
 .mode-btn,
 .mode-b-zoom-btn {
-  transition: background 0.15s, color 0.15s, transform 0.12s ease;
+  transition: background var(--dur-hover) var(--ease-soft),
+              color      var(--dur-hover) var(--ease-soft);
 }
-.tb-btn:active,
-.mode-btn:active,
-.mode-b-zoom-btn:active { transform: scale(0.95); }
 
-/* Anchored note cards lift slightly on hover */
+/* Anchored note cards lift gently on hover */
 .anc-note {
-  transition: box-shadow 0.18s ease, transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: box-shadow var(--dur-hover) var(--ease-flow),
+              transform  var(--dur-hover) var(--ease-flow);
 }
 .anc-note:hover {
   box-shadow: var(--shadow-md);
@@ -6595,18 +6622,24 @@ input, textarea { font: inherit; color: inherit; }
 /* Sidebar page rows ease their hover state */
 .sb-page-row,
 .ws-surah-card {
-  transition: background 0.14s, border-color 0.14s, transform 0.14s ease;
+  transition: background var(--dur-hover) var(--ease-soft),
+              border-color var(--dur-hover) var(--ease-soft);
 }
 
 /* Tool rail buttons */
-.ctr-btn { transition: background 0.14s, color 0.14s, transform 0.12s ease; }
-.ctr-btn:active { transform: scale(0.92); }
+.ctr-btn {
+  transition: background var(--dur-hover) var(--ease-soft),
+              color      var(--dur-hover) var(--ease-soft);
+}
 
 /* Respect reduced-motion preferences everywhere */
 @media (prefers-reduced-motion: reduce) {
   .doc, .mode-b-canvas, .slash-palette, .free-textbox,
+  .collaboration-cursor__caret, .live-pill-dot,
   .toggle-list[data-open="true"] .toggle-list-content > *:not(:first-child) {
     animation: none !important;
   }
+  /* Keep collaborator labels visible (no fade) when motion is reduced */
+  .collaboration-cursor__label { animation: none !important; opacity: 1 !important; }
   * { transition-duration: 0.01ms !important; }
 }

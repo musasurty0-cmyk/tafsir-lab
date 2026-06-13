@@ -178,6 +178,24 @@ export default function PageEditor({
           name:  currentUserName || "Anonymous",
           color: getUserColor(currentUserId),
         },
+        // Custom caret: the name label auto-fades once the peer stops moving.
+        // render() is only called when that peer's awareness changes (they
+        // move or type), so an idle cursor keeps its faded-out label. This
+        // stops a stranded "{name}" tag from hovering over text YOU are
+        // editing just because their cursor happens to sit there.
+        render: (user: { name?: string; color?: string }) => {
+          const caret = document.createElement("span");
+          caret.classList.add("collaboration-cursor__caret");
+          caret.setAttribute("style", `border-color: ${user.color}`);
+
+          const label = document.createElement("div");
+          label.classList.add("collaboration-cursor__label");
+          label.setAttribute("style", `background-color: ${user.color}`);
+          label.textContent = user.name ?? "";
+
+          caret.appendChild(label);
+          return caret;
+        },
       }),
 
       SlashCommandExtension.configure({
