@@ -20,7 +20,7 @@
  */
 
 import { db } from "@/lib/db";
-import { getWorkspaceWithRole, isAdmin, MemberRole } from "./workspaces.service";
+import { getWorkspaceWithRole, isAdmin, canManagePages, MemberRole } from "./workspaces.service";
 
 // ── Error type ────────────────────────────────────────────────
 
@@ -199,11 +199,11 @@ export async function createPage(
   });
   if (!ws) throw new PageError("Surah session not found", "NOT_FOUND");
 
-  // Permissions: only admins (owner + admin) may add pages. Members write
-  // into existing pages but cannot alter the page structure.
-  const { role } = await getWorkspaceWithRole(ws.workspace.id, userId);
-  if (!isAdmin(role)) {
-    throw new PageError("Only admins can add pages", "FORBIDDEN");
+  // Permissions: admins always may add pages; members only when the
+  // workspace has opted in (membersCanManagePages).
+  const { role, workspace } = await getWorkspaceWithRole(ws.workspace.id, userId);
+  if (!canManagePages(role, workspace.membersCanManagePages)) {
+    throw new PageError("You don't have permission to add pages", "FORBIDDEN");
   }
 
   const last = await db.page.findFirst({
@@ -239,7 +239,7 @@ export async function createPage(
 
 /**
  * Rename a page.
- * Admins only (owner + admin). Members cannot change page structure.
+ * Admins always; members only when membersCanManagePages is enabled.
  */
 export async function renamePage(
   pageId: string,
@@ -252,11 +252,11 @@ export async function renamePage(
   });
   if (!page) throw new PageError("Page not found", "NOT_FOUND");
 
-  const { role } = await getWorkspaceWithRole(page.workspaceSurah.workspace.id, userId);
+  const { role, workspace } = await getWorkspaceWithRole(page.workspaceSurah.workspace.id, userId);
 
-  // Permissions: only admins may change page heading names.
-  if (!isAdmin(role)) {
-    throw new PageError("Only admins can rename pages", "FORBIDDEN");
+  // Permissions: admins always; members only when the workspace opts in.
+  if (!canManagePages(role, workspace.membersCanManagePages)) {
+    throw new PageError("You don't have permission to rename pages", "FORBIDDEN");
   }
 
   return db.page.update({
@@ -268,7 +268,7 @@ export async function renamePage(
 
 /**
  * Delete a page permanently.
- * Admins only (owner + admin). Members cannot change page structure.
+ * Admins always; members only when membersCanManagePages is enabled.
  */
 export async function deletePage(
   pageId: string,
@@ -280,11 +280,11 @@ export async function deletePage(
   });
   if (!page) throw new PageError("Page not found", "NOT_FOUND");
 
-  const { role } = await getWorkspaceWithRole(page.workspaceSurah.workspace.id, userId);
+  const { role, workspace } = await getWorkspaceWithRole(page.workspaceSurah.workspace.id, userId);
 
-  // Permissions: only admins may delete pages.
-  if (!isAdmin(role)) {
-    throw new PageError("Only admins can delete pages", "FORBIDDEN");
+  // Permissions: admins always; members only when the workspace opts in.
+  if (!canManagePages(role, workspace.membersCanManagePages)) {
+    throw new PageError("You don't have permission to delete pages", "FORBIDDEN");
   }
 
   await db.page.delete({ where: { id: pageId } });

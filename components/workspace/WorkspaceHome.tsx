@@ -27,7 +27,7 @@ const PLACE: Record<string, string> = { makkah: "Makki", madinah: "Madani" };
 
 interface Props {
   workspaceId: string;
-  workspace: { id: string; name: string; type: string; ownerId: string };
+  workspace: { id: string; name: string; type: string; ownerId: string; membersCanManagePages: boolean };
   role: MemberRole;
   chapters: Chapter[];
   workspaceSurahs: WorkspaceSurahSummary[];
@@ -361,6 +361,7 @@ export default function WorkspaceHome({
         workspaceId={workspaceId}
         workspaceName={wsName}
         workspaceType={workspace.type}
+        membersCanManagePages={workspace.membersCanManagePages}
         currentUserId={workspace.ownerId}
         currentUserRole={role}
         onClose={() => setSettingsOpen(false)}

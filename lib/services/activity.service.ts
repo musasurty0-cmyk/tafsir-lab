@@ -9,7 +9,7 @@ import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 
 export type ActivityAction =
-  | "workspace.created"
+  | "workspace.created" | "workspace.permissions_changed"
   | "member.joined"   | "member.removed"
   | "surah.started"
   | "page.created"    | "page.published" | "page.archived"

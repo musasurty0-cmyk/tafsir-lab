@@ -17,6 +17,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import type { Chapter, Verse } from "@/lib/types";
 import type { MemberRole } from "@/lib/services/workspaces.service";
+import { canManagePages } from "@/lib/services/workspaces.service";
 import type { ProgressStatus } from "@/lib/services/progress.service";
 import type { NoteData } from "./NoteCard";
 import type { ViewMode } from "./TopBar";
@@ -58,7 +59,7 @@ interface FullPage extends PageSummary {
 
 interface Props {
   workspaceId:   string;
-  workspace:     { id: string; name: string; type: string; ownerId: string };
+  workspace:     { id: string; name: string; type: string; ownerId: string; membersCanManagePages: boolean };
   role:          MemberRole;
   chapter:       Chapter;
   surahNumber:   number;
@@ -453,6 +454,7 @@ export default function WorkspacePageView({
         groupProgress={groupProgress}
         personalProgress={personalProgress}
         role={role}
+        canManagePages={canManagePages(role, workspace.membersCanManagePages)}
         onPageSelect={handlePageSelect}
         onPageRenamed={(id, title) =>
           setPageList((prev) => prev.map((p) => p.id === id ? { ...p, title } : p))

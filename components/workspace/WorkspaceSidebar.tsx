@@ -15,7 +15,6 @@ import { ChevronRight, ChevronLeft, Search, X, Plus, MoreHorizontal, Pencil, Tra
 import type { Chapter } from "@/lib/types";
 import type { ProgressStatus } from "@/lib/services/progress.service";
 import type { MemberRole } from "@/lib/services/workspaces.service";
-import { isAdmin } from "@/lib/services/workspaces.service";
 import Link from "next/link";
 
 // ── Icons ──────────────────────────────────────────────────────────────────
@@ -77,6 +76,9 @@ interface Props {
   groupProgress:     Record<string, { status: ProgressStatus; lastChangedBy: string }>;
   personalProgress:  Record<string, ProgressStatus>;
   role:              MemberRole;
+  /** Whether the current user may add/rename/delete pages (admins, or
+   *  members when the workspace has enabled member page management). */
+  canManagePages:    boolean;
   onPageSelect:      (pageId: string) => void;
   onPageRenamed:     (id: string, title: string) => void;
   onPageDeleted:     (id: string) => void;
@@ -206,14 +208,14 @@ export default function WorkspaceSidebar({
   activePageId,
   groupProgress,
   personalProgress: _personalProgress,
-  role,
+  role: _role,
+  canManagePages,
   onPageSelect: _onPageSelect,
   onPageRenamed,
   onPageDeleted,
   collapsed = false,
   onToggleCollapse,
 }: Props) {
-  const canManagePages = isAdmin(role);
   const router = useRouter();
 
   const [query,        setQuery]        = useState("");

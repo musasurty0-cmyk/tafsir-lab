@@ -16,6 +16,7 @@ interface Props {
   workspaceId: string;
   workspaceName: string;
   workspaceType: string;
+  membersCanManagePages: boolean;
   currentUserId: string;
   currentUserRole: MemberRole;
   onClose: () => void;
@@ -31,6 +32,7 @@ export default function WorkspaceSettings({
   workspaceId,
   workspaceName,
   workspaceType,
+  membersCanManagePages: initialMembersCanManagePages,
   currentUserId,
   currentUserRole,
   onClose,
@@ -39,6 +41,28 @@ export default function WorkspaceSettings({
 }: Props) {
   const isAdminOrOwner = currentUserRole === "owner" || currentUserRole === "admin";
   const isOwner = currentUserRole === "owner";
+
+  // Permission policy toggle (admins)
+  const [membersManage, setMembersManage] = useState(initialMembersCanManagePages);
+  const [permSaving, setPermSaving] = useState(false);
+
+  async function toggleMembersManage() {
+    const next = !membersManage;
+    setMembersManage(next); // optimistic
+    setPermSaving(true);
+    try {
+      const res = await fetch(`/api/workspaces/${workspaceId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ membersCanManagePages: next }),
+      });
+      if (!res.ok) setMembersManage(!next); // revert on failure
+    } catch {
+      setMembersManage(!next);
+    } finally {
+      setPermSaving(false);
+    }
+  }
 
   // Members
   const [members, setMembers] = useState<Member[]>([]);
@@ -277,7 +301,7 @@ export default function WorkspaceSettings({
           </div>
         )}
 
-        {/* Permissions — role capability matrix (informational) */}
+        {/* Permissions — role capability matrix + member-page toggle */}
         <div className="ws-settings-section">
           <div className="ws-settings-section-title">Permissions</div>
           <p style={{ fontSize: 12, color: "var(--ink-3)", marginBottom: 10 }}>
@@ -290,7 +314,7 @@ export default function WorkspaceSettings({
               <span className="ws-perm-col">Member</span>
             </div>
             {[
-              { label: "Create, rename & delete pages", admin: true, member: false },
+              { label: "Create, rename & delete pages", admin: true, member: membersManage },
               { label: "Start new surah boards",         admin: true, member: false },
               { label: "Invite & manage members",        admin: true, member: false },
               { label: "Write page content & notes",     admin: true, member: true  },
@@ -306,6 +330,29 @@ export default function WorkspaceSettings({
               </div>
             ))}
           </div>
+
+          {/* Admin toggle: extend page management to members */}
+          {isAdminOrOwner && (
+            <label className="ws-perm-toggle">
+              <span className="ws-perm-toggle-text">
+                <span className="ws-perm-toggle-label">Let members manage pages</span>
+                <span className="ws-perm-toggle-sub">
+                  Members can create, rename & delete pages — not just admins.
+                </span>
+              </span>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={membersManage}
+                className="ws-switch"
+                data-on={membersManage ? "true" : "false"}
+                onClick={toggleMembersManage}
+                disabled={permSaving}
+              >
+                <span className="ws-switch-knob" />
+              </button>
+            </label>
+          )}
         </div>
 
         {/* Members */}

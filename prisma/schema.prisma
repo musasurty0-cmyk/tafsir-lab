@@ -45,6 +45,10 @@ model Workspace {
   inviteCode String?  @unique
   createdAt  DateTime @default(now()) @db.Timestamptz(6)
 
+  // Permission policy: when true, members (not just admins) may create,
+  // rename, and delete pages. Default false = admins manage page structure.
+  membersCanManagePages Boolean @default(false)
+
   owner       User              @relation("WorkspaceOwner", fields: [ownerId], references: [id])
   members     WorkspaceMember[]
   surahs      WorkspaceSurah[]

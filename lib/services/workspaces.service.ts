@@ -36,13 +36,23 @@ export function isAdmin(role: MemberRole): boolean {
 }
 
 /**
+ * Whether the acting role may create / rename / delete pages.
+ * Admins always can; members can only when the workspace has opted in via
+ * its membersCanManagePages flag.
+ */
+export function canManagePages(role: MemberRole, membersCanManagePages: boolean): boolean {
+  return isAdmin(role) || membersCanManagePages;
+}
+
+/**
  * Capability matrix for a role. Single source of truth for both the
  * server-side gates and the client UI (settings panel, button visibility).
  *
  * Policy:
  *   Admins (owner + admin) manage structure — create/rename/delete pages
  *   and create surah boards. Members write: page content, notes, drawings,
- *   text boxes, and progress.
+ *   text boxes, and progress. Page management can be extended to members
+ *   per-workspace via the membersCanManagePages flag.
  */
 export interface RoleCapabilities {
   managePages:  boolean;  // create / rename / delete pages
@@ -51,13 +61,13 @@ export interface RoleCapabilities {
   writeContent: boolean;  // edit page content, notes, drawings, progress
 }
 
-export function capabilitiesFor(role: MemberRole): RoleCapabilities {
+export function capabilitiesFor(role: MemberRole, membersCanManagePages = false): RoleCapabilities {
   const admin = isAdmin(role);
   return {
-    managePages:   admin,
-    manageBoards:  admin,
+    managePages:   canManagePages(role, membersCanManagePages),
+    manageBoards:  admin,         // board creation stays admin-only
     manageMembers: admin,
-    writeContent:  true, // every member can write
+    writeContent:  true,          // every member can write
   };
 }
 
@@ -72,11 +82,11 @@ export function capabilitiesFor(role: MemberRole): RoleCapabilities {
 export async function getWorkspaceWithRole(
   workspaceId: string,
   userId: string
-): Promise<{ workspace: { id: string; name: string; type: string; ownerId: string }; role: MemberRole }> {
+): Promise<{ workspace: { id: string; name: string; type: string; ownerId: string; membersCanManagePages: boolean }; role: MemberRole }> {
   const [workspace, membership] = await Promise.all([
     db.workspace.findUnique({
       where: { id: workspaceId },
-      select: { id: true, name: true, type: true, ownerId: true },
+      select: { id: true, name: true, type: true, ownerId: true, membersCanManagePages: true },
     }),
     db.workspaceMember.findUnique({
       where: { workspaceId_userId: { workspaceId, userId } },
@@ -171,6 +181,38 @@ export async function renameWorkspace(
     data:  { name: trimmed },
     select: { id: true, name: true, type: true, ownerId: true },
   });
+}
+
+/**
+ * Set whether members may manage pages (create/rename/delete).
+ * Admins (owner + admin) may change this policy.
+ */
+export async function setMembersCanManagePages(
+  workspaceId: string,
+  userId: string,
+  value: boolean,
+) {
+  const { role } = await getWorkspaceWithRole(workspaceId, userId);
+  if (!isAdmin(role)) {
+    throw new WorkspaceError("Only admins can change permissions", "FORBIDDEN");
+  }
+
+  const updated = await db.workspace.update({
+    where: { id: workspaceId },
+    data:  { membersCanManagePages: value },
+    select: { id: true, membersCanManagePages: true },
+  });
+
+  void log({
+    workspaceId,
+    userId,
+    action:     "workspace.permissions_changed",
+    entityType: "workspace",
+    entityId:   workspaceId,
+    metadata:   { membersCanManagePages: value },
+  });
+
+  return updated;
 }
 
 /**
