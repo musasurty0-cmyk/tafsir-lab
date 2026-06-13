@@ -35,6 +35,32 @@ export function isAdmin(role: MemberRole): boolean {
   return role === "owner" || role === "admin";
 }
 
+/**
+ * Capability matrix for a role. Single source of truth for both the
+ * server-side gates and the client UI (settings panel, button visibility).
+ *
+ * Policy:
+ *   Admins (owner + admin) manage structure — create/rename/delete pages
+ *   and create surah boards. Members write: page content, notes, drawings,
+ *   text boxes, and progress.
+ */
+export interface RoleCapabilities {
+  managePages:  boolean;  // create / rename / delete pages
+  manageBoards: boolean;  // start new surah boards
+  manageMembers: boolean; // invite / promote / remove
+  writeContent: boolean;  // edit page content, notes, drawings, progress
+}
+
+export function capabilitiesFor(role: MemberRole): RoleCapabilities {
+  const admin = isAdmin(role);
+  return {
+    managePages:   admin,
+    manageBoards:  admin,
+    manageMembers: admin,
+    writeContent:  true, // every member can write
+  };
+}
+
 // ── Queries ───────────────────────────────────────────────────
 
 /**
@@ -161,14 +187,21 @@ export async function startSurah(
   templateId?: string
 ) {
   // Verify membership before any write.
-  await getWorkspaceWithRole(workspaceId, userId);
+  const { role } = await getWorkspaceWithRole(workspaceId, userId);
 
-  // Return existing session if already started.
+  // Return existing session if already started — opening a board members
+  // can already see is harmless and stays open to everyone.
   const existing = await db.workspaceSurah.findUnique({
     where: { workspaceId_surahNumber: { workspaceId, surahNumber } },
     include: { pages: { orderBy: { orderIndex: "asc" } } },
   });
   if (existing) return existing;
+
+  // Permissions: only admins may create a new surah board. Members study
+  // within boards admins have set up; they don't create structure.
+  if (!isAdmin(role)) {
+    throw new WorkspaceError("Only admins can start a new surah board", "FORBIDDEN");
+  }
 
   // Create session (and optionally scaffold pages) in a transaction.
   const workspaceSurah = await db.$transaction(async (tx) => {

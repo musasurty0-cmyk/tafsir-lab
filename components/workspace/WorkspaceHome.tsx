@@ -15,6 +15,8 @@ import { useState, useCallback, useRef, useEffect, useLayoutEffect } from "react
 import { useRouter } from "next/navigation";
 import type { Chapter } from "@/lib/types";
 import type { MemberRole } from "@/lib/services/workspaces.service";
+import { isAdmin } from "@/lib/services/workspaces.service";
+import { Lock } from "lucide-react";
 import type { WorkspaceSurahSummary } from "@/app/workspaces/[workspaceId]/page";
 import Rail from "./Rail";
 import NewWorkspaceModal from "@/components/NewWorkspaceModal";
@@ -104,6 +106,8 @@ export default function WorkspaceHome({
     workspaceSurahs.map((s) => [s.surahNumber, s])
   );
 
+  const canManageBoards = isAdmin(role);
+
   const handleCardClick = useCallback(
     async (chapter: Chapter) => {
       const session = startedMap.get(chapter.id);
@@ -114,6 +118,9 @@ export default function WorkspaceHome({
         router.push(`/workspaces/${workspaceId}/surahs/${chapter.id}`);
         return;
       }
+
+      // Not started: only admins may create a new board. Members can't.
+      if (!isAdmin(role)) return;
 
       // Not started — POST to startSurah, then navigate.
       setStarting(chapter.id);
@@ -138,7 +145,7 @@ export default function WorkspaceHome({
         setStarting(null);
       }
     },
-    [startedMap, workspaceId, router]
+    [startedMap, workspaceId, router, role]
   );
 
   const visible = chapters.filter((ch) => {
@@ -286,6 +293,8 @@ export default function WorkspaceHome({
             const isStarting  = starting   === ch.id;
             const isOpening   = navigating === ch.id;
             const isBusy      = isStarting || isOpening;
+            // Members can open started boards but can't create new ones.
+            const memberLocked = !session && !canManageBoards;
 
             return (
               <button
@@ -294,9 +303,15 @@ export default function WorkspaceHome({
                 style={{ animationDelay: `${Math.min(index * 15, 300)}ms` }}
                 data-started={session ? "true" : "false"}
                 data-loading={isBusy ? "true" : "false"}
+                data-locked={memberLocked ? "true" : "false"}
                 onClick={() => handleCardClick(ch)}
-                title={isBusy ? "Opening…" : session ? `Open — ${session.pageCount} page${session.pageCount !== 1 ? "s" : ""}` : "Start studying"}
-                disabled={isBusy}
+                title={
+                  isBusy ? "Opening…"
+                  : session ? `Open — ${session.pageCount} page${session.pageCount !== 1 ? "s" : ""}`
+                  : memberLocked ? "Only admins can start a new surah board"
+                  : "Start studying"
+                }
+                disabled={isBusy || memberLocked}
               >
                 {/* Number badge */}
                 <div className="ws-card-num">{ch.id}</div>
@@ -326,6 +341,8 @@ export default function WorkspaceHome({
                     </span>
                   ) : isStarting ? (
                     <span className="ws-card-badge ws-card-badge--loading">Starting…</span>
+                  ) : memberLocked ? (
+                    <span className="ws-card-locked-hint"><Lock size={10} /> Admin only</span>
                   ) : (
                     <span className="ws-card-start-hint">Start →</span>
                   )}

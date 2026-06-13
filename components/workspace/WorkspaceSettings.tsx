@@ -277,6 +277,37 @@ export default function WorkspaceSettings({
           </div>
         )}
 
+        {/* Permissions — role capability matrix (informational) */}
+        <div className="ws-settings-section">
+          <div className="ws-settings-section-title">Permissions</div>
+          <p style={{ fontSize: 12, color: "var(--ink-3)", marginBottom: 10 }}>
+            What each role can do in this {workspaceType === "group" ? "group" : "workspace"}.
+          </p>
+          <div className="ws-perm-grid">
+            <div className="ws-perm-row ws-perm-row--head">
+              <span>Capability</span>
+              <span className="ws-perm-col">Admin</span>
+              <span className="ws-perm-col">Member</span>
+            </div>
+            {[
+              { label: "Create, rename & delete pages", admin: true, member: false },
+              { label: "Start new surah boards",         admin: true, member: false },
+              { label: "Invite & manage members",        admin: true, member: false },
+              { label: "Write page content & notes",     admin: true, member: true  },
+              { label: "Draw & add text boxes",          admin: true, member: true  },
+              { label: "Track reading progress",         admin: true, member: true  },
+            ].map((cap) => (
+              <div key={cap.label} className="ws-perm-row">
+                <span>{cap.label}</span>
+                <span className="ws-perm-col">{cap.admin ? "✓" : "—"}</span>
+                <span className={`ws-perm-col${cap.member ? "" : " ws-perm-col--no"}`}>
+                  {cap.member ? "✓" : "—"}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
         {/* Members */}
         <div className="ws-settings-section">
           <div className="ws-settings-section-title">

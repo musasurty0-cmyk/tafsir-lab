@@ -199,7 +199,12 @@ export async function createPage(
   });
   if (!ws) throw new PageError("Surah session not found", "NOT_FOUND");
 
-  await getWorkspaceWithRole(ws.workspace.id, userId);
+  // Permissions: only admins (owner + admin) may add pages. Members write
+  // into existing pages but cannot alter the page structure.
+  const { role } = await getWorkspaceWithRole(ws.workspace.id, userId);
+  if (!isAdmin(role)) {
+    throw new PageError("Only admins can add pages", "FORBIDDEN");
+  }
 
   const last = await db.page.findFirst({
     where:   { workspaceSurahId },
@@ -234,7 +239,7 @@ export async function createPage(
 
 /**
  * Rename a page.
- * Only the page creator or a workspace admin can rename.
+ * Admins only (owner + admin). Members cannot change page structure.
  */
 export async function renamePage(
   pageId: string,
@@ -249,8 +254,9 @@ export async function renamePage(
 
   const { role } = await getWorkspaceWithRole(page.workspaceSurah.workspace.id, userId);
 
-  if (!isAdmin(role) && page.createdById !== userId) {
-    throw new PageError("Not allowed to rename this page", "FORBIDDEN");
+  // Permissions: only admins may change page heading names.
+  if (!isAdmin(role)) {
+    throw new PageError("Only admins can rename pages", "FORBIDDEN");
   }
 
   return db.page.update({
@@ -262,7 +268,7 @@ export async function renamePage(
 
 /**
  * Delete a page permanently.
- * Only the page creator or a workspace admin can delete.
+ * Admins only (owner + admin). Members cannot change page structure.
  */
 export async function deletePage(
   pageId: string,
@@ -276,8 +282,9 @@ export async function deletePage(
 
   const { role } = await getWorkspaceWithRole(page.workspaceSurah.workspace.id, userId);
 
-  if (!isAdmin(role) && page.createdById !== userId) {
-    throw new PageError("Not allowed to delete this page", "FORBIDDEN");
+  // Permissions: only admins may delete pages.
+  if (!isAdmin(role)) {
+    throw new PageError("Only admins can delete pages", "FORBIDDEN");
   }
 
   await db.page.delete({ where: { id: pageId } });

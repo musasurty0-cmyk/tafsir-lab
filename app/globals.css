@@ -1566,6 +1566,17 @@ input, textarea { font: inherit; color: inherit; }
 }
 .ws-surah-card:hover .ws-card-start-hint { opacity: 1; }
 
+/* Member-locked surah card (cannot create new boards) */
+.ws-surah-card[data-locked="true"] {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+.ws-surah-card[data-locked="true"]:hover { transform: none; }
+.ws-card-locked-hint {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 10.5px; color: var(--ink-4);
+}
+
 /* ── Workspace page view layout (Rail + Sidebar + Canvas) ── */
 .workspace-page {
   display: grid;
@@ -4937,6 +4948,38 @@ input, textarea { font: inherit; color: inherit; }
   font-weight: 600;
   margin-bottom: 12px;
 }
+
+/* Permissions capability matrix */
+.ws-perm-grid {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.ws-perm-row {
+  display: grid;
+  grid-template-columns: 1fr 64px 64px;
+  align-items: center;
+  padding: 8px 12px;
+  font-size: 12.5px;
+  color: var(--ink-2);
+  border-top: 1px solid var(--line);
+}
+.ws-perm-row:first-child { border-top: none; }
+.ws-perm-row--head {
+  background: var(--panel);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-3);
+  font-weight: 600;
+}
+.ws-perm-col {
+  text-align: center;
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+.ws-perm-row--head .ws-perm-col { color: var(--ink-3); font-weight: 600; }
+.ws-perm-col--no { color: var(--ink-4); font-weight: 400; }
 
 .ws-settings-invite-box {
   display: flex;
