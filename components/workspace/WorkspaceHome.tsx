@@ -154,8 +154,9 @@ export default function WorkspaceHome({
     return true;
   });
 
-  // Update sliding indicator position when filter changes or on resize
-  useEffect(() => {
+  // Update sliding indicator position when filter changes or on resize.
+  // useLayoutEffect so the pill is positioned before paint (no zero-width flash).
+  useLayoutEffect(() => {
     const btn = tabsRef.current[filter];
     const container = tabsContainerRef.current;
     if (!btn || !container) return;
@@ -252,28 +253,23 @@ export default function WorkspaceHome({
           </div>
 
           <div className="ws-filter-tabs" ref={tabsContainerRef}>
-            {(["all", "started", "not-started"] as const).map((f) => (
-              <button
-                key={f}
-                ref={(el) => { tabsRef.current[f] = el; }}
-                className="ws-filter-tab"
-                data-active={filter === f ? "true" : "false"}
-                onClick={() => {
-                  setPrevFilter(filter);
-                  setFilter(f);
-                  // trigger a short pulse animation on the indicator
-                  if (tabsContainerRef.current) {
-                    tabsContainerRef.current.dataset.anim = "pulse";
-                    setTimeout(() => {
-                      if (tabsContainerRef.current) delete tabsContainerRef.current.dataset.anim;
-                    }, 320);
-                  }
-                }}
-              >
-                {f === "all" ? "All (114)" : f === "started" ? `Started (${workspaceSurahs.length})` : `Not started (${114 - workspaceSurahs.length})`}
-              </button>
-            ))}
             <div className="ws-filter-indicator" aria-hidden />
+            {(["all", "started", "not-started"] as const).map((f) => {
+              const label = f === "all" ? "All" : f === "started" ? "Started" : "Not started";
+              const count = f === "all" ? 114 : f === "started" ? workspaceSurahs.length : 114 - workspaceSurahs.length;
+              return (
+                <button
+                  key={f}
+                  ref={(el) => { tabsRef.current[f] = el; }}
+                  className="ws-filter-tab"
+                  data-active={filter === f ? "true" : "false"}
+                  onClick={() => { setPrevFilter(filter); setFilter(f); }}
+                >
+                  {label}
+                  <span className="ws-filter-count">{count}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
 

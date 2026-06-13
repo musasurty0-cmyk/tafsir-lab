@@ -1453,31 +1453,60 @@ input, textarea { font: inherit; color: inherit; }
 }
 .ws-home-sub { font-size: 13px; color: var(--ink-3); margin: 0; }
 
-/* Filter tabs */
-.ws-filter-tabs { display: flex; gap: 2px; align-items: flex-start; }
-.ws-filter-tab {
-  height: 30px; padding: 0 12px;
-  border-radius: 7px; font-size: 12.5px; color: var(--ink-3);
-  transition: background .12s, color .12s;
-}
-.ws-filter-tab:hover { background: var(--hover); color: var(--ink); }
-.ws-filter-tab[data-active="true"] { background: var(--active); color: var(--ink); font-weight: 500; }
-
-/* Sliding indicator for filter tabs */
+/* Filter tabs — segmented control with a sliding pill */
 .ws-filter-tabs {
   position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 11px;
   --indicator-left: 0px;
   --indicator-width: 0px;
 }
+.ws-filter-tab {
+  position: relative;
+  z-index: 1;
+  height: 28px;
+  padding: 0 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--ink-3);
+  white-space: nowrap;
+  transition: color var(--dur-hover) var(--ease-soft);
+}
+.ws-filter-tab:hover { color: var(--ink-2); }
+.ws-filter-tab[data-active="true"] { color: var(--ink); }
+
+.ws-filter-count {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-4);
+  font-variant-numeric: tabular-nums;
+  transition: color var(--dur-hover) var(--ease-soft);
+}
+.ws-filter-tab[data-active="true"] .ws-filter-count { color: var(--accent-ink); }
+
+/* Sliding pill behind the active tab */
 .ws-filter-indicator {
   position: absolute;
-  bottom: -6px;
+  z-index: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 28px;
   left: var(--indicator-left);
   width: var(--indicator-width);
-  height: 6px;
-  border-radius: 6px;
-  background: linear-gradient(90deg, var(--accent), var(--accent-ink));
-  transition: left .22s cubic-bezier(.2,.9,.2,1), width .22s cubic-bezier(.2,.9,.2,1);
+  border-radius: 8px;
+  background: var(--bg-elev);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--line);
+  transition: left 0.32s var(--ease-flow), width 0.32s var(--ease-flow);
   pointer-events: none;
 }
 
