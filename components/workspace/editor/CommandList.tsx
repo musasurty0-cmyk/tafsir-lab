@@ -30,12 +30,14 @@ interface Props {
   items:    SlashCommandItem[];
   query:    string;
   onSelect: (item: SlashCommandItem) => void;
+  /** Cap the palette height (keyboard-aware value from PageEditor). */
+  maxHeight?: number;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────
 
 const CommandList = forwardRef<CommandListHandle, Props>(
-  function CommandList({ items, query, onSelect }, ref) {
+  function CommandList({ items, query, onSelect, maxHeight }, ref) {
     const [selectedIndex, setSelectedIndex] = useState(0);
     const listRef = useRef<HTMLDivElement>(null);
 
@@ -72,14 +74,14 @@ const CommandList = forwardRef<CommandListHandle, Props>(
 
     if (items.length === 0) {
       return (
-        <div className="slash-palette">
+        <div className="slash-palette" style={maxHeight ? { maxHeight } : undefined}>
           <div className="slash-palette-empty">No commands match "{query}"</div>
         </div>
       );
     }
 
     return (
-      <div className="slash-palette" ref={listRef}>
+      <div className="slash-palette" ref={listRef} style={maxHeight ? { maxHeight } : undefined}>
         {items.map((item, i) => (
           <button
             key={item.id}

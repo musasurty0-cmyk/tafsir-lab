@@ -50,7 +50,20 @@ export function useRoom(pageId: string): Room {
     s.addEventListener("close", onClose);
     s.addEventListener("error", onClose);
 
+    // iOS/iPadOS suspends background tabs and kills the WebSocket. When the
+    // student returns (e.g. after checking a translation app mid-lesson),
+    // reconnect immediately instead of waiting for the backoff timer.
+    const onVisible = () => {
+      if (document.visibilityState !== "visible") return;
+      if (s.readyState !== WebSocket.OPEN) {
+        setStatus("connecting");
+        try { s.reconnect(); } catch { /* already reconnecting */ }
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+
     return () => {
+      document.removeEventListener("visibilitychange", onVisible);
       s.removeEventListener("open",  onOpen);
       s.removeEventListener("close", onClose);
       s.removeEventListener("error", onClose);

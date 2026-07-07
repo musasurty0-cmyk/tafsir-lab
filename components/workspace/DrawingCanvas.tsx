@@ -122,6 +122,15 @@ function hitTest(pts: Pt[], cx: number, cy: number, r: number): boolean {
 //
 // drawSmooth: renders pts as one continuous smooth curve using the midpoint-
 // quadratic technique.  lineCap/lineJoin = "round" ensures seamless joins.
+//
+// Pressure (pen tool): each point carries stylus pressure; when
+// pressureSensitive is on, width varies per segment. Mouse/legacy points
+// store pressure 0.5, which maps to exactly 1.0× width — so mouse strokes
+// and pre-existing strokes render identically to before.
+
+function pressureWidth(base: number, p: number): number {
+  return base * (0.45 + 1.1 * p); // p=0.1 → 0.56×, p=0.5 → 1.0×, p=1 → 1.55×
+}
 
 function drawSmooth(
   ctx:     CanvasRenderingContext2D,
@@ -129,38 +138,64 @@ function drawSmooth(
   color:   string,
   width:   number,
   opacity: number,
+  pressureSensitive = false,
 ) {
   if (!pts.length) return;
   ctx.save();
   ctx.globalAlpha   = opacity;
   ctx.strokeStyle   = color;
   ctx.fillStyle     = color;
-  ctx.lineWidth     = width;
   ctx.lineCap       = "round";
   ctx.lineJoin      = "round";
 
   if (pts.length === 1) {
+    const r = (pressureSensitive ? pressureWidth(width, pts[0][2]) : width) / 2;
     ctx.beginPath();
-    ctx.arc(pts[0][0], pts[0][1], width / 2, 0, Math.PI * 2);
+    ctx.arc(pts[0][0], pts[0][1], r, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
     return;
   }
 
-  ctx.beginPath();
-  ctx.moveTo(pts[0][0], pts[0][1]);
-
-  if (pts.length === 2) {
-    ctx.lineTo(pts[1][0], pts[1][1]);
-  } else {
-    for (let i = 1; i < pts.length - 1; i++) {
-      const mx = (pts[i][0] + pts[i + 1][0]) / 2;
-      const my = (pts[i][1] + pts[i + 1][1]) / 2;
-      ctx.quadraticCurveTo(pts[i][0], pts[i][1], mx, my);
+  if (!pressureSensitive) {
+    // Fast path — one continuous stroke at constant width.
+    ctx.lineWidth = width;
+    ctx.beginPath();
+    ctx.moveTo(pts[0][0], pts[0][1]);
+    if (pts.length === 2) {
+      ctx.lineTo(pts[1][0], pts[1][1]);
+    } else {
+      for (let i = 1; i < pts.length - 1; i++) {
+        const mx = (pts[i][0] + pts[i + 1][0]) / 2;
+        const my = (pts[i][1] + pts[i + 1][1]) / 2;
+        ctx.quadraticCurveTo(pts[i][0], pts[i][1], mx, my);
+      }
+      ctx.lineTo(pts[pts.length - 1][0], pts[pts.length - 1][1]);
     }
-    ctx.lineTo(pts[pts.length - 1][0], pts[pts.length - 1][1]);
+    ctx.stroke();
+    ctx.restore();
+    return;
   }
 
+  // Pressure path — same midpoint-quadratic chain, but each segment is its
+  // own sub-stroke with width from the local pressure. Round caps make the
+  // joints seamless.
+  let px = pts[0][0], py = pts[0][1];
+  for (let i = 1; i < pts.length - 1; i++) {
+    const mx = (pts[i][0] + pts[i + 1][0]) / 2;
+    const my = (pts[i][1] + pts[i + 1][1]) / 2;
+    ctx.beginPath();
+    ctx.lineWidth = pressureWidth(width, (pts[i][2] + pts[i + 1][2]) / 2);
+    ctx.moveTo(px, py);
+    ctx.quadraticCurveTo(pts[i][0], pts[i][1], mx, my);
+    ctx.stroke();
+    px = mx; py = my;
+  }
+  const last = pts[pts.length - 1];
+  ctx.beginPath();
+  ctx.lineWidth = pressureWidth(width, last[2]);
+  ctx.moveTo(px, py);
+  ctx.lineTo(last[0], last[1]);
   ctx.stroke();
   ctx.restore();
 }
@@ -194,7 +229,7 @@ function drawArrow(
 function paintStroke(ctx: CanvasRenderingContext2D, s: Stroke, alphaScale = 1) {
   const pts = normPts(s.points as unknown[]);
   if (s.tool === "arrow") { drawArrow(ctx, pts, s.color, s.width); return; }
-  drawSmooth(ctx, pts, s.color, s.width, s.opacity * alphaScale);
+  drawSmooth(ctx, pts, s.color, s.width, s.opacity * alphaScale, s.tool === "pen");
 }
 
 // ── Props ──────────────────────────────────────────────────────────────────
@@ -349,7 +384,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     for (const seg of remoteActiveRef.current.values()) {
       const onThisPage = seg.mushafPage === undefined || seg.mushafPage === curPage;
       if (onThisPage && seg.points.length > 0) {
-        drawSmooth(ctx, seg.points, seg.color, seg.width, 0.55);
+        drawSmooth(ctx, seg.points, seg.color, seg.width, 0.55, true);
       }
     }
     ctx.restore();
@@ -368,7 +403,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
       if (t === "arrow") {
         drawArrow(ctx, activePtsRef.current, activeColorRef.current, activeWidthRef.current);
       } else {
-        drawSmooth(ctx, activePtsRef.current, activeColorRef.current, activeWidthRef.current, TOOL_OPACITY[t]);
+        drawSmooth(ctx, activePtsRef.current, activeColorRef.current, activeWidthRef.current, TOOL_OPACITY[t], t === "pen");
       }
     }
     ctx.restore();
@@ -542,17 +577,59 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
   }, [roomSocket, scheduleRender]);
 
   // ── Debounced save ─────────────────────────────────────────────────────
+  // Previously fire-and-forget: a failed PUT was silently swallowed and the
+  // in-memory strokes were the only copy. Now: one retry after 3 s, and a
+  // keepalive flush when the tab is hidden/closed (mosque Wi-Fi reality).
+
+  const putStrokes = useCallback((keepalive = false) => {
+    const body = JSON.stringify({ strokes: allMyStrokesRef.current });
+    return fetch(`/api/pages/${pageId}/drawings`, {
+      method:  "PUT",
+      headers: { "Content-Type": "application/json" },
+      body,
+      keepalive,
+    });
+  }, [pageId]);
 
   const scheduleSave = useCallback(() => {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => {
-      fetch(`/api/pages/${pageId}/drawings`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ strokes: allMyStrokesRef.current }),
-      }).catch(() => {});
+      saveTimerRef.current = null;
+      putStrokes().catch(() => {
+        // One retry — covers transient network blips during a lesson.
+        setTimeout(() => { putStrokes().catch(() => {}); }, 3000);
+      });
     }, SAVE_DEBOUNCE);
-  }, [pageId]);
+  }, [putStrokes]);
+
+  // Flush pending saves before the tab suspends; refresh peers on refocus.
+  useEffect(() => {
+    function flushPending() {
+      if (!saveTimerRef.current) return;
+      clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+      putStrokes(true).catch(() => {});
+    }
+    function onVisibility() {
+      if (document.visibilityState === "hidden") {
+        flushPending();
+      } else {
+        // Back from suspension — don't wait up to 15 s for the poll.
+        fetch(`/api/pages/${pageId}/drawings`)
+          .then(r => r.ok ? r.json() : null)
+          .then((d: { otherLayers?: DrawingLayer[] } | null) => {
+            if (d?.otherLayers) setOtherLayers(d.otherLayers);
+          })
+          .catch(() => {});
+      }
+    }
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("pagehide", flushPending);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("pagehide", flushPending);
+    };
+  }, [pageId, putStrokes]);
 
   useEffect(() => () => {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);

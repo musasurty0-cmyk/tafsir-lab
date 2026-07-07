@@ -109,7 +109,21 @@ export default function PageEditor({
   useEffect(() => {
     mountedRef.current = true;
     provider.connect();
+
+    // Reconnect the Yjs socket promptly when an iPad tab is un-suspended —
+    // otherwise the student writes into a disconnected doc until the
+    // library's backoff timer fires.
+    const onVisible = () => {
+      if (document.visibilityState !== "visible") return;
+      const p = provider as unknown as { wsconnected?: boolean; connect: () => void };
+      if (p.wsconnected === false) {
+        try { p.connect(); } catch { /* already connecting */ }
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+
     return () => {
+      document.removeEventListener("visibilitychange", onVisible);
       mountedRef.current = false;
       provider.disconnect();
       setTimeout(() => {
@@ -245,6 +259,11 @@ export default function PageEditor({
 
     editorProps: {
       attributes: { class: "page-editor-content", spellcheck: "true" },
+      // Keep the caret visible above the iPad on-screen keyboard: ProseMirror
+      // auto-scrolls the selection into view with this margin whenever it
+      // comes within the threshold of the (visual) viewport edge.
+      scrollThreshold: 80,
+      scrollMargin:    160,
     },
   });
 
@@ -281,6 +300,45 @@ export default function PageEditor({
     return () => { onEditorReadyRef.current?.(null); };
   }, [editor]);
 
+  // ── Tablet ergonomics for the slash palette ───────────────────────────
+
+  // Reposition the palette when the on-screen keyboard opens/closes.
+  // visualViewport shrinks when the iPad keyboard slides up; without this
+  // the palette can end up hidden behind the keyboard.
+  const [, setViewportTick] = useState(0);
+  useEffect(() => {
+    if (!palette) return;
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const bump = () => setViewportTick((t) => t + 1);
+    vv.addEventListener("resize", bump);
+    vv.addEventListener("scroll", bump);
+    return () => {
+      vv.removeEventListener("resize", bump);
+      vv.removeEventListener("scroll", bump);
+    };
+  }, [palette]);
+
+  // Tap-outside dismiss — a light stylus tap elsewhere must close the
+  // palette even when it doesn't move the text cursor out of the
+  // suggestion range.
+  useEffect(() => {
+    if (!palette) return;
+    function onDown(e: PointerEvent) {
+      const anchor = document.querySelector(".slash-palette-anchor");
+      if (anchor && !anchor.contains(e.target as Node)) setPalette(null);
+    }
+    document.addEventListener("pointerdown", onDown, true);
+    return () => document.removeEventListener("pointerdown", onDown, true);
+  }, [palette]);
+
+  // Floating "+ Insert" — opens the block palette without typing "/",
+  // so stylus/touch users don't need the keyboard-first mental model.
+  const openInsertMenu = useCallback(() => {
+    if (!editor || editor.isDestroyed) return;
+    editor.chain().focus().insertContent("/").run();
+  }, [editor]);
+
   // ── Palette item selection ────────────────────────────────────────────
 
   const handleSelect = useCallback(
@@ -310,25 +368,48 @@ export default function PageEditor({
       <EditorContent editor={editor} />
       <SelectionToolbar editor={editor} />
 
+      {/* Floating insert button — tap-first path to the block palette for
+          stylus/touch users (typing "/" requires summoning the keyboard). */}
+      {!palette && (
+        <button
+          type="button"
+          className="editor-insert-fab"
+          title="Insert block"
+          aria-label="Insert block"
+          onPointerDown={(e) => e.preventDefault() /* keep editor focus */}
+          onClick={openInsertMenu}
+        >
+          +
+        </button>
+      )}
+
       {palette &&
         typeof document !== "undefined" &&
         createPortal(
           (() => {
             // Keep the palette fully on-screen: flip above the caret when
             // there isn't enough room below, and clamp horizontally.
+            // Uses visualViewport so the on-screen keyboard (which shrinks
+            // the visual viewport, not the layout viewport) is respected.
             const MAX_H = 324;
             const MIN_W = 280;
-            const vh = window.innerHeight;
-            const vw = window.innerWidth;
+            const vv = window.visualViewport;
+            const visBottom = vv ? vv.offsetTop + vv.height : window.innerHeight;
+            const vw = vv ? vv.offsetLeft + vv.width : window.innerWidth;
             const left = Math.max(8, Math.min(palette.rect.left, vw - MIN_W - 12));
-            const spaceBelow = vh - palette.rect.bottom;
-            const openUp = spaceBelow < MAX_H + 12 && palette.rect.top > spaceBelow;
+            const spaceBelow = visBottom - palette.rect.bottom;
+            const openUp = spaceBelow < MAX_H + 12 && (palette.rect.top - (vv?.offsetTop ?? 0)) > spaceBelow;
             const pos: React.CSSProperties = openUp
-              ? { position: "fixed", bottom: vh - palette.rect.top + 6, left, zIndex: 9999 }
-              : { position: "fixed", top: palette.rect.bottom + 6, left, zIndex: 9999 };
+              ? { position: "fixed", bottom: window.innerHeight - palette.rect.top + 6, left, zIndex: 9999 }
+              : { position: "fixed", top: Math.min(palette.rect.bottom + 6, visBottom - 120), left, zIndex: 9999 };
+            // When opening downward with the keyboard up, cap the palette
+            // height to the space actually visible above the keyboard.
+            const maxH = openUp
+              ? MAX_H
+              : Math.min(MAX_H, Math.max(120, visBottom - palette.rect.bottom - 18));
             return (
               <div className="slash-palette-anchor" data-open-up={openUp ? "true" : "false"} style={pos}>
-                <CommandList ref={commandListRef} items={palette.items} query={palette.query} onSelect={handleSelect} />
+                <CommandList ref={commandListRef} items={palette.items} query={palette.query} onSelect={handleSelect} maxHeight={maxH} />
               </div>
             );
           })(),

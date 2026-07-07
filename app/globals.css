@@ -4011,6 +4011,59 @@ input, textarea { font: inherit; color: inherit; }
   cursor: text;
 }
 
+/* Floating "+ Insert" button — tap-first path to the block palette for
+   stylus/touch users. Sticky inside the editor column so it never overlaps
+   the canvas pane in split view. */
+.editor-insert-fab {
+  position: sticky;
+  bottom: 28px;
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--bg-elev);
+  border: 1px solid var(--line-strong);
+  box-shadow: var(--shadow-md);
+  color: var(--ink-2);
+  font-size: 22px;
+  font-weight: 300;
+  line-height: 1;
+  cursor: pointer;
+  z-index: 30;
+  transition: background var(--dur-hover) var(--ease-soft),
+              color      var(--dur-hover) var(--ease-soft),
+              border-color var(--dur-hover) var(--ease-soft),
+              box-shadow var(--dur-hover) var(--ease-soft);
+}
+.editor-insert-fab:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  box-shadow: var(--shadow-lg);
+}
+
+/* Mixed Arabic/English typing (bidi):
+   `unicode-bidi: plaintext` makes each block's direction follow its own
+   first strong character — an Arabic-first paragraph flows RTL with the
+   caret behaving correctly, while English paragraphs stay LTR, in the
+   same document. text-align:start keeps alignment matched to direction. */
+.page-editor-content p,
+.page-editor-content h1,
+.page-editor-content h2,
+.page-editor-content h3,
+.page-editor-content li,
+.page-editor-content blockquote {
+  unicode-bidi: plaintext;
+  text-align: start;
+}
+.free-textbox-text,
+.free-textbox-input {
+  unicode-bidi: plaintext;
+}
+
 /* The ProseMirror contenteditable region */
 .page-editor-content {
   outline: none;
