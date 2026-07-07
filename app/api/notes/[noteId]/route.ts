@@ -45,6 +45,7 @@ export async function PATCH(
 
     const body = await req.json() as {
       content?:     unknown;
+      noteType?:    unknown;
       offsetX?:     unknown;
       offsetY?:     unknown;
       width?:       unknown;
@@ -55,6 +56,13 @@ export async function PATCH(
 
     if (body.content !== undefined) {
       await NotesService.updateNoteContent(noteId, userId, body.content);
+    }
+
+    // Note type reclassification (was silently dropped before — clients sent
+    // noteType but the route never processed it).
+    const VALID_TYPES = ["text", "callout", "linguistic", "thematic", "ruling", "question"];
+    if (typeof body.noteType === "string" && VALID_TYPES.includes(body.noteType)) {
+      await NotesService.updateNoteType(noteId, userId, body.noteType as NotesService.NoteType);
     }
 
     const geometry: NotesService.NoteGeometryPatch = {};

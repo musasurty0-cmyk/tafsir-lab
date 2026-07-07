@@ -14,6 +14,7 @@
  *   3. Renders <PageEditor> — the TipTap editor shell.
  */
 
+import { useMemo } from "react";
 import type { Verse } from "@/lib/types";
 import type { ProgressStatus } from "@/lib/services/progress.service";
 import type { MemberRole } from "@/lib/services/workspaces.service";
@@ -118,23 +119,28 @@ export default function ModeAPage({
   onNoteUpdated,
   onNoteDeleted,
 }: Props) {
+  // Memoized so AyahBlockView consumers don't re-render on every parent
+  // render (e.g. presence updates) — only when the actual data changes.
+  const editorContextValue = useMemo(() => ({
+    pageId,
+    surahNumber,
+    verses,
+    notes,
+    role,
+    personalProgress,
+    groupProgress,
+    onNoteCreated,
+    onNoteUpdated,
+    onNoteDeleted,
+    onProgressChange,
+    onOpenTafsir,
+  }), [
+    pageId, surahNumber, verses, notes, role, personalProgress, groupProgress,
+    onNoteCreated, onNoteUpdated, onNoteDeleted, onProgressChange, onOpenTafsir,
+  ]);
+
   return (
-    <EditorContextProvider
-      value={{
-        pageId,
-        surahNumber,
-        verses,
-        notes,
-        role,
-        personalProgress,
-        groupProgress,
-        onNoteCreated,
-        onNoteUpdated,
-        onNoteDeleted,
-        onProgressChange,
-        onOpenTafsir,
-      }}
-    >
+    <EditorContextProvider value={editorContextValue}>
       <div className="doc-wrap">
         <div className="doc">
 

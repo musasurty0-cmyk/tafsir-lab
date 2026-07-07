@@ -9,7 +9,7 @@
  */
 
 import Link from "next/link";
-import { Sliders } from "lucide-react";
+import { Sliders, Download } from "lucide-react";
 import type { Chapter } from "@/lib/types";
 import PresenceBar from "./PresenceBar";
 import type { PresenceData } from "@/lib/collab/usePresence";
@@ -82,6 +82,8 @@ interface Props {
   presenceOthers?:    PresenceData[];
   /** Realtime room connection state — drives the Live indicator */
   liveStatus?:        "connecting" | "connected" | "disconnected";
+  /** Download the current page (content + notes) as Markdown */
+  onExport?:          () => void;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────
@@ -103,6 +105,7 @@ export default function TopBar({
   onToggleFormatting,
   presenceOthers = [],
   liveStatus,
+  onExport,
 }: Props) {
   return (
     <div className="topbar">
@@ -218,6 +221,20 @@ export default function TopBar({
         >
           <Sliders size={14} /> Tweaks
         </button>
+
+        {/* Markdown export */}
+        {onExport && (
+          <>
+            <div className="tb-divider" />
+            <button
+              className="tb-btn"
+              onClick={onExport}
+              title="Download this page as Markdown"
+            >
+              <Download size={14} /> Export
+            </button>
+          </>
+        )}
       </div>
     </div>
   );

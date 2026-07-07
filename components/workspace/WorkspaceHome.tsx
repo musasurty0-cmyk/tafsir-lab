@@ -227,6 +227,13 @@ export default function WorkspaceHome({
 
           {/* Workspace actions */}
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <button
+              className="ws-new-btn ws-new-btn--ghost"
+              title="All notes across this workspace"
+              onClick={() => router.push(`/workspaces/${workspaceId}/notes`)}
+            >
+              Notes
+            </button>
             {role === "owner" && (
               <button
                 className="ws-new-btn ws-new-btn--ghost"

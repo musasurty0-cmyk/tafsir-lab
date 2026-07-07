@@ -3060,6 +3060,33 @@ input, textarea { font: inherit; color: inherit; }
   text-decoration-style: dotted;
 }
 
+/* Note type reclassification pills (AnchoredNoteCard edit form) */
+.anc-note-type-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 6px 0 8px;
+}
+.anc-note-type-option {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  color: var(--ink-3);
+  background: transparent;
+  cursor: pointer;
+  transition: color var(--dur-hover) var(--ease-soft),
+              border-color var(--dur-hover) var(--ease-soft),
+              background var(--dur-hover) var(--ease-soft);
+}
+.anc-note-type-option:hover { border-color: var(--type-color); color: var(--type-color); }
+.anc-note-type-option[data-active="true"] {
+  color: var(--type-color);
+  border-color: var(--type-color);
+  background: color-mix(in oklch, var(--type-color) 10%, transparent);
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════
    Free text boxes — write anywhere on the Mode B canvas
    ═══════════════════════════════════════════════════════════════════════════ */
@@ -6809,4 +6836,194 @@ input, textarea { font: inherit; color: inherit; }
   /* Keep collaborator labels visible (no fade) when motion is reduced */
   .collaboration-cursor__label { animation: none !important; opacity: 1 !important; }
   * { transition-duration: 0.01ms !important; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Notes review — workspace-wide retrieval view (/workspaces/[id]/notes)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.notes-review-page {
+  display: flex;
+  height: 100vh;
+  background: var(--bg);
+}
+.notes-review-main {
+  flex: 1;
+  overflow-y: auto;
+  padding: 40px clamp(20px, 6vw, 72px) 96px;
+}
+.notes-review-head { max-width: 780px; margin: 0 auto 28px; }
+.notes-review-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--ink-3);
+  margin-bottom: 14px;
+  transition: color var(--dur-hover) var(--ease-soft);
+}
+.notes-review-back:hover { color: var(--ink); }
+.notes-review-title {
+  font-family: var(--font-serif);
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  margin: 0 0 4px;
+}
+.notes-review-sub { font-size: 13px; color: var(--ink-3); margin: 0 0 18px; }
+
+.notes-review-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 13px;
+  background: var(--bg-elev);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-md);
+  margin-bottom: 12px;
+}
+.notes-review-search input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 13.5px;
+  color: var(--ink);
+}
+.notes-review-search input::placeholder { color: var(--ink-4); }
+
+.notes-review-filters { display: flex; flex-wrap: wrap; gap: 5px; }
+.notes-review-chip {
+  font-size: 11.5px;
+  font-weight: 500;
+  padding: 4px 11px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  color: var(--ink-3);
+  background: transparent;
+  cursor: pointer;
+  transition: color var(--dur-hover) var(--ease-soft),
+              border-color var(--dur-hover) var(--ease-soft),
+              background var(--dur-hover) var(--ease-soft);
+}
+.notes-review-chip:hover { color: var(--ink); border-color: var(--line-strong); }
+.notes-review-chip[data-active="true"] {
+  color: var(--type-color, var(--accent-ink));
+  border-color: var(--type-color, var(--accent));
+  background: color-mix(in oklch, var(--type-color, var(--accent)) 8%, transparent);
+}
+
+.notes-review-empty {
+  max-width: 780px;
+  margin: 48px auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+  font-size: 13.5px;
+  color: var(--ink-3);
+}
+
+.notes-review-surah { max-width: 780px; margin: 0 auto 34px; }
+.notes-review-surah-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-serif);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--ink);
+  margin: 0 0 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+.notes-review-surah-num {
+  width: 26px; height: 26px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 8px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--ink-2);
+}
+.notes-review-surah-ar {
+  font-family: var(--font-arabic);
+  font-size: 16px;
+  color: var(--ink-3);
+  margin-left: auto;
+}
+
+.notes-review-ayah-group { margin-bottom: 16px; }
+.notes-review-ayah-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-3);
+  margin: 0 0 6px;
+}
+.notes-review-ayah-count {
+  font-size: 10px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--ink-4);
+  font-variant-numeric: tabular-nums;
+}
+
+.notes-review-note {
+  display: grid;
+  grid-template-columns: 84px 1fr;
+  grid-template-areas: "type text" "type meta";
+  gap: 2px 12px;
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--bg-elev);
+  margin-bottom: 6px;
+  cursor: pointer;
+  transition: border-color var(--dur-hover) var(--ease-soft),
+              box-shadow var(--dur-hover) var(--ease-flow),
+              transform var(--dur-hover) var(--ease-flow);
+}
+.notes-review-note:hover {
+  border-color: var(--line-strong);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
+}
+.notes-review-note-type {
+  grid-area: type;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  align-self: start;
+  padding-top: 2px;
+}
+.notes-review-note-text {
+  grid-area: text;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--ink);
+  white-space: pre-wrap;
+  word-break: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  unicode-bidi: plaintext;
+}
+.notes-review-note-meta {
+  grid-area: meta;
+  font-size: 11px;
+  color: var(--ink-4);
 }

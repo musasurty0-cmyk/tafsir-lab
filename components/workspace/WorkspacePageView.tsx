@@ -34,6 +34,7 @@ import TweaksPanel, { type TweaksState, TWEAKS_DEFAULTS } from "./TweaksPanel";
 import TourBubble  from "@/components/TourBubble";
 import { useRoom } from "@/lib/collab/useRoom";
 import { usePresence } from "@/lib/collab/usePresence";
+import { pageToMarkdown, downloadMarkdown } from "@/lib/export-markdown";
 
 // ── Shared types ──────────────────────────────────────────────────────────
 
@@ -310,6 +311,27 @@ export default function WorkspacePageView({
     setTafsirOpen(true);
   }, []);
 
+  // ── Markdown export — the "your notes aren't locked in" safety valve ──
+  const handleExport = useCallback(() => {
+    if (!page) return;
+    const doc = activeEditor && !activeEditor.isDestroyed
+      ? activeEditor.getJSON()
+      : page.tiptapContent;
+    const md = pageToMarkdown({
+      title:     page.title,
+      surahName: chapter.name_simple,
+      doc,
+      notes:     notes.map((n) => ({
+        noteType:    n.noteType,
+        surahNumber: n.surahNumber,
+        ayahNumber:  n.ayahNumber,
+        content:     n.content,
+        author:      { name: n.author.name },
+      })),
+    });
+    downloadMarkdown(`${page.title}.md`, md);
+  }, [page, activeEditor, notes, chapter.name_simple]);
+
   // Optimistic progress mutation — reverts on API error.
   const handleProgressChange = useCallback(
     async (
@@ -498,6 +520,7 @@ export default function WorkspacePageView({
           onToggleFormatting={handleToggleFormatting}
           presenceOthers={presenceOthers}
           liveStatus={room.status}
+          onExport={page ? handleExport : undefined}
         />
         <EditorToolbar editor={activeEditor} open={formattingOpen && mode !== "canvas"} />
 

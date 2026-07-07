@@ -30,17 +30,26 @@ const NOTE_TYPE_META: Record<string, { label: string; color: string }> = {
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
+/** Extract plain text from TipTap JSON, preserving paragraph breaks as \n. */
 function extractText(node: unknown): string {
   if (typeof node === "string") return node;
   if (!node || typeof node !== "object") return "";
-  const n = node as { text?: string; content?: unknown[] };
+  const n = node as { type?: string; text?: string; content?: unknown[] };
   if (n.text) return n.text;
   if (!n.content) return "";
-  return n.content.map(extractText).join("");
+  const parts = n.content.map(extractText);
+  // Block-level children join with newlines so multi-paragraph notes
+  // don't collapse into one run-on line when edited here.
+  if (n.type === "doc") return parts.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+  return parts.join("");
 }
 
 function toDoc(text: string): object {
-  return { type: "doc", content: [{ type: "paragraph", content: text ? [{ type: "text", text }] : [] }] };
+  const paragraphs = text.split("\n").map((line) => ({
+    type:    "paragraph",
+    content: line ? [{ type: "text", text: line }] : [],
+  }));
+  return { type: "doc", content: paragraphs.length ? paragraphs : [{ type: "paragraph" }] };
 }
 
 // ── Icons ──────────────────────────────────────────────────────────────────
@@ -94,6 +103,7 @@ export default function AnchoredNoteCard({ note, x, y, onUpdated, onDeleted }: P
   const [minimized, setMinimized] = useState(note.isMinimized);
   const [editing,   setEditing]   = useState(false);
   const [editText,  setEditText]  = useState(() => extractText(note.content));
+  const [editType,  setEditType]  = useState(note.noteType);
   const [saving,    setSaving]    = useState(false);
   const [deleting,  setDeleting]  = useState(false);
   const [error,     setError]     = useState<string | null>(null);
@@ -118,6 +128,7 @@ export default function AnchoredNoteCard({ note, x, y, onUpdated, onDeleted }: P
 
   function startEdit() {
     setEditText(extractText(note.content));
+    setEditType(note.noteType);
     setError(null);
     setEditing(true);
     setTimeout(() => {
@@ -135,7 +146,10 @@ export default function AnchoredNoteCard({ note, x, y, onUpdated, onDeleted }: P
       const res = await fetch(`/api/notes/${note.id}`, {
         method:  "PATCH",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ content: toDoc(editText.trim()) }),
+        body:    JSON.stringify({
+          content: toDoc(editText.trim()),
+          ...(editType !== note.noteType ? { noteType: editType } : {}),
+        }),
       });
       if (!res.ok) {
         const d = await res.json().catch(() => ({ error: res.statusText }));
@@ -197,8 +211,26 @@ export default function AnchoredNoteCard({ note, x, y, onUpdated, onDeleted }: P
         style={{ position: "absolute", left: x, top: y, width: cardWidth, borderLeftColor: borderColor, zIndex: (note.zIndex ?? 1) + 10 }}
       >
         <div className="anc-note-head">
-          <span className="anc-note-type" style={{ color: meta.color }}>{meta.label}</span>
+          <span className="anc-note-type" style={{ color: (NOTE_TYPE_META[editType] ?? meta).color }}>
+            {(NOTE_TYPE_META[editType] ?? meta).label}
+          </span>
           <span className="anc-note-author">{note.author.name}</span>
+        </div>
+        {/* Type reclassification pills — "type first, categorize later" */}
+        <div className="anc-note-type-picker">
+          {Object.entries(NOTE_TYPE_META).map(([id, m]) => (
+            <button
+              key={id}
+              type="button"
+              className="anc-note-type-option"
+              data-active={editType === id ? "true" : "false"}
+              style={{ "--type-color": m.color } as React.CSSProperties}
+              onClick={() => setEditType(id)}
+              disabled={saving}
+            >
+              {m.label}
+            </button>
+          ))}
         </div>
         <textarea
           ref={textareaRef}

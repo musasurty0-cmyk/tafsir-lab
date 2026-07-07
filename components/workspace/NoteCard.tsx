@@ -43,18 +43,26 @@ const TrashIcon = () => (
   </svg>
 );
 
-/** Extract plain text from TipTap JSON or return the value if already a string. */
+/** Extract plain text from TipTap JSON, preserving paragraph breaks as \n. */
 function extractText(node: unknown): string {
   if (typeof node === "string") return node;
   if (!node || typeof node !== "object") return "";
-  const n = node as { text?: string; content?: unknown[] };
+  const n = node as { type?: string; text?: string; content?: unknown[] };
   if (n.text) return n.text;
   if (!n.content) return "";
-  return n.content.map(extractText).join("");
+  const parts = n.content.map(extractText);
+  // Block-level children join with newlines so multi-paragraph notes
+  // don't collapse into one run-on line when edited here.
+  if (n.type === "doc") return parts.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+  return parts.join("");
 }
 
 function toDoc(text: string): object {
-  return { type: "doc", content: [{ type: "paragraph", content: text ? [{ type: "text", text }] : [] }] };
+  const paragraphs = text.split("\n").map((line) => ({
+    type:    "paragraph",
+    content: line ? [{ type: "text", text: line }] : [],
+  }));
+  return { type: "doc", content: paragraphs.length ? paragraphs : [{ type: "paragraph" }] };
 }
 
 function formatDate(d: Date | string) {

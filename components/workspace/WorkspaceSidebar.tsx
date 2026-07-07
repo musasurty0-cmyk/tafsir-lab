@@ -417,6 +417,9 @@ export default function WorkspaceSidebar({
         <Link href={`/workspaces/${workspaceId}`} className="sidebar-footer-link">
           ← Surah grid
         </Link>
+        <Link href={`/workspaces/${workspaceId}/notes`} className="sidebar-footer-link">
+          All notes
+        </Link>
       </div>
     </aside>
   );
