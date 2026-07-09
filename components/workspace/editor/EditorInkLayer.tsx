@@ -1,55 +1,43 @@
 "use client";
 
 /**
- * EditorInkLayer — transparent ink overlay for the Mode A typed notebook.
+ * EditorInkLayer — stylus-first ink over the Mode A typed notebook.
  *
- * Council round-3 verdict (unanimous): a student typing notes can't circle
- * a word, underline their own sentence, or handwrite an Arabic term without
- * leaving the editor. This overlay makes ink a property of the page:
+ * No mode toggle, no floating buttons: the PEN draws the moment it touches
+ * the page (GoodNotes model). Finger scrolls and taps as normal; mouse and
+ * keyboard edit text as normal. Only pointerType === "pen" inks.
  *
- *   • absolutely-positioned canvas pinned inside .page-editor — strokes
- *     live in content space and scroll WITH the typed text
- *   • pen + highlighter + eraser (reusing the shared lib/ink engine with
- *     pressure-sensitive rendering)
- *   • finger scrolls (touch passes through), pen draws — same input
- *     discipline as the Mushaf canvas
- *   • strokes persist per-user via the drawings API with surface:"editor"
- *     (server merges, so Mushaf canvas saves never clobber these)
- *   • collaborators' editor ink renders at reduced opacity (poll-based)
+ * iPad Safari note: the Apple Pencil ALSO fires touch events (touchType
+ * "stylus"); if the browser is allowed to handle them it claims the Pencil
+ * for scrolling and cancels our pointer stream — that was the "pen moves
+ * the page instead of drawing" bug. We preventDefault stylus touchstart/
+ * touchmove (capture, passive:false) so the Pencil's pointer events flow.
  *
- * Deliberately NOT here (council traps): pan/zoom, arrows/shapes,
- * handwriting recognition, note anchoring. V1 accepts stroke drift if
- * paragraphs above are heavily reflowed.
+ * A slim tool pill (pen / highlighter / eraser / colors / undo) auto-appears
+ * on the first pen touch and can be dismissed — zero chrome while typing.
+ *
+ * Strokes live in content space (they scroll with the text), persist
+ * per-user via the drawings API with surface:"editor" (server merges so
+ * Mushaf-canvas saves never clobber them), and collaborators' editor ink
+ * renders softened via a 20s poll.
  */
 
-import {
-  forwardRef, useCallback, useEffect, useImperativeHandle, useRef,
-} from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { PenLine, Highlighter, Eraser, Undo2, X } from "lucide-react";
 import {
   type Pt, type InkStroke,
   normPts, hitTest, drawSmooth, strokeSurface,
 } from "@/lib/ink";
 
-// ── Public types ───────────────────────────────────────────────────────────
+// ── Types / constants ──────────────────────────────────────────────────────
 
-export type EditorInkTool = "off" | "pen" | "highlight" | "eraser";
-
-export interface EditorInkHandle {
-  undo: () => void;
-}
+type InkTool = "pen" | "highlight" | "eraser";
 
 interface OtherInkLayer { authorId: string; strokes: InkStroke[] }
 
-interface Props {
-  pageId:          string;
-  tool:            EditorInkTool;
-  color:           string;
-  /** Called whenever the user's editor-ink undo stack changes. */
-  onCanUndoChange?: (canUndo: boolean) => void;
-}
+interface Props { pageId: string }
 
-// ── Constants ──────────────────────────────────────────────────────────────
-
+const INK_COLORS      = ["#dc2626", "#18181b", "#2563eb", "#16a34a", "#fbbf24"];
 const PEN_WIDTH       = 2.2;
 const HIGHLIGHT_WIDTH = 14;
 const ERASER_RADIUS   = 16;
@@ -60,26 +48,26 @@ const OPACITY: Record<"pen" | "highlight", number> = { pen: 1, highlight: 0.4 };
 
 // ── Component ──────────────────────────────────────────────────────────────
 
-const EditorInkLayer = forwardRef<EditorInkHandle, Props>(function EditorInkLayer(
-  { pageId, tool, color, onCanUndoChange },
-  ref,
-) {
-  const canvasRef  = useRef<HTMLCanvasElement>(null);
-  const rafRef     = useRef(0);
+export default function EditorInkLayer({ pageId }: Props) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const rafRef    = useRef(0);
+
+  const [tool,  setTool]  = useState<InkTool>("pen");
+  const [color, setColor] = useState(INK_COLORS[0]);
+  const [pillVisible, setPillVisible] = useState(false);
+  const [canUndo, setCanUndo] = useState(false);
 
   const toolRef  = useRef(tool);
   useEffect(() => { toolRef.current = tool; }, [tool]);
   const colorRef = useRef(color);
   useEffect(() => { colorRef.current = color; }, [color]);
 
-  const strokesRef      = useRef<InkStroke[]>([]);
-  const othersRef       = useRef<OtherInkLayer[]>([]);
-  const isDrawingRef    = useRef(false);
-  const activePtsRef    = useRef<Pt[]>([]);
-  const activeToolRef   = useRef<"pen" | "highlight">("pen");
-  const saveTimerRef    = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const onCanUndoRef    = useRef(onCanUndoChange);
-  useEffect(() => { onCanUndoRef.current = onCanUndoChange; }, [onCanUndoChange]);
+  const strokesRef    = useRef<InkStroke[]>([]);
+  const othersRef     = useRef<OtherInkLayer[]>([]);
+  const isDrawingRef  = useRef(false);
+  const activePtsRef  = useRef<Pt[]>([]);
+  const activeToolRef = useRef<"pen" | "highlight">("pen");
+  const saveTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Render ─────────────────────────────────────────────────────────────
 
@@ -136,13 +124,12 @@ const EditorInkLayer = forwardRef<EditorInkHandle, Props>(function EditorInkLaye
     rafRef.current = requestAnimationFrame(render);
   }, [render]);
 
-  // Re-render when the editor content grows/reflows (typing below the ink)
+  // Re-render when the editor content grows/reflows
   useEffect(() => {
     const parent = canvasRef.current?.parentElement;
     if (!parent) return;
     const ro = new ResizeObserver(scheduleRender);
     ro.observe(parent);
-    // .page-editor height follows its content; observe the ProseMirror node too
     const pm = parent.querySelector(".page-editor-content");
     if (pm) ro.observe(pm);
     return () => { ro.disconnect(); cancelAnimationFrame(rafRef.current); };
@@ -169,7 +156,6 @@ const EditorInkLayer = forwardRef<EditorInkHandle, Props>(function EditorInkLaye
     }, SAVE_DEBOUNCE);
   }, [putStrokes]);
 
-  // Initial load + collaborator poll
   useEffect(() => {
     let cancelled = false;
 
@@ -183,7 +169,7 @@ const EditorInkLayer = forwardRef<EditorInkHandle, Props>(function EditorInkLaye
             authorId: l.authorId,
             strokes:  l.strokes.filter((s) => strokeSurface(s) === "editor"),
           }));
-          onCanUndoRef.current?.(strokesRef.current.length > 0);
+          setCanUndo(strokesRef.current.length > 0);
           scheduleRender();
         })
         .catch(() => {});
@@ -194,7 +180,6 @@ const EditorInkLayer = forwardRef<EditorInkHandle, Props>(function EditorInkLaye
       if (document.visibilityState === "visible") load();
     }, OTHERS_POLL_MS);
 
-    // Flush pending ink before the tab suspends
     function flush() {
       if (!saveTimerRef.current) return;
       clearTimeout(saveTimerRef.current);
@@ -213,119 +198,203 @@ const EditorInkLayer = forwardRef<EditorInkHandle, Props>(function EditorInkLaye
     };
   }, [pageId, putStrokes, scheduleRender]);
 
-  // ── Undo handle ────────────────────────────────────────────────────────
+  // ── Stylus input — native capture-phase listeners on the editor ────────
+  // Pen draws, everything else passes through untouched. Capture phase runs
+  // before ProseMirror's handlers, so a pen tap never moves the caret.
 
-  useImperativeHandle(ref, () => ({
-    undo() {
-      if (!strokesRef.current.length) return;
-      strokesRef.current = strokesRef.current.slice(0, -1);
-      onCanUndoRef.current?.(strokesRef.current.length > 0);
-      scheduleSave();
+  useEffect(() => {
+    const parent = canvasRef.current?.parentElement;
+    if (!parent) return;
+
+    function toContent(e: PointerEvent): [number, number] {
+      const rect = canvasRef.current!.getBoundingClientRect();
+      return [e.clientX - rect.left, e.clientY - rect.top];
+    }
+
+    function eraseAt(x: number, y: number) {
+      const prev = strokesRef.current;
+      const next = prev.filter((s) => !hitTest(normPts(s.points as unknown[]), x, y, ERASER_RADIUS));
+      if (next.length !== prev.length) {
+        strokesRef.current = next;
+        setCanUndo(next.length > 0);
+        scheduleSave();
+        scheduleRender();
+      }
+    }
+
+    function onPointerDown(e: PointerEvent) {
+      if (e.pointerType !== "pen") return;
+      e.preventDefault();
+      e.stopPropagation();
+      setPillVisible(true);
+
+      const [x, y] = toContent(e);
+      if (toolRef.current === "eraser") { eraseAt(x, y); return; }
+
+      try { parent!.setPointerCapture(e.pointerId); } catch { /* ok */ }
+      isDrawingRef.current  = true;
+      activeToolRef.current = toolRef.current as "pen" | "highlight";
+      activePtsRef.current  = [[x, y, Math.max(0.1, e.pressure || 0.5)]];
       scheduleRender();
-    },
-  }), [scheduleSave, scheduleRender]);
+    }
 
-  // ── Pointer handling ───────────────────────────────────────────────────
-  // Finger (touch) is ignored entirely → native scroll still works via
-  // touch-action. Pen + mouse draw/erase.
+    function onPointerMove(e: PointerEvent) {
+      if (e.pointerType !== "pen") return;
+      if (toolRef.current === "eraser") {
+        if (e.buttons & 1) { const [x, y] = toContent(e); eraseAt(x, y); }
+        return;
+      }
+      if (!isDrawingRef.current) return;
+      e.preventDefault();
+      e.stopPropagation();
 
-  function toContent(e: React.PointerEvent): [number, number] {
-    const rect = canvasRef.current!.getBoundingClientRect();
-    return [e.clientX - rect.left, e.clientY - rect.top];
-  }
-
-  function eraseAt(x: number, y: number) {
-    const prev = strokesRef.current;
-    const next = prev.filter((s) => !hitTest(normPts(s.points as unknown[]), x, y, ERASER_RADIUS));
-    if (next.length !== prev.length) {
-      strokesRef.current = next;
-      onCanUndoRef.current?.(next.length > 0);
-      scheduleSave();
+      const events = e.getCoalescedEvents?.() ?? [e];
+      const rect = canvasRef.current!.getBoundingClientRect();
+      for (const ev of events) {
+        activePtsRef.current.push([
+          ev.clientX - rect.left,
+          ev.clientY - rect.top,
+          Math.max(0.1, ev.pressure || 0.5),
+        ]);
+      }
       scheduleRender();
     }
-  }
 
-  function onDown(e: React.PointerEvent) {
-    if (e.pointerType === "touch") return;
-    if (toolRef.current === "off") return;
-    e.preventDefault();
-    e.stopPropagation();
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    function onPointerUp(e: PointerEvent) {
+      if (e.pointerType !== "pen") return;
+      if (!isDrawingRef.current) return;
+      e.preventDefault();
 
-    const [x, y] = toContent(e);
-    if (toolRef.current === "eraser") { eraseAt(x, y); return; }
+      isDrawingRef.current = false;
+      const pts = activePtsRef.current;
+      activePtsRef.current = [];
 
-    const pressure = e.pointerType === "pen" ? Math.max(0.1, e.pressure) : 0.5;
-    isDrawingRef.current  = true;
-    activeToolRef.current = toolRef.current as "pen" | "highlight";
-    activePtsRef.current  = [[x, y, pressure]];
-    scheduleRender();
-  }
-
-  function onMove(e: React.PointerEvent) {
-    if (e.pointerType === "touch") return;
-    if (toolRef.current === "off") return;
-    if (toolRef.current === "eraser") {
-      if (e.buttons & 1) { const [x, y] = toContent(e); eraseAt(x, y); }
-      return;
+      if (pts.length >= 1) {
+        const t = activeToolRef.current;
+        strokesRef.current = [...strokesRef.current, {
+          id:      crypto.randomUUID(),
+          tool:    t,
+          points:  pts,
+          color:   colorRef.current,
+          width:   t === "highlight" ? HIGHLIGHT_WIDTH : PEN_WIDTH,
+          opacity: OPACITY[t],
+          surface: "editor",
+        }];
+        setCanUndo(true);
+        scheduleSave();
+      }
+      scheduleRender();
     }
-    if (!isDrawingRef.current) return;
-    e.stopPropagation();
 
-    const events = e.nativeEvent.getCoalescedEvents?.() ?? [e.nativeEvent];
-    const rect = canvasRef.current!.getBoundingClientRect();
-    for (const ev of events) {
-      const pressure = ev.pointerType === "pen" ? Math.max(0.1, ev.pressure) : 0.5;
-      activePtsRef.current.push([ev.clientX - rect.left, ev.clientY - rect.top, pressure]);
+    // iPad Safari: the Pencil also emits touch events (touchType "stylus").
+    // If we don't preventDefault them, Safari claims the Pencil for page
+    // scrolling and CANCELS our pointer stream — pen pans instead of draws.
+    function onTouch(e: TouchEvent) {
+      let allStylus = e.changedTouches.length > 0;
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        const t = e.changedTouches[i] as Touch & { touchType?: string };
+        if (t.touchType !== "stylus") { allStylus = false; break; }
+      }
+      if (allStylus) e.preventDefault(); // fingers untouched → scroll works
     }
+
+    parent.addEventListener("pointerdown",   onPointerDown, { capture: true });
+    parent.addEventListener("pointermove",   onPointerMove, { capture: true });
+    parent.addEventListener("pointerup",     onPointerUp,   { capture: true });
+    parent.addEventListener("pointercancel", onPointerUp,   { capture: true });
+    parent.addEventListener("touchstart",    onTouch,       { capture: true, passive: false });
+    parent.addEventListener("touchmove",     onTouch,       { capture: true, passive: false });
+
+    return () => {
+      parent.removeEventListener("pointerdown",   onPointerDown, { capture: true } as EventListenerOptions);
+      parent.removeEventListener("pointermove",   onPointerMove, { capture: true } as EventListenerOptions);
+      parent.removeEventListener("pointerup",     onPointerUp,   { capture: true } as EventListenerOptions);
+      parent.removeEventListener("pointercancel", onPointerUp,   { capture: true } as EventListenerOptions);
+      parent.removeEventListener("touchstart",    onTouch,       { capture: true } as EventListenerOptions);
+      parent.removeEventListener("touchmove",     onTouch,       { capture: true } as EventListenerOptions);
+    };
+  }, [scheduleRender, scheduleSave]);
+
+  // ── Undo ───────────────────────────────────────────────────────────────
+
+  const undo = useCallback(() => {
+    if (!strokesRef.current.length) return;
+    strokesRef.current = strokesRef.current.slice(0, -1);
+    setCanUndo(strokesRef.current.length > 0);
+    scheduleSave();
     scheduleRender();
-  }
+  }, [scheduleSave, scheduleRender]);
 
-  function onUp(e: React.PointerEvent) {
-    if (e.pointerType === "touch") return;
-    if (!isDrawingRef.current) return;
-    e.preventDefault();
-
-    isDrawingRef.current = false;
-    const pts = activePtsRef.current;
-    activePtsRef.current = [];
-
-    if (pts.length >= 1) {
-      const t = activeToolRef.current;
-      strokesRef.current = [...strokesRef.current, {
-        id:      crypto.randomUUID(),
-        tool:    t,
-        points:  pts,
-        color:   colorRef.current,
-        width:   t === "highlight" ? HIGHLIGHT_WIDTH : PEN_WIDTH,
-        opacity: OPACITY[t],
-        surface: "editor",
-      }];
-      onCanUndoRef.current?.(true);
-      scheduleSave();
-    }
-    scheduleRender();
-  }
-
-  const active = tool !== "off";
+  // ── Render ─────────────────────────────────────────────────────────────
 
   return (
-    <canvas
-      ref={canvasRef}
-      className="editor-ink-canvas"
-      data-active={active ? "true" : "false"}
-      style={{
-        pointerEvents: active ? "auto" : "none",
-        // pan-y: finger scrolling keeps working while the pen draws
-        touchAction: "pan-y",
-        cursor: tool === "pen" ? "crosshair" : tool === "highlight" ? "cell" : tool === "eraser" ? "cell" : "default",
-      }}
-      onPointerDown={onDown}
-      onPointerMove={onMove}
-      onPointerUp={onUp}
-      onPointerCancel={onUp}
-    />
-  );
-});
+    <>
+      {/* Display-only canvas — all input arrives via the editor container */}
+      <canvas ref={canvasRef} className="editor-ink-canvas" />
 
-export default EditorInkLayer;
+      {/* Tool pill — appears on first pen touch, dismissible, zero chrome
+          while typing */}
+      {pillVisible && (
+        <div className="editor-fab-row">
+          <div className="editor-ink-pill">
+            <button
+              className="editor-ink-btn"
+              data-active={tool === "pen" ? "true" : "false"}
+              title="Pen"
+              onClick={() => setTool("pen")}
+            >
+              <PenLine size={15} />
+            </button>
+            <button
+              className="editor-ink-btn"
+              data-active={tool === "highlight" ? "true" : "false"}
+              title="Highlighter"
+              onClick={() => setTool("highlight")}
+            >
+              <Highlighter size={15} />
+            </button>
+            <button
+              className="editor-ink-btn"
+              data-active={tool === "eraser" ? "true" : "false"}
+              title="Eraser"
+              onClick={() => setTool("eraser")}
+            >
+              <Eraser size={15} />
+            </button>
+
+            <span className="editor-ink-sep" />
+
+            {INK_COLORS.map((c) => (
+              <button
+                key={c}
+                className="editor-ink-swatch"
+                data-active={color === c ? "true" : "false"}
+                style={{ background: c }}
+                title="Ink color"
+                onClick={() => setColor(c)}
+              />
+            ))}
+
+            <span className="editor-ink-sep" />
+
+            <button
+              className="editor-ink-btn"
+              title="Undo ink"
+              disabled={!canUndo}
+              onClick={undo}
+            >
+              <Undo2 size={15} />
+            </button>
+            <button
+              className="editor-ink-btn editor-ink-done"
+              title="Hide toolbar"
+              onClick={() => setPillVisible(false)}
+            >
+              <X size={15} />
+            </button>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}

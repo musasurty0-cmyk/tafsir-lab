@@ -3408,6 +3408,7 @@ input, textarea { font: inherit; color: inherit; }
 .fa-overlay {
   position: fixed;
   inset: 0;
+  height: 100dvh; /* iPad Safari: track the dynamic viewport, not the URL-bar-inflated one */
   z-index: 50;
   background: var(--bg);
   display: flex;
@@ -3521,6 +3522,24 @@ input, textarea { font: inherit; color: inherit; }
   padding: 12px 10px;
   border-right: 1px solid var(--line-strong);
   background: var(--bg);
+  /* Short tablet viewports: never let the tool rail's buttons get clipped
+     into invisibility — scroll instead */
+  overflow-y: auto;
+  max-height: 100%;
+}
+
+/* Tablet-fit for the word/ayah focus space */
+@media (max-width: 900px), (max-height: 700px) {
+  .fa-toolbar { padding: 6px 10px; min-height: 44px; gap: 8px; }
+  .fa-label-ar { font-size: 1rem; }
+  .fa-rail { padding: 6px 4px; }
+  .fa-arabic-display {
+    font-size: 2rem;
+    line-height: 2.3;
+    width: min(520px, 86vw);
+    padding: 28px 24px 44px;
+  }
+  .fa-ayah-end { font-size: 1.5rem; }
 }
 /* Reset the absolute-float CSS so the rail sits in normal document flow */
 .fa-rail .canvas-tool-rail {
@@ -4165,8 +4184,10 @@ input, textarea { font: inherit; color: inherit; }
 }
 
 /* Paragraph — generous spacing makes prose breathe */
+/* Tight, notebook-style line advance: Enter goes to the next line, not a
+   blank-line gap. (Was 1em, which read as a double break on every Enter.) */
 .page-editor-content p {
-  margin: 0 0 1em;
+  margin: 0 0 0.2em;
 }
 .page-editor-content p:last-child { margin-bottom: 0; }
 

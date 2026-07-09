@@ -35,12 +35,11 @@ import * as Y from "yjs";
 import YPartyKitProvider from "y-partykit/provider";
 import type { SuggestionProps, SuggestionKeyDownProps } from "@tiptap/suggestion";
 
-import { PenLine, Highlighter, Eraser, Undo2, X } from "lucide-react";
 import { PARTYKIT_HOST } from "@/lib/collab/config";
 import { AyahBlockExtension } from "./AyahBlockExtension";
 import { TafsirBlockExtension } from "./TafsirBlockExtension";
 import { ToggleListExtension } from "./ToggleListExtension";
-import EditorInkLayer, { type EditorInkHandle, type EditorInkTool } from "./EditorInkLayer";
+import EditorInkLayer from "./EditorInkLayer";
 import {
   SlashCommandExtension,
   buildCommands,
@@ -54,9 +53,6 @@ import SelectionToolbar from "./SelectionToolbar";
 // ── Constants ──────────────────────────────────────────────────────────────
 
 const SAVE_DEBOUNCE_MS = 900;
-
-// Annotation ink colors (editor overlay) — red first: annotation over text
-const INK_COLORS = ["#dc2626", "#18181b", "#2563eb", "#16a34a", "#fbbf24"];
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -89,12 +85,6 @@ export default function PageEditor({
   const commandListRef        = useRef<CommandListHandle>(null);
   const ALL_COMMANDS          = useRef(buildCommands());
   const saveTimer             = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // ── Editor ink (stylus annotation over typed text) ────────────────────
-  const [inkTool,   setInkTool]   = useState<EditorInkTool>("off");
-  const [inkColor,  setInkColor]  = useState(INK_COLORS[0]);
-  const [inkCanUndo, setInkCanUndo] = useState(false);
-  const inkRef = useRef<EditorInkHandle>(null);
 
   // ── Yjs document + PartyKit provider ─────────────────────────────────
   // Created synchronously on first render so the Collaboration and
@@ -343,12 +333,6 @@ export default function PageEditor({
     return () => document.removeEventListener("pointerdown", onDown, true);
   }, [palette]);
 
-  // Floating "+ Insert" — opens the block palette without typing "/",
-  // so stylus/touch users don't need the keyboard-first mental model.
-  const openInsertMenu = useCallback(() => {
-    if (!editor || editor.isDestroyed) return;
-    editor.chain().focus().insertContent("/").run();
-  }, [editor]);
 
   // ── Palette item selection ────────────────────────────────────────────
 
@@ -379,101 +363,9 @@ export default function PageEditor({
       <EditorContent editor={editor} />
       <SelectionToolbar editor={editor} />
 
-      {/* Ink overlay — strokes scroll with the typed text */}
-      <EditorInkLayer
-        ref={inkRef}
-        pageId={pageId}
-        tool={inkTool}
-        color={inkColor}
-        onCanUndoChange={setInkCanUndo}
-      />
-
-      {/* Floating tool row: pen + insert (stylus-first ergonomics) */}
-      <div className="editor-fab-row">
-        {inkTool === "off" ? (
-          <>
-            <button
-              type="button"
-              className="editor-insert-fab"
-              title="Annotate with pen — draw over your notes"
-              aria-label="Annotate with pen"
-              onClick={() => setInkTool("pen")}
-            >
-              <PenLine size={17} />
-            </button>
-            {!palette && (
-              <button
-                type="button"
-                className="editor-insert-fab"
-                title="Insert block"
-                aria-label="Insert block"
-                onPointerDown={(e) => e.preventDefault() /* keep editor focus */}
-                onClick={openInsertMenu}
-              >
-                +
-              </button>
-            )}
-          </>
-        ) : (
-          <div className="editor-ink-pill">
-            <button
-              className="editor-ink-btn"
-              data-active={inkTool === "pen" ? "true" : "false"}
-              title="Pen"
-              onClick={() => setInkTool("pen")}
-            >
-              <PenLine size={15} />
-            </button>
-            <button
-              className="editor-ink-btn"
-              data-active={inkTool === "highlight" ? "true" : "false"}
-              title="Highlighter"
-              onClick={() => setInkTool("highlight")}
-            >
-              <Highlighter size={15} />
-            </button>
-            <button
-              className="editor-ink-btn"
-              data-active={inkTool === "eraser" ? "true" : "false"}
-              title="Eraser"
-              onClick={() => setInkTool("eraser")}
-            >
-              <Eraser size={15} />
-            </button>
-
-            <span className="editor-ink-sep" />
-
-            {INK_COLORS.map((c) => (
-              <button
-                key={c}
-                className="editor-ink-swatch"
-                data-active={inkColor === c ? "true" : "false"}
-                style={{ background: c }}
-                title="Ink color"
-                onClick={() => setInkColor(c)}
-              />
-            ))}
-
-            <span className="editor-ink-sep" />
-
-            <button
-              className="editor-ink-btn"
-              title="Undo ink"
-              disabled={!inkCanUndo}
-              onClick={() => inkRef.current?.undo()}
-            >
-              <Undo2 size={15} />
-            </button>
-            <button
-              className="editor-ink-btn editor-ink-done"
-              title="Done — back to typing"
-              onClick={() => setInkTool("off")}
-            >
-              <X size={15} />
-            </button>
-          </div>
-        )}
-      </div>
+      {/* Stylus ink — pen draws directly, no buttons, no mode switch.
+          The tool pill appears only while annotating. */}
+      <EditorInkLayer pageId={pageId} />
 
       {palette &&
         typeof document !== "undefined" &&

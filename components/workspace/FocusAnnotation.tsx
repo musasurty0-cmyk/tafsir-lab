@@ -218,20 +218,58 @@ export default function FocusAnnotation({
     strokesRef.current = loaded;
   }, [verseKey, wordPos]);
 
-  // ── Viewport initialisation — centre world origin in canvas area ───────
-  // The Arabic display is centred around world (0,0) via CSS transform(-50%,-50%).
-  // Setting vp = { x: areaW/2, y: areaH/2 } places world (0,0) at the centre of
-  // the visible canvas, so the verse text appears centred on open.
+  // ── Viewport initialisation — centre on the TAPPED WORD, fit to screen ─
+  // The Arabic display is centred around world (0,0) via CSS
+  // transform(-50%,-50%). Long ayahs make the block very tall, so centring
+  // the block's MIDDLE used to push the tapped word (and the ayah marker)
+  // off-screen on tablets. Instead:
+  //   • zoom fits the block width inside the visible area (never > 1)
+  //   • word mode  → the tapped word lands at the visual centre
+  //   • ayah mode  → the START of the verse sits just below the toolbar
   useLayoutEffect(() => {
     const el = bodyRef.current;
     if (!el) return;
     const { width, height } = el.getBoundingClientRect();
-    const init: Viewport = { x: width / 2, y: height / 2, zoom: 1 };
+
+    const display = el.querySelector<HTMLElement>(".fa-arabic-display");
+    if (!display || !display.offsetWidth) {
+      const init: Viewport = { x: width / 2, y: height / 2, zoom: 1 };
+      viewportRef.current = init;
+      setViewport(init);
+      return;
+    }
+
+    // offsetWidth/Height ignore transforms → true world-unit block size
+    const W = display.offsetWidth;
+    const H = display.offsetHeight;
+    const zoom = Math.max(0.45, Math.min(1, (width - 24) / W));
+
+    // World coords of the block's top-left (block centred on world origin)
+    const blockLeft = -W / 2;
+    const blockTop  = -H / 2;
+
+    let targetWX = 0; // world point to bring to screen focus
+    let targetWY: number;
+
+    const focusEl = display.querySelector<HTMLElement>(".fa-word--focus");
+    if (focusEl) {
+      targetWX = blockLeft + focusEl.offsetLeft + focusEl.offsetWidth / 2;
+      targetWY = blockTop  + focusEl.offsetTop  + focusEl.offsetHeight / 2;
+    } else {
+      // Ayah mode: show the verse from its beginning
+      targetWY = blockTop + Math.min(H / 2, height * 0.35 / zoom);
+    }
+
+    const init: Viewport = {
+      x:    width / 2 - targetWX * zoom,
+      y:    Math.min(height / 2, height * 0.45) - targetWY * zoom,
+      zoom,
+    };
     viewportRef.current = init;
     setViewport(init);
-  // run once after the first paint; bodyRef is stable
+  // re-centre when the focus target changes; bodyRef is stable
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [verseKey, wordPos]);
 
   // ── Canvas render ──────────────────────────────────────────────────────
   // viewportRef is read directly so the RAF always sees the freshest value.
