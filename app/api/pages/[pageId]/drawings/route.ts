@@ -1,13 +1,15 @@
 /**
  * GET  /api/pages/[pageId]/drawings
  *   Returns { myStrokes, otherLayers } where
- *     myStrokes   = current user's stroke array (may be empty)
+ *     myStrokes   = current user's stroke array (may be empty; both surfaces)
  *     otherLayers = [{ authorId, authorName, strokes }] for all other users
  *
  * PUT  /api/pages/[pageId]/drawings
- *   Body: { strokes: Stroke[] }
- *   Upserts the current user's CanvasDrawing record for this page.
- *   Returns { ok: true }.
+ *   Body: { strokes: Stroke[], surface?: "canvas" | "editor" }
+ *   Replaces ONLY the given surface's strokes in the user's record and
+ *   preserves the other surface (the Mushaf canvas and the editor ink
+ *   overlay save independently; a missing surface means "canvas" for
+ *   backward compatibility). Returns { ok: true }.
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -63,13 +65,29 @@ export async function PUT(
     const { userId } = await getSession();
     const { pageId } = await params;
 
-    const body = await req.json() as { strokes?: unknown };
-    const strokes = Array.isArray(body.strokes) ? body.strokes : [];
+    const body = await req.json() as { strokes?: unknown; surface?: unknown };
+    const incoming = Array.isArray(body.strokes) ? body.strokes as { surface?: string }[] : [];
+    const surface  = body.surface === "editor" ? "editor" : "canvas";
+
+    // Stamp the surface on incoming strokes, then merge with the OTHER
+    // surface's existing strokes so canvas and editor saves never clobber
+    // each other (both save the full array for their own surface only).
+    const stamped = incoming.map((s) => ({ ...s, surface }));
+
+    const existing = await db.canvasDrawing.findUnique({
+      where:  { pageId_authorId: { pageId, authorId: userId } },
+      select: { strokes: true },
+    });
+    const prev = Array.isArray(existing?.strokes)
+      ? (existing!.strokes as { surface?: string }[])
+      : [];
+    const kept   = prev.filter((s) => (s?.surface === "editor" ? "editor" : "canvas") !== surface);
+    const merged = [...kept, ...stamped];
 
     await db.canvasDrawing.upsert({
       where:  { pageId_authorId: { pageId, authorId: userId } },
-      create: { pageId, authorId: userId, strokes },
-      update: { strokes },
+      create: { pageId, authorId: userId, strokes: merged },
+      update: { strokes: merged },
     });
 
     return NextResponse.json({ ok: true });

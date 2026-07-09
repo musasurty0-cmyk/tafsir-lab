@@ -45,6 +45,10 @@ import {
   useRef, useState,
 } from "react";
 import type { CanvasViewport } from "./ModeBPage";
+import {
+  type Pt, type InkStroke,
+  normPts, hitTest, drawSmooth, drawArrow, paintStroke, strokeSurface,
+} from "@/lib/ink";
 
 // ── Public types ───────────────────────────────────────────────────────────
 
@@ -56,18 +60,9 @@ export interface DrawingCanvasHandle {
   clear: () => void;
 }
 
-// [x, y, pressure] in world (canvas) coordinates
-type Pt = [number, number, number];
-
-export interface Stroke {
-  id:          string;
-  tool:        "pen" | "highlight" | "arrow";
-  points:      Pt[];
-  color:       string;
-  width:       number;
-  opacity:     number;
-  mushafPage?: number; // which Mushaf page this stroke belongs to (fix #8)
-}
+// Stroke shape + rendering live in lib/ink (shared with the editor ink
+// overlay). Canvas strokes are world-space, tagged surface:"canvas".
+export type Stroke = InkStroke;
 
 interface DrawingLayer {
   authorId:   string;
@@ -86,151 +81,7 @@ const TOOL_OPACITY: Record<"pen" | "highlight" | "arrow", number> = {
 const ERASER_RADIUS = 20;
 const SAVE_DEBOUNCE = 1200;
 
-// ── Backwards compatibility ────────────────────────────────────────────────
-// Old strokes were stored as {x, y} objects; new ones as [x, y, pressure].
-
-function normPts(raw: unknown[]): Pt[] {
-  if (!raw.length) return [];
-  if (Array.isArray(raw[0])) return raw as Pt[];
-  return (raw as { x: number; y: number }[]).map(p => [p.x, p.y, 0.5]);
-}
-
-// ── Geometry helpers ───────────────────────────────────────────────────────
-
-function distToSeg(
-  px: number, py: number,
-  ax: number, ay: number,
-  bx: number, by: number,
-): number {
-  const dx = bx - ax, dy = by - ay;
-  const len2 = dx * dx + dy * dy;
-  if (len2 === 0) return Math.hypot(px - ax, py - ay);
-  const t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / len2));
-  return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
-}
-
-function hitTest(pts: Pt[], cx: number, cy: number, r: number): boolean {
-  if (!pts.length) return false;
-  if (pts.length === 1) return Math.hypot(cx - pts[0][0], cy - pts[0][1]) < r;
-  for (let i = 0; i < pts.length - 1; i++) {
-    if (distToSeg(cx, cy, pts[i][0], pts[i][1], pts[i + 1][0], pts[i + 1][1]) < r) return true;
-  }
-  return false;
-}
-
-// ── Core rendering ─────────────────────────────────────────────────────────
-//
-// drawSmooth: renders pts as one continuous smooth curve using the midpoint-
-// quadratic technique.  lineCap/lineJoin = "round" ensures seamless joins.
-//
-// Pressure (pen tool): each point carries stylus pressure; when
-// pressureSensitive is on, width varies per segment. Mouse/legacy points
-// store pressure 0.5, which maps to exactly 1.0× width — so mouse strokes
-// and pre-existing strokes render identically to before.
-
-function pressureWidth(base: number, p: number): number {
-  return base * (0.45 + 1.1 * p); // p=0.1 → 0.56×, p=0.5 → 1.0×, p=1 → 1.55×
-}
-
-function drawSmooth(
-  ctx:     CanvasRenderingContext2D,
-  pts:     Pt[],
-  color:   string,
-  width:   number,
-  opacity: number,
-  pressureSensitive = false,
-) {
-  if (!pts.length) return;
-  ctx.save();
-  ctx.globalAlpha   = opacity;
-  ctx.strokeStyle   = color;
-  ctx.fillStyle     = color;
-  ctx.lineCap       = "round";
-  ctx.lineJoin      = "round";
-
-  if (pts.length === 1) {
-    const r = (pressureSensitive ? pressureWidth(width, pts[0][2]) : width) / 2;
-    ctx.beginPath();
-    ctx.arc(pts[0][0], pts[0][1], r, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-    return;
-  }
-
-  if (!pressureSensitive) {
-    // Fast path — one continuous stroke at constant width.
-    ctx.lineWidth = width;
-    ctx.beginPath();
-    ctx.moveTo(pts[0][0], pts[0][1]);
-    if (pts.length === 2) {
-      ctx.lineTo(pts[1][0], pts[1][1]);
-    } else {
-      for (let i = 1; i < pts.length - 1; i++) {
-        const mx = (pts[i][0] + pts[i + 1][0]) / 2;
-        const my = (pts[i][1] + pts[i + 1][1]) / 2;
-        ctx.quadraticCurveTo(pts[i][0], pts[i][1], mx, my);
-      }
-      ctx.lineTo(pts[pts.length - 1][0], pts[pts.length - 1][1]);
-    }
-    ctx.stroke();
-    ctx.restore();
-    return;
-  }
-
-  // Pressure path — same midpoint-quadratic chain, but each segment is its
-  // own sub-stroke with width from the local pressure. Round caps make the
-  // joints seamless.
-  let px = pts[0][0], py = pts[0][1];
-  for (let i = 1; i < pts.length - 1; i++) {
-    const mx = (pts[i][0] + pts[i + 1][0]) / 2;
-    const my = (pts[i][1] + pts[i + 1][1]) / 2;
-    ctx.beginPath();
-    ctx.lineWidth = pressureWidth(width, (pts[i][2] + pts[i + 1][2]) / 2);
-    ctx.moveTo(px, py);
-    ctx.quadraticCurveTo(pts[i][0], pts[i][1], mx, my);
-    ctx.stroke();
-    px = mx; py = my;
-  }
-  const last = pts[pts.length - 1];
-  ctx.beginPath();
-  ctx.lineWidth = pressureWidth(width, last[2]);
-  ctx.moveTo(px, py);
-  ctx.lineTo(last[0], last[1]);
-  ctx.stroke();
-  ctx.restore();
-}
-
-function drawArrow(
-  ctx:   CanvasRenderingContext2D,
-  pts:   Pt[],
-  color: string,
-  width: number,
-) {
-  if (pts.length < 2) return;
-  const [x0, y0] = pts[0];
-  const [x1, y1] = pts[pts.length - 1];
-  ctx.save();
-  ctx.strokeStyle = color;
-  ctx.fillStyle   = color;
-  ctx.lineWidth   = width;
-  ctx.lineCap     = "round";
-  ctx.lineJoin    = "round";
-  ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
-  const ang = Math.atan2(y1 - y0, x1 - x0);
-  const hl  = Math.max(14, width * 5);
-  ctx.beginPath();
-  ctx.moveTo(x1, y1);
-  ctx.lineTo(x1 - hl * Math.cos(ang - 0.38), y1 - hl * Math.sin(ang - 0.38));
-  ctx.lineTo(x1 - hl * Math.cos(ang + 0.38), y1 - hl * Math.sin(ang + 0.38));
-  ctx.closePath(); ctx.fill();
-  ctx.restore();
-}
-
-function paintStroke(ctx: CanvasRenderingContext2D, s: Stroke, alphaScale = 1) {
-  const pts = normPts(s.points as unknown[]);
-  if (s.tool === "arrow") { drawArrow(ctx, pts, s.color, s.width); return; }
-  drawSmooth(ctx, pts, s.color, s.width, s.opacity * alphaScale, s.tool === "pen");
-}
+// (normPts / hitTest / drawSmooth / drawArrow / paintStroke now live in lib/ink)
 
 // ── Props ──────────────────────────────────────────────────────────────────
 
@@ -302,9 +153,12 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
 
   // Filter strokes for the current Mushaf page.
   // Strokes without mushafPage (legacy, pre-migration) pass through so they
-  // remain visible until the migration tags them.
+  // remain visible until the migration tags them. Editor-surface strokes
+  // belong to the Mode A ink overlay and never render here.
   function filterForPage(strokes: Stroke[], page: number): Stroke[] {
-    return strokes.filter(s => s.mushafPage === undefined || s.mushafPage === page);
+    return strokes.filter(s =>
+      strokeSurface(s) === "canvas" &&
+      (s.mushafPage === undefined || s.mushafPage === page));
   }
 
   // Silently tag + re-save any strokes that lack mushafPage.
@@ -375,7 +229,8 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     const curPage = mushafPageRef.current;
     for (const layer of otherLayersRef.current) {
       for (const s of layer.strokes) {
-        if (s.mushafPage === undefined || s.mushafPage === curPage) {
+        if (strokeSurface(s) === "canvas" &&
+            (s.mushafPage === undefined || s.mushafPage === curPage)) {
           paintStroke(ctx, s, 0.7);
         }
       }
@@ -463,6 +318,11 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
 
         if (d.myStrokes) {
           const curPage = mushafPageRef.current;
+
+          // Editor-surface strokes belong to the Mode A overlay — this
+          // component only owns canvas-surface strokes (its PUT replaces
+          // only the canvas surface server-side).
+          d.myStrokes = d.myStrokes.filter((s) => strokeSurface(s) === "canvas");
 
           // ── Legacy migration (one-time, silent) ────────────────────────
           // Strokes saved before the mushafPage scoping fix have no
@@ -582,7 +442,8 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
   // keepalive flush when the tab is hidden/closed (mosque Wi-Fi reality).
 
   const putStrokes = useCallback((keepalive = false) => {
-    const body = JSON.stringify({ strokes: allMyStrokesRef.current });
+    // surface:"canvas" → the server merges, preserving editor-surface strokes.
+    const body = JSON.stringify({ strokes: allMyStrokesRef.current, surface: "canvas" });
     return fetch(`/api/pages/${pageId}/drawings`, {
       method:  "PUT",
       headers: { "Content-Type": "application/json" },
@@ -817,6 +678,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
         width:      activeWidthRef.current,
         opacity:    TOOL_OPACITY[drawTool],
         mushafPage: mushafPageRef.current,
+        surface:    "canvas",
       };
       redoStackRef.current = [];
       allMyStrokesRef.current = [...allMyStrokesRef.current, done];

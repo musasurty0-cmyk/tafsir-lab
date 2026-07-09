@@ -4033,18 +4033,36 @@ input, textarea { font: inherit; color: inherit; }
   /* Infinite-feeling canvas: always at least a viewport of writable space,
      and a deep clickable runway below the last block. Clicking the runway
      focuses the end of the document (handled in PageEditor). */
+  position: relative; /* anchor for the ink overlay */
   min-height: calc(100vh - 260px);
   padding-bottom: 50vh;
   cursor: text;
 }
 
-/* Floating "+ Insert" button — tap-first path to the block palette for
-   stylus/touch users. Sticky inside the editor column so it never overlaps
-   the canvas pane in split view. */
-.editor-insert-fab {
+/* Ink overlay — strokes live in content space and scroll with the text */
+.editor-ink-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 5; /* above text, below the tool row */
+}
+
+/* Floating tool row (pen + insert) — sticky inside the editor column so it
+   never overlaps the canvas pane in split view. */
+.editor-fab-row {
   position: sticky;
   bottom: 28px;
-  margin-left: auto;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  z-index: 30;
+  pointer-events: none; /* children re-enable */
+}
+.editor-fab-row > * { pointer-events: auto; }
+
+.editor-insert-fab {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -4059,7 +4077,6 @@ input, textarea { font: inherit; color: inherit; }
   font-weight: 300;
   line-height: 1;
   cursor: pointer;
-  z-index: 30;
   transition: background var(--dur-hover) var(--ease-soft),
               color      var(--dur-hover) var(--ease-soft),
               border-color var(--dur-hover) var(--ease-soft),
@@ -4071,6 +4088,53 @@ input, textarea { font: inherit; color: inherit; }
   color: #fff;
   box-shadow: var(--shadow-lg);
 }
+
+/* Ink tool pill — replaces the FABs while annotating */
+.editor-ink-pill {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 5px 7px;
+  border-radius: 999px;
+  background: var(--bg-elev);
+  border: 1px solid var(--line-strong);
+  box-shadow: var(--shadow-md);
+  animation: slash-pop 0.22s var(--ease-flow) both;
+}
+.editor-ink-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: var(--ink-3);
+  cursor: pointer;
+  transition: background var(--dur-hover) var(--ease-soft),
+              color      var(--dur-hover) var(--ease-soft);
+}
+.editor-ink-btn:hover { background: var(--hover); color: var(--ink); }
+.editor-ink-btn[data-active="true"] {
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+}
+.editor-ink-btn:disabled { opacity: 0.35; cursor: default; }
+.editor-ink-done { color: var(--ink-2); }
+.editor-ink-sep {
+  width: 1px;
+  height: 18px;
+  background: var(--line-strong);
+  margin: 0 3px;
+}
+.editor-ink-swatch {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: border-color var(--dur-hover) var(--ease-soft);
+}
+.editor-ink-swatch[data-active="true"] { border-color: var(--ink); }
 
 /* Mixed Arabic/English typing (bidi):
    `unicode-bidi: plaintext` makes each block's direction follow its own
