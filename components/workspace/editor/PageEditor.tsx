@@ -102,35 +102,58 @@ export default function PageEditor({
   const ALL_COMMANDS          = useRef(buildCommands());
   const saveTimer             = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Freeform text containers — OneNote model: click empty space, type there
-  const [freshBoxId, setFreshBoxId] = useState<string | null>(null);
-  const creatingBoxRef = useRef(false);
+  // ── Freeform text containers — OneNote model ──────────────────────────
+  // Click empty canvas → a DRAFT container renders SYNCHRONOUSLY in the
+  // same gesture with an autofocused textarea (mobile keyboards refuse
+  // focus after an async boundary — creating the note server-first was why
+  // "click and type" didn't work). The note is persisted on first blur;
+  // an empty draft simply evaporates, so stray clicks cost nothing.
+  const pageEditorRef = useRef<HTMLDivElement>(null);
+  const [draftBox, setDraftBox] = useState<{ x: number; y: number } | null>(null);
+  const paletteOpenRef = useRef(false);
+  useEffect(() => { paletteOpenRef.current = palette !== null; }, [palette]);
 
-  const placeTextBox = useCallback((x: number, y: number) => {
-    if (creatingBoxRef.current) return;
-    creatingBoxRef.current = true;
+  const commitDraft = useCallback((x: number, y: number, text: string) => {
+    const paragraphs = text.split("\n").map((line) => ({
+      type:    "paragraph",
+      content: line ? [{ type: "text", text: line }] : [],
+    }));
     fetch(`/api/pages/${pageId}/notes`, {
       method:  "POST",
       headers: { "Content-Type": "application/json" },
       body:    JSON.stringify({
         noteType:   "textbox",
         anchorType: "editor",           // editor-surface container (content space)
-        content:    { type: "doc", content: [{ type: "paragraph" }] },
+        content:    { type: "doc", content: paragraphs },
         offsetX:    Math.round(x),
         offsetY:    Math.round(y),
         width:      260,
       }),
     })
       .then((r) => (r.ok ? r.json() : null))
-      .then((d: { note?: NoteData } | null) => {
-        if (d?.note) {
-          onNoteCreated?.(d.note);
-          setFreshBoxId(d.note.id);
-        }
-      })
-      .catch(() => {})
-      .finally(() => { creatingBoxRef.current = false; });
+      .then((d: { note?: NoteData } | null) => { if (d?.note) onNoteCreated?.(d.note); })
+      .catch(() => {});
   }, [pageId, onNoteCreated]);
+
+  // Click surface: the editor's own empty space PLUS the document margins
+  // (.doc / .doc-wrap padding), so "anywhere on the page" really means
+  // anywhere — coordinates are stored relative to the editor container.
+  useEffect(() => {
+    function onDocClick(e: MouseEvent) {
+      const pe = pageEditorRef.current;
+      if (!pe || paletteOpenRef.current) return;
+      const t = e.target as HTMLElement;
+      const isCanvasSpace =
+        t === pe ||
+        t.classList.contains("doc") ||
+        t.classList.contains("doc-wrap");
+      if (!isCanvasSpace) return;
+      const r = pe.getBoundingClientRect();
+      setDraftBox({ x: e.clientX - r.left, y: e.clientY - r.top });
+    }
+    document.addEventListener("click", onDocClick);
+    return () => document.removeEventListener("click", onDocClick);
+  }, []);
 
   // ── Yjs document + PartyKit provider ─────────────────────────────────
   // Created synchronously on first render so the Collaboration and
@@ -405,18 +428,7 @@ export default function PageEditor({
   // ── Render ────────────────────────────────────────────────────────────
 
   return (
-    <div
-      className="page-editor"
-      onClick={(e) => {
-        // OneNote model: clicking empty canvas space creates a movable text
-        // container right there and starts typing. Boxes left empty delete
-        // themselves on blur, so stray clicks cost nothing.
-        if (e.target !== e.currentTarget) return;      // only true empty space
-        if (palette) return;                            // palette click-away wins
-        const rect = e.currentTarget.getBoundingClientRect();
-        placeTextBox(e.clientX - rect.left, e.clientY - rect.top);
-      }}
-    >
+    <div className="page-editor" ref={pageEditorRef}>
       <EditorContent editor={editor} />
       <SelectionToolbar editor={editor} />
 
@@ -425,14 +437,41 @@ export default function PageEditor({
         <FreeTextBox
           key={note.id}
           note={note}
-          startEditing={note.id === freshBoxId}
           onUpdated={onNoteUpdated}
-          onDeleted={(id) => {
-            if (id === freshBoxId) setFreshBoxId(null);
-            onNoteDeleted?.(id);
-          }}
+          onDeleted={(id) => onNoteDeleted?.(id)}
         />
       ))}
+
+      {/* Draft container — rendered synchronously in the click gesture so
+          the caret + mobile keyboard appear instantly. Persisted on blur. */}
+      {draftBox && (
+        <div
+          className="free-textbox"
+          style={{ left: draftBox.x, top: draftBox.y, width: 260 }}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          <textarea
+            className="free-textbox-input"
+            autoFocus
+            rows={1}
+            placeholder="Type something…"
+            onInput={(e) => {
+              const ta = e.currentTarget;
+              ta.style.height = "auto";
+              ta.style.height = `${ta.scrollHeight}px`;
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") { e.preventDefault(); e.currentTarget.blur(); }
+            }}
+            onBlur={(e) => {
+              const text = e.currentTarget.value.trim();
+              const at = draftBox;
+              setDraftBox(null);
+              if (text && at) commitDraft(at.x, at.y, text);
+            }}
+          />
+        </div>
+      )}
 
       {/* Stylus ink — pen draws directly, no buttons, no mode switch.
           The tool pill appears only while annotating. */}

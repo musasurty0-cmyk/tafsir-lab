@@ -97,11 +97,12 @@ export default function EditorInkLayer({ pageId }: Props) {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, cssW, cssH);
 
-    // Collaborators' editor ink — softened
+    // Collaborators' editor ink — EXACT stored opacity (no viewer-side
+    // dimming; strokes must render identically on every device/session).
     for (const layer of othersRef.current) {
       for (const s of layer.strokes) {
         const pts = normPts(s.points as unknown[]);
-        drawSmooth(ctx, pts, s.color, s.width, s.opacity * 0.65, s.tool === "pen");
+        drawSmooth(ctx, pts, s.color, s.width, s.opacity, s.tool === "pen");
       }
     }
 

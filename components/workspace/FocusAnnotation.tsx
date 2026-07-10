@@ -242,7 +242,8 @@ export default function FocusAnnotation({
     // offsetWidth/Height ignore transforms → true world-unit block size
     const W = display.offsetWidth;
     const H = display.offsetHeight;
-    const zoom = Math.max(0.45, Math.min(1, (width - 24) / W));
+    // Floor 0.3 so even narrow phones can fit the full block width.
+    const zoom = Math.max(0.3, Math.min(1, (width - 24) / W));
 
     // World coords of the block's top-left (block centred on world origin)
     const blockLeft = -W / 2;

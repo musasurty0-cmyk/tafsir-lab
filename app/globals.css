@@ -3541,6 +3541,65 @@ input, textarea { font: inherit; color: inherit; }
   }
   .fa-ayah-end { font-size: 1.5rem; }
 }
+
+/* Phone-fit: the left tool rail becomes a horizontal bar at the BOTTOM
+   (thumb reach), the header ellipsizes instead of clipping, and the
+   Arabic display shrinks so nothing extends past the viewport. */
+@media (max-width: 640px) {
+  .fa-main { flex-direction: column; }
+  .fa-body { order: 1; min-height: 0; }
+  .fa-rail {
+    order: 2;
+    width: 100%;
+    max-height: none;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 2px;
+    padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
+    border-right: none;
+    border-top: 1px solid var(--line-strong);
+    overflow: visible;
+  }
+  .fa-rail .canvas-tool-rail {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 2px;
+  }
+  .fa-toolbar {
+    flex-wrap: nowrap;
+    gap: 8px;
+    padding: 6px 10px;
+    min-height: 42px;
+  }
+  .fa-toolbar-label {
+    min-width: 0;
+    overflow: hidden;
+    flex-wrap: nowrap;
+  }
+  .fa-label-ar {
+    font-size: 0.95rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 42vw;
+  }
+  .fa-label-ref {
+    font-size: 0.72rem;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .fa-close-btn { flex-shrink: 0; }
+  .fa-clear-btn { flex-shrink: 0; padding: 5px 8px; }
+  .fa-arabic-display {
+    font-size: 1.55rem;
+    line-height: 2.05;
+    width: min(440px, 92vw);
+    padding: 18px 12px 32px;
+  }
+  .fa-ayah-end { font-size: 1.2rem; }
+}
 /* Reset the absolute-float CSS so the rail sits in normal document flow */
 .fa-rail .canvas-tool-rail {
   position: relative;

@@ -231,13 +231,15 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     ctx.clearRect(0, 0, w, h);
 
     // ── Pass 1: other users' committed strokes (filtered to current page) ──
+    // Rendered at EXACT stored opacity — no viewer-side dimming. A stroke
+    // must look identical on every device and to every collaborator.
     ctx.save(); applyVP(ctx);
     const curPage = mushafPageRef.current;
     for (const layer of otherLayersRef.current) {
       for (const s of layer.strokes) {
         if (strokeSurface(s) === "canvas" &&
             (s.mushafPage === undefined || s.mushafPage === curPage)) {
-          paintStroke(ctx, s, 0.7);
+          paintStroke(ctx, s);
         }
       }
     }
