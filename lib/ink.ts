@@ -69,7 +69,9 @@ export function hitTest(pts: Pt[], cx: number, cy: number, r: number): boolean {
 // and legacy points render identically to constant width.
 
 export function pressureWidth(base: number, p: number): number {
-  return base * (0.45 + 1.1 * p); // p=0.1 → 0.56×, p=0.5 → 1.0×, p=1 → 1.55×
+  // p=0.5 → exactly 1.0× (mouse/legacy parity). Clamp the floor: sub-1.5px
+  // antialiased lines read as "blurry" on 1× density laptop screens.
+  return Math.max(1.5, base * (0.45 + 1.1 * p));
 }
 
 export function drawSmooth(

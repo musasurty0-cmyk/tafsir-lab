@@ -170,9 +170,11 @@ export default function ModeBPage({
     [pageVerses],
   );
 
-  // Free text boxes live in canvas space — visible on every Mushaf page
+  // Free text boxes live in canvas space — visible on every Mushaf page.
+  // anchorType "editor" boxes belong to the Mode A freeform layer (their
+  // coordinates are editor content space, not canvas world space).
   const textBoxNotes = useMemo(
-    () => notes.filter((n) => n.noteType === "textbox"),
+    () => notes.filter((n) => n.noteType === "textbox" && n.anchorType !== "editor"),
     [notes],
   );
 
@@ -544,6 +546,9 @@ export default function ModeBPage({
 
     function onTouchStart(e: TouchEvent) {
       if (isInteractive(e)) return; // let click fire normally
+      // A pen is drawing (flag set by DrawingCanvas's capture handlers) —
+      // its Android compat-touches must never start a pan.
+      if (el.dataset.penActive === "1") { e.preventDefault(); return; }
       // Apple Pencil on iOS 13+ fires touchType:"stylus" touch events alongside
       // its pointer events.  If we preventDefault here, the companion pointer
       // event (pointerType:"pen") is cancelled and DrawingCanvas never draws.

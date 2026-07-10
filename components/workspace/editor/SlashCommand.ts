@@ -169,6 +169,26 @@ export function buildCommands(): SlashCommandItem[] {
       },
     },
     {
+      id:          "task",
+      title:       "Task list",
+      description: "Checklist with tickable items",
+      icon:        "☑",
+      aliases:     ["todo", "checkbox", "checklist", "check"],
+      execute(editor, range) {
+        editor.chain().focus().deleteRange(range).toggleTaskList().run();
+      },
+    },
+    {
+      id:          "code",
+      title:       "Code block",
+      description: "Monospaced block",
+      icon:        "</>",
+      aliases:     ["codeblock", "pre", "snippet"],
+      execute(editor, range) {
+        editor.chain().focus().deleteRange(range).toggleCodeBlock().run();
+      },
+    },
+    {
       id:          "toggle",
       title:       "Toggle list",
       description: "Collapsible section — click the chevron to fold",

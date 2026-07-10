@@ -114,6 +114,12 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
   const toolRef = useRef(tool);
   useEffect(() => { toolRef.current = tool; }, [tool]);
 
+  // Stroke style refs for the native (capture-phase) stylus handlers
+  const strokeColorRef = useRef(strokeColor);
+  useEffect(() => { strokeColorRef.current = strokeColor; }, [strokeColor]);
+  const strokeWidthRef = useRef(strokeWidth);
+  useEffect(() => { strokeWidthRef.current = strokeWidth; }, [strokeWidth]);
+
   // ── Active stroke — entirely in refs, zero re-renders during drawing ──
   const isDrawingRef   = useRef(false);
   const activePtsRef   = useRef<Pt[]>([]);
@@ -511,6 +517,9 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     // accidentally trigger draw).  Apple Pencil fires touchType:"stylus" —
     // skip preventDefault for those so their companion PointerEvents still fire.
     const preventFingerTouch = (e: TouchEvent) => {
+      // A pen is in contact: kill its Android compat-touches (no touchType
+      // there) so the browser can't claim the stylus for panning.
+      if (el.parentElement?.dataset.penActive === "1") { e.preventDefault(); return; }
       // If the current tool is "hand", let ModeBPage's touch handler manage panning
       // without interference.  We only block touch→pointer promotion for drawing tools.
       if (toolRef.current === "hand") return;
@@ -590,6 +599,94 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     ];
   }
 
+  // ── Stylus input matrix (native capture listeners) ────────────────────
+  // Professional-whiteboard rules: the STYLUS always draws — even with the
+  // hand tool selected it falls back to the pen tool. Finger always pans
+  // (ModeBPage touch handlers). Mouse follows the selected tool (React
+  // handlers above). Registered capture-phase on the canvas container so
+  // they win over pan handlers, and independent of the wrapper's
+  // pointer-events (which is "none" in hand mode).
+  useEffect(() => {
+    const parent = containerRef.current?.parentElement; // .mode-b-canvas
+    if (!parent) return;
+
+    function penTool(): "pen" | "highlight" | "arrow" | "eraser" {
+      const t = toolRef.current;
+      if (t === "hand" || t === "text") return "pen";
+      return t;
+    }
+
+    function down(e: PointerEvent) {
+      if (e.pointerType !== "pen") return;
+      // Interactive elements (tool rail, note cards, word taps) keep working
+      if ((e.target as HTMLElement).closest('button, a, input, select, textarea, [role="button"], .anc-note, .free-textbox')) return;
+      parent!.dataset.penActive = "1"; // suppress Android compat-touch panning
+      e.preventDefault();
+      e.stopPropagation();
+
+      const eff = penTool();
+      const [wx, wy] = toWorld(e.clientX, e.clientY);
+      if (eff === "eraser") { eraseAt(wx, wy); return; }
+
+      try { parent!.setPointerCapture(e.pointerId); } catch { /* ok */ }
+      isDrawingRef.current   = true;
+      activeToolRef.current  = eff;
+      activeColorRef.current = strokeColorRef.current;
+      activeWidthRef.current = strokeWidthRef.current;
+      activePtsRef.current   = [[wx, wy, Math.max(0.1, e.pressure || 0.5)]];
+      scheduleRender();
+    }
+
+    function move(e: PointerEvent) {
+      if (e.pointerType !== "pen") return;
+      if (penTool() === "eraser") {
+        if (e.buttons & 1) { const [wx, wy] = toWorld(e.clientX, e.clientY); eraseAt(wx, wy); }
+        return;
+      }
+      if (!isDrawingRef.current) return;
+      e.preventDefault();
+      e.stopPropagation();
+
+      const events = e.getCoalescedEvents?.() ?? [e];
+      for (const ev of events) {
+        const [wx, wy] = toWorld(ev.clientX, ev.clientY);
+        activePtsRef.current.push([wx, wy, Math.max(0.1, ev.pressure || 0.5)]);
+      }
+
+      if (roomSocket?.readyState === WebSocket.OPEN) {
+        roomSocket.send(JSON.stringify({
+          type:       "stroke-segment",
+          points:     activePtsRef.current,
+          mushafPage: mushafPageRef.current,
+          color:      activeColorRef.current,
+          width:      activeWidthRef.current,
+        }));
+      }
+      scheduleRender();
+    }
+
+    function up(e: PointerEvent) {
+      if (e.pointerType !== "pen") return;
+      parent!.dataset.penActive = "";
+      if (!isDrawingRef.current) return;
+      e.preventDefault();
+      commitActiveStroke();
+    }
+
+    parent.addEventListener("pointerdown",   down, { capture: true });
+    parent.addEventListener("pointermove",   move, { capture: true });
+    parent.addEventListener("pointerup",     up,   { capture: true });
+    parent.addEventListener("pointercancel", up,   { capture: true });
+    return () => {
+      parent.removeEventListener("pointerdown",   down, { capture: true } as EventListenerOptions);
+      parent.removeEventListener("pointermove",   move, { capture: true } as EventListenerOptions);
+      parent.removeEventListener("pointerup",     up,   { capture: true } as EventListenerOptions);
+      parent.removeEventListener("pointercancel", up,   { capture: true } as EventListenerOptions);
+      delete parent.dataset.penActive;
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scheduleRender, scheduleSave, roomSocket]);
+
   // ── Eraser ─────────────────────────────────────────────────────────────
 
   function eraseAt(wx: number, wy: number) {
@@ -612,7 +709,9 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
   function onDown(e: React.PointerEvent) {
     // touch → always handled by ModeBPage native touch handlers (panning)
     if (e.pointerType === "touch") return;
-    // hand tool → never draw
+    // pen → handled by the native capture listeners (stylus always draws)
+    if (e.pointerType === "pen") return;
+    // hand tool → mouse never draws (mouse follows the selected tool)
     if (toolRef.current === "hand") return;
     e.preventDefault();
     e.stopPropagation();
@@ -622,17 +721,18 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     if (toolRef.current === "text")   { onTextPlace?.(wx, wy); return; }
     if (toolRef.current === "eraser") { eraseAt(wx, wy); return; }
 
-    const pressure = e.pointerType === "pen" ? Math.max(0.1, e.pressure) : 0.5;
+    // Mouse-only path now (touch + pen return earlier) — neutral pressure.
     isDrawingRef.current   = true;
     activeToolRef.current  = toolRef.current as "pen" | "highlight" | "arrow";
     activeColorRef.current = strokeColor;
     activeWidthRef.current = strokeWidth;
-    activePtsRef.current   = [[wx, wy, pressure]];
+    activePtsRef.current   = [[wx, wy, 0.5]];
     scheduleRender();
   }
 
   function onMove(e: React.PointerEvent) {
     if (e.pointerType === "touch") return;
+    if (e.pointerType === "pen")   return; // native capture handlers own the pen
     if (toolRef.current === "hand") return;
     if (!isDrawingRef.current) return;
     e.stopPropagation();
@@ -659,16 +759,15 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     scheduleRender();
   }
 
-  function onUp(e: React.PointerEvent) {
-    if (e.pointerType === "touch") return;
-    e.preventDefault();
+  // Commit whatever's in activePtsRef as a finished stroke (shared by the
+  // React mouse handlers and the native stylus handlers).
+  function commitActiveStroke() {
     if (!isDrawingRef.current) return;
-
     isDrawingRef.current = false;
     const pts = activePtsRef.current;
     activePtsRef.current = [];
 
-    if (pts.length >= 1 && toolRef.current !== "eraser") {
+    if (pts.length >= 1) {
       const drawTool = activeToolRef.current;
       const done: Stroke = {
         id:         crypto.randomUUID(),
@@ -696,8 +795,16 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
         }));
       }
     }
-
     scheduleRender();
+  }
+
+  function onUp(e: React.PointerEvent) {
+    if (e.pointerType === "touch") return;
+    if (e.pointerType === "pen")   return; // native capture handlers own the pen
+    e.preventDefault();
+    if (!isDrawingRef.current) return;
+    if (toolRef.current === "eraser") { isDrawingRef.current = false; activePtsRef.current = []; return; }
+    commitActiveStroke();
   }
 
   return (

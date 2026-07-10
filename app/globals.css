@@ -4212,13 +4212,88 @@ input, textarea { font: inherit; color: inherit; }
 .page-editor-content h1 + h2,
 .page-editor-content h2 + h3 { margin-top: 12px; }
 
-/* Blockquote */
+/* Blockquote — OneNote-style quote block: left bar, indent, subtle wash.
+   border-inline-start keeps the bar on the correct side for Arabic (RTL). */
 .page-editor-content blockquote {
-  border: 1px solid var(--accent);
-  margin: 1.25em 0; padding: 10px 18px;
-  color: var(--ink-2); font-style: italic;
-  background: var(--accent-soft); border-radius: var(--radius-md);
+  border: none;
+  border-inline-start: 3px solid var(--accent);
+  margin: 0.9em 0;
+  padding: 8px 16px 8px 16px;
+  padding-inline-start: 16px;
+  color: var(--ink-2);
+  background: color-mix(in oklch, var(--panel) 70%, transparent);
+  border-radius: 0 var(--radius) var(--radius) 0;
 }
+.page-editor-content blockquote p { margin-bottom: 0.2em; }
+.page-editor-content blockquote p:last-child { margin-bottom: 0; }
+
+/* Task lists */
+.page-editor-content ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 0.2em;
+}
+.page-editor-content ul[data-type="taskList"] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.page-editor-content ul[data-type="taskList"] li > label {
+  flex-shrink: 0;
+  margin-top: 0.3em;
+  user-select: none;
+}
+.page-editor-content ul[data-type="taskList"] li > div { flex: 1; min-width: 0; }
+.page-editor-content ul[data-type="taskList"] input[type="checkbox"] {
+  width: 15px; height: 15px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.page-editor-content ul[data-type="taskList"] li[data-checked="true"] > div {
+  color: var(--ink-4);
+  text-decoration: line-through;
+}
+/* Nested task lists */
+.page-editor-content ul[data-type="taskList"] ul[data-type="taskList"] {
+  margin-top: 0.2em;
+  padding-left: 1.4em;
+}
+
+/* Links */
+.page-editor-content a {
+  color: oklch(0.52 0.14 250);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+/* Inline code + code blocks */
+.page-editor-content code {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.88em;
+  background: var(--panel-2);
+  border-radius: 4px;
+  padding: 0.1em 0.35em;
+}
+.page-editor-content pre {
+  font-family: var(--font-mono, monospace);
+  font-size: 13px;
+  line-height: 1.6;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  margin: 0.8em 0;
+  overflow-x: auto;
+  direction: ltr; /* code is always LTR even in Arabic notes */
+}
+.page-editor-content pre code {
+  background: none;
+  padding: 0;
+  font-size: inherit;
+}
+
+/* Sub/superscript */
+.page-editor-content sub, .page-editor-content sup { font-size: 0.75em; }
 
 /* Lists */
 /* Lists — OneNote style (Tailwind preflight strips list-style, so we restore) */

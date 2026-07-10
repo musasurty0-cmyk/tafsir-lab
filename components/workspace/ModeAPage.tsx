@@ -181,6 +181,10 @@ export default function ModeAPage({
             currentUserName={currentUserName}
             roomSocket={roomSocket ?? null}
             onEditorReady={onEditorReady}
+            textBoxNotes={notes.filter((n) => n.noteType === "textbox" && n.anchorType === "editor")}
+            onNoteCreated={onNoteCreated}
+            onNoteUpdated={onNoteUpdated}
+            onNoteDeleted={onNoteDeleted}
           />
 
         </div>

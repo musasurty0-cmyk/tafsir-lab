@@ -65,6 +65,9 @@ export default function EditorInkLayer({ pageId }: Props) {
   const strokesRef    = useRef<InkStroke[]>([]);
   const othersRef     = useRef<OtherInkLayer[]>([]);
   const isDrawingRef  = useRef(false);
+  /** True while a pen pointer is in contact — lets the touch handler
+   *  suppress Android's typeless stylus compat-touches. */
+  const penContactRef = useRef(false);
   const activePtsRef  = useRef<Pt[]>([]);
   const activeToolRef = useRef<"pen" | "highlight">("pen");
   const saveTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -224,6 +227,7 @@ export default function EditorInkLayer({ pageId }: Props) {
 
     function onPointerDown(e: PointerEvent) {
       if (e.pointerType !== "pen") return;
+      penContactRef.current = true; // Android: flag before compat touch events
       e.preventDefault();
       e.stopPropagation();
       setPillVisible(true);
@@ -262,6 +266,7 @@ export default function EditorInkLayer({ pageId }: Props) {
 
     function onPointerUp(e: PointerEvent) {
       if (e.pointerType !== "pen") return;
+      penContactRef.current = false;
       if (!isDrawingRef.current) return;
       e.preventDefault();
 
@@ -286,10 +291,16 @@ export default function EditorInkLayer({ pageId }: Props) {
       scheduleRender();
     }
 
-    // iPad Safari: the Pencil also emits touch events (touchType "stylus").
-    // If we don't preventDefault them, Safari claims the Pencil for page
-    // scrolling and CANCELS our pointer stream — pen pans instead of draws.
+    // The stylus also emits compatibility TOUCH events. If the browser is
+    // allowed to handle them it claims the pen for page scrolling and
+    // CANCELS our pointer stream — pen pans, and each cancelled fragment
+    // commits as a "dot".
+    //   iOS Safari:      touch.touchType === "stylus" identifies the Pencil.
+    //   Android Chrome:  touchType does NOT exist — so we also preventDefault
+    //                    any touch that arrives while a pen pointer is in
+    //                    contact (pointerdown fires before the compat touch).
     function onTouch(e: TouchEvent) {
+      if (penContactRef.current) { e.preventDefault(); return; }
       let allStylus = e.changedTouches.length > 0;
       for (let i = 0; i < e.changedTouches.length; i++) {
         const t = e.changedTouches[i] as Touch & { touchType?: string };

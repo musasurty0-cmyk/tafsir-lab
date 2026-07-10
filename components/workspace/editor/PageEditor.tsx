@@ -29,6 +29,11 @@ import Underline from "@tiptap/extension-underline";
 import Highlight from "@tiptap/extension-highlight";
 import Color from "@tiptap/extension-color";
 import { TextStyle } from "@tiptap/extension-text-style";
+import Link from "@tiptap/extension-link";
+import TaskList from "@tiptap/extension-task-list";
+import TaskItem from "@tiptap/extension-task-item";
+import Subscript from "@tiptap/extension-subscript";
+import Superscript from "@tiptap/extension-superscript";
 import Collaboration from "@tiptap/extension-collaboration";
 import CollaborationCursor from "@tiptap/extension-collaboration-cursor";
 import * as Y from "yjs";
@@ -40,6 +45,8 @@ import { AyahBlockExtension } from "./AyahBlockExtension";
 import { TafsirBlockExtension } from "./TafsirBlockExtension";
 import { ToggleListExtension } from "./ToggleListExtension";
 import EditorInkLayer from "./EditorInkLayer";
+import FreeTextBox from "../FreeTextBox";
+import type { NoteData } from "../NoteCard";
 import {
   SlashCommandExtension,
   buildCommands,
@@ -63,6 +70,11 @@ interface Props {
   currentUserName:  string;
   roomSocket?:      import("partysocket").default | null;
   onEditorReady?:   (editor: Editor | null) => void;
+  /** Freeform movable text containers (notes with anchorType "editor") */
+  textBoxNotes?:    NoteData[];
+  onNoteCreated?:   (note: NoteData) => void;
+  onNoteUpdated?:   (note: NoteData) => void;
+  onNoteDeleted?:   (noteId: string) => void;
 }
 
 interface PaletteState {
@@ -80,11 +92,45 @@ export default function PageEditor({
   currentUserId,
   currentUserName,
   onEditorReady,
+  textBoxNotes = [],
+  onNoteCreated,
+  onNoteUpdated,
+  onNoteDeleted,
 }: Props) {
   const [palette, setPalette] = useState<PaletteState | null>(null);
   const commandListRef        = useRef<CommandListHandle>(null);
   const ALL_COMMANDS          = useRef(buildCommands());
   const saveTimer             = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Freeform text containers — OneNote model: click empty space, type there
+  const [freshBoxId, setFreshBoxId] = useState<string | null>(null);
+  const creatingBoxRef = useRef(false);
+
+  const placeTextBox = useCallback((x: number, y: number) => {
+    if (creatingBoxRef.current) return;
+    creatingBoxRef.current = true;
+    fetch(`/api/pages/${pageId}/notes`, {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({
+        noteType:   "textbox",
+        anchorType: "editor",           // editor-surface container (content space)
+        content:    { type: "doc", content: [{ type: "paragraph" }] },
+        offsetX:    Math.round(x),
+        offsetY:    Math.round(y),
+        width:      260,
+      }),
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { note?: NoteData } | null) => {
+        if (d?.note) {
+          onNoteCreated?.(d.note);
+          setFreshBoxId(d.note.id);
+        }
+      })
+      .catch(() => {})
+      .finally(() => { creatingBoxRef.current = false; });
+  }, [pageId, onNoteCreated]);
 
   // ── Yjs document + PartyKit provider ─────────────────────────────────
   // Created synchronously on first render so the Collaboration and
@@ -176,6 +222,16 @@ export default function PageEditor({
       Highlight.configure({ multicolor: true }),
       TextStyle,
       Color,
+      Subscript,
+      Superscript,
+      Link.configure({
+        openOnClick:   false,   // click edits; Ctrl/Cmd-click opens
+        autolink:      true,    // typed/pasted URLs become links
+        linkOnPaste:   true,
+        HTMLAttributes: { rel: "noopener noreferrer", target: "_blank" },
+      }),
+      TaskList,
+      TaskItem.configure({ nested: true }),
 
       AyahBlockExtension,
       TafsirBlockExtension,
@@ -351,17 +407,32 @@ export default function PageEditor({
   return (
     <div
       className="page-editor"
-      onMouseDown={(e) => {
-        // Clicking the empty runway below the last block continues writing
-        // at the end of the document — the page feels infinitely long.
-        if (e.target === e.currentTarget && editor && !editor.isDestroyed) {
-          e.preventDefault();
-          editor.chain().focus("end").run();
-        }
+      onClick={(e) => {
+        // OneNote model: clicking empty canvas space creates a movable text
+        // container right there and starts typing. Boxes left empty delete
+        // themselves on blur, so stray clicks cost nothing.
+        if (e.target !== e.currentTarget) return;      // only true empty space
+        if (palette) return;                            // palette click-away wins
+        const rect = e.currentTarget.getBoundingClientRect();
+        placeTextBox(e.clientX - rect.left, e.clientY - rect.top);
       }}
     >
       <EditorContent editor={editor} />
       <SelectionToolbar editor={editor} />
+
+      {/* Freeform movable text containers (drag grip to move; auto-resize) */}
+      {textBoxNotes.map((note) => (
+        <FreeTextBox
+          key={note.id}
+          note={note}
+          startEditing={note.id === freshBoxId}
+          onUpdated={onNoteUpdated}
+          onDeleted={(id) => {
+            if (id === freshBoxId) setFreshBoxId(null);
+            onNoteDeleted?.(id);
+          }}
+        />
+      ))}
 
       {/* Stylus ink — pen draws directly, no buttons, no mode switch.
           The tool pill appears only while annotating. */}
