@@ -151,19 +151,26 @@ export default function FreeTextBox({ note, startEditing = false, onUpdated, onD
       onMouseLeave={() => setHovered(false)}
       onMouseDown={(e) => e.stopPropagation()}
     >
-      {/* Hover chrome: drag grip + delete */}
-      <div className="free-textbox-chrome" data-visible={hovered || editing ? "true" : "false"}>
-        <span
-          className="free-textbox-grip"
-          title="Drag to move"
-          onPointerDown={onGripDown}
-          onPointerMove={onGripMove}
-          onPointerUp={onGripUp}
-          onPointerCancel={onGripUp}
+      {/* Top-edge drag bar (OneNote model): hover the container's top edge
+          and drag the whole thing. Delete sits at the bar's right. */}
+      <div
+        className="free-textbox-chrome"
+        data-visible={hovered || editing ? "true" : "false"}
+        title="Drag to move"
+        onPointerDown={onGripDown}
+        onPointerMove={onGripMove}
+        onPointerUp={onGripUp}
+        onPointerCancel={onGripUp}
+      >
+        <span className="free-textbox-gripdots" aria-hidden>⋯⋯</span>
+        <button
+          className="free-textbox-delete"
+          title="Delete"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={handleDelete}
         >
-          ⠿
-        </span>
-        <button className="free-textbox-delete" title="Delete" onClick={handleDelete}>✕</button>
+          ✕
+        </button>
       </div>
 
       {editing ? (

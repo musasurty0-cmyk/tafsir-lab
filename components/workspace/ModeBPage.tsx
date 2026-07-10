@@ -190,17 +190,28 @@ export default function ModeBPage({
   );
 
   // ── Word highlight for notes (fix #7) ────────────────────────────────
-  // Any word with at least one note gets a persistent subtle highlight in
-  // QCFMushafPage.  We use ALL notes (not just pageNotes) so the set is
-  // stable across page changes; QCFMushafPage only renders the current page.
-  const notedWordKeys = useMemo<ReadonlySet<string>>(() => {
-    const keys = new Set<string>();
-    for (const note of notes) {
-      if (note.anchorType === "word" && note.ayahNumber != null && note.wordPosition != null) {
-        keys.add(`${note.ayahNumber}:${note.wordPosition}`);
-      }
+  // Any word with at least one note gets a SOFT translucent highlight
+  // (OneNote-style — no borders). Colours rotate in note-creation order
+  // (first noted word yellow, next green, …) and are deterministic across
+  // reloads. Only visibility-filtered notes reach this client, so the
+  // highlight respects note visibility automatically.
+  const notedWordColors = useMemo<ReadonlyMap<string, string>>(() => {
+    const PALETTE = [
+      "oklch(0.9 0.15 95 / 0.5)",   // yellow
+      "oklch(0.88 0.12 150 / 0.45)", // green
+      "oklch(0.88 0.09 250 / 0.45)", // blue
+      "oklch(0.88 0.1 310 / 0.4)",   // purple
+      "oklch(0.88 0.1 20 / 0.4)",    // rose
+    ];
+    const wordNotes = notes
+      .filter((n) => n.anchorType === "word" && n.ayahNumber != null && n.wordPosition != null)
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+    const map = new Map<string, string>();
+    for (const note of wordNotes) {
+      const key = `${note.ayahNumber}:${note.wordPosition}`;
+      if (!map.has(key)) map.set(key, PALETTE[map.size % PALETTE.length]);
     }
-    return keys;
+    return map;
   }, [notes]);
 
   const openFocus = useCallback((verseKey: string, wordPos: number | null) => {
@@ -701,7 +712,8 @@ export default function ModeBPage({
           onRegisterAyahRef={registerAyahRef}
           onRegisterWordRef={registerWordRef}
           onOpenFocus={openFocus}
-          notedWordKeys={notedWordKeys}
+          notedWordColors={notedWordColors}
+          selectedWordKey={focusAnchor && focusAnchor.wordPos != null ? `${focusAnchor.verseKey}:${focusAnchor.wordPos}` : null}
         />
 
         {/* SVG connector lines */}

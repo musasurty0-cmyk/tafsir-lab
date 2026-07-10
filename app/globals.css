@@ -1620,11 +1620,12 @@ input, textarea { font: inherit; color: inherit; }
 
 /* ── Sidebar expand button (shown in canvas-area when sidebar is collapsed) ── */
 .sidebar-expand-btn {
+  /* Top-left, NOT vertically centred — the centred position sat exactly
+     under the pen tool rail (left: 14px, top: 50%) and blocked it. */
   position: absolute;
-  top: 50%;
+  top: 64px;
   left: 6px;
-  transform: translateY(-50%);
-  z-index: 10;
+  z-index: 35; /* above the rail so it stays tappable when adjacent */
   width: 24px; height: 40px;
   display: flex; align-items: center; justify-content: center;
   background: var(--bg);
@@ -2740,14 +2741,20 @@ input, textarea { font: inherit; color: inherit; }
 .qcf-word:hover  { background: rgba(255, 208, 80, 0.32); }
 .qcf-word:active { background: rgba(255, 185, 40, 0.50); }
 
-/* Persistent note indicator — shown on words that have at least one
-   attached note.  Subtle enough not to clash with QCF glyph rendering. */
+/* Persistent note indicator — soft translucent highlight only (colour comes
+   inline from the rotating palette). NO borders, NO box-shadows: hard edges
+   read as black boxes over QCF glyphs. */
 .qcf-word--noted {
-  background:    rgba(251, 191, 36, 0.18);
-  border-radius: 2px;
-  box-shadow:    0 -2px 0 0 rgba(251, 191, 36, 0.55) inset;
+  border-radius: 3px;
 }
-.qcf-word--noted:hover { background: rgba(255, 208, 80, 0.38); }
+.qcf-word--noted:hover { filter: brightness(0.96); }
+
+/* Word currently open in the note panel */
+.qcf-word--selected {
+  border-radius: 3px;
+  background: oklch(0.9 0.15 95 / 0.6) !important;
+  box-shadow: 0 0 0 4px oklch(0.9 0.15 95 / 0.35);
+}
 
 .qcf-end {
   cursor:     pointer;
@@ -3115,49 +3122,61 @@ input, textarea { font: inherit; color: inherit; }
   box-shadow: var(--shadow-sm);
 }
 
+/* OneNote-style top-edge drag bar: a full-width strip on the container's
+   top edge; grab anywhere along it to move the whole container. */
 .free-textbox-chrome {
   position: absolute;
-  top: -22px;
+  top: -16px;
   left: 0;
+  right: 0;
+  height: 16px;
   display: flex;
-  gap: 4px;
   align-items: center;
+  justify-content: center;
+  background: var(--panel);
+  border: 1px solid var(--line-strong);
+  border-bottom: none;
+  border-radius: 7px 7px 0 0;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.15s;
 }
+.free-textbox-chrome:active { cursor: grabbing; }
 .free-textbox-chrome[data-visible="true"] {
   opacity: 1;
   pointer-events: auto;
 }
-.free-textbox-grip {
-  cursor: grab;
-  font-size: 11px;
-  color: var(--ink-3);
-  background: var(--bg-elev);
-  border: 1px solid var(--line-strong);
-  border-radius: 5px;
-  padding: 1px 6px;
-  user-select: none;
-  touch-action: none;
+.free-textbox-gripdots {
+  font-size: 12px;
+  line-height: 1;
+  letter-spacing: 1px;
+  color: var(--ink-4);
+  pointer-events: none;
 }
-.free-textbox-grip:active { cursor: grabbing; }
 .free-textbox-delete {
+  position: absolute;
+  right: 3px;
+  top: 1px;
   font-size: 10px;
-  color: var(--ink-3);
-  background: var(--bg-elev);
-  border: 1px solid var(--line-strong);
-  border-radius: 5px;
-  padding: 1px 6px;
+  line-height: 1;
+  color: var(--ink-4);
+  background: none;
+  border: none;
+  padding: 2px 4px;
   cursor: pointer;
-  transition: color 0.12s, border-color 0.12s;
+  transition: color 0.12s;
 }
-.free-textbox-delete:hover { color: oklch(0.55 0.18 25); border-color: oklch(0.55 0.18 25 / 0.4); }
+.free-textbox-delete:hover { color: oklch(0.55 0.18 25); }
 
+/* Container text uses the SAME typography as the main editor so containers
+   feel native, not like sticky notes. */
 .free-textbox-text,
 .free-textbox-input {
-  font-size: 13.5px;
-  line-height: 1.55;
+  font-size: 15.5px;
+  line-height: 1.75;
   color: var(--ink);
   white-space: pre-wrap;
   word-break: break-word;
@@ -3405,17 +3424,33 @@ input, textarea { font: inherit; color: inherit; }
    Phase 7 — FocusAnnotation (full-screen word/ayah drawing canvas)
    ═══════════════════════════════════════════════════════════════════════════ */
 
+/* Docked right-side note panel — the Mushaf page stays visible and fully
+   lit to its left (no dim, no fade). Portaled to <body>. On phones it
+   expands to the full viewport. */
 .fa-overlay {
   position: fixed;
-  inset: 0;
+  top: 0;
+  right: 0;
+  left: auto;
+  width: min(500px, 48vw);
   height: 100dvh; /* iPad Safari: track the dynamic viewport, not the URL-bar-inflated one */
-  z-index: 50;
+  z-index: 60;
   background: var(--bg);
+  border-left: 1px solid var(--line-strong);
+  box-shadow: -12px 0 40px oklch(0.22 0.012 80 / 0.12);
   display: flex;
   flex-direction: column;
   -webkit-touch-callout: none;
   -webkit-user-select: none;
   user-select: none;
+  animation: fa-dock-in 0.32s var(--ease-flow) both;
+}
+@keyframes fa-dock-in {
+  from { opacity: 0; transform: translateX(24px); }
+  to   { opacity: 1; transform: none; }
+}
+@media (max-width: 640px) {
+  .fa-overlay { width: 100vw; left: 0; border-left: none; }
 }
 
 /* Row that holds drawing canvas */
@@ -4238,13 +4273,23 @@ input, textarea { font: inherit; color: inherit; }
   unicode-bidi: plaintext;
 }
 
-/* The ProseMirror contenteditable region */
+/* The ProseMirror contenteditable region — this IS the page's default
+   large text container (OneNote model). A whisper of a frame appears on
+   hover so it reads as a container without ever feeling boxed in. */
 .page-editor-content {
   outline: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  transition: border-color var(--dur-hover) var(--ease-soft);
   caret-color: var(--accent);
   font-size: 15.5px;
   line-height: 1.82;
   color: var(--ink);
+}
+
+.page-editor-content:hover,
+.page-editor-content:focus-within {
+  border-color: var(--line);
 }
 
 /* Paragraph — generous spacing makes prose breathe */

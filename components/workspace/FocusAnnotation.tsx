@@ -52,6 +52,7 @@
 import {
   useCallback, useEffect, useLayoutEffect, useRef, useState,
 } from "react";
+import { createPortal } from "react-dom";
 import type { Verse } from "@/lib/types";
 import type { DrawTool } from "./DrawingCanvas";
 import CanvasToolRail, {
@@ -626,8 +627,11 @@ export default function FocusAnnotation({
   const worldTransform = `translate(${viewport.x}px,${viewport.y}px) scale(${viewport.zoom})`;
 
   // ── Render ─────────────────────────────────────────────────────────────
+  // Docked as a right-side panel over the SAME Mushaf page (no separate
+  // screen, no dim). Portaled to <body> so no transformed/overflow ancestor
+  // can hijack the fixed positioning (this was silently breaking tablets).
 
-  return (
+  return createPortal(
     <div className="fa-overlay">
 
       {/* ── Top bar ── */}
@@ -709,6 +713,7 @@ export default function FocusAnnotation({
         </div>
 
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

@@ -67,9 +67,11 @@ interface Props {
   onRegisterAyahRef: (ayahNum: number, el: HTMLElement | null) => void;
   onRegisterWordRef: (ayahNum: number, wordPos: number, el: HTMLElement | null) => void;
   onOpenFocus:       (verseKey: string, wordPos: number | null) => void;
-  /** Words that have at least one note — shown with a persistent highlight.
-   *  Format: "${ayahNumber}:${wordPosition}"  (fix #7) */
-  notedWordKeys?:    ReadonlySet<string>;
+  /** Words that have at least one note → soft translucent highlight colour.
+   *  Key format: "${ayahNumber}:${wordPosition}" */
+  notedWordColors?:  ReadonlyMap<string, string>;
+  /** Word currently open in the note panel — gets the selection highlight */
+  selectedWordKey?:  string | null;
 }
 
 // ── Word entry collapsed for line grouping ──────────────────────────────────
@@ -110,7 +112,8 @@ function Skeleton({ cardRef }: { cardRef: React.RefObject<HTMLDivElement | null>
 export default function QCFMushafPage({
   verses, pageNumber, chapter, loading = false,
   cardRef, onRegisterAyahRef, onRegisterWordRef, onOpenFocus,
-  notedWordKeys,
+  notedWordColors,
+  selectedWordKey,
 }: Props) {
 
   const [fontReady, setFontReady] = useState(false);
@@ -253,8 +256,11 @@ export default function QCFMushafPage({
           return (
             <div key={lineKey} className="qcf-line">
               {words.map((word) => {
-                const isWord = word.char_type_name === "word";
-                const isEnd  = word.char_type_name === "end";
+                const isWord  = word.char_type_name === "word";
+                const isEnd   = word.char_type_name === "end";
+                const wordKey = `${word.ayahNum}:${word.position}`;
+                const noted   = isWord ? notedWordColors?.get(wordKey) : undefined;
+                const selected = isWord && selectedWordKey === `${word.verseKey}:${word.position}`;
 
                 return (
                   <span
@@ -267,13 +273,15 @@ export default function QCFMushafPage({
                       "qcf-glyph",
                       isWord ? "qcf-word" : "",
                       isEnd  ? "qcf-end"  : "",
-                      isWord && notedWordKeys?.has(`${word.ayahNum}:${word.position}`)
-                        ? "qcf-word--noted" : "",
+                      noted    ? "qcf-word--noted"    : "",
+                      selected ? "qcf-word--selected" : "",
                     ].join(" ").trim()}
-                    // font-family is the only per-span style — font-size and
-                    // line-height are inherited from .qcf-lines to avoid any
-                    // per-span spacing discrepancy.
-                    style={{ fontFamily: `p${v2page}-v2` }}
+                    // font-family per-span; noted words get their soft
+                    // translucent highlight colour inline (rotating palette).
+                    style={{
+                      fontFamily: `p${v2page}-v2`,
+                      ...(noted ? { background: noted } : {}),
+                    }}
                     title={isWord ? (word.translation?.text ?? "") : undefined}
                     role={isWord || isEnd ? "button" : undefined}
                     tabIndex={isWord || isEnd ? 0 : undefined}
