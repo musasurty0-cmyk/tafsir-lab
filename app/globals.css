@@ -4058,13 +4058,18 @@ input, textarea { font: inherit; color: inherit; }
   cursor: text;
 }
 
-/* Ink overlay — strokes live in content space and scroll with the text */
+/* Ink overlay — strokes live in content space and scroll with the text.
+   pointer-events: none is CRITICAL: the canvas is display-only (all pen
+   input arrives via capture listeners on the editor container). Without it
+   this invisible full-page canvas eats every click and the editor becomes
+   untypeable. */
 .editor-ink-canvas {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   z-index: 5; /* above text, below the tool row */
+  pointer-events: none;
 }
 
 /* Floating tool row (pen + insert) — sticky inside the editor column so it

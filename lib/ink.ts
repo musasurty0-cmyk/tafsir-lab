@@ -64,14 +64,36 @@ export function hitTest(pts: Pt[], cx: number, cy: number, r: number): boolean {
 
 // ── Rendering ──────────────────────────────────────────────────────────────
 //
-// drawSmooth: one continuous curve via the midpoint-quadratic technique.
-// Pressure (pen tool): p=0.5 maps to exactly 1.0× width, so mouse strokes
-// and legacy points render identically to constant width.
+// Constant-width strokes (highlighter etc.): one continuous midpoint-
+// quadratic path.
+//
+// Pressure strokes (pen): a perfect-freehand OUTLINE polygon filled once.
+// This is how GoodNotes-class apps render ink. The previous approach —
+// stroking each tiny segment separately with a per-segment lineWidth and
+// round caps — beaded into visible "dots" the moment real stylus pressure
+// jittered between samples (thick caps bulging past thin neighbours).
+// A single filled outline has no joints, no caps, no beading, and renders
+// identically on every device because it's a pure function of the stored
+// world-space points.
+
+import { getStroke } from "perfect-freehand";
 
 export function pressureWidth(base: number, p: number): number {
-  // p=0.5 → exactly 1.0× (mouse/legacy parity). Clamp the floor: sub-1.5px
-  // antialiased lines read as "blurry" on 1× density laptop screens.
+  // Kept for callers that need a scalar width from pressure.
   return Math.max(1.5, base * (0.45 + 1.1 * p));
+}
+
+/** perfect-freehand options for a given base width. streamline smooths
+ *  input jitter; thinning maps pressure to width. */
+function freehandOptions(width: number) {
+  return {
+    size:             Math.max(2.5, width * 1.9),
+    thinning:         0.55,
+    smoothing:        0.6,
+    streamline:       0.45,
+    simulatePressure: false, // we store REAL pressure per point
+    last:             true,
+  };
 }
 
 export function drawSmooth(
@@ -100,6 +122,7 @@ export function drawSmooth(
   }
 
   if (!pressureSensitive) {
+    // Constant width — one continuous stroked path.
     ctx.lineWidth = width;
     ctx.beginPath();
     ctx.moveTo(pts[0][0], pts[0][1]);
@@ -118,24 +141,30 @@ export function drawSmooth(
     return;
   }
 
-  // Pressure path — per-segment width; round caps make joints seamless.
-  let px = pts[0][0], py = pts[0][1];
-  for (let i = 1; i < pts.length - 1; i++) {
-    const mx = (pts[i][0] + pts[i + 1][0]) / 2;
-    const my = (pts[i][1] + pts[i + 1][1]) / 2;
+  // Pressure path — single filled outline polygon (no joints, no beads).
+  const outline = getStroke(
+    pts.map((p) => [p[0], p[1], p[2]] as [number, number, number]),
+    freehandOptions(width),
+  );
+
+  if (outline.length < 3) {
     ctx.beginPath();
-    ctx.lineWidth = pressureWidth(width, (pts[i][2] + pts[i + 1][2]) / 2);
-    ctx.moveTo(px, py);
-    ctx.quadraticCurveTo(pts[i][0], pts[i][1], mx, my);
-    ctx.stroke();
-    px = mx; py = my;
+    ctx.arc(pts[0][0], pts[0][1], pressureWidth(width, pts[0][2]) / 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    return;
   }
-  const last = pts[pts.length - 1];
+
   ctx.beginPath();
-  ctx.lineWidth = pressureWidth(width, last[2]);
-  ctx.moveTo(px, py);
-  ctx.lineTo(last[0], last[1]);
-  ctx.stroke();
+  ctx.moveTo(outline[0][0], outline[0][1]);
+  // Midpoint-quadratic around the outline keeps the polygon silky at any zoom.
+  for (let i = 1; i < outline.length; i++) {
+    const [x0, y0] = outline[i - 1];
+    const [x1, y1] = outline[i];
+    ctx.quadraticCurveTo(x0, y0, (x0 + x1) / 2, (y0 + y1) / 2);
+  }
+  ctx.closePath();
+  ctx.fill();
   ctx.restore();
 }
 
