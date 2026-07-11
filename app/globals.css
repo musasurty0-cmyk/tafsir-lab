@@ -2749,12 +2749,14 @@ input, textarea { font: inherit; color: inherit; }
 }
 .qcf-word--noted:hover { filter: brightness(0.96); }
 
-/* Word currently open in the note panel */
+/* Word whose annotation layer is open — ONE stronger highlight, no ring
+   (the background + spread ring combo read as a double highlight). */
 .qcf-word--selected {
   border-radius: 3px;
-  background: oklch(0.9 0.15 95 / 0.6) !important;
-  box-shadow: 0 0 0 4px oklch(0.9 0.15 95 / 0.35);
+  background: oklch(0.88 0.16 95 / 0.7) !important;
+  box-shadow: none;
 }
+.qcf-word--selected:hover { filter: none; }
 
 .qcf-end {
   cursor:     pointer;
@@ -4311,13 +4313,47 @@ input, textarea { font: inherit; color: inherit; }
   unicode-bidi: plaintext;
 }
 
+/* Main document container — same structure as the square containers:
+   a top drag bar (hover), square corners, invisible border until hover. */
+.main-doc-container {
+  position: relative;
+  margin-top: 18px; /* room for the drag bar */
+}
+.main-doc-bar {
+  position: absolute;
+  top: -16px;
+  left: 0;
+  right: 0;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--panel);
+  border: 1px solid var(--line-strong);
+  border-bottom: none;
+  border-radius: 0;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
+  z-index: 6;
+}
+.main-doc-bar:active { cursor: grabbing; }
+.main-doc-container:hover .main-doc-bar,
+.main-doc-container:focus-within .main-doc-bar {
+  opacity: 1;
+  pointer-events: auto;
+}
+
 /* The ProseMirror contenteditable region — this IS the page's default
    large text container (OneNote model). A whisper of a frame appears on
    hover so it reads as a container without ever feeling boxed in. */
 .page-editor-content {
   outline: none;
   border: 1px solid transparent;
-  border-radius: var(--radius-md);
+  border-radius: 0; /* square, matching the other containers */
   transition: border-color var(--dur-hover) var(--ease-soft);
   caret-color: var(--accent);
   font-size: 15.5px;

@@ -114,6 +114,39 @@ export default function FreeTextBox({ note, startEditing = false, onUpdated, onD
     ta.style.height = `${ta.scrollHeight}px`;
   }
 
+  // ── Slash commands in containers ────────────────────────────────────────
+  // Pressing Enter on a line ending "/ayah 2:255" expands it in place to
+  // the verse's Arabic + translation (same endpoint the editor embeds use).
+  function maybeExpandSlash(e: React.KeyboardEvent<HTMLTextAreaElement>): boolean {
+    const ta = e.currentTarget;
+    const before = ta.value.slice(0, ta.selectionStart);
+    const m = before.match(/(^|\n)\/ayah\s+(\d{1,3}:\d{1,3})\s*$/);
+    if (!m) return false;
+    e.preventDefault();
+
+    const key = m[2];
+    const tokenStart = before.length - (m[0].length - m[1].length);
+    const after = ta.value.slice(ta.selectionStart);
+    const placeholder = `⏳ ${key}…`;
+    const next = ta.value.slice(0, tokenStart) + placeholder + after;
+    setText(next);
+    requestAnimationFrame(() => { if (textareaRef.current) autosize(textareaRef.current); });
+
+    fetch(`/api/ayah/${key.replace(":", "_")}`)
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then(({ verse }: { verse: { text_uthmani?: string; translations?: { text?: string }[] } }) => {
+        const ar = verse.text_uthmani ?? "";
+        const tr = (verse.translations?.[0]?.text ?? "").replace(/<[^>]+>/g, "");
+        const insert = `${ar} ﴿${key}﴾${tr ? `\n${tr}` : ""}\n`;
+        setText((prev) => prev.replace(placeholder, insert));
+        requestAnimationFrame(() => { if (textareaRef.current) autosize(textareaRef.current); });
+      })
+      .catch(() => {
+        setText((prev) => prev.replace(placeholder, `/ayah ${key}`));
+      });
+    return true;
+  }
+
   // ── Save / delete ───────────────────────────────────────────────────────
 
   function commitText() {
@@ -228,6 +261,7 @@ export default function FreeTextBox({ note, startEditing = false, onUpdated, onD
         onChange={(e) => { setText(e.target.value); autosize(e.target); }}
         onBlur={commitText}
         onKeyDown={(e) => {
+          if (e.key === "Enter" && maybeExpandSlash(e)) return;
           if (e.key === "Escape") { e.preventDefault(); e.currentTarget.blur(); }
         }}
       />

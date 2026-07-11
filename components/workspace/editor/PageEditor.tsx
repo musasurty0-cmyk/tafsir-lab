@@ -102,6 +102,39 @@ export default function PageEditor({
   const ALL_COMMANDS          = useRef(buildCommands());
   const saveTimer             = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // ── Main document = the page's default container ───────────────────────
+  // Same structure as the square containers: a top drag bar moves it; the
+  // offset persists per page (client-side, localStorage).
+  const [docOffset, setDocOffset] = useState<{ x: number; y: number }>(() => {
+    if (typeof window === "undefined") return { x: 0, y: 0 };
+    try {
+      const raw = localStorage.getItem(`tl-doc-offset:${pageId}`);
+      if (raw) return JSON.parse(raw) as { x: number; y: number };
+    } catch { /* ignore */ }
+    return { x: 0, y: 0 };
+  });
+  const docDragRef = useRef<{ mx: number; my: number; x: number; y: number } | null>(null);
+
+  function onDocBarDown(e: React.PointerEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    docDragRef.current = { mx: e.clientX, my: e.clientY, x: docOffset.x, y: docOffset.y };
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  }
+  function onDocBarMove(e: React.PointerEvent) {
+    const d = docDragRef.current;
+    if (!d) return;
+    setDocOffset({ x: d.x + (e.clientX - d.mx), y: Math.max(0, d.y + (e.clientY - d.my)) });
+  }
+  function onDocBarUp() {
+    if (!docDragRef.current) return;
+    docDragRef.current = null;
+    setDocOffset((cur) => {
+      try { localStorage.setItem(`tl-doc-offset:${pageId}`, JSON.stringify(cur)); } catch { /* ignore */ }
+      return cur;
+    });
+  }
+
   // ── Freeform text containers — OneNote model ──────────────────────────
   // Click empty canvas → a DRAFT container renders SYNCHRONOUSLY in the
   // same gesture with an autofocused textarea (mobile keyboards refuse
@@ -465,7 +498,24 @@ export default function PageEditor({
 
   return (
     <div className="page-editor" ref={pageEditorRef}>
-      <EditorContent editor={editor} />
+      {/* Main container — same structure as the square ones: top drag bar,
+          square chrome, movable (offset persisted per page) */}
+      <div
+        className="main-doc-container"
+        style={{ transform: `translate(${docOffset.x}px, ${docOffset.y}px)` }}
+      >
+        <div
+          className="main-doc-bar"
+          title="Drag to move"
+          onPointerDown={onDocBarDown}
+          onPointerMove={onDocBarMove}
+          onPointerUp={onDocBarUp}
+          onPointerCancel={onDocBarUp}
+        >
+          <span className="free-textbox-gripdots" aria-hidden>⋯⋯</span>
+        </div>
+        <EditorContent editor={editor} />
+      </div>
       <SelectionToolbar editor={editor} />
 
       {/* Freeform movable text containers (drag grip to move; auto-resize) */}
