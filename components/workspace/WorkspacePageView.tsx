@@ -161,7 +161,13 @@ export default function WorkspacePageView({
     updatePresence({ mode });
   }, [mode, updatePresence]);
 
+  // Recently-created note ids — protects fresh notes from being wiped by a
+  // notes poll whose server read predates the creation (the "container
+  // disappears then reappears" bug). Temps ("temp-…") are always protected.
+  const recentCreatedRef = useRef<Map<string, number>>(new Map());
+
   const handleNoteCreated = useCallback((note: NoteData) => {
+    recentCreatedRef.current.set(note.id, Date.now());
     setNotes((prev) => [...prev, note]);
   }, []);
 
@@ -249,7 +255,21 @@ export default function WorkspacePageView({
         fetch(`/api/pages/${activePageId}/notes`)
           .then((r) => r.ok ? r.json() : null)
           .then((data: { notes?: NoteData[] } | null) => {
-            if (data?.notes) setNotes(data.notes);
+            if (!data?.notes) return;
+            // MERGE, don't replace: keep unsaved temps and notes created in
+            // the last 15s that a stale server read hasn't caught up with.
+            setNotes((prev) => {
+              const server    = data.notes!;
+              const serverIds = new Set(server.map((n) => n.id));
+              const now       = Date.now();
+              for (const [id, ts] of recentCreatedRef.current) {
+                if (now - ts > 15000) recentCreatedRef.current.delete(id);
+              }
+              const protectedLocal = prev.filter((n) =>
+                !serverIds.has(n.id) &&
+                (n.id.startsWith("temp-") || recentCreatedRef.current.has(n.id)));
+              return [...server, ...protectedLocal];
+            });
           })
           .catch(() => {});
       }

@@ -33,7 +33,6 @@ import CanvasToolRail, {
   DEFAULT_HIGHLIGHT_COLOR,
   DEFAULT_HIGHLIGHT_SIZE,
 } from "./CanvasToolRail";
-import FocusAnnotation from "./FocusAnnotation";
 
 // ── Re-exported types ──────────────────────────────────────────────────────
 
@@ -171,9 +170,10 @@ export default function ModeBPage({
   );
 
   // Free text boxes live in canvas space — visible on every Mushaf page.
-  // anchorType "editor" boxes belong to the Mode A freeform layer (their
-  // coordinates are editor content space, not canvas world space).
-  const textBoxNotes = useMemo(
+  // anchorType "editor" boxes belong to the Mode A freeform layer.
+  // EXCLUSIVE layers: normal mode shows only page-level boxes; word/ayah
+  // mode shows only that anchor's boxes (see textBoxVisible below).
+  const canvasTextBoxes = useMemo(
     () => notes.filter((n) => n.noteType === "textbox" && n.anchorType !== "editor"),
     [notes],
   );
@@ -195,32 +195,95 @@ export default function ModeBPage({
   // (first noted word yellow, next green, …) and are deterministic across
   // reloads. Only visibility-filtered notes reach this client, so the
   // highlight respects note visibility automatically.
+  // Anchors that own at least one drawing stroke (reported by DrawingCanvas)
+  const [strokeAnchors, setStrokeAnchors] = useState<Set<string>>(new Set());
+
   const notedWordColors = useMemo<ReadonlyMap<string, string>>(() => {
     const PALETTE = [
-      "oklch(0.9 0.15 95 / 0.5)",   // yellow
+      "oklch(0.9 0.15 95 / 0.5)",    // yellow
       "oklch(0.88 0.12 150 / 0.45)", // green
       "oklch(0.88 0.09 250 / 0.45)", // blue
       "oklch(0.88 0.1 310 / 0.4)",   // purple
-      "oklch(0.88 0.1 20 / 0.4)",    // rose
+      "oklch(0.9 0.12 60 / 0.45)",   // orange
     ];
-    const wordNotes = notes
-      .filter((n) => n.anchorType === "word" && n.ayahNumber != null && n.wordPosition != null)
-      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
     const map = new Map<string, string>();
-    for (const note of wordNotes) {
-      const key = `${note.ayahNumber}:${note.wordPosition}`;
+    const add = (key: string) => {
       if (!map.has(key)) map.set(key, PALETTE[map.size % PALETTE.length]);
+    };
+    // Typed note cards anchored to words, in creation order
+    notes
+      .filter((n) => n.anchorType === "word" && n.ayahNumber != null && n.wordPosition != null)
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+      .forEach((n) => add(`${n.ayahNumber}:${n.wordPosition}`));
+    // Drawing layers anchored to words ("w:{surah}:{ayah}:{pos}")
+    for (const a of strokeAnchors) {
+      const m = a.match(/^w:\d+:(\d+):(\d+)$/);
+      if (m) add(`${m[1]}:${m[2]}`);
     }
     return map;
-  }, [notes]);
+  }, [notes, strokeAnchors]);
+
+  // Ayah markers with annotation layers — different, softer palette
+  const notedEndColors = useMemo<ReadonlyMap<number, string>>(() => {
+    const PALETTE = [
+      "oklch(0.93 0.07 200 / 0.45)", // soft teal
+      "oklch(0.93 0.07 130 / 0.45)", // soft sage
+      "oklch(0.93 0.06 280 / 0.4)",  // soft lavender
+      "oklch(0.94 0.07 80 / 0.45)",  // soft sand
+    ];
+    const map = new Map<number, string>();
+    for (const a of strokeAnchors) {
+      const m = a.match(/^a:\d+:(\d+)$/);
+      if (m) {
+        const ayah = Number(m[1]);
+        if (!map.has(ayah)) map.set(ayah, PALETTE[map.size % PALETTE.length]);
+      }
+    }
+    // Ayah-anchored textbox containers count too
+    for (const n of notes) {
+      if (n.noteType === "textbox" && n.anchorType === "ayah" && n.ayahNumber != null && !map.has(n.ayahNumber)) {
+        map.set(n.ayahNumber, PALETTE[map.size % PALETTE.length]);
+      }
+    }
+    return map;
+  }, [strokeAnchors, notes]);
+
+  // ── Annotation-layer session ───────────────────────────────────────────
+  // Anchor keys: "w:{verseKey}:{wordPos}" for words, "a:{verseKey}" for ayahs.
+  const activeAnchorKey = focusAnchor
+    ? (focusAnchor.wordPos != null
+        ? `w:${focusAnchor.verseKey}:${focusAnchor.wordPos}`
+        : `a:${focusAnchor.verseKey}`)
+    : null;
+
+  const [cameraAnim, setCameraAnim] = useState(false);
 
   const openFocus = useCallback((verseKey: string, wordPos: number | null) => {
-    setFocusAnchor({ verseKey, wordPos });
+    // INTERACTION LOCK: while a layer is open, every other word/ayah tap is
+    // ignored — exit is only through Done.
+    setFocusAnchor((cur) => {
+      if (cur) return cur;
+      return { verseKey, wordPos };
+    });
     // Signal Mode A to highlight this verse when in split view
     onAyahSelect?.(verseKey);
   }, [onAyahSelect]);
 
   const closeFocus = useCallback(() => setFocusAnchor(null), []);
+
+  // Entering a layer: smooth-animate the camera back to the centred page
+  // (never restore old zoom/pan) and auto-activate the Pen.
+  useEffect(() => {
+    if (!focusAnchor) return;
+    setTool("pen");
+    const next: CanvasViewport = { x: centeredX(1), y: 40, zoom: 1 };
+    setCameraAnim(true);
+    setViewport(next);
+    patchViewport(next);
+    const t = setTimeout(() => setCameraAnim(false), 380);
+    return () => clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusAnchor]);
 
   // ── QCF page data (fetched client-side when the page changes) ─────────
   // Fix #1 — surah page filtering: the page API returns ALL verses on a
@@ -299,33 +362,62 @@ export default function ModeBPage({
   const strokeWidth = tool === "highlight" ? hlSize : penSize; // arrow inherits pen width
 
   // ── Free text box placement (text tool) ───────────────────────────────
-  // Click with the text tool → create a "textbox" note at the click's
-  // world coordinates, switch back to hand so the new box is editable,
-  // and open it in edit mode immediately.
+  // OPTIMISTIC lifecycle (no flicker): render a temp container instantly,
+  // persist in the background, then swap in the server note (identical
+  // geometry/content, so the swap is invisible). In word/ayah mode the
+  // container belongs to the active annotation layer.
   const [freshTextBoxId, setFreshTextBoxId] = useState<string | null>(null);
 
   const placeTextBox = useCallback((wx: number, wy: number) => {
+    const anchor = focusAnchor;
+    const [surahStr, ayahStr] = (anchor?.verseKey ?? "").split(":");
+    const anchorFields = anchor
+      ? anchor.wordPos != null
+        ? { anchorType: "word", surahNumber: Number(surahStr), ayahNumber: Number(ayahStr), wordPosition: anchor.wordPos }
+        : { anchorType: "ayah", surahNumber: Number(surahStr), ayahNumber: Number(ayahStr) }
+      : { anchorType: "page" };
+
+    const tempId = `temp-${crypto.randomUUID()}`;
+    const temp: NoteData = {
+      id: tempId,
+      noteType: "textbox",
+      anchorType: anchorFields.anchorType,
+      surahNumber: (anchorFields as { surahNumber?: number }).surahNumber ?? null,
+      ayahNumber:  (anchorFields as { ayahNumber?: number }).ayahNumber ?? null,
+      wordPosition: (anchorFields as { wordPosition?: number }).wordPosition ?? null,
+      content: { type: "doc", content: [{ type: "paragraph" }] },
+      color: null,
+      offsetX: Math.round(wx), offsetY: Math.round(wy),
+      width: 220, height: null,
+      isMinimized: false, zIndex: 1, isAdmin: false,
+      createdAt: new Date().toISOString(),
+      author: { id: "me", name: "You", avatarUrl: null },
+    };
+    onNoteCreated?.(temp);
+    setFreshTextBoxId(tempId);
+    setTool("hand"); // hand mode lets clicks reach the new box for editing
+
     fetch(`/api/pages/${pageId}/notes`, {
       method:  "POST",
       headers: { "Content-Type": "application/json" },
       body:    JSON.stringify({
-        noteType:   "textbox",
-        anchorType: "page",
-        content:    { type: "doc", content: [{ type: "paragraph" }] },
-        offsetX:    Math.round(wx),
-        offsetY:    Math.round(wy),
-        width:      220,
+        noteType: "textbox",
+        ...anchorFields,
+        content:  { type: "doc", content: [{ type: "paragraph" }] },
+        offsetX:  Math.round(wx),
+        offsetY:  Math.round(wy),
+        width:    220,
       }),
     })
       .then((r) => (r.ok ? r.json() : null))
       .then((d: { note?: NoteData } | null) => {
-        if (!d?.note) return;
+        if (!d?.note) return; // keep the temp visible; poll won't drop it
+        onNoteDeleted(tempId);
         onNoteCreated?.(d.note);
-        setFreshTextBoxId(d.note.id);
-        setTool("hand"); // hand mode lets clicks reach the new box for editing
+        setFreshTextBoxId((cur) => (cur === tempId ? d.note!.id : cur));
       })
-      .catch(() => {});
-  }, [pageId, onNoteCreated]);
+      .catch(() => { /* temp stays visible */ });
+  }, [pageId, focusAnchor, onNoteCreated, onNoteDeleted]);
 
   const handleHistory = useCallback((u: boolean, r: boolean) => {
     setCanUndo(u);
@@ -334,8 +426,9 @@ export default function ModeBPage({
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (focusAnchor) return;
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      // Escape = Done (exit the word/ayah annotation layer)
+      if (e.key === "Escape" && focusAnchor) { closeFocus(); return; }
       // Tool shortcuts (no modifier)
       if (!e.metaKey && !e.ctrlKey) {
         const t = TOOL_HOTKEYS[e.key.toLowerCase()];
@@ -353,7 +446,7 @@ export default function ModeBPage({
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [focusAnchor]);
+  }, [focusAnchor, closeFocus]);
 
   // ── DOM refs for anchor engine ────────────────────────────────────────
   const innerRef      = useRef<HTMLDivElement>(null);
@@ -701,7 +794,13 @@ export default function ModeBPage({
       <div
         ref={innerRef}
         className="mode-b-inner"
-        style={{ transform: `translate(${viewport.x}px,${viewport.y}px) scale(${viewport.zoom})`, transformOrigin: "0 0", width: MUSHAF_CARD_WIDTH }}
+        style={{
+          transform: `translate(${viewport.x}px,${viewport.y}px) scale(${viewport.zoom})`,
+          transformOrigin: "0 0",
+          width: MUSHAF_CARD_WIDTH,
+          // Smooth camera glide when an annotation session begins
+          transition: cameraAnim ? "transform 0.35s cubic-bezier(0.33, 0.1, 0.25, 1)" : undefined,
+        }}
       >
         <QCFMushafPage
           verses={qcfVerses}
@@ -713,11 +812,13 @@ export default function ModeBPage({
           onRegisterWordRef={registerWordRef}
           onOpenFocus={openFocus}
           notedWordColors={notedWordColors}
+          notedEndColors={notedEndColors}
           selectedWordKey={focusAnchor && focusAnchor.wordPos != null ? `${focusAnchor.verseKey}:${focusAnchor.wordPos}` : null}
+          selectedEndKey={focusAnchor && focusAnchor.wordPos == null ? focusAnchor.verseKey : null}
         />
 
-        {/* SVG connector lines */}
-        <svg className="mode-b-connectors" style={{ position: "absolute", top: 0, left: 0, width: 0, height: 0, overflow: "visible", pointerEvents: "none" }} aria-hidden="true">
+        {/* SVG connector lines (Main Notes chrome — hidden in a layer) */}
+        {focusAnchor ? null : <svg className="mode-b-connectors" style={{ position: "absolute", top: 0, left: 0, width: 0, height: 0, overflow: "visible", pointerEvents: "none" }} aria-hidden="true">
           {pageNotes.map((note) => {
             const notePos  = notePositions.get(note.id);
             const anchorPt = anchorPoints.get(note.id);
@@ -726,10 +827,11 @@ export default function ModeBPage({
               <line key={`conn-${note.id}`} x1={anchorPt.x} y1={anchorPt.y} x2={notePos.x} y2={notePos.y + 16} className="mode-b-connector-line" />
             );
           })}
-        </svg>
+        </svg>}
 
-        {/* Anchored note cards */}
-        {pageNotes.map((note) => {
+        {/* Anchored note cards — part of the Main Notes; hidden while a
+            word/ayah annotation layer is active */}
+        {!focusAnchor && pageNotes.map((note) => {
           const pos = notePositions.get(note.id);
           if (!pos) return null;
           return (
@@ -744,19 +846,30 @@ export default function ModeBPage({
           );
         })}
 
-        {/* Free text boxes — write anywhere on the canvas */}
-        {textBoxNotes.map((note) => (
-          <FreeTextBox
-            key={note.id}
-            note={note}
-            startEditing={note.id === freshTextBoxId}
-            onUpdated={onNoteUpdated}
-            onDeleted={(id) => {
-              if (id === freshTextBoxId) setFreshTextBoxId(null);
-              onNoteDeleted(id);
-            }}
-          />
-        ))}
+        {/* Free text boxes — EXCLUSIVE layers: normal mode shows page-level
+            boxes; word/ayah mode shows only the active layer's boxes */}
+        {canvasTextBoxes
+          .filter((n) => {
+            if (!focusAnchor) return n.anchorType === "page";
+            const [s, a] = focusAnchor.verseKey.split(":").map(Number);
+            if (focusAnchor.wordPos != null) {
+              return n.anchorType === "word" && n.surahNumber === s &&
+                     n.ayahNumber === a && n.wordPosition === focusAnchor.wordPos;
+            }
+            return n.anchorType === "ayah" && n.surahNumber === s && n.ayahNumber === a;
+          })
+          .map((note) => (
+            <FreeTextBox
+              key={note.id}
+              note={note}
+              startEditing={note.id === freshTextBoxId}
+              onUpdated={onNoteUpdated}
+              onDeleted={(id) => {
+                if (id === freshTextBoxId) setFreshTextBoxId(null);
+                onNoteDeleted(id);
+              }}
+            />
+          ))}
       </div>
 
       {/* ── Drawing canvas overlay ── */}
@@ -770,9 +883,25 @@ export default function ModeBPage({
         strokeWidth={strokeWidth}
         viewport={viewport}
         roomSocket={roomSocket ?? null}
+        activeAnchor={activeAnchorKey}
         onHistoryChange={handleHistory}
         onTextPlace={placeTextBox}
+        onAnchorsChange={setStrokeAnchors}
       />
+
+      {/* ── Annotation session chip — the ONLY exit is Done ── */}
+      {focusAnchor && (
+        <div className="anchor-session-chip">
+          <span className="anchor-session-label">
+            {focusAnchor.wordPos != null
+              ? `Word notes · ${focusAnchor.verseKey}`
+              : `Ayah notes · ${focusAnchor.verseKey}`}
+          </span>
+          <button className="anchor-session-done" onClick={closeFocus}>
+            Done
+          </button>
+        </div>
+      )}
 
       {/* ── Vertical tool rail (left side) ── */}
       <CanvasToolRail
@@ -842,16 +971,8 @@ export default function ModeBPage({
         </div>
       )}
 
-      {/* ── Word/ayah focus annotation (full-screen, shown on demand) ── */}
-      {focusAnchor && (
-        <FocusAnnotation
-          verses={verses}
-          verseKey={focusAnchor.verseKey}
-          wordPos={focusAnchor.wordPos}
-          onClose={closeFocus}
-          onOpenTafsir={onOpenTafsir}
-        />
-      )}
+      {/* Word/ayah annotation now happens IN PLACE on this same canvas
+          (exclusive anchor layers) — no separate screen/panel. */}
     </div>
   );
 }

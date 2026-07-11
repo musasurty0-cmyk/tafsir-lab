@@ -50,26 +50,64 @@ interface Props {
 // ── Component ──────────────────────────────────────────────────────────────
 
 export default function FreeTextBox({ note, startEditing = false, onUpdated, onDeleted }: Props) {
-  const [editing, setEditing] = useState(startEditing);
   const [text, setText]       = useState(() => extractText(note.content));
   const [pos, setPos]         = useState({ x: note.offsetX, y: note.offsetY });
   const [hovered, setHovered] = useState(false);
+  const [focused, setFocused] = useState(false);
 
+  const boxRef      = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const dragRef     = useRef<{ startMx: number; startMy: number; startX: number; startY: number; zoom: number } | null>(null);
+
+  // Unsaved optimistic containers haven't got a server id yet — no network.
+  const isTemp = note.id.startsWith("temp-");
 
   // Sync position if the note moves remotely
   useEffect(() => { setPos({ x: note.offsetX, y: note.offsetY }); }, [note.offsetX, note.offsetY]);
 
-  // Autofocus + autosize when editing starts
+  // Sync content if the note changes remotely (skip while the user types)
   useEffect(() => {
-    if (!editing) return;
+    if (textareaRef.current === document.activeElement) return;
+    setText(extractText(note.content));
+    requestAnimationFrame(() => { if (textareaRef.current) autosize(textareaRef.current); });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [note.content]);
+
+  // Body is ALWAYS a live textarea — click places the caret exactly where
+  // clicked, double-click selects a word, drag selects — no edit-mode flip.
+  useEffect(() => {
     const ta = textareaRef.current;
     if (!ta) return;
-    ta.focus();
-    ta.setSelectionRange(ta.value.length, ta.value.length);
     autosize(ta);
-  }, [editing]);
+    if (startEditing) {
+      ta.focus();
+      ta.setSelectionRange(ta.value.length, ta.value.length);
+    }
+  // run once on mount
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Persist manual width resize (CSS resize handle) — debounced PATCH
+  useEffect(() => {
+    const el = boxRef.current;
+    if (!el || isTemp) return;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const ro = new ResizeObserver(() => {
+      const w = Math.round(el.offsetWidth);
+      if (!w || Math.abs(w - (note.width || 220)) < 4) return;
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        fetch(`/api/notes/${note.id}`, {
+          method:  "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body:    JSON.stringify({ width: w }),
+        }).catch(() => {});
+      }, 600);
+    });
+    ro.observe(el);
+    return () => { ro.disconnect(); if (timer) clearTimeout(timer); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [note.id]);
 
   function autosize(ta: HTMLTextAreaElement) {
     ta.style.height = "auto";
@@ -79,12 +117,14 @@ export default function FreeTextBox({ note, startEditing = false, onUpdated, onD
   // ── Save / delete ───────────────────────────────────────────────────────
 
   function commitText() {
-    setEditing(false);
+    setFocused(false);
     const trimmed = text.trim();
     if (trimmed === extractText(note.content).trim()) return;
 
     // Empty box on commit → delete it entirely
     if (!trimmed) { handleDelete(); return; }
+
+    if (isTemp) return; // will persist once the server id arrives
 
     fetch(`/api/notes/${note.id}`, {
       method:  "PATCH",
@@ -99,6 +139,7 @@ export default function FreeTextBox({ note, startEditing = false, onUpdated, onD
   }
 
   function handleDelete() {
+    if (isTemp) { onDeleted?.(note.id); return; } // local-only removal
     fetch(`/api/notes/${note.id}`, { method: "DELETE" })
       .then((r) => { if (r.ok) onDeleted?.(note.id); })
       .catch(() => {});
@@ -134,6 +175,7 @@ export default function FreeTextBox({ note, startEditing = false, onUpdated, onD
     const d = dragRef.current;
     if (!d) return;
     dragRef.current = null;
+    if (isTemp) return; // geometry persists with the server note
     fetch(`/api/notes/${note.id}`, {
       method:  "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -145,7 +187,9 @@ export default function FreeTextBox({ note, startEditing = false, onUpdated, onD
 
   return (
     <div
+      ref={boxRef}
       className="free-textbox"
+      data-focused={focused ? "true" : "false"}
       style={{ left: pos.x, top: pos.y, width: note.width || 220 }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
@@ -155,7 +199,7 @@ export default function FreeTextBox({ note, startEditing = false, onUpdated, onD
           and drag the whole thing. Delete sits at the bar's right. */}
       <div
         className="free-textbox-chrome"
-        data-visible={hovered || editing ? "true" : "false"}
+        data-visible={hovered || focused ? "true" : "false"}
         title="Drag to move"
         onPointerDown={onGripDown}
         onPointerMove={onGripMove}
@@ -173,23 +217,20 @@ export default function FreeTextBox({ note, startEditing = false, onUpdated, onD
         </button>
       </div>
 
-      {editing ? (
-        <textarea
-          ref={textareaRef}
-          className="free-textbox-input"
-          value={text}
-          placeholder="Type something…"
-          onChange={(e) => { setText(e.target.value); autosize(e.target); }}
-          onBlur={commitText}
-          onKeyDown={(e) => {
-            if (e.key === "Escape") { e.preventDefault(); commitText(); }
-          }}
-        />
-      ) : (
-        <div className="free-textbox-text" onClick={() => setEditing(true)}>
-          {text || <span className="free-textbox-placeholder">Empty text box</span>}
-        </div>
-      )}
+      {/* Always-live textarea body — natural caret/selection, blur saves */}
+      <textarea
+        ref={textareaRef}
+        className="free-textbox-input"
+        value={text}
+        placeholder="Type something…"
+        rows={1}
+        onFocus={() => setFocused(true)}
+        onChange={(e) => { setText(e.target.value); autosize(e.target); }}
+        onBlur={commitText}
+        onKeyDown={(e) => {
+          if (e.key === "Escape") { e.preventDefault(); e.currentTarget.blur(); }
+        }}
+      />
 
       <span className="free-textbox-author">{note.author.name.split(" ")[0]}</span>
     </div>

@@ -72,6 +72,10 @@ interface Props {
   notedWordColors?:  ReadonlyMap<string, string>;
   /** Word currently open in the note panel — gets the selection highlight */
   selectedWordKey?:  string | null;
+  /** Ayah markers with annotation layers → soft highlight colour (by ayah number) */
+  notedEndColors?:   ReadonlyMap<number, string>;
+  /** Ayah whose annotation layer is open ("1:2" verseKey) */
+  selectedEndKey?:   string | null;
 }
 
 // ── Word entry collapsed for line grouping ──────────────────────────────────
@@ -114,6 +118,8 @@ export default function QCFMushafPage({
   cardRef, onRegisterAyahRef, onRegisterWordRef, onOpenFocus,
   notedWordColors,
   selectedWordKey,
+  notedEndColors,
+  selectedEndKey,
 }: Props) {
 
   const [fontReady, setFontReady] = useState(false);
@@ -259,8 +265,12 @@ export default function QCFMushafPage({
                 const isWord  = word.char_type_name === "word";
                 const isEnd   = word.char_type_name === "end";
                 const wordKey = `${word.ayahNum}:${word.position}`;
-                const noted   = isWord ? notedWordColors?.get(wordKey) : undefined;
-                const selected = isWord && selectedWordKey === `${word.verseKey}:${word.position}`;
+                const noted   = isWord
+                  ? notedWordColors?.get(wordKey)
+                  : (isEnd ? notedEndColors?.get(word.ayahNum) : undefined);
+                const selected =
+                  (isWord && selectedWordKey === `${word.verseKey}:${word.position}`) ||
+                  (isEnd  && selectedEndKey  === word.verseKey);
 
                 return (
                   <span

@@ -3098,29 +3098,32 @@ input, textarea { font: inherit; color: inherit; }
    Free text boxes — write anywhere on the Mode B canvas
    ═══════════════════════════════════════════════════════════════════════════ */
 
+/* OneNote-model container: rectangular, square corners, transparent
+   background, no card, no shadow — the text simply lives on the page.
+   Border is invisible until hover, slightly clearer when active. */
 .free-textbox {
   position: absolute;
   z-index: 12;
   min-height: 28px;
-  padding: 6px 8px 14px;
-  border-radius: 8px;
+  min-width: 140px;
+  max-width: 900px;
+  padding: 2px 6px 12px;
+  border-radius: 0;
   border: 1px solid transparent;
   background: transparent;
-  animation: textbox-in 0.34s var(--ease-flow) both;
-  transition: border-color var(--dur-hover) var(--ease-soft),
-              background    var(--dur-hover) var(--ease-soft),
-              box-shadow    var(--dur-hover) var(--ease-soft);
+  box-shadow: none;
+  resize: horizontal;   /* free width resize; text reflows, height auto-grows */
+  overflow: hidden;
+  animation: textbox-in 0.24s var(--ease-soft) both;
+  transition: border-color var(--dur-hover) var(--ease-soft);
 }
 @keyframes textbox-in {
-  from { opacity: 0; transform: scale(0.985); }
-  to   { opacity: 1; transform: none; }
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
-.free-textbox:hover,
-.free-textbox:focus-within {
-  border-color: var(--line-strong);
-  background: color-mix(in oklch, var(--bg-elev) 88%, transparent);
-  box-shadow: var(--shadow-sm);
-}
+.free-textbox:hover           { border-color: var(--line); }
+.free-textbox:focus-within,
+.free-textbox[data-focused="true"] { border-color: var(--line-strong); }
 
 /* OneNote-style top-edge drag bar: a full-width strip on the container's
    top edge; grab anywhere along it to move the whole container. */
@@ -3136,7 +3139,7 @@ input, textarea { font: inherit; color: inherit; }
   background: var(--panel);
   border: 1px solid var(--line-strong);
   border-bottom: none;
-  border-radius: 7px 7px 0 0;
+  border-radius: 0;
   cursor: grab;
   user-select: none;
   touch-action: none;
@@ -3203,6 +3206,41 @@ input, textarea { font: inherit; color: inherit; }
   transition: opacity 0.15s;
 }
 .free-textbox:hover .free-textbox-author { opacity: 1; }
+
+/* ── Annotation session chip (word/ayah layer active) — the only exit ── */
+.anchor-session-chip {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg-elev);
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  padding: 5px 6px 5px 14px;
+  box-shadow: var(--shadow-md);
+  animation: slash-pop 0.22s var(--ease-flow) both;
+}
+.anchor-session-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+.anchor-session-done {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 14px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+  transition: opacity var(--dur-hover) var(--ease-soft);
+}
+.anchor-session-done:hover { opacity: 0.88; }
 
 /* ═══════════════════════════════════════════════════════════════════════════
    Phase 6b — Drawing canvas overlay

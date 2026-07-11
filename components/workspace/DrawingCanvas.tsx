@@ -93,16 +93,23 @@ interface Props {
   strokeWidth:       number;
   viewport:          CanvasViewport;
   roomSocket?:       import("partysocket").default | null;
+  /** Active annotation layer ("w:1:2:5" word / "a:1:2" ayah) or null for
+   *  the normal page. Anchored strokes render only when their layer is
+   *  active; new strokes are tagged with the active layer. */
+  activeAnchor?:     string | null;
   onHistoryChange?:  (canUndo: boolean, canRedo: boolean) => void;
   /** Text tool: called with world-space coordinates when the user clicks
    *  the canvas to place a free text box. */
   onTextPlace?:      (worldX: number, worldY: number) => void;
+  /** Reports which annotation anchors have at least one stroke (mine or a
+   *  collaborator's) — drives the persistent word/ayah highlights. */
+  onAnchorsChange?:  (anchors: Set<string>) => void;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────
 
 const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCanvas(
-  { pageId, mushafPage, tool, strokeColor, strokeWidth, viewport, roomSocket, onHistoryChange, onTextPlace },
+  { pageId, mushafPage, tool, strokeColor, strokeWidth, viewport, roomSocket, activeAnchor = null, onHistoryChange, onTextPlace, onAnchorsChange },
   ref,
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -134,6 +141,16 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
   const mushafPageRef  = useRef(mushafPage);
   useEffect(() => { mushafPageRef.current = mushafPage; }, [mushafPage]);
 
+  const anchorRef = useRef<string | null>(activeAnchor);
+  useEffect(() => { anchorRef.current = activeAnchor; }, [activeAnchor]);
+
+  /** EXCLUSIVE layer visibility:
+   *  normal mode    → only unanchored strokes (the Main Notes);
+   *  word/ayah mode → ONLY that anchor's strokes (Main Notes hidden). */
+  function anchorVisible(a?: string): boolean {
+    return (a ?? null) === anchorRef.current;
+  }
+
   const allMyStrokesRef = useRef<Stroke[]>([]);  // all strokes including other pages
   const myStrokesRef    = useRef<Stroke[]>([]);   // filtered to current mushafPage
   const [myStrokes, setMyStrokes] = useState<Stroke[]>([]);
@@ -149,6 +166,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     mushafPage?: number;
     color:       string;
     width:       number;
+    anchor?:     string;
   }>>(new Map());
 
   const redoStackRef = useRef<Stroke[]>([]);
@@ -157,6 +175,18 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
   const onHistoryRef = useRef(onHistoryChange);
   useEffect(() => { onHistoryRef.current = onHistoryChange; }, [onHistoryChange]);
 
+  // Report which anchors own strokes whenever committed strokes change
+  // (creation-order preserved: my strokes first, then collaborators').
+  const onAnchorsRef = useRef(onAnchorsChange);
+  useEffect(() => { onAnchorsRef.current = onAnchorsChange; }, [onAnchorsChange]);
+  useEffect(() => {
+    if (!onAnchorsRef.current) return;
+    const anchors = new Set<string>();
+    for (const s of allMyStrokesRef.current) if (s.anchor) anchors.add(s.anchor);
+    for (const layer of otherLayers) for (const s of layer.strokes) if (s.anchor) anchors.add(s.anchor);
+    onAnchorsRef.current(anchors);
+  }, [myStrokes, otherLayers]);
+
   // Filter strokes for the current Mushaf page.
   // Strokes without mushafPage (legacy, pre-migration) pass through so they
   // remain visible until the migration tags them. Editor-surface strokes
@@ -164,7 +194,8 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
   function filterForPage(strokes: Stroke[], page: number): Stroke[] {
     return strokes.filter(s =>
       strokeSurface(s) === "canvas" &&
-      (s.mushafPage === undefined || s.mushafPage === page));
+      (s.mushafPage === undefined || s.mushafPage === page) &&
+      anchorVisible(s.anchor));
   }
 
   // Silently tag + re-save any strokes that lack mushafPage.
@@ -238,15 +269,17 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     for (const layer of otherLayersRef.current) {
       for (const s of layer.strokes) {
         if (strokeSurface(s) === "canvas" &&
-            (s.mushafPage === undefined || s.mushafPage === curPage)) {
+            (s.mushafPage === undefined || s.mushafPage === curPage) &&
+            anchorVisible(s.anchor)) {
           paintStroke(ctx, s);
         }
       }
     }
     // ── Pass 1b: remote peers' in-progress strokes (live, translucent) ───
     for (const seg of remoteActiveRef.current.values()) {
-      const onThisPage = seg.mushafPage === undefined || seg.mushafPage === curPage;
-      if (onThisPage && seg.points.length > 0) {
+      const onThisPage  = seg.mushafPage === undefined || seg.mushafPage === curPage;
+      const sameLayer   = (seg.anchor ?? null) === anchorRef.current;
+      if (onThisPage && sameLayer && seg.points.length > 0) {
         drawSmooth(ctx, seg.points, seg.color, seg.width, 0.55, true);
       }
     }
@@ -362,13 +395,14 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pageId]);
 
-  // Re-filter when mushaf page changes (fix #8)
+  // Re-filter when the mushaf page OR the active annotation layer changes
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     const filtered = filterForPage(allMyStrokesRef.current, mushafPage);
     setMyStrokes(filtered);
     myStrokesRef.current = filtered;
     onHistoryRef.current?.(filtered.length > 0, redoStackRef.current.length > 0);
-  }, [mushafPage]);
+  }, [mushafPage, activeAnchor]);
 
   // ── Reconciliation poll (slow) ────────────────────────────────────────
   // Live additions arrive via the socket, but erasures / undo / clear by
@@ -400,7 +434,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
       let msg: {
         type: string; connectionId?: string; points?: Pt[]; stroke?: Stroke;
         authorId?: string; authorName?: string;
-        mushafPage?: number; color?: string; width?: number;
+        mushafPage?: number; color?: string; width?: number; anchor?: string;
       } = { type: "" };
       try { msg = JSON.parse(evt.data); } catch { return; }
 
@@ -410,6 +444,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
           mushafPage: msg.mushafPage,
           color:      msg.color ?? "#3b82f6",
           width:      msg.width ?? 3,
+          anchor:     msg.anchor,
         });
         scheduleRender();
         return;
@@ -662,6 +697,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
           mushafPage: mushafPageRef.current,
           color:      activeColorRef.current,
           width:      activeWidthRef.current,
+          anchor:     anchorRef.current ?? undefined,
         }));
       }
       scheduleRender();
@@ -755,6 +791,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
         mushafPage: mushafPageRef.current,
         color:      activeColorRef.current,
         width:      activeWidthRef.current,
+        anchor:     anchorRef.current ?? undefined,
       }));
     }
 
@@ -780,6 +817,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
         opacity:    TOOL_OPACITY[drawTool],
         mushafPage: mushafPageRef.current,
         surface:    "canvas",
+        ...(anchorRef.current ? { anchor: anchorRef.current } : {}),
       };
       redoStackRef.current = [];
       allMyStrokesRef.current = [...allMyStrokesRef.current, done];

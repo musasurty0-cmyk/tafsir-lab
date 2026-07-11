@@ -24,6 +24,10 @@ export interface InkStroke {
   mushafPage?: number;
   /** Which drawing surface owns this stroke; absent = "canvas" (legacy) */
   surface?:    "canvas" | "editor";
+  /** Annotation-layer owner: "w:1:2:5" (word) or "a:1:2" (ayah).
+   *  Absent = page-level stroke, always visible. Anchored strokes render
+   *  only while their word/ayah annotation layer is active. */
+  anchor?:     string;
 }
 
 export function strokeSurface(s: { surface?: string }): "canvas" | "editor" {

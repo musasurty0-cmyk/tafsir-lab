@@ -118,22 +118,58 @@ export default function PageEditor({
       type:    "paragraph",
       content: line ? [{ type: "text", text: line }] : [],
     }));
-    fetch(`/api/pages/${pageId}/notes`, {
-      method:  "POST",
-      headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({
-        noteType:   "textbox",
-        anchorType: "editor",           // editor-surface container (content space)
-        content:    { type: "doc", content: paragraphs },
-        offsetX:    Math.round(x),
-        offsetY:    Math.round(y),
-        width:      260,
-      }),
-    })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d: { note?: NoteData } | null) => { if (d?.note) onNoteCreated?.(d.note); })
-      .catch(() => {});
-  }, [pageId, onNoteCreated]);
+    const content = { type: "doc", content: paragraphs };
+
+    // OPTIMISTIC: the container renders from local state IMMEDIATELY and
+    // stays visible while the save happens in the background — it must
+    // never disappear/reappear. On success the temp is swapped for the
+    // server note (identical content + geometry, invisible swap).
+    const tempId = `temp-${crypto.randomUUID()}`;
+    const temp: NoteData = {
+      id: tempId,
+      noteType: "textbox",
+      anchorType: "editor",
+      surahNumber: null, ayahNumber: null, wordPosition: null,
+      content,
+      color: null,
+      offsetX: Math.round(x), offsetY: Math.round(y),
+      width: 260, height: null,
+      isMinimized: false, zIndex: 1, isAdmin: false,
+      createdAt: new Date().toISOString(),
+      author: { id: currentUserId, name: currentUserName, avatarUrl: null },
+    };
+    onNoteCreated?.(temp);
+
+    const persist = () =>
+      fetch(`/api/pages/${pageId}/notes`, {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({
+          noteType:   "textbox",
+          anchorType: "editor",           // editor-surface container (content space)
+          content,
+          offsetX:    Math.round(x),
+          offsetY:    Math.round(y),
+          width:      260,
+        }),
+      }).then((r) => (r.ok ? r.json() : null));
+
+    persist()
+      .then((d: { note?: NoteData } | null) => {
+        if (d?.note) {
+          onNoteDeleted?.(tempId);
+          onNoteCreated?.(d.note);
+        } else {
+          // one retry; temp stays visible either way
+          setTimeout(() => {
+            persist().then((d2: { note?: NoteData } | null) => {
+              if (d2?.note) { onNoteDeleted?.(tempId); onNoteCreated?.(d2.note); }
+            }).catch(() => {});
+          }, 3000);
+        }
+      })
+      .catch(() => { /* temp stays visible */ });
+  }, [pageId, currentUserId, currentUserName, onNoteCreated, onNoteDeleted]);
 
   // Click surface: the editor's own empty space PLUS the document margins
   // (.doc / .doc-wrap padding), so "anywhere on the page" really means
