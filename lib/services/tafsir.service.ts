@@ -12,10 +12,13 @@
 import { db } from "@/lib/db";
 import { QuranApiTafsirSource } from "@/lib/tafsir/sources/quran-api.source";
 import { TafsirAppSource }      from "@/lib/tafsir/sources/tafsir-app.source";
+import { Spa5kTafsirSource }    from "@/lib/tafsir/sources/spa5k.source";
+import { SPA5K_EDITIONS }       from "@/lib/tafsir/spa5k-catalog";
 import type {
   ITafsirSource,
   QuranApiSourceConfig,
   TafsirAppSourceConfig,
+  Spa5kSourceConfig,
   TafsirEntryResult,
   TafsirSourceMeta,
   UnifiedTafsirResponse,
@@ -62,22 +65,38 @@ const BUILTIN_SOURCES = [
   },
 ] as const;
 
+// ── spa5k/tafsir_api catalog (static CDN — all English + Arabic editions) ──
+// Provisioned alongside the built-ins; slugs come straight from the dataset
+// so they never collide with the quran.com built-ins above.
+
+const SPA5K_SOURCES = SPA5K_EDITIONS.map((e) => ({
+  slug:       e.slug,
+  name:       e.name,
+  nameArabic: null as string | null,
+  language:   e.language,
+  type:       "cdn",
+  config:     { provider: "spa5k", slug: e.slug } satisfies Spa5kSourceConfig,
+  isActive:   true,
+}));
+
 /**
- * Ensures the built-in TafsirSource rows exist in the DB.
- * Safe to call on every request — uses upsert so it's idempotent.
+ * Ensures the built-in + spa5k TafsirSource rows exist in the DB.
+ * Safe to call on every request — createMany(skipDuplicates) is idempotent.
  * Only hits the DB when sources are missing (count check first).
  */
 async function ensureDefaultSources(): Promise<void> {
+  const expected = BUILTIN_SOURCES.length + SPA5K_SOURCES.length;
   const count = await db.tafsirSource.count();
-  if (count >= BUILTIN_SOURCES.length) return;
+  if (count >= expected) return;
 
-  for (const src of BUILTIN_SOURCES) {
-    await db.tafsirSource.upsert({
-      where:  { slug: src.slug },
-      update: {},        // Don't clobber manual edits
-      create: { ...src, config: src.config as object },
-    });
-  }
+  // One bulk insert; existing slugs are left untouched (no clobbering).
+  await db.tafsirSource.createMany({
+    data: [
+      ...BUILTIN_SOURCES.map((s) => ({ ...s, config: s.config as object })),
+      ...SPA5K_SOURCES.map((s) => ({ ...s, config: s.config as object })),
+    ],
+    skipDuplicates: true,
+  });
 }
 
 // ── Public API ────────────────────────────────────────────────────────────
@@ -206,6 +225,9 @@ function buildFetcher(src: SourceRow): ITafsirSource {
   }
   if (src.type === "scrape") {
     return new TafsirAppSource(src.config as TafsirAppSourceConfig);
+  }
+  if (src.type === "cdn") {
+    return new Spa5kTafsirSource(src.config as Spa5kSourceConfig);
   }
   throw new Error(`Unknown source type: ${src.type}`);
 }

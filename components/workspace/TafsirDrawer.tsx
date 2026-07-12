@@ -54,6 +54,9 @@ const RECITERS = [
 ];
 
 const LS_SOURCE_KEY = "tl-tafsir-source";
+const LS_LANG_KEY   = "tl-tafsir-lang";
+
+type LangFilter = "all" | "en" | "ar";
 
 // ── Component ──────────────────────────────────────────────────────────────
 
@@ -68,6 +71,11 @@ export default function TafsirDrawer({ open, verseKey, verses, onClose }: Props)
     (typeof window !== "undefined" ? localStorage.getItem(LS_SOURCE_KEY) : null)
     ?? "ibn-kathir-en"
   );
+  const [langFilter,  setLangFilter] = useState<LangFilter>(() => {
+    if (typeof window === "undefined") return "all";
+    const stored = localStorage.getItem(LS_LANG_KEY);
+    return stored === "en" || stored === "ar" ? stored : "all";
+  });
 
   // ── Fetch state ──────────────────────────────────────────────────────────
   const [entry,   setEntry]   = useState<TafsirEntry | null>(null);
@@ -109,6 +117,25 @@ export default function TafsirDrawer({ open, verseKey, verses, onClose }: Props)
   function switchSource(slug: string) {
     setSourceSlug(slug);
     localStorage.setItem(LS_SOURCE_KEY, slug);
+  }
+
+  // ── Language filter (All / English / Arabic) ─────────────────────────────
+  const filteredSources = useMemo(
+    () => langFilter === "all" ? sources : sources.filter((s) => s.language === langFilter),
+    [sources, langFilter],
+  );
+
+  function switchLang(lang: LangFilter) {
+    setLangFilter(lang);
+    localStorage.setItem(LS_LANG_KEY, lang);
+    // If the current source falls outside the filter, jump to the first match
+    if (lang !== "all") {
+      const cur = sources.find((s) => s.slug === sourceSlug);
+      if (cur && cur.language !== lang) {
+        const first = sources.find((s) => s.language === lang);
+        if (first) switchSource(first.slug);
+      }
+    }
   }
 
   // ── Fetch tafsir whenever ayah or source changes ─────────────────────────
@@ -173,17 +200,31 @@ export default function TafsirDrawer({ open, verseKey, verses, onClose }: Props)
       {/* ── Source selector ── */}
       <div className="drawer-source-bar">
         <span className="drawer-source-label">Source</span>
+        <div className="drawer-lang-chips" role="tablist" aria-label="Tafsir language">
+          {([["all", "All"], ["en", "EN"], ["ar", "AR"]] as [LangFilter, string][]).map(([id, label]) => (
+            <button
+              key={id}
+              className="drawer-lang-chip"
+              data-active={langFilter === id ? "true" : "false"}
+              onClick={() => switchLang(id)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
         <div className="drawer-source-select-wrap">
           <select
             className="drawer-source-select"
             value={sourceSlug}
             onChange={(e) => switchSource(e.target.value)}
           >
-            {sources.length === 0 ? (
+            {filteredSources.length === 0 ? (
               <option value="ibn-kathir-en">Ibn Kathīr (English)</option>
             ) : (
-              sources.map((s) => (
-                <option key={s.slug} value={s.slug}>{s.name}</option>
+              filteredSources.map((s) => (
+                <option key={s.slug} value={s.slug}>
+                  {s.name}{langFilter === "all" ? ` · ${s.language.toUpperCase()}` : ""}
+                </option>
               ))
             )}
           </select>
@@ -277,6 +318,7 @@ export default function TafsirDrawer({ open, verseKey, verses, onClose }: Props)
                   </div>
                   <div
                     className="commentary-body"
+                    dir="auto"
                     dangerouslySetInnerHTML={{
                       __html: entry.contentHtml
                         ?? entry.content

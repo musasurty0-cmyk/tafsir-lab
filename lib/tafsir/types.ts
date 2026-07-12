@@ -47,7 +47,13 @@ export interface TafsirAppSourceConfig {
   slug: string;
 }
 
-export type SourceConfig = QuranApiSourceConfig | TafsirAppSourceConfig;
+export interface Spa5kSourceConfig {
+  provider: "spa5k";
+  /** Edition slug from spa5k/tafsir_api editions.json, e.g. "en-tafisr-ibn-kathir" */
+  slug: string;
+}
+
+export type SourceConfig = QuranApiSourceConfig | TafsirAppSourceConfig | Spa5kSourceConfig;
 
 // ── Ingestion result ──────────────────────────────────────────────────────
 

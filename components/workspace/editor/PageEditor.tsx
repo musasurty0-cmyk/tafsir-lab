@@ -168,11 +168,7 @@ export default function PageEditor({
     setFreshBoxId(tempId);
   }, [currentUserId, currentUserName, onNoteCreated]);
 
-  const persistTemp = useCallback((tempId: string, text: string, at: { x: number; y: number }) => {
-    const paragraphs = text.split("\n").map((line) => ({
-      type:    "paragraph",
-      content: line ? [{ type: "text", text: line }] : [],
-    }));
+  const persistTemp = useCallback((tempId: string, content: object, at: { x: number; y: number }) => {
     const persist = () =>
       fetch(`/api/pages/${pageId}/notes`, {
         method:  "POST",
@@ -180,7 +176,7 @@ export default function PageEditor({
         body:    JSON.stringify({
           noteType:   "textbox",
           anchorType: "editor",           // editor-surface container (content space)
-          content:    { type: "doc", content: paragraphs },
+          content,                        // TipTap doc JSON straight from the box
           offsetX:    Math.round(at.x),
           offsetY:    Math.round(at.y),
           width:      260,
@@ -526,6 +522,7 @@ export default function PageEditor({
         <FreeTextBox
           key={keyAliasRef.current.get(note.id) ?? note.id}
           note={note}
+          rich
           startEditing={note.id === freshBoxId}
           onUpdated={onNoteUpdated}
           onDeleted={(id) => {

@@ -7388,3 +7388,60 @@ input, textarea { font: inherit; color: inherit; }
   font-size: 11px;
   color: var(--ink-4);
 }
+
+/* ── Rich container bodies (Mode A) ─────────────────────────────────────────
+   The rich FreeTextBox reuses the main container's "page-editor-content"
+   class so fonts, sizes and colours are IDENTICAL. The box supplies its own
+   chrome (border, padding, hover states) — neutralise the inner copy. */
+.free-textbox .page-editor-content {
+  padding: 0;
+  border: none;
+  min-height: 1.6em;
+}
+.free-textbox .page-editor-content:hover,
+.free-textbox .page-editor-content:focus-within {
+  border: none;
+}
+/* .tiptap sets min-height: 200px for the main document — not for small boxes */
+.free-textbox .tiptap {
+  min-height: 1.6em;
+}
+/* Container headings shouldn't carry document-scale top margins */
+.free-textbox .page-editor-content h1:first-child,
+.free-textbox .page-editor-content h2:first-child,
+.free-textbox .page-editor-content h3:first-child {
+  margin-top: 0;
+}
+
+/* Plain containers (Mode B canvas) — same type as the main container */
+.free-textbox-input {
+  font-family: var(--font-serif);
+  line-height: 1.82;
+}
+
+/* ── Tafsir drawer: language filter chips (All / EN / AR) ─────────────────── */
+.drawer-lang-chips {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  flex: none;
+}
+.drawer-lang-chip {
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--ink-3);
+  transition: background var(--dur-fast) ease, color var(--dur-fast) ease;
+}
+.drawer-lang-chip:hover { color: var(--ink); }
+.drawer-lang-chip[data-active="true"] {
+  background: var(--bg);
+  color: var(--ink);
+  box-shadow: 0 1px 2px oklch(0% 0 0 / 0.06);
+}
