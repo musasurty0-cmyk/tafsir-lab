@@ -80,14 +80,22 @@ export function buildCommands(): SlashCommandItem[] {
     },
     {
       id:          "tafsir",
-      title:       "Ibn Kathir Tafsir",
-      description: "Embed Ibn Kathīr's commentary (e.g. /tafsir 2:255)",
+      title:       "Tafsir block",
+      description: "Embed commentary — 67+ English & Arabic sources (e.g. /tafsir 2:255)",
       icon:        "📚",
-      aliases:     ["ibn", "kathir", "commentary", "tafseer"],
+      aliases:     ["ibn", "kathir", "commentary", "tafseer", "tabari", "qurtubi", "razi", "saadi", "jalalayn"],
       execute(editor, range, query) {
         const parts    = query.trim().split(/\s+/);
         const rawKey   = parts.slice(1).join("").trim();
         const verseKey = rawKey || "1:1";
+
+        // Default to the source last chosen in the tafsir drawer; the block's
+        // own dropdown can switch to any provisioned source afterwards.
+        let sourceSlug = "ibn-kathir-en";
+        try {
+          const stored = localStorage.getItem("tl-tafsir-source");
+          if (stored) sourceSlug = stored;
+        } catch { /* SSR / private mode */ }
 
         editor
           .chain()
@@ -99,7 +107,8 @@ export function buildCommands(): SlashCommandItem[] {
               attrs: {
                 verseKey,
                 contentHtml: "",
-                sourceName:  "Ibn Kathir",
+                sourceName:  "Tafsīr",
+                sourceSlug,
               },
             },
             { type: "paragraph" },

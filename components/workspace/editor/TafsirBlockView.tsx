@@ -9,22 +9,56 @@ const TrashIcon = () => (
   </svg>
 );
 
+// ── Source catalog (shared across every block on the page) ────────────────
+
+interface SourceMeta {
+  slug:     string;
+  name:     string;
+  language: string;
+}
+
+let sourcesCache: Promise<SourceMeta[]> | null = null;
+
+function loadSources(): Promise<SourceMeta[]> {
+  if (!sourcesCache) {
+    sourcesCache = fetch("/api/tafsir/sources")
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then((d: { sources?: SourceMeta[] }) => d.sources ?? [])
+      .catch(() => {
+        sourcesCache = null; // allow a retry on the next mount
+        return [];
+      });
+  }
+  return sourcesCache;
+}
+
+// ── Component ──────────────────────────────────────────────────────────────
+
 export default function TafsirBlockView({
   node,
   updateAttributes,
   deleteNode,
   selected,
 }: NodeViewProps) {
-  const { verseKey, contentHtml, sourceName } = node.attrs as {
+  const { verseKey, contentHtml, sourceName, sourceSlug } = node.attrs as {
     verseKey:    string;
     contentHtml: string;
     sourceName:  string;
+    sourceSlug?: string;
   };
+  const slug = sourceSlug || "ibn-kathir-en";
 
   const [fetching,   setFetching]   = useState(() => !contentHtml);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [retryKey,   setRetryKey]   = useState(0);
   const [html,       setHtml]       = useState(contentHtml || "");
+  const [sources,    setSources]    = useState<SourceMeta[]>([]);
+
+  useEffect(() => {
+    let alive = true;
+    loadSources().then((s) => { if (alive) setSources(s); });
+    return () => { alive = false; };
+  }, []);
 
   useEffect(() => {
     if (contentHtml) return;
@@ -32,19 +66,39 @@ export default function TafsirBlockView({
     setFetchError(null);
 
     const urlKey = verseKey.replace(":", "_");
-    fetch(`/api/tafsir/${urlKey}?sources=ibn-kathir-en`)
+    fetch(`/api/tafsir/${urlKey}?sources=${encodeURIComponent(slug)}`)
       .then((r) => (r.ok ? r.json() : Promise.reject(r.statusText)))
       .then((data) => {
         const entry = data.entries?.[0];
-        if (!entry) throw new Error("No tafsir found for this verse");
-        const resolved = entry.contentHtml || entry.content || "";
+        if (!entry || entry.error || (!entry.contentHtml && !entry.content)) {
+          throw new Error("No tafsir found for this verse");
+        }
+        const resolved = entry.contentHtml
+          || String(entry.content)
+              .replace(/\n{2,}/g, "</p><p>")
+              .replace(/\n/g, "<br />");
         setHtml(resolved);
-        updateAttributes({ contentHtml: resolved, sourceName: entry.source?.name ?? "Ibn Kathir" });
+        updateAttributes({ contentHtml: resolved, sourceName: entry.source?.name ?? sourceName });
       })
       .catch((e) => setFetchError(String(e)))
       .finally(() => setFetching(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [verseKey, retryKey]);
+  }, [verseKey, slug, retryKey]);
+
+  function switchSource(nextSlug: string) {
+    const next = sources.find((s) => s.slug === nextSlug);
+    setHtml("");
+    // Clearing contentHtml re-triggers the fetch effect with the new slug
+    updateAttributes({
+      sourceSlug:  nextSlug,
+      sourceName:  next?.name ?? sourceName,
+      contentHtml: "",
+    });
+  }
+
+  const enSources = sources.filter((s) => s.language === "en");
+  const arSources = sources.filter((s) => s.language === "ar");
+  const otherSources = sources.filter((s) => s.language !== "en" && s.language !== "ar");
 
   return (
     <NodeViewWrapper>
@@ -63,7 +117,38 @@ export default function TafsirBlockView({
           <div className="tafsir-block-head">
             <div className="tafsir-block-meta">
               <span className="tafsir-block-ref">{verseKey}</span>
-              <span className="tafsir-block-source">{sourceName}</span>
+              {sources.length > 0 ? (
+                <select
+                  className="tafsir-block-source-select"
+                  value={slug}
+                  onChange={(e) => switchSource(e.target.value)}
+                  title="Change tafsir source"
+                >
+                  {enSources.length > 0 && (
+                    <optgroup label="English">
+                      {enSources.map((s) => (
+                        <option key={s.slug} value={s.slug}>{s.name}</option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {arSources.length > 0 && (
+                    <optgroup label="Arabic">
+                      {arSources.map((s) => (
+                        <option key={s.slug} value={s.slug}>{s.name}</option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {otherSources.length > 0 && (
+                    <optgroup label="Other">
+                      {otherSources.map((s) => (
+                        <option key={s.slug} value={s.slug}>{s.name}</option>
+                      ))}
+                    </optgroup>
+                  )}
+                </select>
+              ) : (
+                <span className="tafsir-block-source">{sourceName}</span>
+              )}
             </div>
             <button
               className="tafsir-block-tool tafsir-block-tool--danger"
@@ -100,6 +185,7 @@ export default function TafsirBlockView({
           {!fetching && !fetchError && html && (
             <div
               className="tafsir-block-content"
+              dir="auto"
               dangerouslySetInnerHTML={{ __html: html }}
             />
           )}

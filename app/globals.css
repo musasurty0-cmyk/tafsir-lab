@@ -7445,3 +7445,23 @@ input, textarea { font: inherit; color: inherit; }
   color: var(--ink);
   box-shadow: 0 1px 2px oklch(0% 0 0 / 0.06);
 }
+
+/* ── Tafsir block: inline source picker (any provisioned source) ─────────── */
+.tafsir-block-source-select {
+  max-width: 240px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--ink-3);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 1px 4px;
+  cursor: pointer;
+  transition: color var(--dur-fast) ease, border-color var(--dur-fast) ease;
+}
+.tafsir-block-source-select:hover,
+.tafsir-block-source-select:focus {
+  color: var(--ink);
+  border-color: var(--line);
+  outline: none;
+}

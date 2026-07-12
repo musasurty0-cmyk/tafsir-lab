@@ -16,6 +16,9 @@ export const TafsirBlockExtension = Node.create({
       verseKey:    { default: "" },
       contentHtml: { default: "" },
       sourceName:  { default: "Ibn Kathir" },
+      // TafsirSource slug — any provisioned source (quran.com built-ins or
+      // the spa5k catalog). Old blocks without this attr keep Ibn Kathīr.
+      sourceSlug:  { default: "ibn-kathir-en" },
     };
   },
 
