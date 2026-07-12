@@ -54,11 +54,15 @@ interface Props {
   startEditing?: boolean;
   onUpdated?:  (note: NoteData) => void;
   onDeleted?:  (noteId: string) => void;
+  /** Local-only temp container blurred with content — owner persists it.
+   *  Receives the temp id, the text, and the CURRENT position (the user
+   *  may have dragged the temp before saving). */
+  onPersistTemp?: (tempId: string, text: string, at: { x: number; y: number }) => void;
 }
 
 // ── Component ──────────────────────────────────────────────────────────────
 
-export default function FreeTextBox({ note, startEditing = false, onUpdated, onDeleted }: Props) {
+export default function FreeTextBox({ note, startEditing = false, onUpdated, onDeleted, onPersistTemp }: Props) {
   const [text, setText]       = useState(() => extractText(note.content));
   const [pos, setPos]         = useState({ x: note.offsetX, y: note.offsetY });
   const [hovered, setHovered] = useState(false);
@@ -75,10 +79,13 @@ export default function FreeTextBox({ note, startEditing = false, onUpdated, onD
   // Sync position if the note moves remotely
   useEffect(() => { setPos({ x: note.offsetX, y: note.offsetY }); }, [note.offsetX, note.offsetY]);
 
-  // Sync content if the note changes remotely (skip while the user types)
+  // Sync content if the note changes remotely (skip while the user types;
+  // never let an EMPTY incoming doc wipe non-empty local text — that
+  // happens during the temp→server swap of a freshly created container)
   useEffect(() => {
     if (textareaRef.current === document.activeElement) return;
-    setText(extractText(note.content));
+    const incoming = extractText(note.content);
+    setText((cur) => (!incoming.trim() && cur.trim() ? cur : incoming));
     requestAnimationFrame(() => { if (textareaRef.current) autosize(textareaRef.current); });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [note.content]);
@@ -197,12 +204,17 @@ export default function FreeTextBox({ note, startEditing = false, onUpdated, onD
   function commitText() {
     setFocused(false);
     const trimmed = text.trim();
-    if (trimmed === extractText(note.content).trim()) return;
+    if (trimmed === extractText(note.content).trim() && !isTemp) return;
 
     // Empty box on commit → delete it entirely
     if (!trimmed) { handleDelete(); return; }
 
-    if (isTemp) return; // will persist once the server id arrives
+    if (isTemp) {
+      // Local-only container: the owner creates the server note now
+      // (content + current position in one shot).
+      onPersistTemp?.(note.id, trimmed, { x: pos.x, y: pos.y });
+      return;
+    }
 
     fetch(`/api/notes/${note.id}`, {
       method:  "PATCH",

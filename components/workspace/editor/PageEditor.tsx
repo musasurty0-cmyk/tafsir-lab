@@ -136,35 +136,27 @@ export default function PageEditor({
   }
 
   // ── Freeform text containers — OneNote model ──────────────────────────
-  // Click empty canvas → a DRAFT container renders SYNCHRONOUSLY in the
-  // same gesture with an autofocused textarea (mobile keyboards refuse
-  // focus after an async boundary — creating the note server-first was why
-  // "click and type" didn't work). The note is persisted on first blur;
-  // an empty draft simply evaporates, so stray clicks cost nothing.
+  // Click empty canvas → a TEMP note renders synchronously in the same
+  // gesture as a REAL FreeTextBox (top bar, drag, resize, "/" palette,
+  // /ayah — everything, from frame one). It stays local until first blur
+  // with content, when persistTemp creates the server note and swaps it in
+  // under a STABLE React key (no remount, no flicker). An empty temp just
+  // evaporates; nothing ever hits the server for stray clicks.
   const pageEditorRef = useRef<HTMLDivElement>(null);
-  const [draftBox, setDraftBox] = useState<{ x: number; y: number } | null>(null);
-  const draftDragRef = useRef<{ mx: number; my: number; x: number; y: number } | null>(null);
+  const [freshBoxId, setFreshBoxId] = useState<string | null>(null);
+  // serverId → tempId: keeps the React key stable across the temp→server swap
+  const keyAliasRef = useRef<Map<string, string>>(new Map());
   const paletteOpenRef = useRef(false);
   useEffect(() => { paletteOpenRef.current = palette !== null; }, [palette]);
 
-  const commitDraft = useCallback((x: number, y: number, text: string) => {
-    const paragraphs = text.split("\n").map((line) => ({
-      type:    "paragraph",
-      content: line ? [{ type: "text", text: line }] : [],
-    }));
-    const content = { type: "doc", content: paragraphs };
-
-    // OPTIMISTIC: the container renders from local state IMMEDIATELY and
-    // stays visible while the save happens in the background — it must
-    // never disappear/reappear. On success the temp is swapped for the
-    // server note (identical content + geometry, invisible swap).
+  const createTempAt = useCallback((x: number, y: number) => {
     const tempId = `temp-${crypto.randomUUID()}`;
     const temp: NoteData = {
       id: tempId,
       noteType: "textbox",
       anchorType: "editor",
       surahNumber: null, ayahNumber: null, wordPosition: null,
-      content,
+      content: { type: "doc", content: [{ type: "paragraph" }] },
       color: null,
       offsetX: Math.round(x), offsetY: Math.round(y),
       width: 260, height: null,
@@ -173,7 +165,14 @@ export default function PageEditor({
       author: { id: currentUserId, name: currentUserName, avatarUrl: null },
     };
     onNoteCreated?.(temp);
+    setFreshBoxId(tempId);
+  }, [currentUserId, currentUserName, onNoteCreated]);
 
+  const persistTemp = useCallback((tempId: string, text: string, at: { x: number; y: number }) => {
+    const paragraphs = text.split("\n").map((line) => ({
+      type:    "paragraph",
+      content: line ? [{ type: "text", text: line }] : [],
+    }));
     const persist = () =>
       fetch(`/api/pages/${pageId}/notes`, {
         method:  "POST",
@@ -181,29 +180,29 @@ export default function PageEditor({
         body:    JSON.stringify({
           noteType:   "textbox",
           anchorType: "editor",           // editor-surface container (content space)
-          content,
-          offsetX:    Math.round(x),
-          offsetY:    Math.round(y),
+          content:    { type: "doc", content: paragraphs },
+          offsetX:    Math.round(at.x),
+          offsetY:    Math.round(at.y),
           width:      260,
         }),
       }).then((r) => (r.ok ? r.json() : null));
 
+    const swap = (d: { note?: NoteData } | null) => {
+      if (!d?.note) return false;
+      keyAliasRef.current.set(d.note.id, tempId); // stable key → no remount
+      onNoteDeleted?.(tempId);
+      onNoteCreated?.(d.note);
+      return true;
+    };
+
     persist()
       .then((d: { note?: NoteData } | null) => {
-        if (d?.note) {
-          onNoteDeleted?.(tempId);
-          onNoteCreated?.(d.note);
-        } else {
-          // one retry; temp stays visible either way
-          setTimeout(() => {
-            persist().then((d2: { note?: NoteData } | null) => {
-              if (d2?.note) { onNoteDeleted?.(tempId); onNoteCreated?.(d2.note); }
-            }).catch(() => {});
-          }, 3000);
+        if (!swap(d)) {
+          setTimeout(() => { persist().then(swap).catch(() => {}); }, 3000); // one retry
         }
       })
       .catch(() => { /* temp stays visible */ });
-  }, [pageId, currentUserId, currentUserName, onNoteCreated, onNoteDeleted]);
+  }, [pageId, onNoteCreated, onNoteDeleted]);
 
   // Click surface: the editor's own empty space PLUS the document margins
   // (.doc / .doc-wrap padding), so "anywhere on the page" really means
@@ -219,11 +218,11 @@ export default function PageEditor({
         t.classList.contains("doc-wrap");
       if (!isCanvasSpace) return;
       const r = pe.getBoundingClientRect();
-      setDraftBox({ x: e.clientX - r.left, y: e.clientY - r.top });
+      createTempAt(e.clientX - r.left, e.clientY - r.top);
     }
     document.addEventListener("click", onDocClick);
     return () => document.removeEventListener("click", onDocClick);
-  }, []);
+  }, [createTempAt]);
 
   // ── Yjs document + PartyKit provider ─────────────────────────────────
   // Created synchronously on first render so the Collaboration and
@@ -519,67 +518,23 @@ export default function PageEditor({
       </div>
       <SelectionToolbar editor={editor} />
 
-      {/* Freeform movable text containers (drag grip to move; auto-resize) */}
+      {/* Freeform movable text containers — every one (including a freshly
+          clicked temp) is the SAME full FreeTextBox: top bar, drag, resize,
+          "/" palette, /ayah expansion. Keys are aliased across the
+          temp→server swap so the component never remounts. */}
       {textBoxNotes.map((note) => (
         <FreeTextBox
-          key={note.id}
+          key={keyAliasRef.current.get(note.id) ?? note.id}
           note={note}
+          startEditing={note.id === freshBoxId}
           onUpdated={onNoteUpdated}
-          onDeleted={(id) => onNoteDeleted?.(id)}
+          onDeleted={(id) => {
+            if (id === freshBoxId) setFreshBoxId(null);
+            onNoteDeleted?.(id);
+          }}
+          onPersistTemp={persistTemp}
         />
       ))}
-
-      {/* Draft container — rendered synchronously in the click gesture so
-          the caret + mobile keyboard appear instantly. Persisted on blur.
-          Has the same top drag bar as every container from frame one. */}
-      {draftBox && (
-        <div
-          className="free-textbox"
-          style={{ left: draftBox.x, top: draftBox.y, width: 260 }}
-          onMouseDown={(e) => e.stopPropagation()}
-        >
-          <div
-            className="free-textbox-chrome"
-            data-visible="true"
-            title="Drag to move"
-            onPointerDown={(e) => {
-              e.preventDefault(); // keep the textarea focused while dragging
-              e.stopPropagation();
-              draftDragRef.current = { mx: e.clientX, my: e.clientY, x: draftBox.x, y: draftBox.y };
-              (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-            }}
-            onPointerMove={(e) => {
-              const d = draftDragRef.current;
-              if (!d) return;
-              setDraftBox({ x: d.x + (e.clientX - d.mx), y: d.y + (e.clientY - d.my) });
-            }}
-            onPointerUp={() => { draftDragRef.current = null; }}
-            onPointerCancel={() => { draftDragRef.current = null; }}
-          >
-            <span className="free-textbox-gripdots" aria-hidden>⋯⋯</span>
-          </div>
-          <textarea
-            className="free-textbox-input"
-            autoFocus
-            rows={1}
-            placeholder="Type something…"
-            onInput={(e) => {
-              const ta = e.currentTarget;
-              ta.style.height = "auto";
-              ta.style.height = `${ta.scrollHeight}px`;
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Escape") { e.preventDefault(); e.currentTarget.blur(); }
-            }}
-            onBlur={(e) => {
-              const text = e.currentTarget.value.trim();
-              const at = draftBox;
-              setDraftBox(null);
-              if (text && at) commitDraft(at.x, at.y, text);
-            }}
-          />
-        </div>
-      )}
 
       {/* Stylus ink — pen draws directly, no buttons, no mode switch.
           The tool pill appears only while annotating. */}
