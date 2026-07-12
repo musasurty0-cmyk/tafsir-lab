@@ -143,6 +143,7 @@ export default function PageEditor({
   // an empty draft simply evaporates, so stray clicks cost nothing.
   const pageEditorRef = useRef<HTMLDivElement>(null);
   const [draftBox, setDraftBox] = useState<{ x: number; y: number } | null>(null);
+  const draftDragRef = useRef<{ mx: number; my: number; x: number; y: number } | null>(null);
   const paletteOpenRef = useRef(false);
   useEffect(() => { paletteOpenRef.current = palette !== null; }, [palette]);
 
@@ -529,13 +530,34 @@ export default function PageEditor({
       ))}
 
       {/* Draft container — rendered synchronously in the click gesture so
-          the caret + mobile keyboard appear instantly. Persisted on blur. */}
+          the caret + mobile keyboard appear instantly. Persisted on blur.
+          Has the same top drag bar as every container from frame one. */}
       {draftBox && (
         <div
           className="free-textbox"
           style={{ left: draftBox.x, top: draftBox.y, width: 260 }}
           onMouseDown={(e) => e.stopPropagation()}
         >
+          <div
+            className="free-textbox-chrome"
+            data-visible="true"
+            title="Drag to move"
+            onPointerDown={(e) => {
+              e.preventDefault(); // keep the textarea focused while dragging
+              e.stopPropagation();
+              draftDragRef.current = { mx: e.clientX, my: e.clientY, x: draftBox.x, y: draftBox.y };
+              (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+            }}
+            onPointerMove={(e) => {
+              const d = draftDragRef.current;
+              if (!d) return;
+              setDraftBox({ x: d.x + (e.clientX - d.mx), y: d.y + (e.clientY - d.my) });
+            }}
+            onPointerUp={() => { draftDragRef.current = null; }}
+            onPointerCancel={() => { draftDragRef.current = null; }}
+          >
+            <span className="free-textbox-gripdots" aria-hidden>⋯⋯</span>
+          </div>
           <textarea
             className="free-textbox-input"
             autoFocus

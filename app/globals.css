@@ -4370,6 +4370,8 @@ input, textarea { font: inherit; color: inherit; }
   outline: none;
   border: 1px solid transparent;
   border-radius: 0; /* square, matching the other containers */
+  /* same breathing room as the small containers — text never hugs the frame */
+  padding: 6px 14px 10px;
   transition: border-color var(--dur-hover) var(--ease-soft);
   caret-color: var(--accent);
   font-size: 15.5px;
