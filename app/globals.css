@@ -3109,7 +3109,8 @@ input, textarea { font: inherit; color: inherit; }
   min-height: 28px;
   min-width: 140px;
   max-width: 900px;
-  padding: 2px 6px 12px;
+  /* breathing room: text starts a natural distance from the edges */
+  padding: 4px 12px 14px;
   border-radius: 0;
   border: 1px solid transparent;
   background: transparent;
@@ -3127,33 +3128,26 @@ input, textarea { font: inherit; color: inherit; }
 .free-textbox:focus-within,
 .free-textbox[data-focused="true"] { border-color: var(--line-strong); }
 
-/* OneNote-style top-edge drag bar: a full-width strip on the container's
-   top edge; grab anywhere along it to move the whole container. */
+/* OneNote-style top drag bar — IN FLOW at the top of the container (the
+   old absolute top:-16px strip was clipped invisible by the resize
+   overflow). Bleeds to the container edges; grab anywhere along it. */
 .free-textbox-chrome {
-  position: absolute;
-  top: -16px;
-  left: 0;
-  right: 0;
-  height: 16px;
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
+  height: 14px;
+  margin: -4px -12px 6px; /* cancel container padding → edge-to-edge */
   background: var(--panel);
-  border: 1px solid var(--line-strong);
-  border-bottom: none;
-  border-radius: 0;
+  border-bottom: 1px solid var(--line);
   cursor: grab;
   user-select: none;
   touch-action: none;
   opacity: 0;
-  pointer-events: none;
   transition: opacity 0.15s;
 }
 .free-textbox-chrome:active { cursor: grabbing; }
-.free-textbox-chrome[data-visible="true"] {
-  opacity: 1;
-  pointer-events: auto;
-}
+.free-textbox-chrome[data-visible="true"] { opacity: 1; }
 .free-textbox-gripdots {
   font-size: 12px;
   line-height: 1;
@@ -3198,6 +3192,13 @@ input, textarea { font: inherit; color: inherit; }
   padding: 0;
 }
 .free-textbox-placeholder { color: var(--ink-4); font-style: italic; }
+
+/* Mini "/" palette inside a container — in flow (the container's resize
+   overflow would clip an absolutely-positioned popup) */
+.free-textbox-slash {
+  margin: 6px -6px 0;
+  animation: slash-pop 0.18s var(--ease-flow) both;
+}
 .free-textbox-author {
   position: absolute;
   bottom: 2px;
@@ -3224,7 +3225,13 @@ input, textarea { font: inherit; color: inherit; }
   border-radius: 999px;
   padding: 5px 6px 5px 14px;
   box-shadow: var(--shadow-md);
-  animation: slash-pop 0.22s var(--ease-flow) both;
+  /* Own keyframes: slash-pop ends at transform:none, which WIPED the
+     translateX(-50%) centring and shoved the chip to the right. */
+  animation: chip-in 0.22s var(--ease-flow) both;
+}
+@keyframes chip-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(-4px); }
+  to   { opacity: 1; transform: translateX(-50%); }
 }
 .anchor-session-label {
   font-size: 12px;
@@ -4180,6 +4187,15 @@ input, textarea { font: inherit; color: inherit; }
 /* ═══════════════════════════════════════════════════════════════════════════
    Mode A — Free Editor (TipTap)
    ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Black I-beam everywhere text is edited — the browser's default I-beam
+   (white with a thin outline) vanishes over light backgrounds. */
+.page-editor,
+.page-editor-content,
+.free-textbox,
+.free-textbox-input {
+  cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='17' height='17'><g stroke='%23111' stroke-width='1.4' fill='none'><path d='M5.5 2h6M5.5 15h6M8.5 2v13'/></g></svg>") 8 8, text;
+}
 
 /* ── Editor shell ── */
 .page-editor {

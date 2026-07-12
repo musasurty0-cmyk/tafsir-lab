@@ -37,6 +37,15 @@ function toDoc(text: string): object {
   return { type: "doc", content: paragraphs.length ? paragraphs : [{ type: "paragraph" }] };
 }
 
+// ── Mini "/" palette ────────────────────────────────────────────────────────
+// Plain-text containers get the commands that make sense in a text box
+// (the full block palette needs the rich editor).
+
+const MINI_COMMANDS = [
+  { id: "ayah",    label: "Ayah",    desc: "Embed a verse — type the key (e.g. 2:255), then Enter" },
+  { id: "divider", label: "Divider", desc: "Horizontal line" },
+];
+
 // ── Props ──────────────────────────────────────────────────────────────────
 
 interface Props {
@@ -54,6 +63,7 @@ export default function FreeTextBox({ note, startEditing = false, onUpdated, onD
   const [pos, setPos]         = useState({ x: note.offsetX, y: note.offsetY });
   const [hovered, setHovered] = useState(false);
   const [focused, setFocused] = useState(false);
+  const [slashItems, setSlashItems] = useState<typeof MINI_COMMANDS | null>(null);
 
   const boxRef      = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -112,6 +122,41 @@ export default function FreeTextBox({ note, startEditing = false, onUpdated, onD
   function autosize(ta: HTMLTextAreaElement) {
     ta.style.height = "auto";
     ta.style.height = `${ta.scrollHeight}px`;
+  }
+
+  // ── Slash palette in containers ─────────────────────────────────────────
+  // Typing "/" opens a mini command menu (like the main container's).
+  // Detected on the CURRENT LINE: "/" + optional letters, no space yet.
+  function updateSlashPalette(ta: HTMLTextAreaElement) {
+    const before = ta.value.slice(0, ta.selectionStart);
+    const m = before.match(/(^|\n)\/(\w*)$/);
+    if (!m) { setSlashItems(null); return; }
+    const q = m[2].toLowerCase();
+    const items = MINI_COMMANDS.filter((c) => c.id.startsWith(q));
+    setSlashItems(items.length ? items : null);
+  }
+
+  function applySlashItem(item: (typeof MINI_COMMANDS)[number]) {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    const before = ta.value.slice(0, ta.selectionStart);
+    const after  = ta.value.slice(ta.selectionStart);
+    const m = before.match(/(^|\n)\/(\w*)$/);
+    if (!m) { setSlashItems(null); return; }
+    const tokenStart = before.length - (m[0].length - m[1].length);
+    const base = ta.value.slice(0, tokenStart);
+    const insert = item.id === "ayah" ? "/ayah " : "────────────\n";
+    const next = base + insert + after;
+    setText(next);
+    setSlashItems(null);
+    requestAnimationFrame(() => {
+      const el = textareaRef.current;
+      if (!el) return;
+      el.focus();
+      const caret = (base + insert).length;
+      el.setSelectionRange(caret, caret);
+      autosize(el);
+    });
   }
 
   // ── Slash commands in containers ────────────────────────────────────────
@@ -228,8 +273,8 @@ export default function FreeTextBox({ note, startEditing = false, onUpdated, onD
       onMouseLeave={() => setHovered(false)}
       onMouseDown={(e) => e.stopPropagation()}
     >
-      {/* Top-edge drag bar (OneNote model): hover the container's top edge
-          and drag the whole thing. Delete sits at the bar's right. */}
+      {/* Top drag bar — IN FLOW (same structure as the main container's bar;
+          absolute -16px positioning was clipped by the resize overflow). */}
       <div
         className="free-textbox-chrome"
         data-visible={hovered || focused ? "true" : "false"}
@@ -258,13 +303,35 @@ export default function FreeTextBox({ note, startEditing = false, onUpdated, onD
         placeholder="Type something…"
         rows={1}
         onFocus={() => setFocused(true)}
-        onChange={(e) => { setText(e.target.value); autosize(e.target); }}
-        onBlur={commitText}
+        onChange={(e) => { setText(e.target.value); autosize(e.target); updateSlashPalette(e.target); }}
+        onBlur={() => { setSlashItems(null); commitText(); }}
         onKeyDown={(e) => {
+          if (slashItems?.length && e.key === "Enter") { e.preventDefault(); applySlashItem(slashItems[0]); return; }
+          if (slashItems && e.key === "Escape") { e.preventDefault(); setSlashItems(null); return; }
           if (e.key === "Enter" && maybeExpandSlash(e)) return;
           if (e.key === "Escape") { e.preventDefault(); e.currentTarget.blur(); }
         }}
       />
+
+      {/* Mini "/" palette */}
+      {slashItems && (
+        <div className="slash-palette free-textbox-slash">
+          {slashItems.map((item, i) => (
+            <button
+              key={item.id}
+              className="slash-palette-item"
+              data-active={i === 0 ? "true" : "false"}
+              onMouseDown={(e) => { e.preventDefault(); applySlashItem(item); }}
+            >
+              <span className="slash-palette-icon">{item.id === "ayah" ? "📖" : "—"}</span>
+              <span className="slash-palette-text">
+                <span className="slash-palette-title">{item.label}</span>
+                <span className="slash-palette-desc">{item.desc}</span>
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
 
       <span className="free-textbox-author">{note.author.name.split(" ")[0]}</span>
     </div>
