@@ -30,7 +30,7 @@ import { C, FONTS } from "./theme";
 
 export const SHOW_FPS = 30;
 
-const LEN = {
+export const LEN = {
   title:      90,
   makeGroup:  270,
   surahGrid:  240,
@@ -186,7 +186,7 @@ const SURAHS: [number, string, string, string, number, string][] = [
 
 // ═══════════════ 1 · TITLE ═══════════════
 
-const STitle: React.FC = () => {
+export const STitle: React.FC = () => {
   const frame = useCurrentFrame();
   const pop = useSpr(24, 14, 0.7);
   const bism = interpolate(frame, [4, 32], [0, 1], CL);
@@ -217,7 +217,7 @@ const STitle: React.FC = () => {
 
 // ═══════════════ 2 · MAKE A GROUP ═══════════════
 
-const SMakeGroup: React.FC = () => {
+export const SMakeGroup: React.FC = () => {
   const frame = useCurrentFrame();
 
   const name = "Study Group";
@@ -237,7 +237,7 @@ const SMakeGroup: React.FC = () => {
   return (
     <Scene dur={LEN.makeGroup}>
       <div style={{ position: "absolute", left: 110, top: 84 }}>
-        <Eyebrow>Step 1 · Make a group</Eyebrow>
+        <Eyebrow>Make a group</Eyebrow>
         <Headline>Start a workspace in seconds.</Headline>
       </div>
 
@@ -325,13 +325,13 @@ const SurahCard: React.FC<{ s: typeof SURAHS[number]; p: number; hot?: boolean }
   </div>
 );
 
-const SSurahGrid: React.FC = () => {
+export const SSurahGrid: React.FC = () => {
   const frame = useCurrentFrame();
   const drift = interpolate(frame, [30, LEN.surahGrid], [0, -70], CL);
   return (
     <Scene dur={LEN.surahGrid}>
       <div style={{ position: "absolute", left: 110, top: 70, zIndex: 5 }}>
-        <Eyebrow>Step 2 · The board</Eyebrow>
+        <Eyebrow>The board</Eyebrow>
         <Headline>All 114 sūrahs, one workspace.</Headline>
       </div>
       <AbsoluteFill style={{ alignItems: "center", justifyContent: "flex-start", paddingTop: 250 }}>
@@ -427,7 +427,7 @@ const PERMS: [string, boolean, boolean][] = [
   ["Track reading progress", true, true],
 ];
 
-const SPermissions: React.FC = () => {
+export const SPermissions: React.FC = () => {
   const frame = useCurrentFrame();
   const modalIn = useSpr(10, 15);
   const promoted = frame >= 168;
@@ -439,7 +439,7 @@ const SPermissions: React.FC = () => {
   return (
     <Scene dur={LEN.permissions}>
       <div style={{ position: "absolute", left: 110, top: 70, zIndex: 5 }}>
-        <Eyebrow>Step 4 · Roles</Eyebrow>
+        <Eyebrow>Roles &amp; permissions</Eyebrow>
         <Headline>You decide who does what.</Headline>
       </div>
       <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", paddingTop: 90 }}>
@@ -758,7 +758,7 @@ const SChannels: React.FC = () => {
 
 // ═══════════════ 10 · END ═══════════════
 
-const SEnd: React.FC = () => {
+export const SEnd: React.FC = () => {
   const frame = useCurrentFrame();
   const pop = useSpr(16, 14);
   const btn = useSpr(52, 13);

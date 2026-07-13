@@ -74,7 +74,7 @@ const Caption: React.FC<{ eyebrow: string; title: string; dur: number; center?: 
 
 // ── full-bleed footage section ──────────────────────────────────────────────
 
-const Footage: React.FC<{ src: string; eyebrow: string; title: string; dur: number }> = ({ src, eyebrow, title, dur }) => {
+export const Footage: React.FC<{ src: string; eyebrow: string; title: string; dur: number }> = ({ src, eyebrow, title, dur }) => {
   const frame = useCurrentFrame();
   const fade = Math.min(interpolate(frame, [0, 8], [0, 1], CL), interpolate(frame, [dur - 8, dur], [1, 0], CL));
   return (
@@ -101,7 +101,7 @@ const DevicePanel: React.FC<{ src: string; x: number; w: number; label: string; 
   );
 };
 
-const SideBySide: React.FC<{ lap: string; tab: string; eyebrow: string; title: string; dur: number }> = ({ lap, tab, eyebrow, title, dur }) => {
+export const SideBySide: React.FC<{ lap: string; tab: string; eyebrow: string; title: string; dur: number }> = ({ lap, tab, eyebrow, title, dur }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const fade = Math.min(interpolate(frame, [0, 10], [0, 1], CL), interpolate(frame, [dur - 10, dur], [1, 0], CL));
