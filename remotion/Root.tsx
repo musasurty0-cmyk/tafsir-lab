@@ -4,6 +4,7 @@ import { Trailer, TRAILER_DURATION, TRAILER_FPS } from "./Trailer";
 import { Showcase, SHOW_DURATION, SHOW_FPS } from "./Showcase";
 import { AppTrailer, APP_DURATION, APP_FPS } from "./AppTrailer";
 import { MasterTrailer, MASTER_DURATION, MASTER_FPS } from "./MasterTrailer";
+import { Walkthrough, WALK_DURATION, WALK_FPS } from "./Walkthrough";
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -37,6 +38,14 @@ export const RemotionRoot: React.FC = () => {
         component={MasterTrailer}
         durationInFrames={MASTER_DURATION}
         fps={MASTER_FPS}
+        width={1920}
+        height={1080}
+      />
+      <Composition
+        id="Walkthrough"
+        component={Walkthrough}
+        durationInFrames={WALK_DURATION}
+        fps={WALK_FPS}
         width={1920}
         height={1080}
       />

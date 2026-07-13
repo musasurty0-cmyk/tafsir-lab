@@ -522,7 +522,7 @@ const MiniDoc: React.FC<{ text: string; showCaret: boolean; tablet?: boolean }> 
   </div>
 );
 
-const SSync: React.FC = () => {
+export const SSync: React.FC = () => {
   const frame = useCurrentFrame();
   const full = "The program has a live sync for text and annotation.";
   // laptop types; tablet mirrors ~10 frames behind
@@ -537,7 +537,7 @@ const SSync: React.FC = () => {
       <AbsoluteFill style={{ background: "radial-gradient(900px 600px at 50% 40%, rgba(62,142,110,0.14), transparent 65%)" }} />
       <div style={{ position: "absolute", top: 70, left: 0, right: 0, textAlign: "center" }}>
         <div style={{ display: "inline-flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
-          <Eyebrow light>Step 5 · Together, live</Eyebrow>
+          <Eyebrow light>Live sync · text mode</Eyebrow>
         </div>
       </div>
 
@@ -697,7 +697,7 @@ const SAnnotate: React.FC = () => {
 
 // ═══════════════ 9 · CHANNELS ═══════════════
 
-const SChannels: React.FC = () => {
+export const SChannels: React.FC = () => {
   const frame = useCurrentFrame();
   const appearAt = 70;
   const chanPop = useSpr(appearAt, 14);
@@ -709,7 +709,7 @@ const SChannels: React.FC = () => {
   return (
     <Scene dur={LEN.channels}>
       <div style={{ position: "absolute", left: 110, top: 70, zIndex: 5 }}>
-        <Eyebrow>Step 8 · Organise</Eyebrow>
+        <Eyebrow>Channels</Eyebrow>
         <Headline>A channel for every topic.</Headline>
       </div>
       <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", paddingTop: 120 }}>
