@@ -23,6 +23,13 @@ export interface SlashCommandItem {
   icon:        string;
   /** Aliases that also match (e.g. ["h1", "header"]) */
   aliases?:    string[];
+  /** Tafsir commands: when NO verse key is typed, PageEditor opens a small
+   *  verse picker defaulting to the surah being studied, instead of inserting
+   *  1:1. When a key IS typed (e.g. "/tabari 23:2") it inserts directly. */
+  isTafsir?:          boolean;
+  /** Source slug for the block; undefined → resolve last-used drawer source. */
+  tafsirSlug?:        string;
+  tafsirSourceName?:  string;
   /**
    * Called when the user selects this command.
    * @param editor  the TipTap editor instance
@@ -88,11 +95,14 @@ function insertTafsirBlock(
 
 export function buildCommands(): SlashCommandItem[] {
   const tafsirShortcuts: SlashCommandItem[] = TAFSIR_SHORTCUTS.map((t) => ({
-    id:          t.id,
-    title:       `Tafsīr ${t.title}`,
-    description: `${t.title}'s commentary on an āyah (e.g. /${t.id} 2:255)`,
-    icon:        "📚",
-    aliases:     t.aliases,
+    id:               t.id,
+    title:            `Tafsīr ${t.title}`,
+    description:      `${t.title}'s commentary — pick a verse (or /${t.id} 2:255)`,
+    icon:             "📚",
+    aliases:          t.aliases,
+    isTafsir:         true,
+    tafsirSlug:       t.slug,
+    tafsirSourceName: t.sourceName,
     execute(editor, range, query) {
       insertTafsirBlock(editor, range, query, t.slug, t.sourceName);
     },
@@ -144,9 +154,10 @@ export function buildCommands(): SlashCommandItem[] {
     {
       id:          "tafsir",
       title:       "Tafsir block",
-      description: "Embed commentary — 67+ English & Arabic sources (e.g. /tafsir 2:255)",
+      description: "Embed commentary — 67+ English & Arabic sources",
       icon:        "📚",
       aliases:     ["commentary", "tafseer"],
+      isTafsir:    true,   // tafsirSlug undefined → resolves last-used source
       execute(editor, range, query) {
         // Default to the source last chosen in the tafsir drawer; the block's
         // own dropdown can switch to any provisioned source afterwards.

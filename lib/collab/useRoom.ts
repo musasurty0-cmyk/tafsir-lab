@@ -23,12 +23,21 @@ export type RoomStatus = "connecting" | "connected" | "disconnected";
 export interface Room {
   socket:  PartySocket | null;
   status:  RoomStatus;
+  /** Increments on every (re)connection — consumers watch this to re-sync
+   *  persisted state after the socket comes back from a drop. */
+  epoch:   number;
   send:    (msg: object | ArrayBuffer) => void;
 }
+
+// Heartbeat tuning: ping cadence and how long silence is tolerated before we
+// decide the (possibly half-open) socket is dead and force a reconnect.
+const PING_MS  = 20000;
+const STALE_MS = 45000;
 
 export function useRoom(pageId: string): Room {
   const [socket, setSocket] = useState<PartySocket | null>(null);
   const [status, setStatus] = useState<RoomStatus>("connecting");
+  const [epoch,  setEpoch]  = useState(0);
   const socketRef = useRef<PartySocket | null>(null);
 
   useEffect(() => {
@@ -44,11 +53,36 @@ export function useRoom(pageId: string): Room {
     setSocket(s);
     setStatus("connecting");
 
-    const onOpen  = () => setStatus("connected");
+    // Last time we heard ANYTHING from the server (pong, presence, stroke…).
+    let lastRecv = Date.now();
+
+    const onOpen  = () => { lastRecv = Date.now(); setStatus("connected"); setEpoch((e) => e + 1); };
     const onClose = () => setStatus("disconnected");
-    s.addEventListener("open",  onOpen);
-    s.addEventListener("close", onClose);
-    s.addEventListener("error", onClose);
+    const onMsg   = () => { lastRecv = Date.now(); };
+    s.addEventListener("open",    onOpen);
+    s.addEventListener("close",   onClose);
+    s.addEventListener("error",   onClose);
+    s.addEventListener("message", onMsg);
+
+    // Heartbeat: ping regularly and, if the server has gone silent past the
+    // stale window (a half-open socket that never fired "close"), force a
+    // reconnect. This is what stops "sync worked, then quietly stopped until
+    // a manual refresh" — the dead socket is now detected and replaced.
+    const beat = setInterval(() => {
+      if (document.visibilityState !== "visible") return;
+      const now = Date.now();
+      if (s.readyState === WebSocket.OPEN) {
+        try { s.send(JSON.stringify({ type: "ping" })); } catch { /* ignore */ }
+        if (now - lastRecv > STALE_MS) {
+          lastRecv = now;               // avoid rapid reconnect storms
+          setStatus("connecting");
+          try { s.reconnect(); } catch { /* already reconnecting */ }
+        }
+      } else if (s.readyState !== WebSocket.CONNECTING) {
+        setStatus("connecting");
+        try { s.reconnect(); } catch { /* already reconnecting */ }
+      }
+    }, PING_MS);
 
     // iOS/iPadOS suspends background tabs and kills the WebSocket. When the
     // student returns (e.g. after checking a translation app mid-lesson),
@@ -63,10 +97,12 @@ export function useRoom(pageId: string): Room {
     document.addEventListener("visibilitychange", onVisible);
 
     return () => {
+      clearInterval(beat);
       document.removeEventListener("visibilitychange", onVisible);
-      s.removeEventListener("open",  onOpen);
-      s.removeEventListener("close", onClose);
-      s.removeEventListener("error", onClose);
+      s.removeEventListener("open",    onOpen);
+      s.removeEventListener("close",   onClose);
+      s.removeEventListener("error",   onClose);
+      s.removeEventListener("message", onMsg);
       s.close();
       socketRef.current = null;
       setSocket(null);
@@ -80,5 +116,5 @@ export function useRoom(pageId: string): Room {
     else s.send(JSON.stringify(msg));
   }
 
-  return { socket, status, send };
+  return { socket, status, epoch, send };
 }

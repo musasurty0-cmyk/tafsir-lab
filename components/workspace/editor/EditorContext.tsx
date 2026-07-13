@@ -51,3 +51,8 @@ export function useEditorCtx(): EditorContextValue {
   if (!v) throw new Error("useEditorCtx must be inside EditorContextProvider");
   return v;
 }
+
+/** Non-throwing variant — returns null when rendered outside a provider. */
+export function useEditorCtxOptional(): EditorContextValue | null {
+  return useContext(Ctx);
+}

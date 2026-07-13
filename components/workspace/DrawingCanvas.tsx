@@ -479,6 +479,25 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     return () => roomSocket.removeEventListener("message", onMessage);
   }, [roomSocket, scheduleRender]);
 
+  // On socket RECONNECT, pull persisted drawings immediately so strokes a peer
+  // made while we were briefly disconnected show up without a manual refresh
+  // (the slow poll would eventually catch them; this makes it instant).
+  useEffect(() => {
+    if (!roomSocket) return;
+    let first = true;
+    const onOpen = () => {
+      if (first) { first = false; return; } // skip the initial connect
+      fetch(`/api/pages/${pageId}/drawings`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d: { otherLayers?: DrawingLayer[] } | null) => {
+          if (d?.otherLayers) setOtherLayers(d.otherLayers);
+        })
+        .catch(() => {});
+    };
+    roomSocket.addEventListener("open", onOpen);
+    return () => roomSocket.removeEventListener("open", onOpen);
+  }, [roomSocket, pageId]);
+
   // ── Debounced save ─────────────────────────────────────────────────────
   // Previously fire-and-forget: a failed PUT was silently swallowed and the
   // in-memory strokes were the only copy. Now: one retry after 3 s, and a

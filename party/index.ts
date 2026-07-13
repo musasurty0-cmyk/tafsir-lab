@@ -37,7 +37,8 @@ export interface PresenceData {
 type IncomingMessage =
   | { type: "presence-update"; data: PresenceData }
   | { type: "stroke-segment";  [key: string]: unknown }
-  | { type: "stroke-complete"; [key: string]: unknown };
+  | { type: "stroke-complete"; [key: string]: unknown }
+  | { type: "ping" };
 
 // ── Server ────────────────────────────────────────────────────────────────────
 
@@ -96,6 +97,13 @@ export default class TafsirRoom implements Party.Server {
     // Any JSON message marks this connection as an app socket.
     const isNewAppConn = !this.appConns.has(sender.id);
     this.appConns.add(sender.id);
+
+    // Heartbeat: the client pings periodically so it can detect a silently
+    // dropped (half-open) connection when no pong comes back.
+    if (msg.type === "ping") {
+      try { sender.send(JSON.stringify({ type: "pong" })); } catch { /* ignore */ }
+      return;
+    }
 
     if (msg.type === "presence-update") {
       this.presence.set(sender.id, msg.data);

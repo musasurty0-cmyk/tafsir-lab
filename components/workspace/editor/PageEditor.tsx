@@ -56,6 +56,8 @@ import {
 import CommandList, { type CommandListHandle } from "./CommandList";
 import { getUserColor } from "./RemoteCursorsExtension";
 import SelectionToolbar from "./SelectionToolbar";
+import { useEditorCtxOptional } from "./EditorContext";
+import TafsirVersePicker from "./TafsirVersePicker";
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
@@ -91,6 +93,7 @@ export default function PageEditor({
   initialContent,
   currentUserId,
   currentUserName,
+  roomSocket,
   onEditorReady,
   textBoxNotes = [],
   onNoteCreated,
@@ -101,6 +104,17 @@ export default function PageEditor({
   const commandListRef        = useRef<CommandListHandle>(null);
   const ALL_COMMANDS          = useRef(buildCommands());
   const saveTimer             = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Surah being studied + verses on this page (for the tafsir verse picker)
+  const ectx        = useEditorCtxOptional();
+  const studySurah  = ectx?.surahNumber ?? 1;
+  const pageVerses  = ectx?.verses ?? [];
+
+  // Tafsir verse picker: opened when a tafsir command is chosen WITHOUT a
+  // verse key, so the user picks the āyah within the surah they're studying.
+  const [versePicker, setVersePicker] = useState<{
+    slug: string; sourceName: string; range: { from: number; to: number }; rect: DOMRect;
+  } | null>(null);
 
   // ── Main document = the page's default container ───────────────────────
   // Same structure as the square containers: a top drag bar moves it; the
@@ -266,6 +280,34 @@ export default function PageEditor({
       }, 1000);
     };
   }, [provider]);
+
+  // ── Heal a silently-dropped Yjs connection ─────────────────────────────
+  // The Yjs socket can die without firing "close" (half-open connection);
+  // it then quietly stops syncing until a manual refresh. The app socket
+  // (roomSocket) has a heartbeat that reliably detects this, so when it
+  // reconnects we force the Yjs provider to reconnect too — a fresh y-sync
+  // reconciles the full document. An interval is a belt-and-braces fallback.
+  useEffect(() => {
+    const p = provider as unknown as { wsconnected?: boolean; connect: () => void; disconnect: () => void };
+
+    let firstOpen = true;
+    const onSockOpen = () => {
+      if (firstOpen) { firstOpen = false; return; } // ignore the initial connect
+      try { p.disconnect(); } catch { /* ignore */ }
+      try { p.connect(); }    catch { /* ignore */ }
+    };
+    roomSocket?.addEventListener("open", onSockOpen);
+
+    const iv = setInterval(() => {
+      if (document.visibilityState !== "visible") return;
+      if (p.wsconnected === false) { try { p.connect(); } catch { /* ignore */ } }
+    }, 20000);
+
+    return () => {
+      roomSocket?.removeEventListener("open", onSockOpen);
+      clearInterval(iv);
+    };
+  }, [provider, roomSocket]);
 
   // ── Save helper ───────────────────────────────────────────────────────
 
@@ -483,12 +525,40 @@ export default function PageEditor({
   const handleSelect = useCallback(
     (item: SlashCommandItem) => {
       if (!palette) return;
-      (item as SlashCommandItem & { _query: string })._query = palette.query;
+      const q = palette.query;
+
+      // Tafsir command with NO explicit verse key → open the verse picker
+      // (defaults to the surah being studied). "/tabari 23:2" inserts directly.
+      if (item.isTafsir && !/\d{1,3}:\d{1,3}/.test(q)) {
+        let slug = item.tafsirSlug;
+        if (!slug) {
+          try { slug = localStorage.getItem("tl-tafsir-source") || "ibn-kathir-en"; }
+          catch { slug = "ibn-kathir-en"; }
+        }
+        const range = (palette.props as unknown as { range: { from: number; to: number } }).range;
+        setVersePicker({ slug, sourceName: item.tafsirSourceName ?? "Tafsīr", range, rect: palette.rect });
+        setPalette(null);
+        return;
+      }
+
+      (item as SlashCommandItem & { _query: string })._query = q;
       palette.props.command({ ...(item as object) });
       setPalette(null);
     },
     [palette],
   );
+
+  // Insert a tafsir block at the picker's saved range for the chosen verse.
+  const insertTafsirVerse = useCallback((verseKey: string) => {
+    if (!editor || !versePicker) return;
+    const { range, slug, sourceName } = versePicker;
+    editor.chain().focus().deleteRange(range).insertContent([
+      { type: "tafsirBlock", attrs: { verseKey, contentHtml: "", sourceName, sourceSlug: slug } },
+      { type: "paragraph" },
+    ]).scrollIntoView().run();
+    setVersePicker(null);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editor, versePicker]);
 
   // ── Render ────────────────────────────────────────────────────────────
 
@@ -569,6 +639,25 @@ export default function PageEditor({
           })(),
           document.body,
         )}
+
+      {/* Tafsir verse picker — surah fixed to what's being studied, pick the āyah */}
+      {versePicker && (
+        <TafsirVersePicker
+          surah={studySurah}
+          sourceName={versePicker.sourceName}
+          rect={versePicker.rect}
+          ayahsOnPage={
+            Array.from(new Set(
+              pageVerses
+                .map((v) => v.verse_key.split(":"))
+                .filter(([s]) => Number(s) === studySurah)
+                .map(([, a]) => Number(a))
+            )).sort((a, b) => a - b)
+          }
+          onConfirm={insertTafsirVerse}
+          onCancel={() => setVersePicker(null)}
+        />
+      )}
     </div>
   );
 }

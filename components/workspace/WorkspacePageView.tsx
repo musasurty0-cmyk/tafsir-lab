@@ -424,6 +424,7 @@ export default function WorkspacePageView({
         page={page}
         verses={verses}
         surahNumber={surahNumber}
+        surahName={chapter.name_simple}
         pageId={activePageId}
         role={role}
         notes={notes}

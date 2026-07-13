@@ -41,6 +41,7 @@ interface Props {
   page:              PageData;
   verses:            Verse[];
   surahNumber:       number;
+  surahName:         string;
   pageId:            string;
   role:              MemberRole;
   notes:             NoteData[];
@@ -104,6 +105,7 @@ export default function ModeAPage({
   page,
   verses,
   surahNumber,
+  surahName,
   pageId,
   role,
   notes,
@@ -146,7 +148,9 @@ export default function ModeAPage({
 
           {/* ── Cover ──────────────────────────────────────────────── */}
           <div className="doc-cover">
-            <div className="doc-cover-tag">Page {page.orderIndex + 1}</div>
+            <div className="doc-cover-tag">
+              Sūrah {surahNumber} · {surahName} · Page {page.orderIndex + 1}
+            </div>
             <h1 className="doc-title">{page.title}</h1>
 
             <div className="doc-meta">
