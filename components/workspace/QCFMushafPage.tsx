@@ -275,9 +275,11 @@ export default function QCFMushafPage({
                 const noted    = (isWord
                   ? notedWordColors?.get(wordKey)
                   : (isEnd ? notedEndColors?.get(word.ayahNum) : undefined)) ?? ayahWash;
+                // Yellow selection highlight is ONLY for a specifically
+                // selected word. A selected ayah lights its whole run blue
+                // (ayahActive) — its end marker must never turn yellow.
                 const selected =
-                  (isWord && selectedWordKey === `${word.verseKey}:${word.position}`) ||
-                  (isEnd  && selectedEndKey  === word.verseKey);
+                  isWord && selectedWordKey === `${word.verseKey}:${word.position}`;
                 // Whole ayah lights up while its annotation layer is open
                 const ayahActive = selectedEndKey === word.verseKey;
 
