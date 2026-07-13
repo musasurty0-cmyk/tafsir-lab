@@ -7529,13 +7529,21 @@ input, textarea { font: inherit; color: inherit; }
 /* ── Tafsir verse picker (opened by /tabari, /saadi … with no verse) ─────── */
 .verse-picker {
   width: 320px;
+  max-height: min(70vh, 520px);
+  display: flex;
+  flex-direction: column;
   background: var(--bg-elev);
   border: 1px solid var(--line-2);
   border-radius: 12px;
   box-shadow: 0 22px 50px oklch(0.22 0.012 80 / 0.18);
   padding: 12px;
+  overflow: hidden;
   animation: slash-pop 0.16s var(--ease-flow) both;
 }
+/* head + input row stay put; only the verse list scrolls */
+.verse-picker-head,
+.verse-picker-row,
+.verse-picker-label { flex: none; }
 .verse-picker-head {
   font-family: var(--font-mono);
   font-size: 11px;
@@ -7590,7 +7598,13 @@ input, textarea { font: inherit; color: inherit; }
 .verse-picker-chips {
   display: flex;
   flex-wrap: wrap;
+  align-content: flex-start;
   gap: 6px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 2px;   /* room for the scrollbar */
+  overscroll-behavior: contain;
 }
 .verse-picker-chip {
   font-family: var(--font-mono);
