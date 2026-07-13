@@ -37,6 +37,8 @@
   ],
   "exclude": [
     "node_modules",
-    "trailer"
+    "trailer",
+    "remotion",
+    "remotion.config.ts"
   ]
 }

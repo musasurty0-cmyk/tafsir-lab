@@ -34,3 +34,7 @@ ult/
 
 .vercel
 .partykit/
+
+# Remotion render artifacts
+/out
+remotion/out

@@ -18,7 +18,9 @@
     "tafsir:ingest": "npx tsx scripts/ingest-tafsir.ts",
     "tafsir:sources": "npx tsx scripts/ingest-tafsir.ts --list-sources",
     "party:dev": "partykit dev",
-    "party:deploy": "partykit deploy"
+    "party:deploy": "partykit deploy",
+    "trailer:studio": "remotion studio remotion/index.ts",
+    "trailer:render": "remotion render remotion/index.ts Trailer public/trailer.mp4 --codec=h264"
   },
   "engines": {
     "node": ">=20.0.0 <21.0.0"
@@ -65,12 +67,15 @@
     "zustand": "^5.0.2"
   },
   "devDependencies": {
+    "@remotion/cli": "^4.0.489",
+    "@remotion/google-fonts": "^4.0.489",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "autoprefixer": "^10.4.20",
     "postcss": "^8.4.49",
     "prisma": "^5.22.0",
+    "remotion": "^4.0.489",
     "tailwindcss": "^3.4.17",
     "typescript": "^5"
   }
