@@ -38,3 +38,6 @@ ult/
 # Remotion render artifacts
 /out
 remotion/out
+
+# Remotion render-only footage segments (large, local only)
+public/showcase/

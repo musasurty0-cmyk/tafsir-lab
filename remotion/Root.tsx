@@ -2,6 +2,7 @@ import React from "react";
 import { Composition } from "remotion";
 import { Trailer, TRAILER_DURATION, TRAILER_FPS } from "./Trailer";
 import { Showcase, SHOW_DURATION, SHOW_FPS } from "./Showcase";
+import { AppTrailer, APP_DURATION, APP_FPS } from "./AppTrailer";
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -19,6 +20,14 @@ export const RemotionRoot: React.FC = () => {
         component={Showcase}
         durationInFrames={SHOW_DURATION}
         fps={SHOW_FPS}
+        width={1920}
+        height={1080}
+      />
+      <Composition
+        id="AppTrailer"
+        component={AppTrailer}
+        durationInFrames={APP_DURATION}
+        fps={APP_FPS}
         width={1920}
         height={1080}
       />
