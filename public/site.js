@@ -34,7 +34,7 @@
 /* ─────────────── Scroll reveal ─────────────── */
 (() => {
   const els = document.querySelectorAll(
-    '.pillar, .deep-copy, .deep-stage, .ws-card, .price, .faq-i, .quote-frame, .wbw-strip, .strip-items'
+    '.pillar, .deep-copy, .deep-stage, .ws-card, .price, .faq-i, .quote-frame, .wbw-strip, .strip-items, .library-wall'
   );
   els.forEach(el => el.classList.add('reveal'));
   const io = new IntersectionObserver(
@@ -49,6 +49,27 @@
     { threshold: 0.12 }
   );
   els.forEach(el => io.observe(el));
+})();
+
+/* ─────────────── Mushaf ink draw-in ─────────────── */
+(() => {
+  const mushaf = document.querySelector('.mushaf');
+  if (!mushaf || !('IntersectionObserver' in window)) {
+    mushaf && mushaf.classList.add('ink-play');
+    return;
+  }
+  const io = new IntersectionObserver(
+    entries => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          mushaf.classList.add('ink-play');
+          io.disconnect();
+        }
+      });
+    },
+    { threshold: 0.35 }
+  );
+  io.observe(mushaf);
 })();
 
 /* ─────────────── Drawer tab toggle ─────────────── */
