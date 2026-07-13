@@ -36,15 +36,22 @@ export const HIGHLIGHT_COLORS = [
 ];
 
 export const PEN_WIDTHS       = [
-  { label: "S", value: 1.5 },
-  { label: "M", value: 2.5 },
-  { label: "L", value: 4.5 },
+  { label: "XS", value: 1   },
+  { label: "S",  value: 1.5 },
+  { label: "M",  value: 2.5 },
+  { label: "L",  value: 4.5 },
+  { label: "XL", value: 7   },
 ];
 export const HIGHLIGHT_WIDTHS = [
-  { label: "S", value: 10 },
-  { label: "M", value: 16 },
-  { label: "L", value: 24 },
+  { label: "S",  value: 10 },
+  { label: "M",  value: 16 },
+  { label: "L",  value: 24 },
+  { label: "XL", value: 32 },
 ];
+
+// Fine-adjust slider ranges (px)
+const PEN_RANGE       = { min: 0.5, max: 14, step: 0.5 };
+const HIGHLIGHT_RANGE = { min: 6,   max: 40, step: 1   };
 
 // ── Exported defaults ─────────────────────────────────────────────────────
 
@@ -370,7 +377,7 @@ export default function CanvasToolRail({
           ))}
         </div>
 
-        <p className="ctr-popover-label">Size</p>
+        <p className="ctr-popover-label">Size <span className="ctr-size-value">{strokeSize}px</span></p>
         <div className="ctr-widths">
           {widths.map((w) => (
             <button
@@ -385,6 +392,18 @@ export default function CanvasToolRail({
             </button>
           ))}
         </div>
+        {/* Fine adjust — any thickness in the tool's range */}
+        <input
+          type="range"
+          className="ctr-size-slider"
+          min={isHighlight ? HIGHLIGHT_RANGE.min : PEN_RANGE.min}
+          max={isHighlight ? HIGHLIGHT_RANGE.max : PEN_RANGE.max}
+          step={isHighlight ? HIGHLIGHT_RANGE.step : PEN_RANGE.step}
+          value={strokeSize}
+          aria-label="Stroke thickness"
+          onChange={(e) => handleWidth(Number(e.target.value))}
+          onPointerDown={(e) => e.stopPropagation()}
+        />
       </div>
     </div>
   );

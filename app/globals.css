@@ -7465,3 +7465,63 @@ input, textarea { font: inherit; color: inherit; }
   border-color: var(--line);
   outline: none;
 }
+
+/* Whole-ayah highlight while its annotation layer is OPEN — soft blue wash
+   on every glyph so the active ayah reads as one unit */
+.qcf-glyph.qcf-word--ayah-active {
+  background: oklch(0.85 0.1 250 / 0.5);
+  border-radius: 3px;
+}
+
+/* Eraser rubber — round, sized to the real hit radius, follows the pointer */
+.eraser-ring {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 1.5px solid oklch(0.45 0.01 80 / 0.65);
+  background: oklch(0.99 0.002 80 / 0.55);
+  box-shadow:
+    0 1px 6px oklch(0 0 0 / 0.16),
+    inset 0 0 0 2px oklch(1 0 0 / 0.6);
+  pointer-events: none;
+  z-index: 40;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+/* Tool rail: fine-adjust thickness slider */
+.ctr-size-value {
+  float: right;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  color: var(--ink-3);
+}
+.ctr-size-slider {
+  width: 100%;
+  margin: 6px 0 2px;
+  appearance: none;
+  -webkit-appearance: none;
+  height: 3px;
+  border-radius: 99px;
+  background: var(--line-strong, oklch(0.22 0.012 80 / 0.18));
+  outline: none;
+  cursor: pointer;
+}
+.ctr-size-slider::-webkit-slider-thumb {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--ink, #18181b);
+  border: 2px solid #fff;
+  box-shadow: 0 1px 3px oklch(0 0 0 / 0.25);
+}
+.ctr-size-slider::-moz-range-thumb {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--ink, #18181b);
+  border: 2px solid #fff;
+  box-shadow: 0 1px 3px oklch(0 0 0 / 0.25);
+}

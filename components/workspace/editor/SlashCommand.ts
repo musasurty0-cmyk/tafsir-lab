@@ -32,9 +32,72 @@ export interface SlashCommandItem {
   execute(editor: Editor, range: { from: number; to: number }, query: string): void;
 }
 
+// ── Tafsir shortcuts ──────────────────────────────────────────────────────
+// "/saadi 2:255" → al-Saʿdī's commentary on 2:255, "/jalalayn 18:10" → the
+// Jalālayn on 18:10, etc. Each inserts a tafsirBlock pre-set to that source;
+// the block's own dropdown can still switch afterwards.
+
+const TAFSIR_SHORTCUTS: {
+  id: string; title: string; slug: string; sourceName: string; aliases?: string[];
+}[] = [
+  { id: "kathir",    title: "Ibn Kathīr",           slug: "ibn-kathir-en",                sourceName: "Ibn Kathīr (English)",      aliases: ["ibnkathir", "ibn"] },
+  { id: "saadi",     title: "al-Saʿdī",             slug: "ar-tafsir-as-saadi",           sourceName: "Tafsir As-Saadi",           aliases: ["sadi", "sa'di"] },
+  { id: "tabari",    title: "al-Ṭabarī",            slug: "ar-tafsir-al-tabari",          sourceName: "Tafsir al-Tabari" },
+  { id: "qurtubi",   title: "al-Qurṭubī",           slug: "ar-tafseer-al-qurtubi",        sourceName: "Tafseer Al Qurtubi" },
+  { id: "razi",      title: "al-Rāzī",              slug: "tafsir-al-razi",               sourceName: "Tafsir Al-Razi" },
+  { id: "jalalayn",  title: "al-Jalālayn",          slug: "en-al-jalalayn",               sourceName: "Al-Jalalayn",               aliases: ["jalayn", "jalal"] },
+  { id: "baghawi",   title: "al-Baghawī",           slug: "ar-tafsir-al-baghawi",         sourceName: "Tafseer Al-Baghawi" },
+  { id: "muyassar",  title: "al-Muyassar",          slug: "ar-tafsir-muyassar",           sourceName: "Tafsir Muyassar" },
+  { id: "mukhtasar", title: "al-Mukhtaṣar",         slug: "en-tafsir-al-mukhtasar",       sourceName: "English Al-Mukhtasar" },
+  { id: "maarif",    title: "Maʿārif al-Qurʾān",    slug: "maarif-en",                    sourceName: "Maʿārif al-Qurʾān (English)" },
+  { id: "tahrir",    title: "Ibn ʿĀshūr",           slug: "ar-tafseer-tahrir-al-tanwir",  sourceName: "Tafsir al-Tahrir wa al-Tanwir", aliases: ["ashur", "ibnashur"] },
+  { id: "shawkani",  title: "al-Shawkānī",          slug: "fath-al-qadir-al-shawkani",    sourceName: "Fath Al-Qadir Al-Shawkani", aliases: ["fath"] },
+  { id: "uthaymeen", title: "Ibn ʿUthaymīn",        slug: "tafsir-ibn-uthaymeen",         sourceName: "Tafsir Ibn Uthaymeen",      aliases: ["uthaymin", "othaimeen"] },
+  { id: "kashshaf",  title: "al-Zamakhsharī",       slug: "al-kashshaf-al-zamakhshari",   sourceName: "Al-Kashshaf Al-Zamakhshari", aliases: ["zamakhshari"] },
+  { id: "baydawi",   title: "al-Bayḍāwī",           slug: "tafsir-al-baydawi",            sourceName: "Tafsir Al-Baydawi",         aliases: ["baidawi"] },
+];
+
+/** Shared insert used by /tafsir and every scholar shortcut. */
+function insertTafsirBlock(
+  editor: Editor,
+  range: { from: number; to: number },
+  query: string,
+  sourceSlug: string,
+  sourceName: string,
+): void {
+  const parts    = query.trim().split(/\s+/);
+  const rawKey   = parts.slice(1).join("").trim(); // "saadi 2:255" → "2:255"
+  const verseKey = /^\d{1,3}:\d{1,3}$/.test(rawKey) ? rawKey : "1:1";
+
+  editor
+    .chain()
+    .focus()
+    .deleteRange(range)
+    .insertContent([
+      {
+        type: "tafsirBlock",
+        attrs: { verseKey, contentHtml: "", sourceName, sourceSlug },
+      },
+      { type: "paragraph" },
+    ])
+    .scrollIntoView()
+    .run();
+}
+
 // ── Available commands ────────────────────────────────────────────────────
 
 export function buildCommands(): SlashCommandItem[] {
+  const tafsirShortcuts: SlashCommandItem[] = TAFSIR_SHORTCUTS.map((t) => ({
+    id:          t.id,
+    title:       `Tafsīr ${t.title}`,
+    description: `${t.title}'s commentary on an āyah (e.g. /${t.id} 2:255)`,
+    icon:        "📚",
+    aliases:     t.aliases,
+    execute(editor, range, query) {
+      insertTafsirBlock(editor, range, query, t.slug, t.sourceName);
+    },
+  }));
+
   return [
     {
       id:          "ayah",
@@ -83,12 +146,8 @@ export function buildCommands(): SlashCommandItem[] {
       title:       "Tafsir block",
       description: "Embed commentary — 67+ English & Arabic sources (e.g. /tafsir 2:255)",
       icon:        "📚",
-      aliases:     ["ibn", "kathir", "commentary", "tafseer", "tabari", "qurtubi", "razi", "saadi", "jalalayn"],
+      aliases:     ["commentary", "tafseer"],
       execute(editor, range, query) {
-        const parts    = query.trim().split(/\s+/);
-        const rawKey   = parts.slice(1).join("").trim();
-        const verseKey = rawKey || "1:1";
-
         // Default to the source last chosen in the tafsir drawer; the block's
         // own dropdown can switch to any provisioned source afterwards.
         let sourceSlug = "ibn-kathir-en";
@@ -96,25 +155,7 @@ export function buildCommands(): SlashCommandItem[] {
           const stored = localStorage.getItem("tl-tafsir-source");
           if (stored) sourceSlug = stored;
         } catch { /* SSR / private mode */ }
-
-        editor
-          .chain()
-          .focus()
-          .deleteRange(range)
-          .insertContent([
-            {
-              type: "tafsirBlock",
-              attrs: {
-                verseKey,
-                contentHtml: "",
-                sourceName:  "Tafsīr",
-                sourceSlug,
-              },
-            },
-            { type: "paragraph" },
-          ])
-          .scrollIntoView()
-          .run();
+        insertTafsirBlock(editor, range, query, sourceSlug, "Tafsīr");
       },
     },
     {
@@ -217,6 +258,9 @@ export function buildCommands(): SlashCommandItem[] {
         editor.chain().focus().deleteRange(range).setHorizontalRule().run();
       },
     },
+
+    // Scholar shortcuts last — the block palette stays first when browsing
+    ...tafsirShortcuts,
   ];
 }
 

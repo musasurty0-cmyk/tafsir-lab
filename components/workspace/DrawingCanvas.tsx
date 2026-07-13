@@ -677,6 +677,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     function move(e: PointerEvent) {
       if (e.pointerType !== "pen") return;
       if (penTool() === "eraser") {
+        moveEraserRing(e.clientX, e.clientY); // stylus hover shows the rubber
         if (e.buttons & 1) { const [wx, wy] = toWorld(e.clientX, e.clientY); eraseAt(wx, wy); }
         return;
       }
@@ -727,6 +728,25 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
 
   // ── Eraser ─────────────────────────────────────────────────────────────
 
+  // Visual eraser: a round "rubber" ring that follows the pointer so the
+  // tool reads as an eraser, not a generic crosshair. Positioned via direct
+  // style writes (no re-render per move).
+  const eraserRingRef = useRef<HTMLDivElement>(null);
+
+  function moveEraserRing(clientX: number, clientY: number) {
+    const ring = eraserRingRef.current;
+    const wrap = containerRef.current;
+    if (!ring || !wrap) return;
+    const r = wrap.getBoundingClientRect();
+    ring.style.left    = `${clientX - r.left}px`;
+    ring.style.top     = `${clientY - r.top}px`;
+    ring.style.opacity = "1";
+  }
+
+  function hideEraserRing() {
+    if (eraserRingRef.current) eraserRingRef.current.style.opacity = "0";
+  }
+
   function eraseAt(wx: number, wy: number) {
     const r    = ERASER_RADIUS / viewportRef.current.zoom;
     const prev = myStrokesRef.current;
@@ -772,6 +792,8 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     if (e.pointerType === "touch") return;
     if (e.pointerType === "pen")   return; // native capture handlers own the pen
     if (toolRef.current === "hand") return;
+    // The eraser ring follows the mouse even before the button goes down
+    if (toolRef.current === "eraser") moveEraserRing(e.clientX, e.clientY);
     if (!isDrawingRef.current) return;
     e.stopPropagation();
 
@@ -866,7 +888,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
         style={{
           cursor: tool === "pen" || tool === "arrow" ? "crosshair"
                 : tool === "highlight"               ? "cell"
-                : tool === "eraser"                  ? "cell"
+                : tool === "eraser"                  ? "none"   // the ring IS the cursor
                 : tool === "text"                    ? "text"
                 : "default",
         }}
@@ -878,6 +900,20 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
         onPointerMove={onMove}
         onPointerUp={e     => onUp(e)}
         onPointerCancel={e => onUp(e)}
+        onPointerLeave={hideEraserRing}
+      />
+
+      {/* Eraser "rubber" — sized to the true hit radius so what you see is
+          exactly what gets erased */}
+      <div
+        ref={eraserRingRef}
+        className="eraser-ring"
+        style={{
+          display: tool === "eraser" ? "block" : "none",
+          width:   ERASER_RADIUS * 2,
+          height:  ERASER_RADIUS * 2,
+        }}
+        aria-hidden
       />
     </div>
   );

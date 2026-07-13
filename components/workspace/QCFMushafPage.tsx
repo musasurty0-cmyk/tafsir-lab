@@ -74,6 +74,9 @@ interface Props {
   selectedWordKey?:  string | null;
   /** Ayah markers with annotation layers → soft highlight colour (by ayah number) */
   notedEndColors?:   ReadonlyMap<number, string>;
+  /** Ayāt with notes in their annotation layer → EVERY glyph of the ayah gets
+   *  this soft wash (word-level colours take precedence). Keyed by ayah number. */
+  notedAyahColors?:  ReadonlyMap<number, string>;
   /** Ayah whose annotation layer is open ("1:2" verseKey) */
   selectedEndKey?:   string | null;
 }
@@ -119,6 +122,7 @@ export default function QCFMushafPage({
   notedWordColors,
   selectedWordKey,
   notedEndColors,
+  notedAyahColors,
   selectedEndKey,
 }: Props) {
 
@@ -265,12 +269,17 @@ export default function QCFMushafPage({
                 const isWord  = word.char_type_name === "word";
                 const isEnd   = word.char_type_name === "end";
                 const wordKey = `${word.ayahNum}:${word.position}`;
-                const noted   = isWord
+                // Ayah-layer wash covers EVERY glyph of the ayah; word-level
+                // colours (and the end-marker colour) sit on top of it.
+                const ayahWash = notedAyahColors?.get(word.ayahNum);
+                const noted    = (isWord
                   ? notedWordColors?.get(wordKey)
-                  : (isEnd ? notedEndColors?.get(word.ayahNum) : undefined);
+                  : (isEnd ? notedEndColors?.get(word.ayahNum) : undefined)) ?? ayahWash;
                 const selected =
                   (isWord && selectedWordKey === `${word.verseKey}:${word.position}`) ||
                   (isEnd  && selectedEndKey  === word.verseKey);
+                // Whole ayah lights up while its annotation layer is open
+                const ayahActive = selectedEndKey === word.verseKey;
 
                 return (
                   <span
@@ -283,8 +292,9 @@ export default function QCFMushafPage({
                       "qcf-glyph",
                       isWord ? "qcf-word" : "",
                       isEnd  ? "qcf-end"  : "",
-                      noted    ? "qcf-word--noted"    : "",
-                      selected ? "qcf-word--selected" : "",
+                      noted      ? "qcf-word--noted"       : "",
+                      selected   ? "qcf-word--selected"    : "",
+                      ayahActive ? "qcf-word--ayah-active" : "",
                     ].join(" ").trim()}
                     // font-family per-span; noted words get their soft
                     // translucent highlight colour inline (rotating palette).

@@ -223,26 +223,22 @@ export default function ModeBPage({
     return map;
   }, [notes, strokeAnchors]);
 
-  // Ayah markers with annotation layers — different, softer palette
+  // Ayāt with annotation layers — the WHOLE ayah gets one soft blue wash
+  // (every word + the end marker), so a noted ayah reads as a single unit.
   const notedEndColors = useMemo<ReadonlyMap<number, string>>(() => {
-    const PALETTE = [
-      "oklch(0.93 0.07 200 / 0.45)", // soft teal
-      "oklch(0.93 0.07 130 / 0.45)", // soft sage
-      "oklch(0.93 0.06 280 / 0.4)",  // soft lavender
-      "oklch(0.94 0.07 80 / 0.45)",  // soft sand
-    ];
+    const AYAH_WASH = "oklch(0.88 0.09 250 / 0.42)"; // soft blue
     const map = new Map<number, string>();
     for (const a of strokeAnchors) {
       const m = a.match(/^a:\d+:(\d+)$/);
       if (m) {
         const ayah = Number(m[1]);
-        if (!map.has(ayah)) map.set(ayah, PALETTE[map.size % PALETTE.length]);
+        if (!map.has(ayah)) map.set(ayah, AYAH_WASH);
       }
     }
     // Ayah-anchored textbox containers count too
     for (const n of notes) {
       if (n.noteType === "textbox" && n.anchorType === "ayah" && n.ayahNumber != null && !map.has(n.ayahNumber)) {
-        map.set(n.ayahNumber, PALETTE[map.size % PALETTE.length]);
+        map.set(n.ayahNumber, AYAH_WASH);
       }
     }
     return map;
@@ -813,6 +809,7 @@ export default function ModeBPage({
           onOpenFocus={openFocus}
           notedWordColors={notedWordColors}
           notedEndColors={notedEndColors}
+          notedAyahColors={notedEndColors}
           selectedWordKey={focusAnchor && focusAnchor.wordPos != null ? `${focusAnchor.verseKey}:${focusAnchor.wordPos}` : null}
           selectedEndKey={focusAnchor && focusAnchor.wordPos == null ? focusAnchor.verseKey : null}
         />
