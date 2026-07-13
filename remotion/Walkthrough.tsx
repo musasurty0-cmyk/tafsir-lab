@@ -26,8 +26,8 @@ const R = {
   grid:      237,
   promote:   261,
   slash:     298,
-  annotate:  353,
-  wordnotes: 345,
+  annotate:  366,
+  wordnotes: 340,
 };
 
 export const WALK_DURATION =
