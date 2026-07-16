@@ -61,7 +61,15 @@ const FormattingIcon = ({ size = 13 }: { size?: number }) => (
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
-export type ViewMode = "editor" | "canvas" | "split";
+export type ViewMode = "editor" | "canvas" | "split" | "board";
+
+const BoardIcon = ({ size = 13 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="4" width="18" height="14" rx="2"/>
+    <path d="M7 21l2-3M17 21l-2-3"/>
+  </svg>
+);
 
 interface Props {
   workspaceId:        string;
@@ -181,10 +189,18 @@ export default function TopBar({
           >
             <SplitIcon /> Split
           </button>
+          <button
+            className="mode-btn"
+            data-active={mode === "board" ? "true" : "false"}
+            onClick={() => mode !== "board" && onSetMode("board")}
+            title="Whiteboard — blank scratch canvas"
+          >
+            <BoardIcon /> Board
+          </button>
         </div>
 
         {/* Formatting toggle — only in editor / split mode */}
-        {mode !== "canvas" && (
+        {mode !== "canvas" && mode !== "board" && (
           <>
             <div className="tb-divider" />
             <button

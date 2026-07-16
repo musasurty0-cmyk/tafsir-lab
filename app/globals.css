@@ -7621,3 +7621,43 @@ input, textarea { font: inherit; color: inherit; }
   color: var(--accent-ink);
   background: var(--accent-soft);
 }
+
+/* ── Whiteboard (blank scratch canvas, view mode "board") ────────────────── */
+.whiteboard-canvas {
+  /* faint dot grid signals a blank, infinite surface */
+  background-color: var(--bg);
+  background-image: radial-gradient(var(--line) 1px, transparent 1px);
+  background-size: 26px 26px;
+  background-position: 0 0;
+}
+.whiteboard-hint {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  max-width: 440px;
+  text-align: center;
+  pointer-events: none;
+  color: var(--ink-3);
+  animation: textbox-in 0.4s var(--ease-soft) both;
+}
+.whiteboard-hint-title {
+  font-family: var(--font-serif);
+  font-size: 26px;
+  font-weight: 600;
+  color: var(--ink-2);
+  margin: 0 0 10px;
+}
+.whiteboard-hint-body {
+  font-size: 15px;
+  line-height: 1.65;
+  margin: 0;
+}
+.whiteboard-hint-body code {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  background: var(--panel);
+  padding: 1px 6px;
+  border-radius: 5px;
+  color: var(--accent-ink);
+}

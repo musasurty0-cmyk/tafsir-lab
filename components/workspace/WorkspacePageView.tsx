@@ -13,7 +13,7 @@
  *   - progressLoading indicator in TopBar.
  */
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import type { Chapter, Verse } from "@/lib/types";
 import type { MemberRole } from "@/lib/services/workspaces.service";
@@ -29,6 +29,8 @@ import ModeAPage from "./ModeAPage";
 import EditorToolbar from "./editor/EditorToolbar";
 import type { Editor } from "@tiptap/core";
 import ModeBPage, { type PageUserPrefsData } from "./ModeBPage";
+import WhiteboardPage from "./WhiteboardPage";
+import { EditorContextProvider } from "./editor/EditorContext";
 import TafsirDrawer from "./TafsirDrawer";
 import TweaksPanel, { type TweaksState, TWEAKS_DEFAULTS } from "./TweaksPanel";
 import TourBubble  from "@/components/TourBubble";
@@ -473,6 +475,47 @@ export default function WorkspacePageView({
     );
   }
 
+  // ── Whiteboard (blank scratch canvas) ──────────────────────────────────
+  // AyahBlockView (inside rich containers) reads verses + onOpenTafsir from
+  // EditorContext, so the board is wrapped in the same provider Mode A uses.
+  const whiteboardNotes = useMemo(
+    () => notes.filter((n) => n.noteType === "textbox" && n.anchorType === "whiteboard"),
+    [notes],
+  );
+  const whiteboardCtx = useMemo(() => ({
+    pageId: activePageId, surahNumber, verses, notes, role,
+    personalProgress, groupProgress,
+    onNoteCreated: handleNoteCreated, onNoteUpdated: handleNoteUpdated, onNoteDeleted: handleNoteDeleted,
+    onProgressChange: handleProgressChange, onOpenTafsir: openTafsir,
+  }), [
+    activePageId, surahNumber, verses, notes, role, personalProgress, groupProgress,
+    handleNoteCreated, handleNoteUpdated, handleNoteDeleted, handleProgressChange, openTafsir,
+  ]);
+
+  function renderWhiteboard() {
+    if (!page) {
+      return (
+        <div className="mode-b-canvas mode-b-canvas--empty">
+          <p className="mode-b-empty-msg">No page selected.</p>
+        </div>
+      );
+    }
+    return (
+      <EditorContextProvider value={whiteboardCtx}>
+        <WhiteboardPage
+          pageId={activePageId}
+          notes={whiteboardNotes}
+          roomSocket={room.socket}
+          currentUserId={currentUserId}
+          currentUserName={currentUserName}
+          onNoteCreated={handleNoteCreated}
+          onNoteUpdated={handleNoteUpdated}
+          onNoteDeleted={handleNoteDeleted}
+        />
+      </EditorContextProvider>
+    );
+  }
+
   // ── Render ────────────────────────────────────────────────────────────
 
   return (
@@ -543,13 +586,15 @@ export default function WorkspacePageView({
           liveStatus={room.status}
           onExport={page ? handleExport : undefined}
         />
-        <EditorToolbar editor={activeEditor} open={formattingOpen && mode !== "canvas"} />
+        <EditorToolbar editor={activeEditor} open={formattingOpen && mode !== "canvas" && mode !== "board"} />
 
         <div className={`study-layout${mode === "split" ? " study-layout--split" : ""}`}>
 
           {mode === "editor" && renderModeA()}
 
           {mode === "canvas" && renderModeB()}
+
+          {mode === "board" && renderWhiteboard()}
 
           {mode === "split" && (
             <>
