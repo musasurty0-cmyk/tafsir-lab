@@ -289,3 +289,39 @@ export async function deletePage(
 
   await db.page.delete({ where: { id: pageId } });
 }
+
+// ─────────────────────────────────────────────────────────────
+// WORKSPACE WHITEBOARD (blank scratch canvas — its own page)
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * Sentinel surah slot that hosts the single per-workspace whiteboard page.
+ * Real surah boards are 1–114; this 0 slot is excluded from every surah
+ * listing (workspace home + home "last surah") so it never shows as a board.
+ */
+export const WHITEBOARD_SURAH = 0;
+
+/** Get-or-create the workspace's whiteboard page. Membership is required. */
+export async function getOrCreateWorkspaceWhiteboard(workspaceId: string, userId: string) {
+  await getWorkspaceWithRole(workspaceId, userId); // gate: throws for non-members
+
+  const surah = await db.workspaceSurah.upsert({
+    where:  { workspaceId_surahNumber: { workspaceId, surahNumber: WHITEBOARD_SURAH } },
+    update: {},
+    create: { workspaceId, surahNumber: WHITEBOARD_SURAH },
+    select: { id: true },
+  });
+
+  const existing = await db.page.findFirst({
+    where:   { workspaceSurahId: surah.id },
+    orderBy: { orderIndex: "asc" },
+    select:  { id: true },
+  });
+  if (existing) return { pageId: existing.id };
+
+  const page = await db.page.create({
+    data: { workspaceSurahId: surah.id, title: "Whiteboard", orderIndex: 0, status: "draft", createdById: userId },
+    select: { id: true },
+  });
+  return { pageId: page.id };
+}

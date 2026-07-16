@@ -55,7 +55,7 @@ export default async function HomePage() {
     }).catch((e) => { console.error("[home] user query failed:", e); throw e; }),
 
     db.workspaceSurah.findMany({
-      where:    { workspace: { members: { some: { userId } } } },
+      where:    { workspace: { members: { some: { userId } } }, surahNumber: { gte: 1 } }, // skip whiteboard sentinel
       orderBy:  { startedAt: "desc" },
       distinct: ["workspaceId"],
       select:   { workspaceId: true, surahNumber: true, startedAt: true },

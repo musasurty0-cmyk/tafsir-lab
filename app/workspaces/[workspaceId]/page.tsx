@@ -35,7 +35,7 @@ export default async function WorkspaceHomePage({
     WorkspacesService.getWorkspaceWithRole(workspaceId, userId),
     fetchChapters(),
     db.workspaceSurah.findMany({
-      where: { workspaceId },
+      where: { workspaceId, surahNumber: { gte: 1 } }, // exclude the whiteboard sentinel (0)
       select: {
         id: true,
         surahNumber: true,

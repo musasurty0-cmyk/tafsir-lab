@@ -11,7 +11,7 @@
  * Rail is rendered here (fetches workspaces itself).
  */
 
-import { useState, useCallback, useRef, useEffect, useLayoutEffect, useMemo } from "react";
+import { useState, useCallback, useRef, useEffect, useLayoutEffect } from "react";
 import { useRouter } from "next/navigation";
 import type { Chapter } from "@/lib/types";
 import type { MemberRole } from "@/lib/services/workspaces.service";
@@ -107,16 +107,6 @@ export default function WorkspaceHome({
   );
 
   const canManageBoards = isAdmin(role);
-
-  // Blank whiteboard target: the lowest-numbered started surah's first page,
-  // opened directly in board mode. The board surface is separate from that
-  // page's study content, so it works as the workspace scratch canvas.
-  const boardTarget = useMemo(() => {
-    const s = workspaceSurahs
-      .filter((x) => x.firstPageId)
-      .sort((a, b) => a.surahNumber - b.surahNumber)[0];
-    return s ? `/workspaces/${workspaceId}/surahs/${s.surahNumber}/pages/${s.firstPageId}?mode=board` : null;
-  }, [workspaceSurahs, workspaceId]);
 
   const handleCardClick = useCallback(
     async (chapter: Chapter) => {
@@ -246,9 +236,8 @@ export default function WorkspaceHome({
             </button>
             <button
               className="ws-new-btn ws-new-btn--ghost"
-              title={boardTarget ? "Blank whiteboard — verses, tafsīr & pen" : "Start a surah first to open a whiteboard"}
-              disabled={!boardTarget}
-              onClick={() => boardTarget && router.push(boardTarget)}
+              title="Blank whiteboard — verses, tafsīr & pen"
+              onClick={() => router.push(`/workspaces/${workspaceId}/whiteboard`)}
             >
               ◇ Blank board
             </button>
