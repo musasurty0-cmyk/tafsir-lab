@@ -25,13 +25,14 @@ interface Props {
   workspaceId:     string;
   workspaceName:   string;
   pageId:          string;
+  boardTitle?:     string;
   role:            MemberRole;
   currentUserId:   string;
   currentUserName: string;
 }
 
 export default function WhiteboardShell({
-  workspaceId, workspaceName, pageId, role, currentUserId, currentUserName,
+  workspaceId, workspaceName, pageId, boardTitle, role, currentUserId, currentUserName,
 }: Props) {
   const [notes, setNotes] = useState<NoteData[]>([]);
   const recentCreatedRef  = useRef<Map<string, number>>(new Map());
@@ -109,7 +110,7 @@ export default function WhiteboardShell({
         <Link href={`/workspaces/${workspaceId}`} className="whiteboard-shell-back">
           <ChevronLeft size={16} /> {workspaceName}
         </Link>
-        <span className="whiteboard-shell-title">◇ Whiteboard</span>
+        <span className="whiteboard-shell-title">◇ {boardTitle ?? "Whiteboard"}</span>
         <div className="whiteboard-shell-presence">
           {others.slice(0, 4).map((p, i) => (
             <span key={i} className="whiteboard-shell-pip" style={{ background: p.color }} title={p.name} />

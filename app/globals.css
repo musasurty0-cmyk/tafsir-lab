@@ -7716,3 +7716,60 @@ input, textarea { font: inherit; color: inherit; }
   display: flex;
   position: relative;
 }
+
+/* ── Boards workspace home (kind: boards) ────────────────────────────────── */
+.ws-home-kind-badge {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--accent-ink);
+  background: var(--accent-soft);
+  padding: 3px 9px;
+  border-radius: 6px;
+  vertical-align: middle;
+  margin-left: 8px;
+}
+.boards-new-row { margin: 24px 0 20px; }
+.boards-new-btn { font-size: 14px; }
+.boards-new-form { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.boards-new-input {
+  flex: 1 1 320px;
+  min-width: 240px;
+  font-size: 15px;
+  padding: 10px 14px;
+  border: 1.5px solid var(--accent);
+  border-radius: 10px;
+  background: var(--bg-elev);
+  color: var(--ink);
+  outline: none;
+}
+.boards-empty {
+  border: 1px dashed var(--line-2);
+  border-radius: var(--radius-lg);
+  padding: 48px 24px;
+  text-align: center;
+}
+.boards-empty-title { font-family: var(--font-serif); font-size: 20px; font-weight: 600; color: var(--ink-2); margin: 0 0 8px; }
+.boards-empty-body  { font-size: 14px; color: var(--ink-3); margin: 0 auto; max-width: 420px; line-height: 1.6; }
+.boards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px;
+}
+.board-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 120px;
+  padding: 18px 20px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--bg-elev);
+  transition: border-color .15s, box-shadow .15s, transform .15s;
+}
+.board-card:hover { border-color: var(--accent); box-shadow: var(--shadow-md); transform: translateY(-2px); }
+.board-card-icon  { font-size: 22px; color: var(--accent-ink); }
+.board-card-title { font-family: var(--font-serif); font-size: 19px; font-weight: 600; color: var(--ink); margin-top: auto; }
+.board-card-date  { font-family: var(--font-mono); font-size: 11.5px; color: var(--ink-4); letter-spacing: 0.03em; }

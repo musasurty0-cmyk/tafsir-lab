@@ -21,6 +21,7 @@ export default function NewWorkspaceModal({ onClose }: Props) {
 
   const [name,    setName]    = useState("");
   const [type,    setType]    = useState<"private" | "group">("private");
+  const [kind,    setKind]    = useState<"study" | "boards">("study");
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState<string | null>(null);
 
@@ -46,7 +47,7 @@ export default function NewWorkspaceModal({ onClose }: Props) {
       const res = await fetch("/api/workspaces", {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ name: trimmed, type }),
+        body:    JSON.stringify({ name: trimmed, type, kind }),
       });
 
       if (!res.ok) {
@@ -110,6 +111,37 @@ export default function NewWorkspaceModal({ onClose }: Props) {
               <div>
                 <div className="modal-type-name">Group</div>
                 <div className="modal-type-desc">Shared with members</div>
+              </div>
+            </button>
+          </div>
+
+          <label className="modal-label" style={{ marginTop: 18 }}>What is it for?</label>
+          <div className="modal-type-row">
+            <button
+              type="button"
+              className="modal-type-btn"
+              data-active={kind === "study" ? "true" : "false"}
+              onClick={() => setKind("study")}
+              disabled={loading}
+            >
+              <span className="modal-type-icon">📖</span>
+              <div>
+                <div className="modal-type-name">Qurʾān study</div>
+                <div className="modal-type-desc">All 114 sūrahs + a blank board</div>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              className="modal-type-btn"
+              data-active={kind === "boards" ? "true" : "false"}
+              onClick={() => setKind("boards")}
+              disabled={loading}
+            >
+              <span className="modal-type-icon">◇</span>
+              <div>
+                <div className="modal-type-name">Blank boards</div>
+                <div className="modal-type-desc">Several free whiteboards, e.g. a weekly class</div>
               </div>
             </button>
           </div>

@@ -23,7 +23,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const { userId } = await getSession();
-    const body = await req.json() as { name?: unknown; type?: unknown };
+    const body = await req.json() as { name?: unknown; type?: unknown; kind?: unknown };
 
     if (!body.name || typeof body.name !== "string" || !body.name.trim()) {
       return NextResponse.json({ error: "name is required" }, { status: 400 });
@@ -34,11 +34,13 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
+    const kind = body.kind === "boards" ? "boards" : "study";
 
     const workspace = await WorkspacesService.createWorkspace(
       userId,
       body.name,
       body.type,
+      kind,
     );
     return NextResponse.json({ workspace }, { status: 201 });
   } catch (err) {

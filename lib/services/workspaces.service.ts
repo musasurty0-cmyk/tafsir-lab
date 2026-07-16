@@ -82,11 +82,11 @@ export function capabilitiesFor(role: MemberRole, membersCanManagePages = false)
 export async function getWorkspaceWithRole(
   workspaceId: string,
   userId: string
-): Promise<{ workspace: { id: string; name: string; type: string; ownerId: string; membersCanManagePages: boolean }; role: MemberRole }> {
+): Promise<{ workspace: { id: string; name: string; type: string; kind: string; ownerId: string; membersCanManagePages: boolean }; role: MemberRole }> {
   const [workspace, membership] = await Promise.all([
     db.workspace.findUnique({
       where: { id: workspaceId },
-      select: { id: true, name: true, type: true, ownerId: true, membersCanManagePages: true },
+      select: { id: true, name: true, type: true, kind: true, ownerId: true, membersCanManagePages: true },
     }),
     db.workspaceMember.findUnique({
       where: { workspaceId_userId: { workspaceId, userId } },
@@ -136,14 +136,25 @@ export async function createWorkspace(
   userId: string,
   name: string,
   type: "private" | "group",
+  kind: "study" | "boards" = "study",
 ) {
   const workspace = await db.$transaction(async (tx) => {
     const ws = await tx.workspace.create({
-      data: { name: name.trim(), type, ownerId: userId },
+      data: { name: name.trim(), type, kind, ownerId: userId },
     });
     await tx.workspaceMember.create({
       data: { workspaceId: ws.id, userId, role: "owner" },
     });
+    // Boards workspace: scaffold the sentinel board container + a first board
+    // so the user lands on something usable instead of an empty list.
+    if (kind === "boards") {
+      const container = await tx.workspaceSurah.create({
+        data: { workspaceId: ws.id, surahNumber: 0 },
+      });
+      await tx.page.create({
+        data: { workspaceSurahId: container.id, title: "Board 1", orderIndex: 0, status: "draft", createdById: userId },
+      });
+    }
     return ws;
   });
 

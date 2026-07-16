@@ -39,7 +39,10 @@ model User {
 model Workspace {
   id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name       String
-  type       String   // 'private' | 'group'
+  type       String   // 'private' | 'group'  (visibility)
+  // 'study'  → 114-surah grid + a single blank board (default)
+  // 'boards' → no surahs; several free blank boards (e.g. a weekly class)
+  kind       String   @default("study")
   ownerId    String   @db.Uuid
   avatarUrl  String?
   inviteCode String?  @unique

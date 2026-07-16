@@ -1,18 +1,16 @@
 /**
- * /workspaces/[workspaceId]/whiteboard — the workspace's blank whiteboard.
+ * /workspaces/[workspaceId]/whiteboard — the single default board.
  *
- * A standalone scratch canvas (not tied to any surah). Its notes + ink are
- * stored on a hidden page under a sentinel board (surahNumber 0), which is
- * excluded from every surah listing.
+ * Study workspaces have one blank board reached from the "Blank board" button;
+ * this get-or-creates it and redirects to its canonical /whiteboard/[boardId]
+ * URL. Boards workspaces navigate straight to /whiteboard/[boardId] instead.
  */
 
 export const dynamic = "force-dynamic";
 
+import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
-import { db } from "@/lib/db";
-import * as WorkspacesService from "@/lib/services/workspaces.service";
 import * as PagesService from "@/lib/services/pages.service";
-import WhiteboardShell from "@/components/workspace/WhiteboardShell";
 
 export default async function WhiteboardRoute({
   params,
@@ -21,21 +19,6 @@ export default async function WhiteboardRoute({
 }) {
   const { workspaceId } = await params;
   const { userId } = await getSession();
-
-  const [{ workspace, role }, { pageId }, currentUser] = await Promise.all([
-    WorkspacesService.getWorkspaceWithRole(workspaceId, userId),
-    PagesService.getOrCreateWorkspaceWhiteboard(workspaceId, userId),
-    db.user.findUnique({ where: { id: userId }, select: { name: true } }),
-  ]);
-
-  return (
-    <WhiteboardShell
-      workspaceId={workspaceId}
-      workspaceName={workspace.name}
-      pageId={pageId}
-      role={role}
-      currentUserId={userId}
-      currentUserName={currentUser?.name ?? "Anonymous"}
-    />
-  );
+  const { pageId } = await PagesService.getOrCreateWorkspaceWhiteboard(workspaceId, userId);
+  redirect(`/workspaces/${workspaceId}/whiteboard/${pageId}`);
 }

@@ -13,6 +13,8 @@ import * as WorkspacesService from "@/lib/services/workspaces.service";
 import { db } from "@/lib/db";
 import { fetchChapters } from "@/lib/quran-api";
 import WorkspaceHome from "@/components/workspace/WorkspaceHome";
+import BoardsHome from "@/components/workspace/BoardsHome";
+import * as PagesService from "@/lib/services/pages.service";
 
 export type WorkspaceSurahSummary = {
   id: string;
@@ -31,8 +33,22 @@ export default async function WorkspaceHomePage({
   const { workspaceId } = await params;
   const { userId } = await getSession();
 
-  const [{ workspace, role }, chapters, rawSurahs] = await Promise.all([
-    WorkspacesService.getWorkspaceWithRole(workspaceId, userId),
+  // Boards workspace → the boards list is home (no surah grid).
+  const gate = await WorkspacesService.getWorkspaceWithRole(workspaceId, userId);
+  if (gate.workspace.kind === "boards") {
+    const boards = await PagesService.listWorkspaceBoards(workspaceId, userId);
+    return (
+      <BoardsHome
+        workspaceId={workspaceId}
+        workspace={gate.workspace}
+        role={gate.role}
+        boards={boards.map((b) => ({ id: b.id, title: b.title, createdAt: b.createdAt }))}
+      />
+    );
+  }
+
+  const { workspace, role } = gate;
+  const [chapters, rawSurahs] = await Promise.all([
     fetchChapters(),
     db.workspaceSurah.findMany({
       where: { workspaceId, surahNumber: { gte: 1 } }, // exclude the whiteboard sentinel (0)

@@ -325,3 +325,55 @@ export async function getOrCreateWorkspaceWhiteboard(workspaceId: string, userId
   });
   return { pageId: page.id };
 }
+
+/** List all boards (whiteboards) in a workspace, newest first. */
+export async function listWorkspaceBoards(workspaceId: string, userId: string) {
+  await getWorkspaceWithRole(workspaceId, userId);
+  const container = await db.workspaceSurah.findUnique({
+    where:  { workspaceId_surahNumber: { workspaceId, surahNumber: WHITEBOARD_SURAH } },
+    select: { id: true },
+  });
+  if (!container) return [];
+  return db.page.findMany({
+    where:   { workspaceSurahId: container.id },
+    orderBy: { orderIndex: "asc" },
+    select:  { id: true, title: true, createdAt: true },
+  });
+}
+
+/** Create a new named board in a workspace. */
+export async function createWorkspaceBoard(workspaceId: string, userId: string, title: string) {
+  await getWorkspaceWithRole(workspaceId, userId);
+  const container = await db.workspaceSurah.upsert({
+    where:  { workspaceId_surahNumber: { workspaceId, surahNumber: WHITEBOARD_SURAH } },
+    update: {},
+    create: { workspaceId, surahNumber: WHITEBOARD_SURAH },
+    select: { id: true },
+  });
+  const last = await db.page.findFirst({
+    where:   { workspaceSurahId: container.id },
+    orderBy: { orderIndex: "desc" },
+    select:  { orderIndex: true },
+  });
+  const page = await db.page.create({
+    data: {
+      workspaceSurahId: container.id,
+      title: title.trim() || "Untitled board",
+      orderIndex: (last?.orderIndex ?? -1) + 1,
+      status: "draft",
+      createdById: userId,
+    },
+    select: { id: true, title: true },
+  });
+  return page;
+}
+
+/** Validate that a board page belongs to this workspace, returning its title. */
+export async function getWorkspaceBoard(workspaceId: string, boardId: string, userId: string) {
+  await getWorkspaceWithRole(workspaceId, userId);
+  const page = await db.page.findFirst({
+    where:  { id: boardId, workspaceSurah: { workspaceId, surahNumber: WHITEBOARD_SURAH } },
+    select: { id: true, title: true },
+  });
+  return page; // null when not found / not a board of this workspace
+}
