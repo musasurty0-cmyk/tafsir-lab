@@ -109,6 +109,14 @@ export default function WorkspacePageView({
   const [tweaks, setTweaks]               = useState<TweaksState>(TWEAKS_DEFAULTS);
   const [showTweaks, setShowTweaks]       = useState(false);
   const [mode, setMode]                   = useState<ViewMode>("editor");
+  // Deep-link: ?mode=board (from the surah grid's Blank board button) opens
+  // this page straight into the whiteboard.
+  useEffect(() => {
+    try {
+      const m = new URLSearchParams(window.location.search).get("mode");
+      if (m === "board" || m === "canvas" || m === "split" || m === "editor") setMode(m as ViewMode);
+    } catch { /* ignore */ }
+  }, []);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [formattingOpen, setFormattingOpen] = useState(false);
   const [activeEditor, setActiveEditor]     = useState<Editor | null>(null);

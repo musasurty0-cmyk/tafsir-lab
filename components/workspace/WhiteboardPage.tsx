@@ -267,7 +267,9 @@ export default function WhiteboardPage({
     setViewport(next); patchViewport(next);
   };
 
-  const empty = notes.length === 0;
+  // Hint shows only on a truly blank board — it disappears the moment a
+  // container is added OR a stroke exists (canUndo reflects own strokes).
+  const empty = notes.length === 0 && !canUndo;
 
   return (
     <div

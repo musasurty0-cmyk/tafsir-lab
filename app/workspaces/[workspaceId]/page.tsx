@@ -20,6 +20,7 @@ export type WorkspaceSurahSummary = {
   startedAt: Date;
   pageCount: number;
   publishedCount: number;
+  firstPageId: string | null;
 };
 
 export default async function WorkspaceHomePage({
@@ -41,8 +42,8 @@ export default async function WorkspaceHomePage({
         startedAt: true,
         _count: { select: { pages: true } },
         pages: {
-          where: { status: "published" },
-          select: { id: true },
+          orderBy: { orderIndex: "asc" },
+          select: { id: true, status: true },
         },
       },
     }),
@@ -53,7 +54,8 @@ export default async function WorkspaceHomePage({
     surahNumber: s.surahNumber,
     startedAt: s.startedAt,
     pageCount: s._count.pages,
-    publishedCount: s.pages.length,
+    publishedCount: s.pages.filter((p) => p.status === "published").length,
+    firstPageId: s.pages[0]?.id ?? null,
   }));
 
   return (
