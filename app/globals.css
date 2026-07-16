@@ -5024,11 +5024,13 @@ input, textarea { font: inherit; color: inherit; }
   background: oklch(0.1 0.005 250 / 0.45);
   backdrop-filter: blur(4px);
   display: flex;
-  align-items: center;
+  align-items: flex-start;          /* scroll from the top when the card is tall */
   justify-content: center;
   z-index: 9999;
-  padding: 16px;
+  padding: 6vh 16px;
+  overflow-y: auto;                 /* never clip a tall modal on tablet/phone */
 }
+.modal-card { margin: auto 0; max-height: none; }
 .modal-card {
   background: var(--bg-elev);
   border: 1px solid var(--line);
