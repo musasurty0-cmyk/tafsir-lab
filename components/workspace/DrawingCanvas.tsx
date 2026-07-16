@@ -666,9 +666,11 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     const parent = containerRef.current?.parentElement; // .mode-b-canvas
     if (!parent) return;
 
-    function penTool(): "pen" | "highlight" | "arrow" | "eraser" {
+    // Stylus draws even in the hand (pan) tool, but the TEXT tool is explicit —
+    // a pen tap there must place a text box, not draw.
+    function penTool(): "pen" | "highlight" | "arrow" | "eraser" | "text" {
       const t = toolRef.current;
-      if (t === "hand" || t === "text") return "pen";
+      if (t === "hand") return "pen";
       return t;
     }
 
@@ -682,6 +684,8 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
 
       const eff = penTool();
       const [wx, wy] = toWorld(e.clientX, e.clientY);
+      // Text tool: a pen tap drops a container instead of drawing.
+      if (eff === "text") { parent!.dataset.penActive = ""; onTextPlace?.(wx, wy); return; }
       if (eff === "eraser") { eraseAt(wx, wy); return; }
 
       try { parent!.setPointerCapture(e.pointerId); } catch { /* ok */ }

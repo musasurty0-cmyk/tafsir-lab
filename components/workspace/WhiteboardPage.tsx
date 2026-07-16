@@ -108,6 +108,13 @@ export default function WhiteboardPage({
     setTool("hand"); // let the click reach the fresh box for editing
   }, [currentUserId, currentUserName, onNoteCreated]);
 
+  // Refs so the native touch handlers (stable effect) see the current tool +
+  // placement callback without re-subscribing.
+  const toolRef = useRef(tool);
+  useEffect(() => { toolRef.current = tool; }, [tool]);
+  const createTempRef = useRef(createTempAt);
+  useEffect(() => { createTempRef.current = createTempAt; }, [createTempAt]);
+
   const persistTemp = useCallback((tempId: string, content: object, at: { x: number; y: number }) => {
     const post = () =>
       fetch(`/api/pages/${pageId}/notes`, {
@@ -221,6 +228,15 @@ export default function WhiteboardPage({
     }
     function onEnd(e: TouchEvent) {
       if (!isInteractive(e)) e.preventDefault();
+      // Text tool: a single-finger TAP (barely moved) drops a container.
+      if (toolRef.current === "text" && pts.size === 1 && panStart && !isInteractive(e)) {
+        const t = e.changedTouches[0];
+        if (t && Math.hypot(t.clientX - panStart.tx, t.clientY - panStart.ty) < 12) {
+          const rect = el.getBoundingClientRect();
+          const vp = viewportRef.current;
+          createTempRef.current((t.clientX - rect.left - vp.x) / vp.zoom, (t.clientY - rect.top - vp.y) / vp.zoom);
+        }
+      }
       for (const t of e.changedTouches) pts.delete(t.identifier);
       if (pts.size < 2) pinchStart = null;
       if (pts.size === 1 && panStart === null) startPan();
