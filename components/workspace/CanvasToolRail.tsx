@@ -36,6 +36,7 @@ export const HIGHLIGHT_COLORS = [
 ];
 
 export const PEN_WIDTHS       = [
+  { label: "F",  value: 0.5 },   // fine-liner — for writing while zoomed in
   { label: "XS", value: 1   },
   { label: "S",  value: 1.5 },
   { label: "M",  value: 2.5 },
@@ -50,8 +51,8 @@ export const HIGHLIGHT_WIDTHS = [
 ];
 
 // Fine-adjust slider ranges (px)
-const PEN_RANGE       = { min: 0.5, max: 14, step: 0.5 };
-const HIGHLIGHT_RANGE = { min: 6,   max: 40, step: 1   };
+const PEN_RANGE       = { min: 0.25, max: 14, step: 0.25 };
+const HIGHLIGHT_RANGE = { min: 6,    max: 40, step: 1    };
 
 // ── Exported defaults ─────────────────────────────────────────────────────
 

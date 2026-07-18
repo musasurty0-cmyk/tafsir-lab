@@ -84,14 +84,19 @@ import { getStroke } from "perfect-freehand";
 
 export function pressureWidth(base: number, p: number): number {
   // Kept for callers that need a scalar width from pressure.
-  return Math.max(1.5, base * (0.45 + 1.1 * p));
+  // Floor is PROPORTIONAL for thin pens (fine-liner at high zoom) but keeps
+  // the old 1.5px crispness clamp once the base width is big enough for it.
+  return Math.max(Math.min(1.5, base * 0.55), base * (0.45 + 1.1 * p));
 }
 
 /** perfect-freehand options for a given base width. streamline smooths
  *  input jitter; thinning maps pressure to width. */
 function freehandOptions(width: number) {
   return {
-    size:             Math.max(2.5, width * 1.9),
+    // Proportional floor: a 0.25–1 width pen must actually render thin
+    // (users zoom far in to write); the old absolute 2.5 floor made every
+    // "thin" setting identical. Widths ≥ ~1.3 keep the crispness clamp.
+    size:             Math.max(Math.min(2.5, width * 2.6), width * 1.9),
     thinning:         0.55,
     smoothing:        0.6,
     streamline:       0.45,

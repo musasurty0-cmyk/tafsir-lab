@@ -12,6 +12,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { MemberRole } from "@/lib/services/workspaces.service";
 import WorkspaceSettings from "./WorkspaceSettings";
+import Rail from "./Rail";
 import NewWorkspaceModal from "@/components/NewWorkspaceModal";
 
 interface Board { id: string; title: string; createdAt: Date | string; }
@@ -92,6 +93,10 @@ export default function BoardsHome({ workspaceId, workspace, role, boards: initi
 
   return (
     <div className="workspace-home">
+      {/* .workspace-home is a grid of [rail | content] — without the Rail the
+          content collapses into the narrow rail column. */}
+      <Rail activeWorkspaceId={workspaceId} />
+
       <div className="workspace-home-content">
         <div className="ws-home-header">
           <div className="ws-home-titles">
