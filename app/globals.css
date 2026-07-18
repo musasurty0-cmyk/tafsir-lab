@@ -7430,8 +7430,15 @@ input, textarea { font: inherit; color: inherit; }
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 999px;
-  flex: none;
+  /* 33 languages — scroll horizontally instead of overflowing the bar */
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  white-space: nowrap;
 }
+.drawer-lang-chips::-webkit-scrollbar { display: none; }
+.drawer-lang-chip { flex: none; }
 .drawer-lang-chip {
   padding: 2px 9px;
   border-radius: 999px;
@@ -7775,3 +7782,35 @@ input, textarea { font: inherit; color: inherit; }
 .board-card-icon  { font-size: 22px; color: var(--accent-ink); }
 .board-card-title { font-family: var(--font-serif); font-size: 19px; font-weight: 600; color: var(--ink); margin-top: auto; }
 .board-card-date  { font-family: var(--font-mono); font-size: 11.5px; color: var(--ink-4); letter-spacing: 0.03em; }
+
+/* ── Login: hidden demo-code row (revealed by tapping the logo) ──────────── */
+.login-demo-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  animation: slash-pop 0.18s var(--ease-flow) both;
+}
+.login-demo-input {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  letter-spacing: 0.2em;
+  padding: 10px 14px;
+  border: 1.5px solid var(--line-2);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--ink);
+  outline: none;
+}
+.login-demo-input:focus { border-color: var(--accent); }
+.login-demo-go {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--bg);
+  background: var(--ink);
+  padding: 10px 16px;
+  border-radius: 10px;
+  white-space: nowrap;
+}
+.login-demo-go:disabled { opacity: 0.5; }

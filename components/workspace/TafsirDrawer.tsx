@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useMemo } from "react";
 import { X } from "lucide-react";
 import { useAppStore } from "@/lib/store";
+import { TAFSIR_LANGUAGE_NAMES } from "@/lib/tafsir/spa5k-catalog";
 import type { Verse } from "@/lib/types";
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -56,7 +57,8 @@ const RECITERS = [
 const LS_SOURCE_KEY = "tl-tafsir-source";
 const LS_LANG_KEY   = "tl-tafsir-lang";
 
-type LangFilter = "all" | "en" | "ar";
+/** "all" or an ISO language code present in the source list. */
+type LangFilter = string;
 
 // ── Component ──────────────────────────────────────────────────────────────
 
@@ -73,8 +75,7 @@ export default function TafsirDrawer({ open, verseKey, verses, onClose }: Props)
   );
   const [langFilter,  setLangFilter] = useState<LangFilter>(() => {
     if (typeof window === "undefined") return "all";
-    const stored = localStorage.getItem(LS_LANG_KEY);
-    return stored === "en" || stored === "ar" ? stored : "all";
+    return localStorage.getItem(LS_LANG_KEY) ?? "all";
   });
 
   // ── Fetch state ──────────────────────────────────────────────────────────
@@ -108,6 +109,9 @@ export default function TafsirDrawer({ open, verseKey, verses, onClose }: Props)
         if (stored && !data.sources.find((s) => s.slug === stored)) {
           setSourceSlug(data.sources[0].slug);
         }
+        // Stored language filter no longer present → fall back to All
+        setLangFilter((cur) =>
+          cur !== "all" && !data.sources!.some((s) => s.language === cur) ? "all" : cur);
       })
       .catch(() => {/* non-fatal */});
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -119,7 +123,18 @@ export default function TafsirDrawer({ open, verseKey, verses, onClose }: Props)
     localStorage.setItem(LS_SOURCE_KEY, slug);
   }
 
-  // ── Language filter (All / English / Arabic) ─────────────────────────────
+  // ── Language filter — dynamic: every language present in the catalog ─────
+  // English + Arabic pinned first, the rest by how many sources they have.
+  const languages = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const s of sources) counts.set(s.language, (counts.get(s.language) ?? 0) + 1);
+    const langs = [...counts.entries()].sort((a, b) => {
+      const pin = (l: string) => (l === "en" ? 0 : l === "ar" ? 1 : 2);
+      return pin(a[0]) - pin(b[0]) || b[1] - a[1] || a[0].localeCompare(b[0]);
+    });
+    return langs; // [code, count][]
+  }, [sources]);
+
   const filteredSources = useMemo(
     () => langFilter === "all" ? sources : sources.filter((s) => s.language === langFilter),
     [sources, langFilter],
@@ -201,14 +216,22 @@ export default function TafsirDrawer({ open, verseKey, verses, onClose }: Props)
       <div className="drawer-source-bar">
         <span className="drawer-source-label">Source</span>
         <div className="drawer-lang-chips" role="tablist" aria-label="Tafsir language">
-          {([["all", "All"], ["en", "EN"], ["ar", "AR"]] as [LangFilter, string][]).map(([id, label]) => (
+          <button
+            className="drawer-lang-chip"
+            data-active={langFilter === "all" ? "true" : "false"}
+            onClick={() => switchLang("all")}
+          >
+            All
+          </button>
+          {languages.map(([code, count]) => (
             <button
-              key={id}
+              key={code}
               className="drawer-lang-chip"
-              data-active={langFilter === id ? "true" : "false"}
-              onClick={() => switchLang(id)}
+              data-active={langFilter === code ? "true" : "false"}
+              onClick={() => switchLang(code)}
+              title={`${TAFSIR_LANGUAGE_NAMES[code] ?? code} · ${count} source${count !== 1 ? "s" : ""}`}
             >
-              {label}
+              {TAFSIR_LANGUAGE_NAMES[code] ?? code.toUpperCase()}
             </button>
           ))}
         </div>

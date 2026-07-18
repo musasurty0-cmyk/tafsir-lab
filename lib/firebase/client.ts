@@ -9,7 +9,7 @@
  */
 
 import { initializeApp, getApps, type FirebaseApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, type Auth } from "firebase/auth";
+import { getAuth, GoogleAuthProvider, OAuthProvider, type Auth } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey:     process.env.NEXT_PUBLIC_FIREBASE_API_KEY!,
@@ -35,3 +35,12 @@ export function getFirebaseAuth(): Auth {
 }
 
 export const googleProvider = new GoogleAuthProvider();
+
+/**
+ * Microsoft sign-in (work/school accounts like @youthmajlis.org AND personal
+ * accounts). Requires the Microsoft provider to be enabled in the Firebase
+ * Console (Authentication → Sign-in method) with an Azure app registration.
+ * tenant "common" = any Azure AD org + personal Microsoft accounts.
+ */
+export const microsoftProvider = new OAuthProvider("microsoft.com");
+microsoftProvider.setCustomParameters({ prompt: "select_account", tenant: "common" });

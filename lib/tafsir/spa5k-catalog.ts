@@ -1,5 +1,5 @@
 /**
- * spa5k/tafsir_api edition catalog — English + Arabic editions.
+ * spa5k/tafsir_api edition catalog — ALL languages (115 editions, 33 languages).
  *
  * Generated from https://cdn.jsdelivr.net/gh/spa5k/tafsir_api@main/tafsir/editions.json
  * (duplicated language+name pairs collapsed to their first slug).
@@ -12,8 +12,46 @@ export interface Spa5kEdition {
   slug:       string;
   name:       string;
   authorName: string;
-  language:   "en" | "ar";
+  /** ISO 639-1 code, e.g. "en", "ar", "ur" */
+  language:   string;
 }
+
+/** Display names for every language code in the catalog. */
+export const TAFSIR_LANGUAGE_NAMES: Record<string, string> = {
+  "ar": "Arabic",
+  "as": "Assamese",
+  "az": "Azerbaijani",
+  "bn": "Bengali",
+  "bs": "Bosnian",
+  "en": "English",
+  "es": "Spanish",
+  "fa": "Persian",
+  "ff": "Fulah",
+  "fr": "French",
+  "hi": "Hindi",
+  "id": "Indonesian",
+  "it": "Italian",
+  "ja": "Japanese",
+  "km": "Khmer",
+  "ku": "Kurdish",
+  "ky": "Kyrgyz",
+  "ml": "Malayalam",
+  "ps": "Pashto",
+  "ru": "Russian",
+  "si": "Sinhala",
+  "sq": "Albanian",
+  "sr": "Serbian",
+  "ta": "Tamil",
+  "te": "Telugu",
+  "th": "Thai",
+  "tl": "Tagalog",
+  "tr": "Turkish",
+  "ug": "Uyghur",
+  "ur": "Urdu",
+  "uz": "Uzbek",
+  "vi": "Vietnamese",
+  "zh": "Chinese",
+};
 
 export const SPA5K_EDITIONS: Spa5kEdition[] = [
   { slug: "abu-bakr-jabir-al-jazairi", name: "Abu Bakr Jabir Al-Jazairi", authorName: "Abu Bakr Jabir Al-Jazairi", language: "ar" },
@@ -71,6 +109,14 @@ export const SPA5K_EDITIONS: Spa5kEdition[] = [
   { slug: "tafsir-makhi", name: "Tafsir Makhi", authorName: "Tafsir Makhi", language: "ar" },
   { slug: "ar-tafsir-muyassar", name: "Tafsir Muyassar", authorName: "المیسر", language: "ar" },
   { slug: "tahlil-kalimat-al-qur-an", name: "Tahlil Kalimat al-Qur'an", authorName: "Tahlil Kalimat al-Qur'an", language: "ar" },
+  { slug: "assamese-mokhtasar", name: "Assamese Abridged Explanation of the Quran", authorName: "Assamese Abridged Explanation of the Quran", language: "as" },
+  { slug: "azeri-mokhtasar", name: "Azeri Mokhtasar", authorName: "Azeri Mokhtasar", language: "az" },
+  { slug: "bengali-mokhtasar", name: "Bengali Abridged Explanation of the Quran", authorName: "Bengali Abridged Explanation of the Quran", language: "bn" },
+  { slug: "bn-tafseer-ibn-e-kaseer", name: "Tafseer ibn Kathir", authorName: "Tawheed Publication", language: "bn" },
+  { slug: "bn-tafsir-abu-bakr-zakaria", name: "Tafsir Abu Bakr Zakaria", authorName: "King Fahd Quran Printing Complex", language: "bn" },
+  { slug: "bn-tafsir-ahsanul-bayaan", name: "Tafsir Ahsanul Bayaan", authorName: "Bayaan Foundation", language: "bn" },
+  { slug: "bn-tafisr-fathul-majid", name: "Tafsir Fathul Majid", authorName: "AbdulRahman Bin Hasan Al-Alshaikh", language: "bn" },
+  { slug: "bosnian-mokhtasar", name: "Bosnian Abridged Explanation of the Quran", authorName: "Bosnian Abridged Explanation of the Quran", language: "bs" },
   { slug: "en-al-qushairi-tafsir", name: "Al Qushairi Tafsir", authorName: "Al Qushairi Tafsir", language: "en" },
   { slug: "en-al-jalalayn", name: "Al-Jalalayn", authorName: "Al-Jalalayn", language: "en" },
   { slug: "en-asbab-al-nuzul-by-al-wahidi", name: "Asbab Al-Nuzul by Al-Wahidi", authorName: "Asbab Al-Nuzul by Al-Wahidi", language: "en" },
@@ -83,4 +129,44 @@ export const SPA5K_EDITIONS: Spa5kEdition[] = [
   { slug: "en-tafisr-ibn-kathir", name: "Tafsir Ibn Kathir", authorName: "Hafiz Ibn Kathir", language: "en" },
   { slug: "en-tafsir-ibn-abbas", name: "Tanwîr al-Miqbâs min Tafsîr Ibn ‘Abbâs", authorName: "Tanwîr al-Miqbâs min Tafsîr Ibn ‘Abbâs", language: "en" },
   { slug: "en-tazkirul-quran", name: "Tazkirul Quran(Maulana Wahiduddin Khan)", authorName: "Maulana Wahid Uddin Khan", language: "en" },
+  { slug: "spanish-mokhtasar", name: "Spanish Abridged Explanation of the Quran", authorName: "Spanish Abridged Explanation of the Quran", language: "es" },
+  { slug: "persian-mokhtasar", name: "Persian Al-Mukhtasar in interpreting the Noble Quran", authorName: "Persian Al-Mukhtasar in interpreting the Noble Quran", language: "fa" },
+  { slug: "fr-tafsir-as-saadi", name: "Tafsir As-Saadi - Persian", authorName: "Tafsir As-Saadi - Persian", language: "fa" },
+  { slug: "fulani-mokhtasar", name: "Fulani Mokhtasar", authorName: "Fulani Mokhtasar", language: "ff" },
+  { slug: "french-mokhtasar", name: "French Abridged Explanation of the Quran", authorName: "French Abridged Explanation of the Quran", language: "fr" },
+  { slug: "hindi-mokhtasar", name: "Hindi Mokhtasar", authorName: "Hindi Mokhtasar", language: "hi" },
+  { slug: "indonesian-mokhtasar", name: "Indoniesua Al-Mukhtasar in Interpreting the Noble Quran", authorName: "Indoniesua Al-Mukhtasar in Interpreting the Noble Quran", language: "id" },
+  { slug: "id-tafsir-as-saadi", name: "Tafsir As-Saadi - Indonesian", authorName: "Tafsir As-Saadi - Indonesian", language: "id" },
+  { slug: "in-tafsir-jalalayn", name: "Tafsir Jalalayn", authorName: "Tafsir Jalalayn", language: "id" },
+  { slug: "italian-mokhtasar", name: "Italian Al-Mukhtasar in interpreting the Noble Quran", authorName: "Italian Al-Mukhtasar in interpreting the Noble Quran", language: "it" },
+  { slug: "japanese-mokhtasar", name: "Japanese Abridged Explanation of the Quran", authorName: "Japanese Abridged Explanation of the Quran", language: "ja" },
+  { slug: "khmer-mokhtasar", name: "Khmer Abridged Explanation of the Quran", authorName: "Khmer Abridged Explanation of the Quran", language: "km" },
+  { slug: "kurdish-mokhtasar", name: "Kurdish Mokhtasar", authorName: "Kurdish Mokhtasar", language: "ku" },
+  { slug: "kurd-tafsir-rebar", name: "Rebar Kurdish Tafsir", authorName: "Rebar Kurdish Tafsir", language: "ku" },
+  { slug: "kyrgyz-mokhtasar", name: "Kyrgyz Mokhtasar", authorName: "Kyrgyz Mokhtasar", language: "ky" },
+  { slug: "malayalam-mokhtasar", name: "Malayalam Abridged Explanation of the Quran", authorName: "Malayalam Abridged Explanation of the Quran", language: "ml" },
+  { slug: "pashto-mokhtasar", name: "Pashto Mokhtasar", authorName: "Pashto Mokhtasar", language: "ps" },
+  { slug: "russian-mokhtasar", name: "Russian Al-Mukhtasar", authorName: "Russian Al-Mukhtasar", language: "ru" },
+  { slug: "ru-tafseer-al-saddi", name: "Tafseer Al Saadi - Russian", authorName: "Saddi", language: "ru" },
+  { slug: "tafsir-as-saadi-russian", name: "Tafsir As-Saadi", authorName: "Tafsir As-Saadi", language: "ru" },
+  { slug: "ru-tafsir-ibne-kahtir", name: "Tafsir Ibne Kathir", authorName: "Tafsir Ibne Kathir", language: "ru" },
+  { slug: "sinhalese-mokhtasar", name: "Sinhalese Mokhtasar", authorName: "Sinhalese Mokhtasar", language: "si" },
+  { slug: "sq-saadi", name: "Tafsir As-Saadi", authorName: "Tafsir As-Saadi", language: "sq" },
+  { slug: "serbian-mokhtasar", name: "Serbian Mokhtasar", authorName: "Serbian Mokhtasar", language: "sr" },
+  { slug: "tamil-mokhtasar", name: "Tamil Mokhtasar", authorName: "Tamil Mokhtasar", language: "ta" },
+  { slug: "telugu-mokhtasar", name: "Telugu Mokhtasar", authorName: "Telugu Mokhtasar", language: "te" },
+  { slug: "thai-mokhtasar", name: "Thai Mokhtasar", authorName: "Thai Mokhtasar", language: "th" },
+  { slug: "tagalog-mokhtasar", name: "Filipino (Tagalog) Al-Mukhtasar in interpreting the Noble Quran", authorName: "Filipino (Tagalog) Al-Mukhtasar in interpreting the Noble Quran", language: "tl" },
+  { slug: "turkish-tafsir-as-saadi-turkish", name: "Tafsir As-Saadi - Turkish", authorName: "Tafsir As-Saadi - Turkish", language: "tr" },
+  { slug: "tr-tafsir-ibne-kathir", name: "Tafsir Ibne Kathir", authorName: "Tafsir Ibne Kathir", language: "tr" },
+  { slug: "turkish-mokhtasar", name: "Turkish Al-Mukhtasar in Interpreting the Noble Quran", authorName: "Turkish Al-Mukhtasar in Interpreting the Noble Quran", language: "tr" },
+  { slug: "uyghur-mokhtasar", name: "Uyghur Mokhtasar", authorName: "Uyghur Mokhtasar", language: "ug" },
+  { slug: "ur-tafsir-fe-zalul-quran-syed-qatab", name: "Fi Zilal al-Quran", authorName: "Sayyid Ibrahim Qutb", language: "ur" },
+  { slug: "ur-tafsir-as-saadi-urdu", name: "Tafsir As-Saadi - Urdu", authorName: "Tafsir As-Saadi - Urdu", language: "ur" },
+  { slug: "ur-tafsir-bayan-ul-quran", name: "Tafsir Bayan ul Quran", authorName: "Dr. Israr Ahmad", language: "ur" },
+  { slug: "ur-tafseer-ibn-e-kaseer", name: "Tafsir Ibn Kathir", authorName: "Hafiz Ibn Kathir", language: "ur" },
+  { slug: "ur-tazkirul-quran", name: "Tazkirul Quran(Maulana Wahiduddin Khan)", authorName: "Maulana Wahid Uddin Khan", language: "ur" },
+  { slug: "uzbek-mokhtasar", name: "Uzbek Mokhtasar", authorName: "Uzbek Mokhtasar", language: "uz" },
+  { slug: "vietnamese-mokhtasar", name: "Vietnamese Al-Mukhtasar in interpreting the Noble Quran", authorName: "Vietnamese Al-Mukhtasar in interpreting the Noble Quran", language: "vi" },
+  { slug: "chinese-mokhtasar", name: "Chinese Abridged Explanation of the Quran", authorName: "Chinese Abridged Explanation of the Quran", language: "zh" },
 ];

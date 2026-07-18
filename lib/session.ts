@@ -47,11 +47,14 @@ export async function getSessionOrNull(): Promise<Session | null> {
 
 // ── Write ─────────────────────────────────────────────────────────────────
 
-export async function createSession(userId: string): Promise<void> {
+export async function createSession(
+  userId: string,
+  opts: { ephemeral?: boolean } = {},
+): Promise<void> {
   const token = await new SignJWT({ uid: userId })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
-    .setExpirationTime("30d")
+    .setExpirationTime(opts.ephemeral ? "12h" : "30d")
     .sign(secret());
 
   const jar = await cookies();
@@ -59,7 +62,9 @@ export async function createSession(userId: string): Promise<void> {
     httpOnly: true,
     secure:   process.env.NODE_ENV === "production",
     sameSite: "lax",
-    maxAge:   30 * 24 * 60 * 60,
+    // Ephemeral (demo) sessions get a BROWSER-SESSION cookie — no maxAge —
+    // so closing the browser ends the demo.
+    ...(opts.ephemeral ? {} : { maxAge: 30 * 24 * 60 * 60 }),
     path:     "/",
   });
 }

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { NodeViewWrapper, type NodeViewProps } from "@tiptap/react";
+import { TAFSIR_LANGUAGE_NAMES } from "@/lib/tafsir/spa5k-catalog";
 
 const TrashIcon = () => (
   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
@@ -96,9 +97,16 @@ export default function TafsirBlockView({
     });
   }
 
-  const enSources = sources.filter((s) => s.language === "en");
-  const arSources = sources.filter((s) => s.language === "ar");
-  const otherSources = sources.filter((s) => s.language !== "en" && s.language !== "ar");
+  // Group by language — English and Arabic pinned first, the rest by size.
+  const byLang = new Map<string, SourceMeta[]>();
+  for (const s of sources) {
+    if (!byLang.has(s.language)) byLang.set(s.language, []);
+    byLang.get(s.language)!.push(s);
+  }
+  const langGroups = [...byLang.entries()].sort((a, b) => {
+    const pin = (l: string) => (l === "en" ? 0 : l === "ar" ? 1 : 2);
+    return pin(a[0]) - pin(b[0]) || b[1].length - a[1].length || a[0].localeCompare(b[0]);
+  });
 
   return (
     <NodeViewWrapper>
@@ -124,27 +132,13 @@ export default function TafsirBlockView({
                   onChange={(e) => switchSource(e.target.value)}
                   title="Change tafsir source"
                 >
-                  {enSources.length > 0 && (
-                    <optgroup label="English">
-                      {enSources.map((s) => (
+                  {langGroups.map(([lang, group]) => (
+                    <optgroup key={lang} label={TAFSIR_LANGUAGE_NAMES[lang] ?? lang.toUpperCase()}>
+                      {group.map((s) => (
                         <option key={s.slug} value={s.slug}>{s.name}</option>
                       ))}
                     </optgroup>
-                  )}
-                  {arSources.length > 0 && (
-                    <optgroup label="Arabic">
-                      {arSources.map((s) => (
-                        <option key={s.slug} value={s.slug}>{s.name}</option>
-                      ))}
-                    </optgroup>
-                  )}
-                  {otherSources.length > 0 && (
-                    <optgroup label="Other">
-                      {otherSources.map((s) => (
-                        <option key={s.slug} value={s.slug}>{s.name}</option>
-                      ))}
-                    </optgroup>
-                  )}
+                  ))}
                 </select>
               ) : (
                 <span className="tafsir-block-source">{sourceName}</span>
