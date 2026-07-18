@@ -122,16 +122,24 @@ function WelcomeHero({
   const name = user?.name ? firstName(user.name) : null;
 
   let subtitle = "Your personal Qur’an study space.";
+  // surahNumber 0 = the whiteboard sentinel — the page is a blank board,
+  // not a surah. Show the workspace name and deep-link to the board.
+  const lastIsBoard = lastPage?.workspaceSurah.surahNumber === 0;
+
   if (lastPage) {
     const sn = surahNames[lastPage.workspaceSurah.surahNumber];
-    subtitle  = sn ? `Studying ${sn.name} · ${lastPage.workspaceSurah.workspace.name}` : subtitle;
+    subtitle = lastIsBoard
+      ? `Boards · ${lastPage.workspaceSurah.workspace.name}`
+      : sn ? `Studying ${sn.name} · ${lastPage.workspaceSurah.workspace.name}` : subtitle;
   } else if (totalSurahs > 0) {
     subtitle = `${totalSurahs} surah${totalSurahs > 1 ? "s" : ""} in progress.`;
   }
 
   if (lastPage) {
     const { workspaceSurah: ws } = lastPage;
-    const href  = `/workspaces/${ws.workspace.id}/surahs/${ws.surahNumber}/pages/${lastPage.id}`;
+    const href = lastIsBoard
+      ? `/workspaces/${ws.workspace.id}/whiteboard/${lastPage.id}`
+      : `/workspaces/${ws.workspace.id}/surahs/${ws.surahNumber}/pages/${lastPage.id}`;
     const surah = surahNames[ws.surahNumber];
 
     return (
@@ -155,19 +163,21 @@ function WelcomeHero({
         >
           <div className="hw-resume-accent" />
           <div className="hw-resume-body">
-            <span className="hw-resume-label">Continue studying</span>
+            <span className="hw-resume-label">{lastIsBoard ? "Continue on your board" : "Continue studying"}</span>
             <div className="hw-resume-surah">
               <span className="hw-resume-surah-name">
-                {surah?.name ?? `Surah ${ws.surahNumber}`}
+                {lastIsBoard
+                  ? ws.workspace.name
+                  : surah?.name ?? `Surah ${ws.surahNumber}`}
               </span>
-              {surah?.arabic && (
+              {!lastIsBoard && surah?.arabic && (
                 <span className="hw-resume-surah-arabic" dir="rtl">
                   {surah.arabic}
                 </span>
               )}
             </div>
             <p className="hw-resume-page">{lastPage.title}</p>
-            <p className="hw-resume-ws">{ws.workspace.name}</p>
+            <p className="hw-resume-ws">{lastIsBoard ? "Blank board" : ws.workspace.name}</p>
           </div>
           <button
             className={`hw-resume-btn${isNavigating ? " hw-resume-btn--loading" : ""}`}
