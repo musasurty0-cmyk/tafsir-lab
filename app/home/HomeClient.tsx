@@ -10,6 +10,7 @@
  *   JoinRow       — secondary invite-code action
  */
 
+import { pushWithSplash } from "@/lib/nav-splash";
 import { useRef, useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { getFirebaseAuth } from "@/lib/firebase/client";
@@ -421,7 +422,7 @@ export default function HomeClient({
     }, NAV_TIMEOUT_MS);
 
     try {
-      router.push(href);
+      pushWithSplash(router, href);
     } catch {
       clearTimeout(navTimerRef.current);
       setIsNavigating(false);
@@ -444,7 +445,7 @@ export default function HomeClient({
   async function handleSignOut() {
     await fetch("/api/auth/logout", { method: "POST" });
     try { await getFirebaseAuth().signOut(); } catch { /* ignore */ }
-    router.push("/login");
+    pushWithSplash(router, "/login");
     router.refresh();
   }
 

@@ -5,6 +5,7 @@
  * Provides a real "Create first page" form.
  */
 
+import { pushWithSplash } from "@/lib/nav-splash";
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -69,7 +70,7 @@ export default function SurahNoPages({
       }
 
       const { page } = await res.json() as { page: { id: string } };
-      router.push(`/workspaces/${workspaceId}/surahs/${surahNumber}/pages/${page.id}`);
+      pushWithSplash(router, `/workspaces/${workspaceId}/surahs/${surahNumber}/pages/${page.id}`);
     } catch {
       setError("Network error — please try again");
       setSaving(false);

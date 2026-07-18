@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Sans, IBM_Plex_Serif, IBM_Plex_Mono } from "next/font/google";
+import NavSplashCleaner from "@/components/NavSplashCleaner";
 import "./globals.css";
 
 const plex = IBM_Plex_Sans({
@@ -45,6 +46,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         className={`${plex.variable} ${plexSerif.variable} ${plexMono.variable}`}
         style={{ fontFamily: "var(--font-sans), system-ui, sans-serif" }}
       >
+        <NavSplashCleaner />
         {children}
       </body>
     </html>

@@ -11,6 +11,7 @@
  * Rail is rendered here (fetches workspaces itself).
  */
 
+import { pushWithSplash } from "@/lib/nav-splash";
 import { useState, useCallback, useRef, useEffect, useLayoutEffect } from "react";
 import { useRouter } from "next/navigation";
 import type { Chapter } from "@/lib/types";
@@ -115,7 +116,7 @@ export default function WorkspaceHome({
       if (session) {
         // Already started — show immediate feedback then navigate.
         setNavigating(chapter.id);
-        router.push(`/workspaces/${workspaceId}/surahs/${chapter.id}`);
+        pushWithSplash(router, `/workspaces/${workspaceId}/surahs/${chapter.id}`);
         return;
       }
 
@@ -139,7 +140,7 @@ export default function WorkspaceHome({
           return;
         }
         // Navigate — the surah page will show empty page list (no pages yet).
-        router.push(`/workspaces/${workspaceId}/surahs/${chapter.id}`);
+        pushWithSplash(router, `/workspaces/${workspaceId}/surahs/${chapter.id}`);
       } catch (err) {
         console.error("startSurah error:", err);
         setStarting(null);
@@ -230,14 +231,14 @@ export default function WorkspaceHome({
             <button
               className="ws-new-btn ws-new-btn--ghost"
               title="All notes across this workspace"
-              onClick={() => router.push(`/workspaces/${workspaceId}/notes`)}
+              onClick={() => pushWithSplash(router, `/workspaces/${workspaceId}/notes`)}
             >
               Notes
             </button>
             <button
               className="ws-new-btn ws-new-btn--ghost"
               title="Blank whiteboard — verses, tafsīr & pen"
-              onClick={() => router.push(`/workspaces/${workspaceId}/whiteboard`)}
+              onClick={() => pushWithSplash(router, `/workspaces/${workspaceId}/whiteboard`)}
             >
               ◇ Blank board
             </button>
@@ -381,7 +382,7 @@ export default function WorkspaceHome({
         }}
         onDeleted={() => {
           setSettingsOpen(false);
-          router.push("/home");
+          pushWithSplash(router, "/home");
         }}
       />
     )}

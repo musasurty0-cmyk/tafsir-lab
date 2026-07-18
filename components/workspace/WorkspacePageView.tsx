@@ -13,6 +13,7 @@
  *   - progressLoading indicator in TopBar.
  */
 
+import { pushWithSplash } from "@/lib/nav-splash";
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import type { Chapter, Verse } from "@/lib/types";
@@ -333,7 +334,7 @@ export default function WorkspacePageView({
   };
 
   const handlePageSelect = (pageId: string) => {
-    router.push(`/workspaces/${workspaceId}/surahs/${surahNumber}/pages/${pageId}`);
+    pushWithSplash(router, `/workspaces/${workspaceId}/surahs/${surahNumber}/pages/${pageId}`);
   };
 
   const openTafsir = useCallback((verseKey: string) => {

@@ -13,6 +13,7 @@
  * have been removed. Nothing is disabled here.
  */
 
+import { pushWithSplash } from "@/lib/nav-splash";
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import NewWorkspaceModal from "@/components/NewWorkspaceModal";
@@ -76,7 +77,7 @@ export default function Rail({ activeWorkspaceId }: Props) {
         <button
           className="rail-logo"
           title="TafsirLab"
-          onClick={() => router.push("/home")}
+          onClick={() => pushWithSplash(router, "/home")}
         >
           T
         </button>
@@ -86,7 +87,7 @@ export default function Rail({ activeWorkspaceId }: Props) {
           className="rail-btn"
           data-active={isHome ? "true" : "false"}
           title="Home"
-          onClick={() => router.push("/home")}
+          onClick={() => pushWithSplash(router, "/home")}
         >
           <HomeIcon />
         </button>
@@ -100,7 +101,7 @@ export default function Rail({ activeWorkspaceId }: Props) {
             className="rail-ws"
             data-active={ws.id === activeWorkspaceId ? "true" : "false"}
             title={ws.name}
-            onClick={() => router.push(`/workspaces/${ws.id}`)}
+            onClick={() => pushWithSplash(router, `/workspaces/${ws.id}`)}
           >
             {initials(ws.name)}
           </button>

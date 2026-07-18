@@ -15,6 +15,7 @@
  * to switch view modes and open panels without prop-threading.
  */
 
+import { pushWithSplash } from "@/lib/nav-splash";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { getTour, setTour, clearTour, type TourState } from "@/lib/tour";
@@ -138,7 +139,7 @@ export default function TourBubble() {
 
         // 4. Store IDs, advance step, navigate
         setTour({ ...t, step: 1, workspaceId: workspace.id, pageId: page.id });
-        router.push(`/workspaces/${workspace.id}/surahs/1/pages/${page.id}`);
+        pushWithSplash(router, `/workspaces/${workspace.id}/surahs/1/pages/${page.id}`);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Setup failed — please try again.");
       } finally {

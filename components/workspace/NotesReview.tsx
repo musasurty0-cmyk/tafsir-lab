@@ -12,6 +12,7 @@
  *   • one tap from any note back to the page it lives on
  */
 
+import { pushWithSplash } from "@/lib/nav-splash";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -214,7 +215,7 @@ export default function NotesReview({ workspaceId, workspaceName, chapters, curr
                         key={n.id}
                         className="notes-review-note"
                         onClick={() =>
-                          router.push(`/workspaces/${workspaceId}/surahs/${n.page.workspaceSurah.surahNumber}/pages/${n.page.id}`)
+                          pushWithSplash(router, `/workspaces/${workspaceId}/surahs/${n.page.workspaceSurah.surahNumber}/pages/${n.page.id}`)
                         }
                         title={`Open "${n.page.title}"`}
                       >

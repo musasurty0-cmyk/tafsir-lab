@@ -8,6 +8,7 @@
  * Dismiss: Escape key or clicking the backdrop.
  */
 
+import { pushWithSplash } from "@/lib/nav-splash";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -59,7 +60,7 @@ export default function NewWorkspaceModal({ onClose }: Props) {
 
       const { workspace } = await res.json() as { workspace: { id: string } };
       onClose();
-      router.push(`/workspaces/${workspace.id}`);
+      pushWithSplash(router, `/workspaces/${workspace.id}`);
     } catch {
       setError("Network error — please try again");
       setLoading(false);

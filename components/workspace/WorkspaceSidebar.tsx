@@ -9,6 +9,7 @@
  *   • No disabled buttons remain.
  */
 
+import { pushWithSplash } from "@/lib/nav-splash";
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronRight, ChevronLeft, Search, X, Plus, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
@@ -142,7 +143,7 @@ function PageRow({
     try {
       await fetch(`/api/pages/${page.id}`, { method: "DELETE" });
       onDeleted(page.id);
-      if (isActive) router.push(`/workspaces/${workspaceId}`);
+      if (isActive) pushWithSplash(router, `/workspaces/${workspaceId}`);
     } finally { setDeleting(false); setConfirmDelete(false); }
   }
 
@@ -264,7 +265,7 @@ export default function WorkspaceSidebar({
       const { page } = await res.json() as { page: { id: string } };
       setCreatingPage(false);
       setNewTitle("");
-      router.push(`/workspaces/${workspaceId}/surahs/${chapter.id}/pages/${page.id}`);
+      pushWithSplash(router, `/workspaces/${workspaceId}/surahs/${chapter.id}/pages/${page.id}`);
     } catch {
       setCreateError("Network error");
       setSaving(false);
@@ -284,7 +285,7 @@ export default function WorkspaceSidebar({
       <div className="sidebar-head">
         <button
           className="ws-switcher"
-          onClick={() => router.push(`/workspaces/${workspaceId}`)}
+          onClick={() => pushWithSplash(router, `/workspaces/${workspaceId}`)}
           title="Back to surah grid"
         >
           <div className="ws-switcher-avatar">

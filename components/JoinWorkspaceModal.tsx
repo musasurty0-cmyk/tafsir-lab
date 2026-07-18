@@ -1,5 +1,6 @@
 "use client";
 
+import { pushWithSplash } from "@/lib/nav-splash";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
@@ -32,7 +33,7 @@ export default function JoinWorkspaceModal({ onClose }: Props) {
         return;
       }
       if (data.workspace?.id) {
-        router.push(`/workspaces/${data.workspace.id}`);
+        pushWithSplash(router, `/workspaces/${data.workspace.id}`);
         router.refresh();
         onClose();
       }

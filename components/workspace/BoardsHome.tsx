@@ -7,6 +7,7 @@
  * lets you spin up a new one — each opens the standalone whiteboard canvas.
  */
 
+import { pushWithSplash } from "@/lib/nav-splash";
 import { useLayoutEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -71,7 +72,7 @@ export default function BoardsHome({ workspaceId, workspace, role, boards: initi
       });
       const data = await res.json().catch(() => null) as { board?: { id: string } } | null;
       if (data?.board) {
-        router.push(`/workspaces/${workspaceId}/whiteboard/${data.board.id}`);
+        pushWithSplash(router, `/workspaces/${workspaceId}/whiteboard/${data.board.id}`);
       }
     } finally {
       setSaving(false);
@@ -124,7 +125,7 @@ export default function BoardsHome({ workspaceId, workspace, role, boards: initi
           </div>
 
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <button className="ws-new-btn ws-new-btn--ghost" title="All notes across this workspace" onClick={() => router.push(`/workspaces/${workspaceId}/notes`)}>Notes</button>
+            <button className="ws-new-btn ws-new-btn--ghost" title="All notes across this workspace" onClick={() => pushWithSplash(router, `/workspaces/${workspaceId}/notes`)}>Notes</button>
             <button className="ws-new-btn ws-new-btn--ghost" title="Workspace settings and members" onClick={() => setSettingsOpen(true)}>Settings</button>
             <button className="ws-new-btn" onClick={() => setModalOpen(true)} title="Create new workspace">+ New workspace</button>
           </div>
@@ -181,7 +182,7 @@ export default function BoardsHome({ workspaceId, workspace, role, boards: initi
           currentUserRole={role}
           onClose={() => setSettingsOpen(false)}
           onRenamed={(name) => { setWsName(name); setSettingsOpen(false); }}
-          onDeleted={() => { setSettingsOpen(false); router.push("/home"); }}
+          onDeleted={() => { setSettingsOpen(false); pushWithSplash(router, "/home"); }}
         />
       )}
       {modalOpen && <NewWorkspaceModal onClose={() => setModalOpen(false)} />}
