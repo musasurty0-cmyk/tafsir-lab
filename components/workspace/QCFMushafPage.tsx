@@ -72,14 +72,15 @@ interface Props {
   notedWordColors?:  ReadonlyMap<string, string>;
   /** Word currently open in the note panel — gets the selection highlight */
   selectedWordKey?:  string | null;
-  /** Ayah markers with annotation layers → soft highlight colour (by ayah number) */
-  notedEndColors?:   ReadonlyMap<number, string>;
-  /** Ayāt with notes in their annotation layer → EVERY glyph of the ayah gets
-   *  this soft wash (word-level colours take precedence). Keyed by ayah number. */
+  /** Ayāt with notes in their annotation layer → the whole ayah (words + end
+   *  marker) is wrapped in ONE continuous wash. Keyed by ayah number. */
   notedAyahColors?:  ReadonlyMap<number, string>;
   /** Ayah whose annotation layer is open ("1:2" verseKey) */
   selectedEndKey?:   string | null;
 }
+
+/** Wash for the ayah whose annotation layer is currently open. */
+const AYAH_ACTIVE_WASH = "oklch(0.85 0.1 250 / 0.5)";
 
 // ── Word entry collapsed for line grouping ──────────────────────────────────
 
@@ -121,7 +122,6 @@ export default function QCFMushafPage({
   cardRef, onRegisterAyahRef, onRegisterWordRef, onOpenFocus,
   notedWordColors,
   selectedWordKey,
-  notedEndColors,
   notedAyahColors,
   selectedEndKey,
 }: Props) {
@@ -263,72 +263,97 @@ export default function QCFMushafPage({
           // We only reach here after fontReady=true, so the font IS loaded.
           const v2page = words[0]?.v2_page ?? pageNumber;
 
+          // ── Ayah wash runs ─────────────────────────────────────────────
+          // Consecutive glyphs of the same washed ayah are grouped into ONE
+          // wrapper span carrying the background, so the highlight reads as
+          // a single continuous region — no per-word boxes, no gaps.
+          interface Run { wash: string | null; ayahNum: number; entries: WordEntry[] }
+          const runs: Run[] = [];
+          for (const word of words) {
+            const wash = selectedEndKey === word.verseKey
+              ? AYAH_ACTIVE_WASH
+              : (notedAyahColors?.get(word.ayahNum) ?? null);
+            const prev = runs[runs.length - 1];
+            if (prev && prev.wash === wash &&
+                (wash === null || prev.ayahNum === word.ayahNum)) {
+              prev.entries.push(word);
+            } else {
+              runs.push({ wash, ayahNum: word.ayahNum, entries: [word] });
+            }
+          }
+
+          const renderGlyph = (word: WordEntry) => {
+            const isWord  = word.char_type_name === "word";
+            const isEnd   = word.char_type_name === "end";
+            const wordKey = `${word.ayahNum}:${word.position}`;
+            // Word-level note colour sits on top of any ayah run wash.
+            const noted = isWord ? notedWordColors?.get(wordKey) : undefined;
+            // Yellow selection highlight is ONLY for a specifically
+            // selected word — a selected ayah lights up via its run wash.
+            const selected =
+              isWord && selectedWordKey === `${word.verseKey}:${word.position}`;
+
+            return (
+              <span
+                key={`${word.verseKey}:${word.position}`}
+                ref={(el) => {
+                  if (isWord) onRegisterWordRef(word.ayahNum, word.position, el);
+                  if (word.isFirstInVerse) onRegisterAyahRef(word.ayahNum, el);
+                }}
+                className={[
+                  "qcf-glyph",
+                  isWord ? "qcf-word" : "",
+                  isEnd  ? "qcf-end"  : "",
+                  noted    ? "qcf-word--noted"    : "",
+                  selected ? "qcf-word--selected" : "",
+                ].join(" ").trim()}
+                // font-family per-span; noted words get their soft
+                // translucent highlight colour inline (rotating palette).
+                style={{
+                  fontFamily: `p${v2page}-v2`,
+                  ...(noted ? { background: noted } : {}),
+                }}
+                title={isWord ? (word.translation?.text ?? "") : undefined}
+                role={isWord || isEnd ? "button" : undefined}
+                tabIndex={isWord || isEnd ? 0 : undefined}
+                onClick={
+                  isWord
+                    ? (e) => { e.stopPropagation(); onOpenFocus(word.verseKey, word.position); }
+                    : isEnd
+                    ? (e) => { e.stopPropagation(); onOpenFocus(word.verseKey, null); }
+                    : undefined
+                }
+                onKeyDown={
+                  isWord || isEnd
+                    ? (e) => {
+                        if (e.key === "Enter") {
+                          e.stopPropagation();
+                          onOpenFocus(word.verseKey, isWord ? word.position : null);
+                        }
+                      }
+                    : undefined
+                }
+                // Safe: Quran Foundation API data only — no user input
+                dangerouslySetInnerHTML={{ __html: word.code_v2 }}
+              />
+            );
+          };
+
           return (
             <div key={lineKey} className="qcf-line">
-              {words.map((word) => {
-                const isWord  = word.char_type_name === "word";
-                const isEnd   = word.char_type_name === "end";
-                const wordKey = `${word.ayahNum}:${word.position}`;
-                // Ayah-layer wash covers EVERY glyph of the ayah; word-level
-                // colours (and the end-marker colour) sit on top of it.
-                const ayahWash = notedAyahColors?.get(word.ayahNum);
-                const noted    = (isWord
-                  ? notedWordColors?.get(wordKey)
-                  : (isEnd ? notedEndColors?.get(word.ayahNum) : undefined)) ?? ayahWash;
-                // Yellow selection highlight is ONLY for a specifically
-                // selected word. A selected ayah lights its whole run blue
-                // (ayahActive) — its end marker must never turn yellow.
-                const selected =
-                  isWord && selectedWordKey === `${word.verseKey}:${word.position}`;
-                // Whole ayah lights up while its annotation layer is open
-                const ayahActive = selectedEndKey === word.verseKey;
-
-                return (
+              {runs.map((run, ri) =>
+                run.wash ? (
                   <span
-                    key={`${word.verseKey}:${word.position}`}
-                    ref={(el) => {
-                      if (isWord) onRegisterWordRef(word.ayahNum, word.position, el);
-                      if (word.isFirstInVerse) onRegisterAyahRef(word.ayahNum, el);
-                    }}
-                    className={[
-                      "qcf-glyph",
-                      isWord ? "qcf-word" : "",
-                      isEnd  ? "qcf-end"  : "",
-                      noted      ? "qcf-word--noted"       : "",
-                      selected   ? "qcf-word--selected"    : "",
-                      ayahActive ? "qcf-word--ayah-active" : "",
-                    ].join(" ").trim()}
-                    // font-family per-span; noted words get their soft
-                    // translucent highlight colour inline (rotating palette).
-                    style={{
-                      fontFamily: `p${v2page}-v2`,
-                      ...(noted ? { background: noted } : {}),
-                    }}
-                    title={isWord ? (word.translation?.text ?? "") : undefined}
-                    role={isWord || isEnd ? "button" : undefined}
-                    tabIndex={isWord || isEnd ? 0 : undefined}
-                    onClick={
-                      isWord
-                        ? (e) => { e.stopPropagation(); onOpenFocus(word.verseKey, word.position); }
-                        : isEnd
-                        ? (e) => { e.stopPropagation(); onOpenFocus(word.verseKey, null); }
-                        : undefined
-                    }
-                    onKeyDown={
-                      isWord || isEnd
-                        ? (e) => {
-                            if (e.key === "Enter") {
-                              e.stopPropagation();
-                              onOpenFocus(word.verseKey, isWord ? word.position : null);
-                            }
-                          }
-                        : undefined
-                    }
-                    // Safe: Quran Foundation API data only — no user input
-                    dangerouslySetInnerHTML={{ __html: word.code_v2 }}
-                  />
-                );
-              })}
+                    key={`run-${lineKey}-${ri}`}
+                    className="qcf-ayah-run"
+                    style={{ background: run.wash }}
+                  >
+                    {run.entries.map(renderGlyph)}
+                  </span>
+                ) : (
+                  run.entries.map(renderGlyph)
+                ),
+              )}
             </div>
           );
         })}

@@ -22,6 +22,7 @@ import DrawingCanvas, { type DrawTool, type DrawingCanvasHandle } from "./Drawin
 import CanvasToolRail, {
   DEFAULT_PEN_COLOR, DEFAULT_PEN_SIZE,
   DEFAULT_HIGHLIGHT_COLOR, DEFAULT_HIGHLIGHT_SIZE,
+  DEFAULT_ERASER_SIZE, ERASER_SIZE_KEY,
 } from "./CanvasToolRail";
 
 // Drawings on the whiteboard live on this sentinel page (real Mushaf ≥ 1).
@@ -79,6 +80,17 @@ export default function WhiteboardPage({
   const [hlSize, setHlSize]                 = useState(DEFAULT_HIGHLIGHT_SIZE);
   const [canUndo, setCanUndo]               = useState(false);
   const [canRedo, setCanRedo]               = useState(false);
+
+  // Eraser radius (screen px) — remembered across sessions.
+  const [eraserSize, setEraserSizeState] = useState(DEFAULT_ERASER_SIZE);
+  useEffect(() => {
+    const v = Number(localStorage.getItem(ERASER_SIZE_KEY));
+    if (v >= 6 && v <= 60) setEraserSizeState(v);
+  }, []);
+  const setEraserSize = useCallback((s: number) => {
+    setEraserSizeState(s);
+    try { localStorage.setItem(ERASER_SIZE_KEY, String(s)); } catch { /* ignore */ }
+  }, []);
 
   const isHighlight = tool === "highlight";
   const activeColor = isHighlight ? hlColor : penColor;
@@ -324,6 +336,7 @@ export default function WhiteboardPage({
         viewport={viewport}
         roomSocket={roomSocket ?? null}
         onTextPlace={createTempAt}
+        eraserRadius={eraserSize}
         onHistoryChange={(u, r) => { setCanUndo(u); setCanRedo(r); }}
       />
 
@@ -336,6 +349,8 @@ export default function WhiteboardPage({
         onHighlightColorChange={setHlColor}
         strokeSize={activeSize}
         onStrokeSizeChange={(s) => (isHighlight ? setHlSize(s) : setPenSize(s))}
+        eraserSize={eraserSize}
+        onEraserSizeChange={setEraserSize}
         canUndo={canUndo}
         canRedo={canRedo}
         onUndo={() => drawingRef.current?.undo()}

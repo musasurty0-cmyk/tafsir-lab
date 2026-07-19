@@ -7475,11 +7475,16 @@ input, textarea { font: inherit; color: inherit; }
   outline: none;
 }
 
-/* Whole-ayah highlight while its annotation layer is OPEN — soft blue wash
-   on every glyph so the active ayah reads as one unit */
-.qcf-glyph.qcf-word--ayah-active {
-  background: oklch(0.85 0.1 250 / 0.5);
-  border-radius: 3px;
+/* Whole-ayah wash wrapper — consecutive glyphs of a washed ayah are grouped
+   into ONE flex-row span carrying the background, so the highlight is a
+   single continuous region across the line (no per-word boxes, no gaps).
+   Layout-neutral: glyph spans keep their exact advance widths inside. */
+.qcf-ayah-run {
+  display:       flex;
+  direction:     rtl;
+  align-items:   center;
+  flex-shrink:   0;
+  border-radius: 4px;
 }
 
 /* Eraser rubber — round, sized to the real hit radius, follows the pointer */
@@ -7533,6 +7538,38 @@ input, textarea { font: inherit; color: inherit; }
   background: var(--ink, #18181b);
   border: 2px solid #fff;
   box-shadow: 0 1px 3px oklch(0 0 0 / 0.25);
+}
+
+/* ── Eraser size popover ─────────────────────────────────────────────────── */
+.ctr-widths--eraser .ctr-width-btn {
+  width:  34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ctr-eraser-dot {
+  display: block;
+  border-radius: 50%;
+  background: oklch(0.92 0.005 80);
+  border: 1.5px solid var(--ink-3, #6b7280);
+}
+/* Live preview — the actual on-screen diameter of the eraser ring */
+.ctr-eraser-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  margin: 4px 0 2px;
+  overflow: hidden;
+}
+.ctr-eraser-preview-ring {
+  display: block;
+  max-width: 120px;
+  max-height: 44px;
+  border-radius: 50%;
+  border: 1.5px dashed var(--ink-3, #6b7280);
+  background: oklch(0.96 0.004 80 / 0.6);
 }
 
 /* ── Tafsir verse picker (opened by /tabari, /saadi … with no verse) ─────── */

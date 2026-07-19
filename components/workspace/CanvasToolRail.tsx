@@ -50,9 +50,18 @@ export const HIGHLIGHT_WIDTHS = [
   { label: "XL", value: 32 },
 ];
 
+// Eraser hit RADIUS presets (screen px) — matches the on-canvas ring.
+export const ERASER_WIDTHS = [
+  { label: "S",  value: 10 },
+  { label: "M",  value: 20 },
+  { label: "L",  value: 32 },
+  { label: "XL", value: 48 },
+];
+
 // Fine-adjust slider ranges (px)
 const PEN_RANGE       = { min: 0.25, max: 14, step: 0.25 };
 const HIGHLIGHT_RANGE = { min: 6,    max: 40, step: 1    };
+const ERASER_RANGE    = { min: 6,    max: 60, step: 1    };
 
 // ── Exported defaults ─────────────────────────────────────────────────────
 
@@ -60,6 +69,9 @@ export const DEFAULT_PEN_COLOR       = "#18181b";
 export const DEFAULT_PEN_SIZE        = 2.5;
 export const DEFAULT_HIGHLIGHT_COLOR = "#fbbf24";
 export const DEFAULT_HIGHLIGHT_SIZE  = 14;
+export const DEFAULT_ERASER_SIZE     = 20;
+/** localStorage key remembering the last used eraser size */
+export const ERASER_SIZE_KEY         = "tl-eraser-size";
 
 const HIDE_DELAY_MS = 1250;
 
@@ -179,6 +191,10 @@ interface Props {
   /** Size for whichever tool is currently active (pen or highlight). */
   strokeSize:             number;
   onStrokeSizeChange:     (s: number) => void;
+  /** Eraser hit radius (screen px). Optional — rail hides the eraser
+   *  popover when the host doesn't manage a size. */
+  eraserSize?:            number;
+  onEraserSizeChange?:    (s: number) => void;
   canUndo:                boolean;
   canRedo:                boolean;
   onUndo:                 () => void;
@@ -194,6 +210,7 @@ export default function CanvasToolRail({
   penColor, onPenColorChange,
   highlightColor, onHighlightColorChange,
   strokeSize, onStrokeSizeChange,
+  eraserSize, onEraserSizeChange,
   canUndo, canRedo,
   onUndo, onRedo,
   onClear,
@@ -205,13 +222,19 @@ export default function CanvasToolRail({
 
   const [popoverOpen, setPopoverOpen] = useState(false);
 
-  // Track the last pen/highlight tool so the popover shows correct content
-  // while fading out after the user switches to eraser / arrow / hand.
-  const lastPaletteToolRef = useRef<"pen" | "highlight">("pen");
-  const isCurrentlyPalette = activeTool === "pen" || activeTool === "highlight";
-  if (isCurrentlyPalette) lastPaletteToolRef.current = activeTool;
+  // Eraser gets a popover only when the host manages its size.
+  const eraserHasPopover = eraserSize != null && !!onEraserSizeChange;
+
+  // Track the last popover-bearing tool so the popover shows correct content
+  // while fading out after the user switches to arrow / hand / text.
+  const lastPaletteToolRef = useRef<"pen" | "highlight" | "eraser">("pen");
+  const isCurrentlyPalette =
+    activeTool === "pen" || activeTool === "highlight" ||
+    (activeTool === "eraser" && eraserHasPopover);
+  if (isCurrentlyPalette) lastPaletteToolRef.current = activeTool as "pen" | "highlight" | "eraser";
 
   const popoverTool = lastPaletteToolRef.current;
+  const isEraser    = popoverTool === "eraser";
   const isHighlight = popoverTool === "highlight";
   const colors      = isHighlight ? HIGHLIGHT_COLORS : PEN_COLORS;
   const widths      = isHighlight ? HIGHLIGHT_WIDTHS  : PEN_WIDTHS;
@@ -244,7 +267,8 @@ export default function CanvasToolRail({
   // When activeTool changes externally (keyboard shortcut etc.), update popover
   useEffect(() => {
     if (isFirstRender.current) { isFirstRender.current = false; return; }
-    if (activeTool === "pen" || activeTool === "highlight") {
+    if (activeTool === "pen" || activeTool === "highlight" ||
+        (activeTool === "eraser" && eraserHasPopover)) {
       openAndSchedule();
     } else {
       cancelHide();
@@ -262,6 +286,10 @@ export default function CanvasToolRail({
   }
   function handleWidth(w: number) {
     onStrokeSizeChange(w);
+    scheduleHide();
+  }
+  function handleEraserSize(w: number) {
+    onEraserSizeChange?.(w);
     scheduleHide();
   }
 
@@ -302,7 +330,8 @@ export default function CanvasToolRail({
           onClick={() => {
             onToolChange(id);
             // Re-clicking an already-active palette tool: re-open and reset timer
-            if ((id === "pen" || id === "highlight") && id === activeTool) {
+            if ((id === "pen" || id === "highlight" ||
+                 (id === "eraser" && eraserHasPopover)) && id === activeTool) {
               openAndSchedule();
             }
           }}
@@ -364,47 +393,91 @@ export default function CanvasToolRail({
         onMouseEnter={cancelHide}
         onMouseLeave={scheduleHide}
       >
-        <p className="ctr-popover-label">Colour</p>
-        <div className="ctr-swatches">
-          {colors.map((c) => (
-            <button
-              key={c.hex}
-              className="ctr-swatch"
-              title={c.label}
-              data-active={activeColor === c.hex ? "true" : "false"}
-              style={{ background: c.hex }}
-              onClick={() => handleColor(c.hex)}
+        {isEraser ? (
+          <>
+            {/* ── Eraser: size presets + live preview (matches the on-canvas
+                   ring, which is the true 1:1 preview while hovering) ── */}
+            <p className="ctr-popover-label">Eraser size <span className="ctr-size-value">{eraserSize}px</span></p>
+            <div className="ctr-widths ctr-widths--eraser">
+              {ERASER_WIDTHS.map((w) => (
+                <button
+                  key={w.value}
+                  className="ctr-width-btn"
+                  title={`${w.label} — ${w.value}px`}
+                  data-active={eraserSize === w.value ? "true" : "false"}
+                  onClick={() => handleEraserSize(w.value)}
+                >
+                  {/* preset circles at 40% scale so XL fits the popover */}
+                  <span
+                    className="ctr-eraser-dot"
+                    style={{ width: w.value * 0.8, height: w.value * 0.8 }}
+                  />
+                </button>
+              ))}
+            </div>
+            <div className="ctr-eraser-preview" aria-hidden>
+              <span
+                className="ctr-eraser-preview-ring"
+                style={{ width: (eraserSize ?? 0) * 2, height: (eraserSize ?? 0) * 2 }}
+              />
+            </div>
+            <input
+              type="range"
+              className="ctr-size-slider"
+              min={ERASER_RANGE.min}
+              max={ERASER_RANGE.max}
+              step={ERASER_RANGE.step}
+              value={eraserSize}
+              aria-label="Eraser size"
+              onChange={(e) => handleEraserSize(Number(e.target.value))}
+              onPointerDown={(e) => e.stopPropagation()}
             />
-          ))}
-        </div>
+          </>
+        ) : (
+          <>
+            <p className="ctr-popover-label">Colour</p>
+            <div className="ctr-swatches">
+              {colors.map((c) => (
+                <button
+                  key={c.hex}
+                  className="ctr-swatch"
+                  title={c.label}
+                  data-active={activeColor === c.hex ? "true" : "false"}
+                  style={{ background: c.hex }}
+                  onClick={() => handleColor(c.hex)}
+                />
+              ))}
+            </div>
 
-        <p className="ctr-popover-label">Size <span className="ctr-size-value">{strokeSize}px</span></p>
-        <div className="ctr-widths">
-          {widths.map((w) => (
-            <button
-              key={w.value}
-              className="ctr-width-btn"
-              title={`${w.label} — ${w.value}px`}
-              data-active={strokeSize === w.value ? "true" : "false"}
-              style={{ color: isHighlight ? "#ca8a04" : "#374151" }}
-              onClick={() => handleWidth(w.value)}
-            >
-              <WidthBar value={w.value} isHighlight={isHighlight} />
-            </button>
-          ))}
-        </div>
-        {/* Fine adjust — any thickness in the tool's range */}
-        <input
-          type="range"
-          className="ctr-size-slider"
-          min={isHighlight ? HIGHLIGHT_RANGE.min : PEN_RANGE.min}
-          max={isHighlight ? HIGHLIGHT_RANGE.max : PEN_RANGE.max}
-          step={isHighlight ? HIGHLIGHT_RANGE.step : PEN_RANGE.step}
-          value={strokeSize}
-          aria-label="Stroke thickness"
-          onChange={(e) => handleWidth(Number(e.target.value))}
-          onPointerDown={(e) => e.stopPropagation()}
-        />
+            <p className="ctr-popover-label">Size <span className="ctr-size-value">{strokeSize}px</span></p>
+            <div className="ctr-widths">
+              {widths.map((w) => (
+                <button
+                  key={w.value}
+                  className="ctr-width-btn"
+                  title={`${w.label} — ${w.value}px`}
+                  data-active={strokeSize === w.value ? "true" : "false"}
+                  style={{ color: isHighlight ? "#ca8a04" : "#374151" }}
+                  onClick={() => handleWidth(w.value)}
+                >
+                  <WidthBar value={w.value} isHighlight={isHighlight} />
+                </button>
+              ))}
+            </div>
+            {/* Fine adjust — any thickness in the tool's range */}
+            <input
+              type="range"
+              className="ctr-size-slider"
+              min={isHighlight ? HIGHLIGHT_RANGE.min : PEN_RANGE.min}
+              max={isHighlight ? HIGHLIGHT_RANGE.max : PEN_RANGE.max}
+              step={isHighlight ? HIGHLIGHT_RANGE.step : PEN_RANGE.step}
+              value={strokeSize}
+              aria-label="Stroke thickness"
+              onChange={(e) => handleWidth(Number(e.target.value))}
+              onPointerDown={(e) => e.stopPropagation()}
+            />
+          </>
+        )}
       </div>
     </div>
   );

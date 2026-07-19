@@ -32,6 +32,8 @@ import CanvasToolRail, {
   DEFAULT_PEN_SIZE,
   DEFAULT_HIGHLIGHT_COLOR,
   DEFAULT_HIGHLIGHT_SIZE,
+  DEFAULT_ERASER_SIZE,
+  ERASER_SIZE_KEY,
 } from "./CanvasToolRail";
 
 // ── Re-exported types ──────────────────────────────────────────────────────
@@ -353,6 +355,21 @@ export default function ModeBPage({
   const [canRedo, setCanRedo]   = useState(false);
   const drawingRef              = useRef<DrawingCanvasHandle>(null);
 
+  // Native touch handlers are registered once — they read the tool via ref.
+  const toolRef = useRef(tool);
+  useEffect(() => { toolRef.current = tool; }, [tool]);
+
+  // Eraser radius (screen px) — remembered across sessions.
+  const [eraserSize, setEraserSizeState] = useState(DEFAULT_ERASER_SIZE);
+  useEffect(() => {
+    const v = Number(localStorage.getItem(ERASER_SIZE_KEY));
+    if (v >= 6 && v <= 60) setEraserSizeState(v);
+  }, []);
+  const setEraserSize = useCallback((s: number) => {
+    setEraserSizeState(s);
+    try { localStorage.setItem(ERASER_SIZE_KEY, String(s)); } catch { /* ignore */ }
+  }, []);
+
   // Active stroke params forwarded to DrawingCanvas
   const strokeColor = tool === "highlight" ? hlColor : penColor;
   const strokeWidth = tool === "highlight" ? hlSize : penSize; // arrow inherits pen width
@@ -414,6 +431,12 @@ export default function ModeBPage({
       })
       .catch(() => { /* temp stays visible */ });
   }, [pageId, focusAnchor, onNoteCreated, onNoteDeleted]);
+
+  // Ref for the native touch handlers (stable effect) — a direct closure
+  // would capture the mount-time focusAnchor and place boxes on the wrong
+  // layer (same bug class as the stylus path in DrawingCanvas).
+  const placeTextBoxRef = useRef(placeTextBox);
+  useEffect(() => { placeTextBoxRef.current = placeTextBox; }, [placeTextBox]);
 
   const handleHistory = useCallback((u: boolean, r: boolean) => {
     setCanUndo(u);
@@ -638,9 +661,10 @@ export default function ModeBPage({
     // A touch on a button / role=button / link must NOT have preventDefault called —
     // that would kill the browser's click event and break tool-rail buttons and
     // Quran word taps.  We skip both preventDefault and pan-state setup for those.
+    // Text containers and note cards handle their own touches too.
     function isInteractive(e: TouchEvent) {
       return !!(e.target as HTMLElement).closest(
-        'button, a, input, select, textarea, [role="button"]',
+        'button, a, input, select, textarea, [role="button"], .free-textbox, .anc-note',
       );
     }
 
@@ -694,6 +718,20 @@ export default function ModeBPage({
       // Don't preventDefault for interactive-element taps — the browser needs to
       // fire a click event for tool buttons and Quran word taps to work.
       if (!isInteractive(e)) e.preventDefault();
+      // Text tool: a single-finger TAP (barely moved) drops a container —
+      // works on the main canvas AND inside a word/ayah annotation layer
+      // (placeTextBoxRef reads the live focusAnchor).
+      if (toolRef.current === "text" && pts.size === 1 && panStart && !isInteractive(e)) {
+        const t = e.changedTouches[0];
+        if (t && Math.hypot(t.clientX - panStart.tx, t.clientY - panStart.ty) < 12) {
+          const rect = el.getBoundingClientRect();
+          const vp = viewportRef.current;
+          placeTextBoxRef.current(
+            (t.clientX - rect.left - vp.x) / vp.zoom,
+            (t.clientY - rect.top  - vp.y) / vp.zoom,
+          );
+        }
+      }
       for (const t of e.changedTouches) pts.delete(t.identifier);
       if (pts.size < 2) { pinchStart = null; }
       if (pts.size === 1 && panStart === null) startPanFromPts();
@@ -808,7 +846,6 @@ export default function ModeBPage({
           onRegisterWordRef={registerWordRef}
           onOpenFocus={openFocus}
           notedWordColors={notedWordColors}
-          notedEndColors={notedEndColors}
           notedAyahColors={notedEndColors}
           selectedWordKey={focusAnchor && focusAnchor.wordPos != null ? `${focusAnchor.verseKey}:${focusAnchor.wordPos}` : null}
           selectedEndKey={focusAnchor && focusAnchor.wordPos == null ? focusAnchor.verseKey : null}
@@ -883,6 +920,7 @@ export default function ModeBPage({
         activeAnchor={activeAnchorKey}
         onHistoryChange={handleHistory}
         onTextPlace={placeTextBox}
+        eraserRadius={eraserSize}
         onAnchorsChange={setStrokeAnchors}
       />
 
@@ -910,6 +948,8 @@ export default function ModeBPage({
         onHighlightColorChange={setHlColor}
         strokeSize={tool === "highlight" ? hlSize : penSize}
         onStrokeSizeChange={tool === "highlight" ? setHlSize : setPenSize}
+        eraserSize={eraserSize}
+        onEraserSizeChange={setEraserSize}
         canUndo={canUndo}
         canRedo={canRedo}
         onUndo={() => drawingRef.current?.undo()}

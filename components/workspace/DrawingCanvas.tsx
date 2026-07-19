@@ -185,6 +185,44 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
   const redoStackRef = useRef<Stroke[]>([]);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // ── Persistence-safety bookkeeping ────────────────────────────────────
+  // tombstones: ids the user deleted this session (undo / eraser / clear).
+  //   Sent with every PUT so the server can remove them; the server merge is
+  //   otherwise ADDITIVE by id, so a save can never wipe strokes it doesn't
+  //   know about (draw-before-load, or the same user on a second device).
+  // savedIds: ids known to exist on the server (returned by a GET, or
+  //   included in a PUT that succeeded). A stroke we know was on the server
+  //   that later vanishes from a GET was deleted elsewhere → drop it locally.
+  const tombstonesRef = useRef<Set<string>>(new Set());
+  const savedIdsRef   = useRef<Set<string>>(new Set());
+  const loadedRef     = useRef(false);
+
+  /** Two-way reconcile of MY strokes against a fresh server read:
+   *  add server strokes we don't have (drawn on another device), drop local
+   *  strokes the server no longer has but once did (deleted on another
+   *  device). Unsaved local strokes are always kept. */
+  const syncMyStrokes = useCallback((serverMine: Stroke[]) => {
+    const canvasServer = serverMine.filter((s) => strokeSurface(s) === "canvas");
+    const serverIds    = new Set(canvasServer.map((s) => s.id));
+    for (const id of serverIds) savedIdsRef.current.add(id);
+
+    const have  = new Set(allMyStrokesRef.current.map((s) => s.id));
+    const added = canvasServer.filter(
+      (s) => !have.has(s.id) && !tombstonesRef.current.has(s.id),
+    );
+    const kept = allMyStrokesRef.current.filter(
+      (s) => serverIds.has(s.id) || !savedIdsRef.current.has(s.id),
+    );
+    if (added.length === 0 && kept.length === allMyStrokesRef.current.length) return;
+
+    allMyStrokesRef.current = [...kept, ...added];
+    const filtered = filterForPage(allMyStrokesRef.current, mushafPageRef.current);
+    myStrokesRef.current = filtered;
+    setMyStrokes(filtered);
+    onHistoryRef.current?.(filtered.length > 0, redoStackRef.current.length > 0);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const onHistoryRef = useRef(onHistoryChange);
   useEffect(() => { onHistoryRef.current = onHistoryChange; }, [onHistoryChange]);
 
@@ -365,46 +403,79 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
   // ── Data loading ───────────────────────────────────────────────────────
 
   useEffect(() => {
-    fetch(`/api/pages/${pageId}/drawings`)
-      .then(r => r.ok ? r.json() : null)
-      .then((d: { myStrokes?: Stroke[]; otherLayers?: DrawingLayer[] } | null) => {
-        if (!d) return;
+    let alive   = true;
+    let attempt = 0;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+    loadedRef.current = false;
 
-        if (d.myStrokes) {
-          const curPage = mushafPageRef.current;
+    // Fresh page context — a previous pageId's strokes/tombstones must never
+    // merge into (or delete from) this page's set.
+    allMyStrokesRef.current = [];
+    myStrokesRef.current    = [];
+    redoStackRef.current    = [];
+    tombstonesRef.current   = new Set();
+    savedIdsRef.current     = new Set();
+    setMyStrokes([]);
 
-          // Editor-surface strokes belong to the Mode A overlay — this
-          // component only owns canvas-surface strokes (its PUT replaces
-          // only the canvas surface server-side).
-          d.myStrokes = d.myStrokes.filter((s) => strokeSurface(s) === "canvas");
+    function load() {
+      fetch(`/api/pages/${pageId}/drawings`)
+        .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+        .then((d: { myStrokes?: Stroke[]; otherLayers?: DrawingLayer[] }) => {
+          if (!alive) return;
+          loadedRef.current = true;
 
-          // ── Legacy migration (one-time, silent) ────────────────────────
-          // Strokes saved before the mushafPage scoping fix have no
-          // mushafPage field.  Tag them to whichever Mushaf page is open
-          // now (always the first page of the surah on a fresh load).
-          // Re-save immediately — after this the strokes are permanently
-          // scoped and will never bleed across pages again.
-          const { migrated, changed } = migrateLegacyStrokes(d.myStrokes, curPage);
+          if (d.myStrokes) {
+            const curPage = mushafPageRef.current;
 
-          allMyStrokesRef.current = migrated;
-          const filtered = filterForPage(migrated, curPage);
-          setMyStrokes(filtered);
-          myStrokesRef.current = filtered;
-          onHistoryRef.current?.(filtered.length > 0, false);
+            // Editor-surface strokes belong to the Mode A overlay — this
+            // component only owns canvas-surface strokes.
+            const mine = d.myStrokes.filter((s) => strokeSurface(s) === "canvas");
 
-          if (changed) {
-            // Fire-and-forget — intentionally no error handling / loading state
-            fetch(`/api/pages/${pageId}/drawings`, {
-              method:  "PUT",
-              headers: { "Content-Type": "application/json" },
-              body:    JSON.stringify({ strokes: migrated }),
-            }).catch(() => {});
+            // ── Legacy migration (one-time, silent) ────────────────────────
+            // Strokes saved before the mushafPage scoping fix have no
+            // mushafPage field.  Tag them to whichever Mushaf page is open
+            // now (always the first page of the surah on a fresh load).
+            const { migrated, changed } = migrateLegacyStrokes(mine, curPage);
+
+            for (const s of migrated) savedIdsRef.current.add(s.id);
+
+            // MERGE with anything drawn before the load finished — replacing
+            // would silently discard those strokes from local state.
+            const serverIds = new Set(migrated.map((s) => s.id));
+            const localOnly = allMyStrokesRef.current.filter((s) => !serverIds.has(s.id));
+            allMyStrokesRef.current = [
+              ...migrated.filter((s) => !tombstonesRef.current.has(s.id)),
+              ...localOnly,
+            ];
+            const filtered = filterForPage(allMyStrokesRef.current, curPage);
+            setMyStrokes(filtered);
+            myStrokesRef.current = filtered;
+            onHistoryRef.current?.(filtered.length > 0, redoStackRef.current.length > 0);
+
+            if (changed) {
+              // Fire-and-forget — server merges by id, so this only updates
+              // the migrated copies and can't clobber anything else.
+              fetch(`/api/pages/${pageId}/drawings`, {
+                method:  "PUT",
+                headers: { "Content-Type": "application/json" },
+                body:    JSON.stringify({ strokes: allMyStrokesRef.current, surface: "canvas" }),
+              }).catch(() => {});
+            }
           }
-        }
 
-        if (d.otherLayers) setOtherLayers(d.otherLayers);
-      })
-      .catch(() => {});
+          if (d.otherLayers) setOtherLayers(d.otherLayers);
+        })
+        .catch(() => {
+          // A failed initial load must NOT be silent — without the server
+          // copy in memory, later behaviour degrades. Retry with backoff.
+          if (!alive) return;
+          attempt++;
+          if (attempt <= 6) retryTimer = setTimeout(load, Math.min(15000, 1000 * 2 ** attempt));
+        });
+    }
+    load();
+
+    return () => { alive = false; if (retryTimer) clearTimeout(retryTimer); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pageId]);
 
@@ -420,20 +491,23 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
   // ── Reconciliation poll (slow) ────────────────────────────────────────
   // Live additions arrive via the socket, but erasures / undo / clear by
   // peers are only persisted to the DB — this poll picks those up and also
-  // heals any missed socket messages.
+  // heals any missed socket messages. It reconciles MY strokes too, so the
+  // same account on a second device converges instead of diverging.
   useEffect(() => {
     if (!pageId) return;
     const id = setInterval(() => {
       if (document.visibilityState !== "visible") return;
       fetch(`/api/pages/${pageId}/drawings`)
         .then(r => r.ok ? r.json() : null)
-        .then((d: { otherLayers?: DrawingLayer[] } | null) => {
-          if (d?.otherLayers) setOtherLayers(d.otherLayers);
+        .then((d: { myStrokes?: Stroke[]; otherLayers?: DrawingLayer[] } | null) => {
+          if (!d) return;
+          if (d.otherLayers) setOtherLayers(d.otherLayers);
+          if (d.myStrokes && loadedRef.current) syncMyStrokes(d.myStrokes);
         })
         .catch(() => {});
     }, 15000);
     return () => clearInterval(id);
-  }, [pageId]);
+  }, [pageId, syncMyStrokes]);
 
   // ── Real-time remote strokes via PartyKit socket ──────────────────────
   // • stroke-segment: peer is actively drawing — update remoteActiveRef
@@ -502,14 +576,16 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
       if (first) { first = false; return; } // skip the initial connect
       fetch(`/api/pages/${pageId}/drawings`)
         .then((r) => (r.ok ? r.json() : null))
-        .then((d: { otherLayers?: DrawingLayer[] } | null) => {
-          if (d?.otherLayers) setOtherLayers(d.otherLayers);
+        .then((d: { myStrokes?: Stroke[]; otherLayers?: DrawingLayer[] } | null) => {
+          if (!d) return;
+          if (d.otherLayers) setOtherLayers(d.otherLayers);
+          if (d.myStrokes && loadedRef.current) syncMyStrokes(d.myStrokes);
         })
         .catch(() => {});
     };
     roomSocket.addEventListener("open", onOpen);
     return () => roomSocket.removeEventListener("open", onOpen);
-  }, [roomSocket, pageId]);
+  }, [roomSocket, pageId, syncMyStrokes]);
 
   // ── Debounced save ─────────────────────────────────────────────────────
   // Previously fire-and-forget: a failed PUT was silently swallowed and the
@@ -517,13 +593,24 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
   // keepalive flush when the tab is hidden/closed (mosque Wi-Fi reality).
 
   const putStrokes = useCallback((keepalive = false) => {
-    // surface:"canvas" → the server merges, preserving editor-surface strokes.
-    const body = JSON.stringify({ strokes: allMyStrokesRef.current, surface: "canvas" });
+    // surface:"canvas" → the server merges by id within this surface,
+    // preserving editor-surface strokes AND any canvas strokes this client
+    // doesn't have (other device, draw-before-load). deletedIds carries the
+    // user's explicit deletions so those still propagate.
+    const snapshot = allMyStrokesRef.current;
+    const body = JSON.stringify({
+      strokes:    snapshot,
+      surface:    "canvas",
+      deletedIds: [...tombstonesRef.current],
+    });
     return fetch(`/api/pages/${pageId}/drawings`, {
       method:  "PUT",
       headers: { "Content-Type": "application/json" },
       body,
       keepalive,
+    }).then((r) => {
+      if (r.ok) for (const s of snapshot) savedIdsRef.current.add(s.id);
+      return r;
     });
   }, [pageId]);
 
@@ -553,8 +640,10 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
         // Back from suspension — don't wait up to 15 s for the poll.
         fetch(`/api/pages/${pageId}/drawings`)
           .then(r => r.ok ? r.json() : null)
-          .then((d: { otherLayers?: DrawingLayer[] } | null) => {
-            if (d?.otherLayers) setOtherLayers(d.otherLayers);
+          .then((d: { myStrokes?: Stroke[]; otherLayers?: DrawingLayer[] } | null) => {
+            if (!d) return;
+            if (d.otherLayers) setOtherLayers(d.otherLayers);
+            if (d.myStrokes && loadedRef.current) syncMyStrokes(d.myStrokes);
           })
           .catch(() => {});
       }
@@ -565,7 +654,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("pagehide", flushPending);
     };
-  }, [pageId, putStrokes]);
+  }, [pageId, putStrokes, syncMyStrokes]);
 
   useEffect(() => () => {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
@@ -627,6 +716,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
       const nextPage = prev.slice(0, -1);
       // Remove from allMyStrokes too
       allMyStrokesRef.current = allMyStrokesRef.current.filter(s => s.id !== removed.id);
+      tombstonesRef.current.add(removed.id);
       myStrokesRef.current = nextPage;
       setMyStrokes(nextPage);
       scheduleSave(); notifyHistory();
@@ -636,6 +726,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
       if (!stack.length) return;
       const stroke = stack[stack.length - 1];
       redoStackRef.current = stack.slice(0, -1);
+      tombstonesRef.current.delete(stroke.id); // it's alive again
       allMyStrokesRef.current = [...allMyStrokesRef.current, stroke];
       const nextPage = [...myStrokesRef.current, stroke];
       myStrokesRef.current = nextPage;
@@ -648,6 +739,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
       // word/ayah annotation layers on the same page.
       const visibleIds = new Set(myStrokesRef.current.map(s => s.id));
       if (!visibleIds.size) return;
+      for (const id of visibleIds) tombstonesRef.current.add(id);
       allMyStrokesRef.current = allMyStrokesRef.current.filter(s => !visibleIds.has(s.id));
       redoStackRef.current = [];
       myStrokesRef.current = [];
@@ -699,7 +791,10 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
       const eff = penTool();
       const [wx, wy] = toWorld(e.clientX, e.clientY);
       // Text tool: a pen tap drops a container instead of drawing.
-      if (eff === "text") { parent!.dataset.penActive = ""; onTextPlace?.(wx, wy); return; }
+      // MUST go through the ref — these handlers are registered once, so a
+      // direct prop call would use the mount-time callback and anchor the
+      // box to the wrong (no-layer) state.
+      if (eff === "text") { parent!.dataset.penActive = ""; onTextPlaceRef.current?.(wx, wy); return; }
       if (eff === "eraser") { eraseAt(wx, wy); return; }
 
       try { parent!.setPointerCapture(e.pointerId); } catch { /* ok */ }
@@ -746,6 +841,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
       parent!.dataset.penActive = "";
       if (!isDrawingRef.current) return;
       e.preventDefault();
+      appendFinalPoint(e.clientX, e.clientY);
       commitActiveStroke();
     }
 
@@ -794,6 +890,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
       prev.filter(s => hitTest(normPts(s.points as unknown[]), wx, wy, r)).map(s => s.id),
     );
     if (removedIds.size === 0) return;
+    for (const id of removedIds) tombstonesRef.current.add(id);
 
     // Remove STRICTLY BY ID. The previous survive-by-visibility sync dropped
     // every same-page stroke hidden in other word/ayah layers — erasing on
@@ -864,6 +961,17 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     scheduleRender();
   }
 
+  // The pointerup event carries the true lift position — append it so the
+  // stroke ends exactly where the pen left the surface (pressure on the up
+  // event is 0, so reuse the last sample's pressure).
+  function appendFinalPoint(clientX: number, clientY: number) {
+    const pts = activePtsRef.current;
+    const last = pts[pts.length - 1];
+    if (!last) return;
+    const [wx, wy] = toWorld(clientX, clientY);
+    if (Math.hypot(wx - last[0], wy - last[1]) > 1e-3) pts.push([wx, wy, last[2]]);
+  }
+
   // Commit whatever's in activePtsRef as a finished stroke (shared by the
   // React mouse handlers and the native stylus handlers).
   function commitActiveStroke() {
@@ -910,6 +1018,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     e.preventDefault();
     if (!isDrawingRef.current) return;
     if (toolRef.current === "eraser") { isDrawingRef.current = false; activePtsRef.current = []; return; }
+    appendFinalPoint(e.clientX, e.clientY);
     commitActiveStroke();
   }
 

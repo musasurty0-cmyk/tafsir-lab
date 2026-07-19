@@ -71,16 +71,15 @@ export function hitTest(pts: Pt[], cx: number, cy: number, r: number): boolean {
 // Constant-width strokes (highlighter etc.): one continuous midpoint-
 // quadratic path.
 //
-// Pressure strokes (pen): a perfect-freehand OUTLINE polygon filled once.
-// This is how GoodNotes-class apps render ink. The previous approach —
-// stroking each tiny segment separately with a per-segment lineWidth and
-// round caps — beaded into visible "dots" the moment real stylus pressure
-// jittered between samples (thick caps bulging past thin neighbours).
-// A single filled outline has no joints, no caps, no beading, and renders
-// identically on every device because it's a pure function of the stored
-// world-space points.
-
-import { getStroke } from "perfect-freehand";
+// Pressure strokes (pen): a variable-width OUTLINE polygon built directly
+// from the stored samples and filled once. Earlier versions used
+// perfect-freehand, but its `streamline` interpolation visibly straightened
+// curves ("warped" handwriting) and its size-relative corner threshold plus
+// pressure `thinning` truncated the ends of small letters. The custom
+// outline below offsets the RAW centreline by a per-point radius (real
+// pressure, zero-phase smoothed) and closes both ends with true semicircular
+// caps at the exact first/last sample — the stroke follows the stylus path
+// faithfully and is never clipped.
 
 export function pressureWidth(base: number, p: number): number {
   // Kept for callers that need a scalar width from pressure.
@@ -89,24 +88,71 @@ export function pressureWidth(base: number, p: number): number {
   return Math.max(Math.min(1.5, base * 0.55), base * (0.45 + 1.1 * p));
 }
 
-/** perfect-freehand options for a given base width. streamline smooths
- *  input jitter; thinning maps pressure to width. */
-function freehandOptions(width: number) {
-  return {
-    // Proportional floor: a 0.25–1 width pen must actually render thin
-    // (users zoom far in to write); the old absolute 2.5 floor made every
-    // "thin" setting identical. Widths ≥ ~1.3 keep the crispness clamp.
-    size:             Math.max(Math.min(2.5, width * 2.6), width * 1.9),
-    // Handwriting tuning: high streamline (0.45) visibly straightened and
-    // lagged strokes ("warped" feel); high thinning pinched stroke ends to
-    // nothing at pen-lift, cutting off small letters. Keep just enough
-    // smoothing to hide jitter without rewriting the user's hand.
-    thinning:         0.38,
-    smoothing:        0.5,
-    streamline:       0.22,
-    simulatePressure: false, // we store REAL pressure per point
-    last:             true,
-  };
+/** Rendered stroke radius for a base width at pressure p. ×1.9 keeps the
+ *  on-screen thickness of previously saved strokes (perfect-freehand drew
+ *  at size ≈ width×1.9). */
+function strokeRadius(base: number, p: number): number {
+  return (pressureWidth(base, p) * 1.9) / 2;
+}
+
+/**
+ * Build the closed outline polygon for a pressure stroke.
+ *
+ * - Centreline is the raw input path — no streamline/simplification, so the
+ *   rendered ink follows the user's hand exactly at any size.
+ * - Pressure (width) is zero-phase smoothed (forward+backward EMA) so width
+ *   never jitters into beads, without shifting the path geometry.
+ * - Both ends get sampled semicircular caps centred on the exact first and
+ *   last points — nothing tapers away or gets cut off at pen-lift.
+ */
+function penOutline(raw: Pt[], base: number): [number, number][] {
+  // Drop consecutive near-duplicate samples (pen resting in place)
+  const P: Pt[] = [];
+  for (const p of raw) {
+    const last = P[P.length - 1];
+    if (!last || Math.hypot(p[0] - last[0], p[1] - last[1]) > 1e-3) P.push(p);
+  }
+  const n = P.length;
+  if (n < 2) return [];
+
+  // Zero-phase pressure smoothing: forward EMA and backward EMA, averaged.
+  // Smooths WIDTH only — the path geometry is never touched.
+  const ALPHA = 0.3;
+  const fwd = new Float32Array(n);
+  const bwd = new Float32Array(n);
+  let acc = P[0][2];
+  for (let i = 0; i < n; i++) { acc += (P[i][2] - acc) * ALPHA; fwd[i] = acc; }
+  acc = P[n - 1][2];
+  for (let i = n - 1; i >= 0; i--) { acc += (P[i][2] - acc) * ALPHA; bwd[i] = acc; }
+
+  // Tangent angle + offset points per sample
+  const left:  [number, number][] = [];
+  const right: [number, number][] = [];
+  const theta = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    const a = P[Math.max(0, i - 1)];
+    const b = P[Math.min(n - 1, i + 1)];
+    theta[i] = Math.atan2(b[1] - a[1], b[0] - a[0]);
+    const r = strokeRadius(base, (fwd[i] + bwd[i]) / 2);
+    left.push ([P[i][0] + r * Math.cos(theta[i] - Math.PI / 2), P[i][1] + r * Math.sin(theta[i] - Math.PI / 2)]);
+    right.push([P[i][0] + r * Math.cos(theta[i] + Math.PI / 2), P[i][1] + r * Math.sin(theta[i] + Math.PI / 2)]);
+  }
+
+  // Ring: left side forward → end cap → right side backward → start cap.
+  const CAP_STEPS = 8;
+  const ring: [number, number][] = [...left];
+  const rEnd = strokeRadius(base, (fwd[n - 1] + bwd[n - 1]) / 2);
+  for (let k = 1; k < CAP_STEPS; k++) {
+    const a = theta[n - 1] - Math.PI / 2 + (k / CAP_STEPS) * Math.PI;
+    ring.push([P[n - 1][0] + rEnd * Math.cos(a), P[n - 1][1] + rEnd * Math.sin(a)]);
+  }
+  for (let i = n - 1; i >= 0; i--) ring.push(right[i]);
+  const rStart = strokeRadius(base, (fwd[0] + bwd[0]) / 2);
+  for (let k = 1; k < CAP_STEPS; k++) {
+    const a = theta[0] + Math.PI / 2 + (k / CAP_STEPS) * Math.PI;
+    ring.push([P[0][0] + rStart * Math.cos(a), P[0][1] + rStart * Math.sin(a)]);
+  }
+  return ring;
 }
 
 export function drawSmooth(
@@ -126,7 +172,7 @@ export function drawSmooth(
   ctx.lineJoin    = "round";
 
   if (pts.length === 1) {
-    const r = (pressureSensitive ? pressureWidth(width, pts[0][2]) : width) / 2;
+    const r = pressureSensitive ? strokeRadius(width, pts[0][2]) : width / 2;
     ctx.beginPath();
     ctx.arc(pts[0][0], pts[0][1], r, 0, Math.PI * 2);
     ctx.fill();
@@ -155,14 +201,11 @@ export function drawSmooth(
   }
 
   // Pressure path — single filled outline polygon (no joints, no beads).
-  const outline = getStroke(
-    pts.map((p) => [p[0], p[1], p[2]] as [number, number, number]),
-    freehandOptions(width),
-  );
+  const outline = penOutline(pts, width);
 
   if (outline.length < 3) {
     ctx.beginPath();
-    ctx.arc(pts[0][0], pts[0][1], pressureWidth(width, pts[0][2]) / 2, 0, Math.PI * 2);
+    ctx.arc(pts[0][0], pts[0][1], strokeRadius(width, pts[0][2]), 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
     return;
@@ -170,7 +213,9 @@ export function drawSmooth(
 
   ctx.beginPath();
   ctx.moveTo(outline[0][0], outline[0][1]);
-  // Midpoint-quadratic around the outline keeps the polygon silky at any zoom.
+  // Midpoint-quadratic around the outline keeps the polygon silky at any
+  // zoom. Body points sit on the true offset curve and caps are 8-segment
+  // arcs, so the smoothing rounds nothing off perceptibly.
   for (let i = 1; i < outline.length; i++) {
     const [x0, y0] = outline[i - 1];
     const [x1, y1] = outline[i];
