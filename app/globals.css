@@ -7814,3 +7814,39 @@ input, textarea { font: inherit; color: inherit; }
   white-space: nowrap;
 }
 .login-demo-go:disabled { opacity: 0.5; }
+
+/* ── UI language switcher ────────────────────────────────────────────────── */
+.lang-switcher {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--ink-2);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 5px 10px;
+  background: var(--bg-elev);
+  cursor: pointer;
+}
+.lang-switcher select {
+  border: none;
+  background: transparent;
+  color: var(--ink);
+  font-size: 13px;
+  outline: none;
+  cursor: pointer;
+}
+.lang-switcher--compact { padding: 4px 8px; font-size: 12px; }
+
+/* ── RTL guards ──────────────────────────────────────────────────────────────
+   Arabic/Urdu UI flips document direction, but surfaces whose layout is
+   coordinate-based (drawing canvases, whiteboards, the Mushaf page — which
+   already manages rtl internally) must stay LTR so absolute positions,
+   stroke math, and pan/zoom stay correct. */
+[dir="rtl"] .mode-b-canvas,
+[dir="rtl"] .whiteboard-canvas,
+[dir="rtl"] .page-editor,
+[dir="rtl"] .qcf-page,
+[dir="rtl"] .drawing-canvas-wrap {
+  direction: ltr;
+}

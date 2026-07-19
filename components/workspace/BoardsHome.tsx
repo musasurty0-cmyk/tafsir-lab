@@ -8,6 +8,7 @@
  */
 
 import { pushWithSplash } from "@/lib/nav-splash";
+import { useT } from "@/lib/i18n/LocaleProvider";
 import { useLayoutEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -34,6 +35,7 @@ function todayTitle() {
 
 export default function BoardsHome({ workspaceId, workspace, role, boards: initialBoards }: Props) {
   const router = useRouter();
+  const t = useT();
 
   useLayoutEffect(() => {
     document.getElementById("tl-nav-splash")?.remove();
@@ -118,16 +120,16 @@ export default function BoardsHome({ workspaceId, workspace, role, boards: initi
                 title={role === "owner" ? "Click to rename" : undefined}
                 style={{ cursor: role === "owner" ? "text" : "default" }}
               >
-                {wsName} <span className="ws-home-kind-badge">Boards</span>
+                {wsName} <span className="ws-home-kind-badge">{t("boards.badge")}</span>
               </h1>
             )}
-            <p className="ws-home-sub">{boards.length} board{boards.length !== 1 ? "s" : ""}</p>
+            <p className="ws-home-sub">{t("boards.count", { n: boards.length })}</p>
           </div>
 
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <button className="ws-new-btn ws-new-btn--ghost" title="All notes across this workspace" onClick={() => pushWithSplash(router, `/workspaces/${workspaceId}/notes`)}>Notes</button>
-            <button className="ws-new-btn ws-new-btn--ghost" title="Workspace settings and members" onClick={() => setSettingsOpen(true)}>Settings</button>
-            <button className="ws-new-btn" onClick={() => setModalOpen(true)} title="Create new workspace">+ New workspace</button>
+            <button className="ws-new-btn ws-new-btn--ghost" title="All notes across this workspace" onClick={() => pushWithSplash(router, `/workspaces/${workspaceId}/notes`)}>{t("ws.notes")}</button>
+            <button className="ws-new-btn ws-new-btn--ghost" title="Workspace settings and members" onClick={() => setSettingsOpen(true)}>{t("ws.settings")}</button>
+            <button className="ws-new-btn" onClick={() => setModalOpen(true)} title="Create new workspace">{t("ws.newWorkspace")}</button>
           </div>
         </div>
 
@@ -139,25 +141,25 @@ export default function BoardsHome({ workspaceId, workspace, role, boards: initi
                 ref={inputRef}
                 className="boards-new-input"
                 value={title}
-                placeholder="Board name (e.g. this week's topic)"
+                placeholder={t("boards.namePlaceholder")}
                 onChange={(e) => setTitle(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") createBoard(); if (e.key === "Escape") setCreating(false); }}
                 maxLength={80}
                 disabled={saving}
               />
-              <button className="ws-new-btn" onClick={createBoard} disabled={saving}>{saving ? "Creating…" : "Create board →"}</button>
-              <button className="ws-new-btn ws-new-btn--ghost" onClick={() => setCreating(false)} disabled={saving}>Cancel</button>
+              <button className="ws-new-btn" onClick={createBoard} disabled={saving}>{saving ? t("boards.creating") : t("boards.create")}</button>
+              <button className="ws-new-btn ws-new-btn--ghost" onClick={() => setCreating(false)} disabled={saving}>{t("boards.cancel")}</button>
             </div>
           ) : (
-            <button className="ws-new-btn boards-new-btn" onClick={startCreate}>◇ New board</button>
+            <button className="ws-new-btn boards-new-btn" onClick={startCreate}>{t("boards.new")}</button>
           )}
         </div>
 
         {/* Boards grid */}
         {boards.length === 0 ? (
           <div className="boards-empty">
-            <p className="boards-empty-title">No boards yet</p>
-            <p className="boards-empty-body">Create a blank board for this week&apos;s notes — pull in verses &amp; tafsīr, and annotate freely.</p>
+            <p className="boards-empty-title">{t("boards.emptyTitle")}</p>
+            <p className="boards-empty-body">{t("boards.emptyBody")}</p>
           </div>
         ) : (
           <div className="boards-grid">

@@ -13,6 +13,7 @@ import { Sliders, Download } from "lucide-react";
 import type { Chapter } from "@/lib/types";
 import PresenceBar from "./PresenceBar";
 import type { PresenceData } from "@/lib/collab/usePresence";
+import { useT, LanguageSwitcher } from "@/lib/i18n/LocaleProvider";
 
 // ── Icons ──────────────────────────────────────────────────────────────────
 
@@ -115,6 +116,7 @@ export default function TopBar({
   liveStatus,
   onExport,
 }: Props) {
+  const t = useT();
   return (
     <div className="topbar">
 
@@ -171,7 +173,7 @@ export default function TopBar({
             onClick={() => mode !== "editor" && onSetMode("editor")}
             title="Document view"
           >
-            <PenIcon /> Editor
+            <PenIcon /> {t("topbar.editor")}
           </button>
           <button
             className="mode-btn"
@@ -179,7 +181,7 @@ export default function TopBar({
             onClick={() => mode !== "canvas" && onSetMode("canvas")}
             title="Spatial canvas"
           >
-            <GridIcon /> Canvas
+            <GridIcon /> {t("topbar.canvas")}
           </button>
           <button
             className="mode-btn mode-btn--split"
@@ -187,7 +189,7 @@ export default function TopBar({
             onClick={() => mode !== "split" && onSetMode("split")}
             title="Split — Editor + Canvas"
           >
-            <SplitIcon /> Split
+            <SplitIcon /> {t("topbar.split")}
           </button>
           <button
             className="mode-btn"
@@ -195,7 +197,7 @@ export default function TopBar({
             onClick={() => mode !== "board" && onSetMode("board")}
             title="Whiteboard — blank scratch canvas"
           >
-            <BoardIcon /> Board
+            <BoardIcon /> {t("topbar.board")}
           </button>
         </div>
 
@@ -209,7 +211,7 @@ export default function TopBar({
               onClick={onToggleFormatting}
               title={formattingOpen ? "Hide formatting" : "Show formatting"}
             >
-              <FormattingIcon /> Formatting
+              <FormattingIcon /> {t("topbar.formatting")}
             </button>
           </>
         )}
@@ -223,7 +225,7 @@ export default function TopBar({
           onClick={onToggleTafsir}
           title="Toggle Tafsīr drawer"
         >
-          <BookOpenIcon /> Tafsīr
+          <BookOpenIcon /> {t("topbar.tafsir")}
         </button>
 
         <div className="tb-divider" />
@@ -247,10 +249,13 @@ export default function TopBar({
               onClick={onExport}
               title="Download this page as Markdown"
             >
-              <Download size={14} /> Export
+              <Download size={14} /> {t("topbar.export")}
             </button>
           </>
         )}
+
+        <div className="tb-divider" />
+        <LanguageSwitcher compact />
       </div>
     </div>
   );

@@ -12,6 +12,7 @@
  */
 
 import { pushWithSplash } from "@/lib/nav-splash";
+import { useT } from "@/lib/i18n/LocaleProvider";
 import { useState, useCallback, useRef, useEffect, useLayoutEffect } from "react";
 import { useRouter } from "next/navigation";
 import type { Chapter } from "@/lib/types";
@@ -42,6 +43,7 @@ export default function WorkspaceHome({
   workspaceSurahs,
 }: Props) {
   const router = useRouter();
+  const t = useT();
 
   // Remove navigation splash screen injected by HomeClient on mount.
   useLayoutEffect(() => {
@@ -222,7 +224,7 @@ export default function WorkspaceHome({
               </span>
             </div>
             <p className="ws-home-sub">
-              {workspaceSurahs.length} surah{workspaceSurahs.length !== 1 ? "s" : ""} in progress
+              {t("ws.surahsInProgress", { n: workspaceSurahs.length })}
             </p>
           </div>
 
@@ -233,14 +235,14 @@ export default function WorkspaceHome({
               title="All notes across this workspace"
               onClick={() => pushWithSplash(router, `/workspaces/${workspaceId}/notes`)}
             >
-              Notes
+              {t("ws.notes")}
             </button>
             <button
               className="ws-new-btn ws-new-btn--ghost"
               title="Blank whiteboard — verses, tafsīr & pen"
               onClick={() => pushWithSplash(router, `/workspaces/${workspaceId}/whiteboard`)}
             >
-              ◇ Blank board
+              {t("ws.blankBoard")}
             </button>
             {role === "owner" && (
               <button
@@ -248,7 +250,7 @@ export default function WorkspaceHome({
                 onClick={startRename}
                 title="Rename workspace"
               >
-                Rename
+                {t("ws.rename")}
               </button>
             )}
             <button
@@ -256,21 +258,21 @@ export default function WorkspaceHome({
               title="Workspace settings and members"
               onClick={() => setSettingsOpen(true)}
             >
-              Settings
+              {t("ws.settings")}
             </button>
             <button
               className="ws-new-btn"
               onClick={() => setModalOpen(true)}
               title="Create new workspace"
             >
-              + New workspace
+              {t("ws.newWorkspace")}
             </button>
           </div>
 
           <div className="ws-filter-tabs" ref={tabsContainerRef}>
             <div className="ws-filter-indicator" aria-hidden />
             {(["all", "started", "not-started"] as const).map((f) => {
-              const label = f === "all" ? "All" : f === "started" ? "Started" : "Not started";
+              const label = f === "all" ? t("ws.filter.all") : f === "started" ? t("ws.filter.started") : t("ws.filter.notStarted");
               const count = f === "all" ? 114 : f === "started" ? workspaceSurahs.length : 114 - workspaceSurahs.length;
               return (
                 <button

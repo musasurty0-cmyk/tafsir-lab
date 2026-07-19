@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useMemo } from "react";
 import { X } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { TAFSIR_LANGUAGE_NAMES } from "@/lib/tafsir/spa5k-catalog";
+import { useT } from "@/lib/i18n/LocaleProvider";
 import type { Verse } from "@/lib/types";
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -64,6 +65,7 @@ type LangFilter = string;
 
 export default function TafsirDrawer({ open, verseKey, verses, onClose }: Props) {
   const { openWordPanel } = useAppStore();
+  const t = useT();
 
   // ── Core state ──────────────────────────────────────────────────────────
   const [tab,         setTab]       = useState<Tab>("commentary");
@@ -189,10 +191,10 @@ export default function TafsirDrawer({ open, verseKey, verses, onClose }: Props)
     ?? (sourceSlug === "maarif-en" ? "Maʿārif al-Qurʾān (English)" : "Ibn Kathīr (English)");
 
   const TABS: { id: Tab; label: string }[] = [
-    { id: "commentary",   label: "Commentary"   },
-    { id: "wbw",          label: "Word-by-word" },
-    { id: "translations", label: "Translations" },
-    { id: "audio",        label: "Recitation"   },
+    { id: "commentary",   label: t("drawer.commentary")   },
+    { id: "wbw",          label: t("drawer.wordByWord") },
+    { id: "translations", label: t("drawer.translations") },
+    { id: "audio",        label: t("drawer.recitation")   },
   ];
 
   // ── Render ───────────────────────────────────────────────────────────────
@@ -202,7 +204,7 @@ export default function TafsirDrawer({ open, verseKey, verses, onClose }: Props)
       {/* ── Header ── */}
       <div className="drawer-head">
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div className="drawer-head-title">Tafsīr · Classical Commentary</div>
+          <div className="drawer-head-title">{t("drawer.title")}</div>
           {activeAyah && (
             <div className="drawer-head-ref">{activeAyah} · Al-Qurʾān</div>
           )}
@@ -214,7 +216,7 @@ export default function TafsirDrawer({ open, verseKey, verses, onClose }: Props)
 
       {/* ── Source selector ── */}
       <div className="drawer-source-bar">
-        <span className="drawer-source-label">Source</span>
+        <span className="drawer-source-label">{t("drawer.source")}</span>
         <div className="drawer-lang-chips" role="tablist" aria-label="Tafsir language">
           <button
             className="drawer-lang-chip"

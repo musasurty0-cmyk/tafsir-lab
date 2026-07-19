@@ -4,9 +4,11 @@ import { useState }              from "react";
 import { useRouter }             from "next/navigation";
 import { signInWithPopup, type AuthProvider } from "firebase/auth";
 import { getFirebaseAuth, googleProvider, microsoftProvider } from "@/lib/firebase/client";
+import { useT, LanguageSwitcher } from "@/lib/i18n/LocaleProvider";
 
 export default function LoginPage() {
   const router                = useRouter();
+  const t                     = useT();
   const [loading, setLoading] = useState<"google" | "microsoft" | "demo" | null>(null);
   const [error,   setError]   = useState<string | null>(null);
 
@@ -81,7 +83,7 @@ export default function LoginPage() {
         </div>
 
         <h1 className="login-title">TafsirLab</h1>
-        <p className="login-subtitle">Your personal Qurʾān study space</p>
+        <p className="login-subtitle">{t("login.subtitle")}</p>
 
         <button
           className="login-google-btn"
@@ -89,7 +91,7 @@ export default function LoginPage() {
           disabled={loading !== null}
         >
           {loading === "google" ? <span className="login-spinner" /> : <GoogleIcon />}
-          {loading === "google" ? "Signing in…" : "Continue with Google"}
+          {loading === "google" ? t("login.signingIn") : t("login.google")}
         </button>
 
         <button
@@ -98,7 +100,7 @@ export default function LoginPage() {
           disabled={loading !== null}
         >
           {loading === "microsoft" ? <span className="login-spinner" /> : <MicrosoftIcon />}
-          {loading === "microsoft" ? "Signing in…" : "Continue with Microsoft"}
+          {loading === "microsoft" ? t("login.signingIn") : t("login.microsoft")}
         </button>
 
         {/* Hidden demo entry — revealed by tapping the logo */}
@@ -108,7 +110,7 @@ export default function LoginPage() {
               className="login-demo-input"
               type="password"
               inputMode="numeric"
-              placeholder="Demo code"
+              placeholder={t("login.demoCode")}
               value={demoCode}
               onChange={(e) => setDemoCode(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") handleDemo(); }}
@@ -120,16 +122,18 @@ export default function LoginPage() {
               onClick={handleDemo}
               disabled={loading !== null || !demoCode.trim()}
             >
-              {loading === "demo" ? "Opening…" : "Open demo"}
+              {loading === "demo" ? t("login.opening") : t("login.openDemo")}
             </button>
           </div>
         )}
 
         {error && <p className="login-error">{error}</p>}
 
-        <p className="login-footer">
-          Your notes and workspaces are private and synced to your account.
-        </p>
+        <p className="login-footer">{t("login.footer")}</p>
+
+        <div style={{ marginTop: 14, display: "flex", justifyContent: "center" }}>
+          <LanguageSwitcher compact />
+        </div>
       </div>
     </div>
   );

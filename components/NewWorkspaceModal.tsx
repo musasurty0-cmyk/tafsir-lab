@@ -9,6 +9,7 @@
  */
 
 import { pushWithSplash } from "@/lib/nav-splash";
+import { useT } from "@/lib/i18n/LocaleProvider";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -18,6 +19,7 @@ interface Props {
 
 export default function NewWorkspaceModal({ onClose }: Props) {
   const router   = useRouter();
+  const t        = useT();
   const inputRef = useRef<HTMLInputElement>(null);
 
   const [name,    setName]    = useState("");
@@ -70,22 +72,22 @@ export default function NewWorkspaceModal({ onClose }: Props) {
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-        <h2 className="modal-title">New workspace</h2>
+        <h2 className="modal-title">{t("modal.newWorkspace")}</h2>
 
         <form onSubmit={handleSubmit}>
-          <label className="modal-label" htmlFor="ws-name">Name</label>
+          <label className="modal-label" htmlFor="ws-name">{t("modal.name")}</label>
           <input
             ref={inputRef}
             id="ws-name"
             className="modal-input"
-            placeholder="e.g. Al-Baqarah Study Group"
+            placeholder={t("modal.namePlaceholder")}
             value={name}
             onChange={(e) => setName(e.target.value)}
             maxLength={80}
             disabled={loading}
           />
 
-          <label className="modal-label" style={{ marginTop: 18 }}>Type</label>
+          <label className="modal-label" style={{ marginTop: 18 }}>{t("modal.type")}</label>
           <div className="modal-type-row">
             <button
               type="button"
@@ -96,8 +98,8 @@ export default function NewWorkspaceModal({ onClose }: Props) {
             >
               <span className="modal-type-icon">🔒</span>
               <div>
-                <div className="modal-type-name">Private</div>
-                <div className="modal-type-desc">Only visible to you</div>
+                <div className="modal-type-name">{t("modal.private")}</div>
+                <div className="modal-type-desc">{t("modal.privateDesc")}</div>
               </div>
             </button>
 
@@ -110,13 +112,13 @@ export default function NewWorkspaceModal({ onClose }: Props) {
             >
               <span className="modal-type-icon">👥</span>
               <div>
-                <div className="modal-type-name">Group</div>
-                <div className="modal-type-desc">Shared with members</div>
+                <div className="modal-type-name">{t("modal.group")}</div>
+                <div className="modal-type-desc">{t("modal.groupDesc")}</div>
               </div>
             </button>
           </div>
 
-          <label className="modal-label" style={{ marginTop: 18 }}>What is it for?</label>
+          <label className="modal-label" style={{ marginTop: 18 }}>{t("modal.whatFor")}</label>
           <div className="modal-type-row">
             <button
               type="button"
@@ -127,8 +129,8 @@ export default function NewWorkspaceModal({ onClose }: Props) {
             >
               <span className="modal-type-icon">📖</span>
               <div>
-                <div className="modal-type-name">Qurʾān study</div>
-                <div className="modal-type-desc">All 114 sūrahs + a blank board</div>
+                <div className="modal-type-name">{t("modal.study")}</div>
+                <div className="modal-type-desc">{t("modal.studyDesc")}</div>
               </div>
             </button>
 
@@ -141,8 +143,8 @@ export default function NewWorkspaceModal({ onClose }: Props) {
             >
               <span className="modal-type-icon">◇</span>
               <div>
-                <div className="modal-type-name">Blank boards</div>
-                <div className="modal-type-desc">Several free whiteboards, e.g. a weekly class</div>
+                <div className="modal-type-name">{t("modal.boards")}</div>
+                <div className="modal-type-desc">{t("modal.boardsDesc")}</div>
               </div>
             </button>
           </div>
@@ -156,14 +158,14 @@ export default function NewWorkspaceModal({ onClose }: Props) {
               onClick={onClose}
               disabled={loading}
             >
-              Cancel
+              {t("modal.cancel")}
             </button>
             <button
               type="submit"
               className="modal-btn-create"
               disabled={loading || !name.trim()}
             >
-              {loading ? "Creating…" : "Create workspace"}
+              {loading ? t("modal.creating") : t("modal.create")}
             </button>
           </div>
         </form>

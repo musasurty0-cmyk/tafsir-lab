@@ -10,6 +10,7 @@
  */
 
 import { pushWithSplash } from "@/lib/nav-splash";
+import { useT } from "@/lib/i18n/LocaleProvider";
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronRight, ChevronLeft, Search, X, Plus, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
@@ -218,6 +219,7 @@ export default function WorkspaceSidebar({
   onToggleCollapse,
 }: Props) {
   const router = useRouter();
+  const t = useT();
 
   const [query,        setQuery]        = useState("");
   const [creatingPage, setCreatingPage] = useState(false);
@@ -416,10 +418,10 @@ export default function WorkspaceSidebar({
       {/* ── Footer ── */}
       <div className="sidebar-footer">
         <Link href={`/workspaces/${workspaceId}`} className="sidebar-footer-link">
-          ← Surah grid
+          ← {t("sidebar.workspaceHome")}
         </Link>
         <Link href={`/workspaces/${workspaceId}/notes`} className="sidebar-footer-link">
-          All notes
+          {t("sidebar.allNotes")}
         </Link>
       </div>
     </aside>
