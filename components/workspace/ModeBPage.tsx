@@ -25,7 +25,7 @@ import type { ProgressStatus } from "@/lib/services/progress.service";
 import type { NoteData } from "./NoteCard";
 import QCFMushafPage from "./QCFMushafPage";
 import AnchoredNoteCard from "./AnchoredNoteCard";
-import FreeTextBox from "./FreeTextBox";
+import FreeTextBox, { TEXTBOX_DEFAULT_WIDTH } from "./FreeTextBox";
 import DrawingCanvas, { type DrawTool, type DrawingCanvasHandle } from "./DrawingCanvas";
 import CanvasToolRail, {
   DEFAULT_PEN_COLOR,
@@ -375,11 +375,16 @@ export default function ModeBPage({
   const strokeWidth = tool === "highlight" ? hlSize : penSize; // arrow inherits pen width
 
   // ── Free text box placement (text tool) ───────────────────────────────
-  // OPTIMISTIC lifecycle (no flicker): render a temp container instantly,
-  // persist in the background, then swap in the server note (identical
-  // geometry/content, so the swap is invisible). In word/ayah mode the
-  // container belongs to the active annotation layer.
+  // Whiteboard-style OPTIMISTIC lifecycle: render a local temp container
+  // instantly; the rich body persists it ON BLUR with its content via
+  // onPersistTemp (keyAliasRef keeps the React key stable across the
+  // temp→server swap so typed content is never lost). In word/ayah mode
+  // the container belongs to the active annotation layer.
   const [freshTextBoxId, setFreshTextBoxId] = useState<string | null>(null);
+  const keyAliasRef    = useRef<Map<string, string>>(new Map()); // serverId → tempId
+  const tempAnchorsRef = useRef<Map<string, {
+    anchorType: string; surahNumber?: number; ayahNumber?: number; wordPosition?: number;
+  }>>(new Map());
 
   const placeTextBox = useCallback((wx: number, wy: number) => {
     const anchor = focusAnchor;
@@ -391,6 +396,7 @@ export default function ModeBPage({
       : { anchorType: "page" };
 
     const tempId = `temp-${crypto.randomUUID()}`;
+    tempAnchorsRef.current.set(tempId, anchorFields);
     const temp: NoteData = {
       id: tempId,
       noteType: "textbox",
@@ -401,7 +407,7 @@ export default function ModeBPage({
       content: { type: "doc", content: [{ type: "paragraph" }] },
       color: null,
       offsetX: Math.round(wx), offsetY: Math.round(wy),
-      width: 220, height: null,
+      width: TEXTBOX_DEFAULT_WIDTH, height: null,
       isMinimized: false, zIndex: 1, isAdmin: false,
       createdAt: new Date().toISOString(),
       author: { id: "me", name: "You", avatarUrl: null },
@@ -409,28 +415,39 @@ export default function ModeBPage({
     onNoteCreated?.(temp);
     setFreshTextBoxId(tempId);
     setTool("hand"); // hand mode lets clicks reach the new box for editing
+  }, [focusAnchor, onNoteCreated]);
 
-    fetch(`/api/pages/${pageId}/notes`, {
-      method:  "POST",
-      headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({
-        noteType: "textbox",
-        ...anchorFields,
-        content:  { type: "doc", content: [{ type: "paragraph" }] },
-        offsetX:  Math.round(wx),
-        offsetY:  Math.round(wy),
-        width:    220,
-      }),
-    })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d: { note?: NoteData } | null) => {
-        if (!d?.note) return; // keep the temp visible; poll won't drop it
-        onNoteDeleted(tempId);
-        onNoteCreated?.(d.note);
-        setFreshTextBoxId((cur) => (cur === tempId ? d.note!.id : cur));
-      })
-      .catch(() => { /* temp stays visible */ });
-  }, [pageId, focusAnchor, onNoteCreated, onNoteDeleted]);
+  // Persist a temp container (called by the rich body on blur, with content
+  // and final position). Anchor fields were captured at placement time.
+  const persistTextBoxTemp = useCallback((tempId: string, content: object, at: { x: number; y: number }) => {
+    const anchorFields = tempAnchorsRef.current.get(tempId) ?? { anchorType: "page" };
+    const post = () =>
+      fetch(`/api/pages/${pageId}/notes`, {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({
+          noteType: "textbox",
+          ...anchorFields,
+          content,
+          offsetX: Math.round(at.x),
+          offsetY: Math.round(at.y),
+          width:   TEXTBOX_DEFAULT_WIDTH,
+        }),
+      }).then((r) => (r.ok ? r.json() : null));
+
+    const swap = (d: { note?: NoteData } | null) => {
+      if (!d?.note) return false;
+      keyAliasRef.current.set(d.note.id, tempId); // stable key across the swap
+      tempAnchorsRef.current.delete(tempId);
+      onNoteDeleted(tempId);
+      onNoteCreated?.(d.note);
+      setFreshTextBoxId((cur) => (cur === tempId ? d.note!.id : cur));
+      return true;
+    };
+
+    post().then((d) => { if (!swap(d)) setTimeout(() => post().then(swap).catch(() => {}), 3000); })
+          .catch(() => { /* temp stays visible */ });
+  }, [pageId, onNoteCreated, onNoteDeleted]);
 
   // Ref for the native touch handlers (stable effect) — a direct closure
   // would capture the mount-time focusAnchor and place boxes on the wrong
@@ -894,7 +911,7 @@ export default function ModeBPage({
           })
           .map((note) => (
             <FreeTextBox
-              key={note.id}
+              key={keyAliasRef.current.get(note.id) ?? note.id}
               note={note}
               startEditing={note.id === freshTextBoxId}
               onUpdated={onNoteUpdated}
@@ -902,6 +919,7 @@ export default function ModeBPage({
                 if (id === freshTextBoxId) setFreshTextBoxId(null);
                 onNoteDeleted(id);
               }}
+              onPersistTemp={persistTextBoxTemp}
             />
           ))}
       </div>

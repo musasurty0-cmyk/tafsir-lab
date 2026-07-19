@@ -17,7 +17,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { NoteData } from "./NoteCard";
-import FreeTextBox from "./FreeTextBox";
+import FreeTextBox, { TEXTBOX_DEFAULT_WIDTH } from "./FreeTextBox";
 import DrawingCanvas, { type DrawTool, type DrawingCanvasHandle } from "./DrawingCanvas";
 import CanvasToolRail, {
   DEFAULT_PEN_COLOR, DEFAULT_PEN_SIZE,
@@ -110,7 +110,7 @@ export default function WhiteboardPage({
       content: { type: "doc", content: [{ type: "paragraph" }] },
       color: null,
       offsetX: Math.round(wx), offsetY: Math.round(wy),
-      width: 260, height: null,
+      width: TEXTBOX_DEFAULT_WIDTH, height: null,
       isMinimized: false, zIndex: 1, isAdmin: false,
       createdAt: new Date().toISOString(),
       author: { id: currentUserId, name: currentUserName, avatarUrl: null },
@@ -134,7 +134,7 @@ export default function WhiteboardPage({
         headers: { "Content-Type": "application/json" },
         body:    JSON.stringify({
           noteType: "textbox", anchorType: "whiteboard",
-          content, offsetX: Math.round(at.x), offsetY: Math.round(at.y), width: 260,
+          content, offsetX: Math.round(at.x), offsetY: Math.round(at.y), width: TEXTBOX_DEFAULT_WIDTH,
         }),
       }).then((r) => (r.ok ? r.json() : null));
 
@@ -317,7 +317,6 @@ export default function WhiteboardPage({
           <FreeTextBox
             key={keyAliasRef.current.get(note.id) ?? note.id}
             note={note}
-            rich
             startEditing={note.id === freshBoxId}
             onUpdated={onNoteUpdated}
             onDeleted={(id) => { if (id === freshBoxId) setFreshBoxId(null); onNoteDeleted(id); }}

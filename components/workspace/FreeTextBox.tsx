@@ -1,16 +1,22 @@
 "use client";
 
 /**
- * FreeTextBox — free-floating text box on the Mode B canvas.
+ * FreeTextBox — free-floating rich text container on a canvas surface
+ * (Mode B Mushaf canvas, word/ayah annotation layers, and whiteboards).
  *
- * Stored as a StructuredNote with noteType "textbox" + anchorType "page";
- * offsetX/offsetY hold RAW canvas-space coordinates (unlike anchored notes,
- * which are clamped beside the Mushaf card).
+ * Stored as a StructuredNote with noteType "textbox"; offsetX/offsetY hold
+ * RAW canvas-space coordinates. Lives inside .mode-b-inner, so it pans and
+ * zooms with the viewport.
  *
- * Lives inside .mode-b-inner, so it pans and zooms with the viewport.
+ * The body is ONE shared implementation: the same TipTap editor as the main
+ * page editor — same extensions, same slash palette (CommandList), same
+ * /ayah and /tafsir block widgets, same SelectionToolbar, same typography
+ * ("page-editor-content"). Containers differ from the main editor ONLY in
+ * persistence (notes REST API instead of Yjs). There is deliberately no
+ * "simplified" plain-text fallback — that was a second, divergent editor.
  *
  * Interactions (hand tool active — the drawing overlay passes events through):
- *   click text   → edit in place (autosizing textarea)
+ *   click text   → edit in place
  *   drag grip    → move (PATCH offsetX/offsetY on release)
  *   ✕ button     → delete
  */
@@ -41,35 +47,15 @@ import {
   type SlashCommandItem,
 } from "./editor/SlashCommand";
 import CommandList, { type CommandListHandle } from "./editor/CommandList";
+import SelectionToolbar from "./editor/SelectionToolbar";
+import TafsirVersePicker from "./editor/TafsirVersePicker";
+import { useEditorCtxOptional } from "./editor/EditorContext";
 import type { NoteData } from "./NoteCard";
 
-// ── Helpers ────────────────────────────────────────────────────────────────
-
-function extractText(node: unknown): string {
-  if (typeof node === "string") return node;
-  if (!node || typeof node !== "object") return "";
-  const n = node as { text?: string; content?: unknown[] };
-  if (n.text) return n.text;
-  if (!n.content) return "";
-  return n.content.map(extractText).join("\n").replace(/\n+/g, "\n").trim();
-}
-
-function toDoc(text: string): object {
-  const paragraphs = text.split("\n").map((line) => ({
-    type:    "paragraph",
-    content: line ? [{ type: "text", text: line }] : [],
-  }));
-  return { type: "doc", content: paragraphs.length ? paragraphs : [{ type: "paragraph" }] };
-}
-
-// ── Mini "/" palette ────────────────────────────────────────────────────────
-// Plain-text containers get the commands that make sense in a text box
-// (the full block palette needs the rich editor).
-
-const MINI_COMMANDS = [
-  { id: "ayah",    label: "Ayah",    desc: "Embed a verse — type the key (e.g. 2:255), then Enter" },
-  { id: "divider", label: "Divider", desc: "Horizontal line" },
-];
+/** Default width for a freshly placed container — wide enough that the slash
+ *  palette, ayah/tafsir search results and toolbars are comfortable without
+ *  a manual resize. */
+export const TEXTBOX_DEFAULT_WIDTH = 340;
 
 // ── Props ──────────────────────────────────────────────────────────────────
 
@@ -77,9 +63,6 @@ interface Props {
   note:        NoteData;
   /** Autofocus the editor on mount (set for freshly placed boxes) */
   startEditing?: boolean;
-  /** Rich TipTap body — full slash menu, headings, lists, ayah blocks…
-   *  (Mode A editor surface). Default: plain textarea (Mode B canvas). */
-  rich?:       boolean;
   onUpdated?:  (note: NoteData) => void;
   onDeleted?:  (noteId: string) => void;
   /** Local-only temp container blurred with content — owner persists it.
@@ -90,16 +73,13 @@ interface Props {
 
 // ── Component ──────────────────────────────────────────────────────────────
 
-export default function FreeTextBox({ note, startEditing = false, rich = false, onUpdated, onDeleted, onPersistTemp }: Props) {
-  const [text, setText]       = useState(() => extractText(note.content));
+export default function FreeTextBox({ note, startEditing = false, onUpdated, onDeleted, onPersistTemp }: Props) {
   const [pos, setPos]         = useState({ x: note.offsetX, y: note.offsetY });
   const [hovered, setHovered] = useState(false);
   const [focused, setFocused] = useState(false);
-  const [slashItems, setSlashItems] = useState<typeof MINI_COMMANDS | null>(null);
 
-  const boxRef      = useRef<HTMLDivElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const dragRef     = useRef<{ startMx: number; startMy: number; startX: number; startY: number; zoom: number } | null>(null);
+  const boxRef  = useRef<HTMLDivElement>(null);
+  const dragRef = useRef<{ startMx: number; startMy: number; startX: number; startY: number; zoom: number } | null>(null);
 
   // Unsaved optimistic containers haven't got a server id yet — no network.
   const isTemp = note.id.startsWith("temp-");
@@ -111,31 +91,6 @@ export default function FreeTextBox({ note, startEditing = false, rich = false, 
   // Sync position if the note moves remotely
   useEffect(() => { setPos({ x: note.offsetX, y: note.offsetY }); }, [note.offsetX, note.offsetY]);
 
-  // Sync content if the note changes remotely (skip while the user types;
-  // never let an EMPTY incoming doc wipe non-empty local text — that
-  // happens during the temp→server swap of a freshly created container)
-  useEffect(() => {
-    if (textareaRef.current === document.activeElement) return;
-    const incoming = extractText(note.content);
-    setText((cur) => (!incoming.trim() && cur.trim() ? cur : incoming));
-    requestAnimationFrame(() => { if (textareaRef.current) autosize(textareaRef.current); });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [note.content]);
-
-  // Body is ALWAYS a live textarea — click places the caret exactly where
-  // clicked, double-click selects a word, drag selects — no edit-mode flip.
-  useEffect(() => {
-    const ta = textareaRef.current;
-    if (!ta) return;
-    autosize(ta);
-    if (startEditing) {
-      ta.focus();
-      ta.setSelectionRange(ta.value.length, ta.value.length);
-    }
-  // run once on mount
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   // Persist manual width resize (CSS resize handle) — debounced PATCH
   useEffect(() => {
     const el = boxRef.current;
@@ -143,7 +98,7 @@ export default function FreeTextBox({ note, startEditing = false, rich = false, 
     let timer: ReturnType<typeof setTimeout> | null = null;
     const ro = new ResizeObserver(() => {
       const w = Math.round(el.offsetWidth);
-      if (!w || Math.abs(w - (note.width || 220)) < 4) return;
+      if (!w || Math.abs(w - (note.width || TEXTBOX_DEFAULT_WIDTH)) < 4) return;
       if (timer) clearTimeout(timer);
       timer = setTimeout(() => {
         fetch(`/api/notes/${note.id}`, {
@@ -157,108 +112,6 @@ export default function FreeTextBox({ note, startEditing = false, rich = false, 
     return () => { ro.disconnect(); if (timer) clearTimeout(timer); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [note.id]);
-
-  function autosize(ta: HTMLTextAreaElement) {
-    ta.style.height = "auto";
-    ta.style.height = `${ta.scrollHeight}px`;
-  }
-
-  // ── Slash palette in containers ─────────────────────────────────────────
-  // Typing "/" opens a mini command menu (like the main container's).
-  // Detected on the CURRENT LINE: "/" + optional letters, no space yet.
-  function updateSlashPalette(ta: HTMLTextAreaElement) {
-    const before = ta.value.slice(0, ta.selectionStart);
-    const m = before.match(/(^|\n)\/(\w*)$/);
-    if (!m) { setSlashItems(null); return; }
-    const q = m[2].toLowerCase();
-    const items = MINI_COMMANDS.filter((c) => c.id.startsWith(q));
-    setSlashItems(items.length ? items : null);
-  }
-
-  function applySlashItem(item: (typeof MINI_COMMANDS)[number]) {
-    const ta = textareaRef.current;
-    if (!ta) return;
-    const before = ta.value.slice(0, ta.selectionStart);
-    const after  = ta.value.slice(ta.selectionStart);
-    const m = before.match(/(^|\n)\/(\w*)$/);
-    if (!m) { setSlashItems(null); return; }
-    const tokenStart = before.length - (m[0].length - m[1].length);
-    const base = ta.value.slice(0, tokenStart);
-    const insert = item.id === "ayah" ? "/ayah " : "────────────\n";
-    const next = base + insert + after;
-    setText(next);
-    setSlashItems(null);
-    requestAnimationFrame(() => {
-      const el = textareaRef.current;
-      if (!el) return;
-      el.focus();
-      const caret = (base + insert).length;
-      el.setSelectionRange(caret, caret);
-      autosize(el);
-    });
-  }
-
-  // ── Slash commands in containers ────────────────────────────────────────
-  // Pressing Enter on a line ending "/ayah 2:255" expands it in place to
-  // the verse's Arabic + translation (same endpoint the editor embeds use).
-  function maybeExpandSlash(e: React.KeyboardEvent<HTMLTextAreaElement>): boolean {
-    const ta = e.currentTarget;
-    const before = ta.value.slice(0, ta.selectionStart);
-    const m = before.match(/(^|\n)\/ayah\s+(\d{1,3}:\d{1,3})\s*$/);
-    if (!m) return false;
-    e.preventDefault();
-
-    const key = m[2];
-    const tokenStart = before.length - (m[0].length - m[1].length);
-    const after = ta.value.slice(ta.selectionStart);
-    const placeholder = `⏳ ${key}…`;
-    const next = ta.value.slice(0, tokenStart) + placeholder + after;
-    setText(next);
-    requestAnimationFrame(() => { if (textareaRef.current) autosize(textareaRef.current); });
-
-    fetch(`/api/ayah/${key.replace(":", "_")}`)
-      .then((r) => (r.ok ? r.json() : Promise.reject()))
-      .then(({ verse }: { verse: { text_uthmani?: string; translations?: { text?: string }[] } }) => {
-        const ar = verse.text_uthmani ?? "";
-        const tr = (verse.translations?.[0]?.text ?? "").replace(/<[^>]+>/g, "");
-        const insert = `${ar} ﴿${key}﴾${tr ? `\n${tr}` : ""}\n`;
-        setText((prev) => prev.replace(placeholder, insert));
-        requestAnimationFrame(() => { if (textareaRef.current) autosize(textareaRef.current); });
-      })
-      .catch(() => {
-        setText((prev) => prev.replace(placeholder, `/ayah ${key}`));
-      });
-    return true;
-  }
-
-  // ── Save / delete ───────────────────────────────────────────────────────
-
-  function commitText() {
-    setFocused(false);
-    const trimmed = text.trim();
-    if (trimmed === extractText(note.content).trim() && !isTemp) return;
-
-    // Empty box on commit → delete it entirely
-    if (!trimmed) { handleDelete(); return; }
-
-    if (isTemp) {
-      // Local-only container: the owner creates the server note now
-      // (content + current position in one shot).
-      onPersistTemp?.(note.id, toDoc(trimmed), { x: pos.x, y: pos.y });
-      return;
-    }
-
-    fetch(`/api/notes/${note.id}`, {
-      method:  "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({ content: toDoc(trimmed) }),
-    })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d: { note?: NoteData } | null) => {
-        if (d?.note) onUpdated?.(d.note);
-      })
-      .catch(() => {});
-  }
 
   function handleDelete() {
     if (isTemp) { onDeleted?.(note.id); return; } // local-only removal
@@ -312,7 +165,7 @@ export default function FreeTextBox({ note, startEditing = false, rich = false, 
       ref={boxRef}
       className="free-textbox"
       data-focused={focused ? "true" : "false"}
-      style={{ left: pos.x, top: pos.y, width: note.width || 220 }}
+      style={{ left: pos.x, top: pos.y, width: note.width || TEXTBOX_DEFAULT_WIDTH }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onMouseDown={(e) => e.stopPropagation()}
@@ -339,60 +192,15 @@ export default function FreeTextBox({ note, startEditing = false, rich = false, 
         </button>
       </div>
 
-      {rich ? (
-        /* Rich TipTap body — SAME extension set, typography and slash menu
-           as the main container (class "page-editor-content" carries the
-           identical font family / size / colour). */
-        <RichBody
-          note={note}
-          startEditing={startEditing}
-          posRef={posRef}
-          onFocusChange={setFocused}
-          onUpdated={onUpdated}
-          onDelete={handleDelete}
-          onPersistTemp={onPersistTemp}
-        />
-      ) : (
-        <>
-          {/* Always-live textarea body — natural caret/selection, blur saves */}
-          <textarea
-            ref={textareaRef}
-            className="free-textbox-input"
-            value={text}
-            placeholder="Type something…"
-            rows={1}
-            onFocus={() => setFocused(true)}
-            onChange={(e) => { setText(e.target.value); autosize(e.target); updateSlashPalette(e.target); }}
-            onBlur={() => { setSlashItems(null); commitText(); }}
-            onKeyDown={(e) => {
-              if (slashItems?.length && e.key === "Enter") { e.preventDefault(); applySlashItem(slashItems[0]); return; }
-              if (slashItems && e.key === "Escape") { e.preventDefault(); setSlashItems(null); return; }
-              if (e.key === "Enter" && maybeExpandSlash(e)) return;
-              if (e.key === "Escape") { e.preventDefault(); e.currentTarget.blur(); }
-            }}
-          />
-
-          {/* Mini "/" palette */}
-          {slashItems && (
-            <div className="slash-palette free-textbox-slash">
-              {slashItems.map((item, i) => (
-                <button
-                  key={item.id}
-                  className="slash-palette-item"
-                  data-active={i === 0 ? "true" : "false"}
-                  onMouseDown={(e) => { e.preventDefault(); applySlashItem(item); }}
-                >
-                  <span className="slash-palette-icon">{item.id === "ayah" ? "📖" : "—"}</span>
-                  <span className="slash-palette-text">
-                    <span className="slash-palette-title">{item.label}</span>
-                    <span className="slash-palette-desc">{item.desc}</span>
-                  </span>
-                </button>
-              ))}
-            </div>
-          )}
-        </>
-      )}
+      <RichBody
+        note={note}
+        startEditing={startEditing}
+        posRef={posRef}
+        onFocusChange={setFocused}
+        onUpdated={onUpdated}
+        onDelete={handleDelete}
+        onPersistTemp={onPersistTemp}
+      />
 
       <span className="free-textbox-author">{note.author.name.split(" ")[0]}</span>
     </div>
@@ -402,7 +210,8 @@ export default function FreeTextBox({ note, startEditing = false, rich = false, 
 // ── Rich body — standalone TipTap editor per container ─────────────────────
 // Mirrors the main container's PageEditor: full extension list, the SAME
 // slash-command palette (h1…h3, quote, lists, tasks, code, toggle, divider,
-// ayah + tafsir blocks) and the same "page-editor-content" typography class.
+// ayah + tafsir blocks), the same SelectionToolbar, the same tafsir verse
+// picker, and the same "page-editor-content" typography class.
 // No Yjs here — containers sync via the notes REST API like before.
 
 interface PaletteState {
@@ -440,6 +249,18 @@ function RichBody({
   const paletteOpenRef = useRef(false);
   const saveTimer      = useRef<ReturnType<typeof setTimeout> | null>(null);
   const persistedRef   = useRef(false);
+
+  // Surah being studied + verses on this page — for the tafsir verse picker
+  // (same context the main editor reads; falls back to surah 1 on boards).
+  const ectx       = useEditorCtxOptional();
+  const studySurah = ectx?.surahNumber || 1;
+  const pageVerses = ectx?.verses ?? [];
+
+  // Tafsir verse picker: opened when a tafsir command is chosen WITHOUT a
+  // verse key, so the user picks the āyah within the surah they're studying.
+  const [versePicker, setVersePicker] = useState<{
+    slug: string; sourceName: string; range: { from: number; to: number }; rect: DOMRect;
+  } | null>(null);
 
   // Fresh values inside editor callbacks (created once, closures go stale)
   const noteRef = useRef(note);
@@ -560,9 +381,9 @@ function RichBody({
     onFocus() { cbRef.current.onFocusChange(true); },
 
     onBlur({ editor, event }) {
-      // Clicking a palette item steals focus for a moment — not a real exit
+      // Clicking a palette / picker item steals focus for a moment — not a real exit
       const rel = (event as FocusEvent).relatedTarget as HTMLElement | null;
-      if (rel?.closest?.(".slash-palette-anchor")) return;
+      if (rel?.closest?.(".slash-palette-anchor, .verse-picker")) return;
       cbRef.current.onFocusChange(false);
       commit(editor);
     },
@@ -627,7 +448,25 @@ function RichBody({
   const handleSelect = useCallback(
     (item: SlashCommandItem) => {
       if (!palette) return;
-      (item as SlashCommandItem & { _query: string })._query = palette.query;
+      const q = palette.query;
+
+      // Tafsir command with NO explicit verse key → open the verse picker
+      // (defaults to the surah being studied) — same flow as the main editor.
+      // "/tabari 23:2" inserts directly.
+      if (item.isTafsir && !/\d{1,3}:\d{1,3}/.test(q)) {
+        let slug = item.tafsirSlug;
+        if (!slug) {
+          try { slug = localStorage.getItem("tl-tafsir-source") || "ibn-kathir-en"; }
+          catch { slug = "ibn-kathir-en"; }
+        }
+        const range = (palette.props as unknown as { range: { from: number; to: number } }).range;
+        setVersePicker({ slug, sourceName: item.tafsirSourceName ?? "Tafsīr", range, rect: palette.rect });
+        paletteOpenRef.current = false;
+        setPalette(null);
+        return;
+      }
+
+      (item as SlashCommandItem & { _query: string })._query = q;
       palette.props.command({ ...(item as object) });
       paletteOpenRef.current = false;
       setPalette(null);
@@ -635,9 +474,24 @@ function RichBody({
     [palette],
   );
 
+  // Insert a tafsir block at the picker's saved range for the chosen verse.
+  const insertTafsirVerse = useCallback((verseKey: string) => {
+    if (!editor || !versePicker) return;
+    const { range, slug, sourceName } = versePicker;
+    editor.chain().focus().deleteRange(range).insertContent([
+      { type: "tafsirBlock", attrs: { verseKey, contentHtml: "", sourceName, sourceSlug: slug } },
+      { type: "paragraph" },
+    ]).scrollIntoView().run();
+    setVersePicker(null);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editor, versePicker]);
+
   return (
     <>
       <EditorContent editor={editor} />
+
+      {/* Same floating formatting toolbar as the main editor */}
+      <SelectionToolbar editor={editor} />
 
       {palette &&
         typeof document !== "undefined" &&
@@ -666,6 +520,25 @@ function RichBody({
           })(),
           document.body,
         )}
+
+      {/* Tafsir verse picker — surah fixed to what's being studied, pick the āyah */}
+      {versePicker && (
+        <TafsirVersePicker
+          surah={studySurah}
+          sourceName={versePicker.sourceName}
+          rect={versePicker.rect}
+          ayahsOnPage={
+            Array.from(new Set(
+              pageVerses
+                .map((v) => v.verse_key.split(":"))
+                .filter(([s]) => Number(s) === studySurah)
+                .map(([, a]) => Number(a))
+            )).sort((a, b) => a - b)
+          }
+          onConfirm={insertTafsirVerse}
+          onCancel={() => setVersePicker(null)}
+        />
+      )}
     </>
   );
 }

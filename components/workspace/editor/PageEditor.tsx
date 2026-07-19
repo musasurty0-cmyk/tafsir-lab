@@ -45,7 +45,7 @@ import { AyahBlockExtension } from "./AyahBlockExtension";
 import { TafsirBlockExtension } from "./TafsirBlockExtension";
 import { ToggleListExtension } from "./ToggleListExtension";
 import EditorInkLayer from "./EditorInkLayer";
-import FreeTextBox from "../FreeTextBox";
+import FreeTextBox, { TEXTBOX_DEFAULT_WIDTH } from "../FreeTextBox";
 import type { NoteData } from "../NoteCard";
 import {
   SlashCommandExtension,
@@ -173,7 +173,7 @@ export default function PageEditor({
       content: { type: "doc", content: [{ type: "paragraph" }] },
       color: null,
       offsetX: Math.round(x), offsetY: Math.round(y),
-      width: 260, height: null,
+      width: TEXTBOX_DEFAULT_WIDTH, height: null,
       isMinimized: false, zIndex: 1, isAdmin: false,
       createdAt: new Date().toISOString(),
       author: { id: currentUserId, name: currentUserName, avatarUrl: null },
@@ -193,7 +193,7 @@ export default function PageEditor({
           content,                        // TipTap doc JSON straight from the box
           offsetX:    Math.round(at.x),
           offsetY:    Math.round(at.y),
-          width:      260,
+          width:      TEXTBOX_DEFAULT_WIDTH,
         }),
       }).then((r) => (r.ok ? r.json() : null));
 
@@ -592,7 +592,6 @@ export default function PageEditor({
         <FreeTextBox
           key={keyAliasRef.current.get(note.id) ?? note.id}
           note={note}
-          rich
           startEditing={note.id === freshBoxId}
           onUpdated={onNoteUpdated}
           onDeleted={(id) => {

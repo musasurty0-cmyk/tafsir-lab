@@ -7477,14 +7477,15 @@ input, textarea { font: inherit; color: inherit; }
 
 /* Whole-ayah wash wrapper — consecutive glyphs of a washed ayah are grouped
    into ONE flex-row span carrying the background, so the highlight is a
-   single continuous region across the line (no per-word boxes, no gaps).
+   single continuous SQUARE-CORNERED rectangle across the line, like a text
+   selection in a document (no per-word boxes, no gaps, no rounding).
    Layout-neutral: glyph spans keep their exact advance widths inside. */
 .qcf-ayah-run {
   display:       flex;
   direction:     rtl;
-  align-items:   center;
+  align-items:   stretch;   /* glyphs fill the run's full height — solid band */
   flex-shrink:   0;
-  border-radius: 4px;
+  border-radius: 0;
 }
 
 /* Eraser rubber — round, sized to the real hit radius, follows the pointer */

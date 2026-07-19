@@ -463,35 +463,41 @@ export default function WorkspacePageView({
         </div>
       );
     }
+    // Rich containers on the canvas (and inside word/ayah annotation layers)
+    // read verses / surah / onOpenTafsir from EditorContext — the same
+    // provider Mode A and the whiteboard use.
     return (
-      <ModeBPage
-        verses={verses}
-        pageId={activePageId}
-        surahNumber={surahNumber}
-        chapter={chapter}
-        userPrefs={page.userPrefs}
-        personalProgress={personalProgress}
-        groupProgress={groupProgress}
-        notes={notes}
-        roomSocket={room.socket}
-        onOpenTafsir={openTafsir}
-        onNoteCreated={handleNoteCreated}
-        onNoteUpdated={handleNoteUpdated}
-        onNoteDeleted={handleNoteDeleted}
-        onAyahSelect={handleAyahSelect}
-        scrollToNoteId={selectedNoteId}
-      />
+      <EditorContextProvider value={editorCtx}>
+        <ModeBPage
+          verses={verses}
+          pageId={activePageId}
+          surahNumber={surahNumber}
+          chapter={chapter}
+          userPrefs={page.userPrefs}
+          personalProgress={personalProgress}
+          groupProgress={groupProgress}
+          notes={notes}
+          roomSocket={room.socket}
+          onOpenTafsir={openTafsir}
+          onNoteCreated={handleNoteCreated}
+          onNoteUpdated={handleNoteUpdated}
+          onNoteDeleted={handleNoteDeleted}
+          onAyahSelect={handleAyahSelect}
+          scrollToNoteId={selectedNoteId}
+        />
+      </EditorContextProvider>
     );
   }
 
-  // ── Whiteboard (blank scratch canvas) ──────────────────────────────────
-  // AyahBlockView (inside rich containers) reads verses + onOpenTafsir from
-  // EditorContext, so the board is wrapped in the same provider Mode A uses.
+  // ── Shared editor context for canvas surfaces ──────────────────────────
+  // AyahBlockView / TafsirVersePicker (inside rich containers) read verses,
+  // surah and onOpenTafsir from EditorContext — one provider serves the
+  // Mushaf canvas, annotation layers, and the whiteboard alike.
   const whiteboardNotes = useMemo(
     () => notes.filter((n) => n.noteType === "textbox" && n.anchorType === "whiteboard"),
     [notes],
   );
-  const whiteboardCtx = useMemo(() => ({
+  const editorCtx = useMemo(() => ({
     pageId: activePageId, surahNumber, verses, notes, role,
     personalProgress, groupProgress,
     onNoteCreated: handleNoteCreated, onNoteUpdated: handleNoteUpdated, onNoteDeleted: handleNoteDeleted,
@@ -510,7 +516,7 @@ export default function WorkspacePageView({
       );
     }
     return (
-      <EditorContextProvider value={whiteboardCtx}>
+      <EditorContextProvider value={editorCtx}>
         <WhiteboardPage
           pageId={activePageId}
           notes={whiteboardNotes}
