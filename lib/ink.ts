@@ -97,9 +97,13 @@ function freehandOptions(width: number) {
     // (users zoom far in to write); the old absolute 2.5 floor made every
     // "thin" setting identical. Widths ≥ ~1.3 keep the crispness clamp.
     size:             Math.max(Math.min(2.5, width * 2.6), width * 1.9),
-    thinning:         0.55,
-    smoothing:        0.6,
-    streamline:       0.45,
+    // Handwriting tuning: high streamline (0.45) visibly straightened and
+    // lagged strokes ("warped" feel); high thinning pinched stroke ends to
+    // nothing at pen-lift, cutting off small letters. Keep just enough
+    // smoothing to hide jitter without rewriting the user's hand.
+    thinning:         0.38,
+    smoothing:        0.5,
+    streamline:       0.22,
     simulatePressure: false, // we store REAL pressure per point
     last:             true,
   };

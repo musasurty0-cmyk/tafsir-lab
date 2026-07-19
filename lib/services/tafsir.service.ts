@@ -10,6 +10,7 @@
  */
 
 import { db } from "@/lib/db";
+import { sanitizeTafsirHtml } from "@/lib/sanitize-html";
 import { QuranApiTafsirSource } from "@/lib/tafsir/sources/quran-api.source";
 import { TafsirAppSource }      from "@/lib/tafsir/sources/tafsir-app.source";
 import { Spa5kTafsirSource }    from "@/lib/tafsir/sources/spa5k.source";
@@ -251,7 +252,8 @@ function toResult(
   return {
     source:      meta,
     content:     failed ? "" : content,
-    contentHtml: contentHtml ?? undefined,
+    // Third-party HTML — strip scripts/handlers before it reaches any client
+    contentHtml: contentHtml ? sanitizeTafsirHtml(contentHtml) : undefined,
     fetchedAt:   fetchedAt.toISOString(),
     fromCache,
     ...(failed && { error: "Content unavailable" }),

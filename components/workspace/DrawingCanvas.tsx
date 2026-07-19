@@ -101,6 +101,8 @@ interface Props {
   /** Text tool: called with world-space coordinates when the user clicks
    *  the canvas to place a free text box. */
   onTextPlace?:      (worldX: number, worldY: number) => void;
+  /** Eraser hit radius in SCREEN pixels (ring is drawn at this size). */
+  eraserRadius?:     number;
   /** Reports which annotation anchors have at least one stroke (mine or a
    *  collaborator's) — drives the persistent word/ayah highlights. */
   onAnchorsChange?:  (anchors: Set<string>) => void;
@@ -109,7 +111,7 @@ interface Props {
 // ── Component ─────────────────────────────────────────────────────────────
 
 const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCanvas(
-  { pageId, mushafPage, tool, strokeColor, strokeWidth, viewport, roomSocket, activeAnchor = null, onHistoryChange, onTextPlace, onAnchorsChange },
+  { pageId, mushafPage, tool, strokeColor, strokeWidth, viewport, roomSocket, activeAnchor = null, onHistoryChange, onTextPlace, onAnchorsChange, eraserRadius = ERASER_RADIUS },
   ref,
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -143,6 +145,17 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
 
   const anchorRef = useRef<string | null>(activeAnchor);
   useEffect(() => { anchorRef.current = activeAnchor; }, [activeAnchor]);
+
+  // Adjustable eraser size (screen px) — ref so native handlers stay fresh
+  const eraserRadiusRef = useRef(eraserRadius);
+  useEffect(() => { eraserRadiusRef.current = eraserRadius; }, [eraserRadius]);
+
+  // onTextPlace via ref: the native stylus handlers are registered once, so a
+  // direct closure captured the MOUNT-TIME callback — text boxes placed with a
+  // pen inside a word/ayah layer were anchored to the stale (no-layer) state
+  // and appeared on the main board instead of inside the layer.
+  const onTextPlaceRef = useRef(onTextPlace);
+  useEffect(() => { onTextPlaceRef.current = onTextPlace; }, [onTextPlace]);
 
   /** EXCLUSIVE layer visibility:
    *  normal mode    → only unanchored strokes (the Main Notes);
@@ -630,11 +643,12 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
       scheduleSave(); notifyHistory();
     },
     clear() {
-      // Clear only strokes belonging to the current Mushaf page
-      const curPage = mushafPageRef.current;
-      allMyStrokesRef.current = allMyStrokesRef.current.filter(
-        s => s.mushafPage !== undefined && s.mushafPage !== curPage,
-      );
+      // Clear ONLY the strokes currently visible (this page + active layer),
+      // by id — clearing the main Mushaf must never touch strokes hidden in
+      // word/ayah annotation layers on the same page.
+      const visibleIds = new Set(myStrokesRef.current.map(s => s.id));
+      if (!visibleIds.size) return;
+      allMyStrokesRef.current = allMyStrokesRef.current.filter(s => !visibleIds.has(s.id));
       redoStackRef.current = [];
       myStrokesRef.current = [];
       setMyStrokes([]);
@@ -771,18 +785,25 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
   }
 
   function eraseAt(wx: number, wy: number) {
-    const r    = ERASER_RADIUS / viewportRef.current.zoom;
+    const r    = eraserRadiusRef.current / viewportRef.current.zoom;
     const prev = myStrokesRef.current;
-    const next = prev.filter(s => !hitTest(normPts(s.points as unknown[]), wx, wy, r));
-    if (next.length !== prev.length) {
-      // Sync erasures back to allMyStrokes
-      const survivingIds = new Set(next.map(s => s.id));
-      allMyStrokesRef.current = allMyStrokesRef.current.filter(s => survivingIds.has(s.id) || s.mushafPage !== mushafPageRef.current);
-      redoStackRef.current = [];
-      myStrokesRef.current = next;
-      setMyStrokes(next);
-      scheduleSave(); notifyHistory();
-    }
+    // prev is already scoped to OWN strokes, this page, this surface, and the
+    // ACTIVE annotation layer — so the eraser can only ever touch the user's
+    // own visible pen/highlight/arrow strokes, nothing else.
+    const removedIds = new Set(
+      prev.filter(s => hitTest(normPts(s.points as unknown[]), wx, wy, r)).map(s => s.id),
+    );
+    if (removedIds.size === 0) return;
+
+    // Remove STRICTLY BY ID. The previous survive-by-visibility sync dropped
+    // every same-page stroke hidden in other word/ayah layers — erasing on
+    // the main Mushaf silently destroyed all embedded annotation layers.
+    const next = prev.filter(s => !removedIds.has(s.id));
+    allMyStrokesRef.current = allMyStrokesRef.current.filter(s => !removedIds.has(s.id));
+    redoStackRef.current = [];
+    myStrokesRef.current = next;
+    setMyStrokes(next);
+    scheduleSave(); notifyHistory();
   }
 
   // ── Pointer handlers (fix #6 — touch is always rejected) ──────────────
@@ -933,8 +954,8 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
         className="eraser-ring"
         style={{
           display: tool === "eraser" ? "block" : "none",
-          width:   ERASER_RADIUS * 2,
-          height:  ERASER_RADIUS * 2,
+          width:   eraserRadius * 2,
+          height:  eraserRadius * 2,
         }}
         aria-hidden
       />

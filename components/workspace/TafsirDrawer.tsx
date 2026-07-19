@@ -5,6 +5,7 @@ import { X } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { TAFSIR_LANGUAGE_NAMES } from "@/lib/tafsir/spa5k-catalog";
 import { useT } from "@/lib/i18n/LocaleProvider";
+import { sanitizeTafsirHtml } from "@/lib/sanitize-html";
 import type { Verse } from "@/lib/types";
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -344,11 +345,16 @@ export default function TafsirDrawer({ open, verseKey, verses, onClose }: Props)
                   <div
                     className="commentary-body"
                     dir="auto"
+                    // contentHtml is third-party; content is plain text whose
+                    // tags must not survive the <p>/<br> re-wrapping either.
                     dangerouslySetInnerHTML={{
-                      __html: entry.contentHtml
-                        ?? entry.content
-                            .replace(/\n{2,}/g, "</p><p>")
-                            .replace(/\n/g, "<br />"),
+                      __html: sanitizeTafsirHtml(
+                        entry.contentHtml
+                          ?? entry.content
+                              .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+                              .replace(/\n{2,}/g, "</p><p>")
+                              .replace(/\n/g, "<br />"),
+                      ),
                     }}
                   />
                 </div>

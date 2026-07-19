@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { NodeViewWrapper, type NodeViewProps } from "@tiptap/react";
 import { TAFSIR_LANGUAGE_NAMES } from "@/lib/tafsir/spa5k-catalog";
+import { sanitizeTafsirHtml } from "@/lib/sanitize-html";
 
 const TrashIcon = () => (
   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
@@ -180,7 +181,9 @@ export default function TafsirBlockView({
             <div
               className="tafsir-block-content"
               dir="auto"
-              dangerouslySetInnerHTML={{ __html: html }}
+              // Defense-in-depth: blocks persisted before server-side
+              // sanitisation carry raw HTML in their attrs
+              dangerouslySetInnerHTML={{ __html: sanitizeTafsirHtml(html) }}
             />
           )}
         </div>
