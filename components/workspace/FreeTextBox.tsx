@@ -63,6 +63,12 @@ interface Props {
   note:        NoteData;
   /** Autofocus the editor on mount (set for freshly placed boxes) */
   startEditing?: boolean;
+  /** Mushaf-canvas containers: /ayah drops the verse's Arabic + translation
+   *  as plain inline text (the classic canvas behaviour) instead of the
+   *  interactive Ayah block widget. /tafsir is unaffected — always the block
+   *  widget. Defaults to false (widget), which is what the main document and
+   *  whiteboards use. */
+  ayahInline?: boolean;
   onUpdated?:  (note: NoteData) => void;
   onDeleted?:  (noteId: string) => void;
   /** Local-only temp container blurred with content — owner persists it.
@@ -73,7 +79,7 @@ interface Props {
 
 // ── Component ──────────────────────────────────────────────────────────────
 
-export default function FreeTextBox({ note, startEditing = false, onUpdated, onDeleted, onPersistTemp }: Props) {
+export default function FreeTextBox({ note, startEditing = false, ayahInline = false, onUpdated, onDeleted, onPersistTemp }: Props) {
   const [pos, setPos]         = useState({ x: note.offsetX, y: note.offsetY });
   const [hovered, setHovered] = useState(false);
   const [focused, setFocused] = useState(false);
@@ -195,6 +201,7 @@ export default function FreeTextBox({ note, startEditing = false, onUpdated, onD
       <RichBody
         note={note}
         startEditing={startEditing}
+        ayahInline={ayahInline}
         posRef={posRef}
         onFocusChange={setFocused}
         onUpdated={onUpdated}
@@ -232,6 +239,7 @@ function isEmptyDoc(d: unknown): boolean {
 interface RichBodyProps {
   note:          NoteData;
   startEditing:  boolean;
+  ayahInline:    boolean;
   posRef:        React.MutableRefObject<{ x: number; y: number }>;
   onFocusChange: (focused: boolean) => void;
   onUpdated?:    (note: NoteData) => void;
@@ -240,7 +248,7 @@ interface RichBodyProps {
 }
 
 function RichBody({
-  note, startEditing, posRef,
+  note, startEditing, ayahInline, posRef,
   onFocusChange, onUpdated, onDelete, onPersistTemp,
 }: RichBodyProps) {
   const [palette, setPalette] = useState<PaletteState | null>(null);
@@ -256,9 +264,12 @@ function RichBody({
   const studySurah = ectx?.surahNumber || 1;
   const pageVerses = ectx?.verses ?? [];
 
-  // Tafsir verse picker: opened when a tafsir command is chosen WITHOUT a
-  // verse key, so the user picks the āyah within the surah they're studying.
+  // Verse picker: opened when a tafsir command — or, in ayahInline mode, the
+  // /ayah command — is chosen WITHOUT a verse key, so the user picks the āyah
+  // within the surah they're studying. `kind` decides what gets inserted on
+  // confirm: a tafsir block, or the verse's plain Arabic + translation text.
   const [versePicker, setVersePicker] = useState<{
+    kind: "tafsir" | "ayah";
     slug: string; sourceName: string; range: { from: number; to: number }; rect: DOMRect;
   } | null>(null);
 
@@ -449,18 +460,31 @@ function RichBody({
     (item: SlashCommandItem) => {
       if (!palette) return;
       const q = palette.query;
+      const keyMatch = q.match(/\d{1,3}:\d{1,3}/);
+      const range = (palette.props as unknown as { range: { from: number; to: number } }).range;
+
+      // Ayah command on the Mushaf canvas → insert the verse's Arabic +
+      // translation as plain inline text (the classic canvas behaviour),
+      // NOT the interactive Ayah block widget. "/ayah 2:255" inserts directly;
+      // "/ayah" with no key opens the verse picker (surah being studied).
+      if (ayahInline && item.id === "ayah") {
+        paletteOpenRef.current = false;
+        setPalette(null);
+        if (keyMatch) insertAyahInline(keyMatch[0], range);
+        else setVersePicker({ kind: "ayah", slug: "", sourceName: "Āyah", range, rect: palette.rect });
+        return;
+      }
 
       // Tafsir command with NO explicit verse key → open the verse picker
       // (defaults to the surah being studied) — same flow as the main editor.
       // "/tabari 23:2" inserts directly.
-      if (item.isTafsir && !/\d{1,3}:\d{1,3}/.test(q)) {
+      if (item.isTafsir && !keyMatch) {
         let slug = item.tafsirSlug;
         if (!slug) {
           try { slug = localStorage.getItem("tl-tafsir-source") || "ibn-kathir-en"; }
           catch { slug = "ibn-kathir-en"; }
         }
-        const range = (palette.props as unknown as { range: { from: number; to: number } }).range;
-        setVersePicker({ slug, sourceName: item.tafsirSourceName ?? "Tafsīr", range, rect: palette.rect });
+        setVersePicker({ kind: "tafsir", slug, sourceName: item.tafsirSourceName ?? "Tafsīr", range, rect: palette.rect });
         paletteOpenRef.current = false;
         setPalette(null);
         return;
@@ -471,7 +495,8 @@ function RichBody({
       paletteOpenRef.current = false;
       setPalette(null);
     },
-    [palette],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [palette, ayahInline],
   );
 
   // Insert a tafsir block at the picker's saved range for the chosen verse.
@@ -485,6 +510,34 @@ function RichBody({
     setVersePicker(null);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editor, versePicker]);
+
+  // Insert the verse's Arabic + translation as PLAIN inline text at a slash
+  // range (classic canvas /ayah). Fetches the verse; shows a loading marker
+  // meanwhile; replaces it (or restores the command on failure).
+  const insertAyahInline = useCallback((verseKey: string, range: { from: number; to: number }) => {
+    if (!editor) return;
+    const placeholder = `⏳ ${verseKey}…`;
+    editor.chain().focus().deleteRange(range).run();
+    const from = editor.state.selection.from;
+    editor.chain().insertContent(placeholder).run();
+    const to = editor.state.selection.from;
+
+    fetch(`/api/ayah/${verseKey.replace(":", "_")}`)
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then(({ verse }: { verse: { text_uthmani?: string; translations?: { text?: string }[] } }) => {
+        const ar = (verse.text_uthmani ?? "").trim();
+        const tr = (verse.translations?.[0]?.text ?? "").replace(/<[^>]+>/g, "").trim();
+        const content: object[] = [
+          { type: "paragraph", content: ar ? [{ type: "text", text: `${ar} ﴿${verseKey}﴾` }] : [] },
+        ];
+        if (tr) content.push({ type: "paragraph", content: [{ type: "text", text: tr }] });
+        content.push({ type: "paragraph" });
+        editor.chain().focus().insertContentAt({ from, to }, content).scrollIntoView().run();
+      })
+      .catch(() => {
+        editor.chain().focus().insertContentAt({ from, to }, `/ayah ${verseKey}`).run();
+      });
+  }, [editor]);
 
   return (
     <>
@@ -521,7 +574,8 @@ function RichBody({
           document.body,
         )}
 
-      {/* Tafsir verse picker — surah fixed to what's being studied, pick the āyah */}
+      {/* Verse picker — surah fixed to what's being studied, pick the āyah.
+          Confirms into a tafsir block or inline āyah text per picker.kind. */}
       {versePicker && (
         <TafsirVersePicker
           surah={studySurah}
@@ -535,7 +589,15 @@ function RichBody({
                 .map(([, a]) => Number(a))
             )).sort((a, b) => a - b)
           }
-          onConfirm={insertTafsirVerse}
+          onConfirm={(verseKey) => {
+            if (versePicker.kind === "ayah") {
+              const { range } = versePicker;
+              setVersePicker(null);
+              insertAyahInline(verseKey, range);
+            } else {
+              insertTafsirVerse(verseKey);
+            }
+          }}
           onCancel={() => setVersePicker(null)}
         />
       )}

@@ -914,6 +914,7 @@ export default function ModeBPage({
               key={keyAliasRef.current.get(note.id) ?? note.id}
               note={note}
               startEditing={note.id === freshTextBoxId}
+              ayahInline   /* Mushaf canvas: /ayah drops inline verse text */
               onUpdated={onNoteUpdated}
               onDeleted={(id) => {
                 if (id === freshTextBoxId) setFreshTextBoxId(null);
