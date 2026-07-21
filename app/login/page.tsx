@@ -9,22 +9,6 @@ import {
 import { getFirebaseAuth, googleProvider, microsoftProvider } from "@/lib/firebase/client";
 import { useT, LanguageSwitcher } from "@/lib/i18n/LocaleProvider";
 
-/**
- * iOS/iPadOS runs EVERY browser (Chrome, Edge, Firefox…) on Apple's WebKit,
- * where signInWithPopup is unreliable and throws a WebKit SyntaxError
- * ("The string did not match the expected pattern"). Detect those devices so
- * we go straight to the full-page redirect flow instead of the popup.
- * iPadOS 13+ masquerades as desktop Safari (platform "MacIntel"), so we also
- * treat a touch-capable Mac as iPad.
- */
-function isWebkitTouchDevice(): boolean {
-  if (typeof navigator === "undefined") return false;
-  const ua = navigator.userAgent;
-  const iOS = /iPad|iPhone|iPod/.test(ua);
-  const iPadOS = navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
-  return iOS || iPadOS;
-}
-
 /** Popup failures that mean "the user aborted" — don't fall back to redirect. */
 const USER_ABORTED = new Set([
   "auth/popup-closed-by-user",
@@ -80,21 +64,14 @@ export default function LoginPage() {
     setError(null);
     const auth = getFirebaseAuth();
 
-    // iOS/iPadOS WebKit: skip the flaky popup entirely — redirect navigates
-    // the page away and completeSignIn runs via getRedirectResult on return.
-    if (isWebkitTouchDevice()) {
-      try {
-        await signInWithRedirect(auth, provider);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Something went wrong");
-        setLoading(null);
-      }
-      return;
-    }
-
-    // Desktop: popup, with a redirect fallback if the POPUP ITSELF is unusable
-    // (blocked / not supported / a WebKit SyntaxError), but NOT if the user
-    // simply closed it.
+    // Popup on EVERY device (incl. iOS/iPadOS WebKit). The old WebKit popup
+    // error ("The string did not match the expected pattern") was caused by
+    // the cross-domain authDomain (firebaseapp.com ≠ the app's own domain);
+    // now that authDomain is first-party via the /__/auth proxy, the popup
+    // works on iOS and — crucially — doesn't depend on redirect state
+    // surviving a full page navigation (which iOS WebKit was dropping, so
+    // getRedirectResult came back empty and bounced to the login page).
+    // Redirect stays only as a fallback if the popup itself is unusable.
     let result: UserCredential;
     try {
       result = await signInWithPopup(auth, provider);
