@@ -28,6 +28,19 @@ export default function LoginPage() {
   const [demoOpen, setDemoOpen] = useState(false);
   const [demoCode, setDemoCode] = useState("");
 
+  // In-app iOS browsers (Chrome=CriOS, Firefox=FxiOS, Edge=EdgiOS, Opera=OPiOS,
+  // Google app=GSA) break Firebase's popup cross-window relay AND drop the
+  // redirect state, so Google sign-in can't complete there. Safari (the same
+  // WebKit engine) works. Nudge those users to Safari instead of a silent fail.
+  const [useSafariHint, setUseSafariHint] = useState(false);
+  useEffect(() => {
+    const ua = navigator.userAgent;
+    const iOS = /iPad|iPhone|iPod/.test(ua) ||
+                (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    const nonSafari = /CriOS|FxiOS|EdgiOS|OPiOS|GSA/.test(ua);
+    setUseSafariHint(iOS && nonSafari);
+  }, []);
+
   // Exchange a Firebase credential for our session cookie, then enter the app.
   async function completeSignIn(result: UserCredential) {
     const token = await result.user.getIdToken();
@@ -136,6 +149,24 @@ export default function LoginPage() {
 
         <h1 className="login-title">TafsirLab</h1>
         <p className="login-subtitle">{t("login.subtitle")}</p>
+
+        {useSafariHint && (
+          <div
+            style={{
+              margin: "0 0 14px",
+              padding: "10px 12px",
+              borderRadius: 10,
+              background: "oklch(0.95 0.03 250 / 0.6)",
+              border: "1px solid oklch(0.8 0.06 250 / 0.5)",
+              color: "var(--ink, #18181b)",
+              fontSize: 13,
+              lineHeight: 1.5,
+              textAlign: "center",
+            }}
+          >
+            On iPhone &amp; iPad, please open this page in <strong>Safari</strong> to sign in.
+          </div>
+        )}
 
         <button
           className="login-google-btn"
