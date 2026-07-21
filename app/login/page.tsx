@@ -92,12 +92,12 @@ export default function LoginPage() {
       return;
     }
 
-    // Desktop: popup, with a redirect fallback if the popup is unusable
+    // Desktop: popup, with a redirect fallback if the POPUP ITSELF is unusable
     // (blocked / not supported / a WebKit SyntaxError), but NOT if the user
     // simply closed it.
+    let result: UserCredential;
     try {
-      const result = await signInWithPopup(auth, provider);
-      await completeSignIn(result);
+      result = await signInWithPopup(auth, provider);
     } catch (err) {
       const code = (err as { code?: string })?.code;
       if (code && USER_ABORTED.has(code)) { setLoading(null); return; }
@@ -107,6 +107,16 @@ export default function LoginPage() {
         setError(err2 instanceof Error ? err2.message : "Something went wrong");
         setLoading(null);
       }
+      return;
+    }
+
+    // Popup succeeded — exchange for our session. A failure HERE is a server
+    // problem, not a popup problem: surface it, never loop into a redirect.
+    try {
+      await completeSignIn(result);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Sign-in failed");
+      setLoading(null);
     }
   }
 
