@@ -1,47 +1,112 @@
 "use client";
 
-import { useState }              from "react";
+import { useEffect, useState }   from "react";
 import { useRouter }             from "next/navigation";
-import { signInWithPopup, type AuthProvider } from "firebase/auth";
+import {
+  signInWithPopup, signInWithRedirect, getRedirectResult,
+  type AuthProvider, type UserCredential,
+} from "firebase/auth";
 import { getFirebaseAuth, googleProvider, microsoftProvider } from "@/lib/firebase/client";
 import { useT, LanguageSwitcher } from "@/lib/i18n/LocaleProvider";
+
+/**
+ * iOS/iPadOS runs EVERY browser (Chrome, Edge, Firefox…) on Apple's WebKit,
+ * where signInWithPopup is unreliable and throws a WebKit SyntaxError
+ * ("The string did not match the expected pattern"). Detect those devices so
+ * we go straight to the full-page redirect flow instead of the popup.
+ * iPadOS 13+ masquerades as desktop Safari (platform "MacIntel"), so we also
+ * treat a touch-capable Mac as iPad.
+ */
+function isWebkitTouchDevice(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent;
+  const iOS = /iPad|iPhone|iPod/.test(ua);
+  const iPadOS = navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+  return iOS || iPadOS;
+}
+
+/** Popup failures that mean "the user aborted" — don't fall back to redirect. */
+const USER_ABORTED = new Set([
+  "auth/popup-closed-by-user",
+  "auth/cancelled-popup-request",
+  "auth/user-cancelled",
+]);
 
 export default function LoginPage() {
   const router                = useRouter();
   const t                     = useT();
   const [loading, setLoading] = useState<"google" | "microsoft" | "demo" | null>(null);
   const [error,   setError]   = useState<string | null>(null);
+  // True while completing a redirect sign-in after returning from the provider.
+  const [completing, setCompleting] = useState(false);
 
   // Secret demo flow — tap the logo to reveal the code prompt.
   const [demoOpen, setDemoOpen] = useState(false);
   const [demoCode, setDemoCode] = useState("");
 
+  // Exchange a Firebase credential for our session cookie, then enter the app.
+  async function completeSignIn(result: UserCredential) {
+    const token = await result.user.getIdToken();
+    const res = await fetch("/api/auth/session", {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ idToken: token }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({})) as { error?: string };
+      throw new Error(data.error ?? "Sign-in failed");
+    }
+    router.push("/home");
+    router.refresh();
+  }
+
+  // On mount, finish any sign-in that used the redirect flow (iOS path).
+  useEffect(() => {
+    const auth = getFirebaseAuth();
+    setCompleting(true);
+    getRedirectResult(auth)
+      .then(async (result) => {
+        if (result?.user) await completeSignIn(result);
+      })
+      .catch((err) => {
+        setError(err instanceof Error ? err.message : "Sign-in failed");
+      })
+      .finally(() => setCompleting(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   async function handleSignIn(provider: AuthProvider, which: "google" | "microsoft") {
     setLoading(which);
     setError(null);
+    const auth = getFirebaseAuth();
 
-    try {
-      const auth   = getFirebaseAuth();
-      const result = await signInWithPopup(auth, provider);
-      const token  = await result.user.getIdToken();
-
-      // Exchange Firebase token for our session cookie
-      const res = await fetch("/api/auth/session", {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ idToken: token }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json() as { error?: string };
-        throw new Error(data.error ?? "Sign-in failed");
+    // iOS/iPadOS WebKit: skip the flaky popup entirely — redirect navigates
+    // the page away and completeSignIn runs via getRedirectResult on return.
+    if (isWebkitTouchDevice()) {
+      try {
+        await signInWithRedirect(auth, provider);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Something went wrong");
+        setLoading(null);
       }
+      return;
+    }
 
-      router.push("/home");
-      router.refresh();
+    // Desktop: popup, with a redirect fallback if the popup is unusable
+    // (blocked / not supported / a WebKit SyntaxError), but NOT if the user
+    // simply closed it.
+    try {
+      const result = await signInWithPopup(auth, provider);
+      await completeSignIn(result);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
-      setLoading(null);
+      const code = (err as { code?: string })?.code;
+      if (code && USER_ABORTED.has(code)) { setLoading(null); return; }
+      try {
+        await signInWithRedirect(auth, provider);
+      } catch (err2) {
+        setError(err2 instanceof Error ? err2.message : "Something went wrong");
+        setLoading(null);
+      }
     }
   }
 
@@ -88,16 +153,16 @@ export default function LoginPage() {
         <button
           className="login-google-btn"
           onClick={() => handleSignIn(googleProvider, "google")}
-          disabled={loading !== null}
+          disabled={loading !== null || completing}
         >
-          {loading === "google" ? <span className="login-spinner" /> : <GoogleIcon />}
-          {loading === "google" ? t("login.signingIn") : t("login.google")}
+          {loading === "google" || completing ? <span className="login-spinner" /> : <GoogleIcon />}
+          {loading === "google" || completing ? t("login.signingIn") : t("login.google")}
         </button>
 
         <button
           className="login-google-btn"
           onClick={() => handleSignIn(microsoftProvider, "microsoft")}
-          disabled={loading !== null}
+          disabled={loading !== null || completing}
         >
           {loading === "microsoft" ? <span className="login-spinner" /> : <MicrosoftIcon />}
           {loading === "microsoft" ? t("login.signingIn") : t("login.microsoft")}
