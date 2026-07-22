@@ -48,6 +48,8 @@ interface MuPage {
   toPixmap(m: unknown, cs: unknown, alpha: boolean): { asPNG(): Uint8Array };
 }
 
+type HostEl = HTMLDivElement & { __done?: boolean };
+
 export default function PdfPages({ src, pageWidth = 900 }: Props) {
   const [dims, setDims]   = useState<{ w: number; h: number }[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -55,6 +57,25 @@ export default function PdfPages({ src, pageWidth = 900 }: Props) {
   const mupdfRef  = useRef<Mupdf | null>(null);
   const pageRefs  = useRef<(HTMLDivElement | null)[]>([]);
   const urlsRef   = useRef<string[]>([]);
+  // Raster queue — rasterising runs on the MAIN thread (10-45ms/page), so we
+  // process one page at a time and never while the user is mid-stroke: a
+  // raster during a pen stroke starves pointermove sampling → jagged ink.
+  const queueRef   = useRef<number[]>([]);
+  const queuedRef  = useRef<Set<number>>(new Set());
+  const pumpingRef = useRef(false);
+  const lastBusyRef = useRef(0);
+
+  // Any held-button pointer activity (pen stroke, mouse drag, finger pan)
+  // marks the canvas "busy" — rasters wait for a quiet moment.
+  useEffect(() => {
+    const busy = (e: PointerEvent) => { if (e.buttons & 1) lastBusyRef.current = Date.now(); };
+    window.addEventListener("pointerdown", busy, { capture: true, passive: true });
+    window.addEventListener("pointermove", busy, { capture: true, passive: true });
+    return () => {
+      window.removeEventListener("pointerdown", busy, { capture: true } as EventListenerOptions);
+      window.removeEventListener("pointermove", busy, { capture: true } as EventListenerOptions);
+    };
+  }, []);
 
   // ── Load the document + measure every page (fast; no rasterising) ────────
   // Note: we intentionally DON'T abort mid-flight on cleanup — React StrictMode
@@ -98,7 +119,7 @@ export default function PdfPages({ src, pageWidth = 900 }: Props) {
   //    which is throttled in background tabs) ──────────────────────────────
   useEffect(() => {
     if (!dims.length) return;
-    for (let i = 0; i < Math.min(3, dims.length); i++) renderPage(i);
+    for (let i = 0; i < Math.min(3, dims.length); i++) enqueueRender(i);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dims]);
 
@@ -106,7 +127,7 @@ export default function PdfPages({ src, pageWidth = 900 }: Props) {
   useEffect(() => {
     if (!dims.length) return;
     const io = new IntersectionObserver(
-      (entries) => { for (const e of entries) if (e.isIntersecting) renderPage(Number((e.target as HTMLElement).dataset.page)); },
+      (entries) => { for (const e of entries) if (e.isIntersecting) enqueueRender(Number((e.target as HTMLElement).dataset.page)); },
       { rootMargin: "800px 0px" },
     );
     for (const el of pageRefs.current) if (el) io.observe(el);
@@ -114,8 +135,69 @@ export default function PdfPages({ src, pageWidth = 900 }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dims]);
 
+  // ── Unload rasters far off-screen ────────────────────────────────────────
+  // 46 pages × ~1800×2550 RGBA ≈ 800MB decoded — iPads buckle (jank, blank
+  // layers). Pages keep their raster inside a generous margin and fall back
+  // to the skeleton beyond it; re-entry re-rasterises in one quiet frame.
+  // The margin is 3× the load margin so writing near an edge never thrashes.
+  useEffect(() => {
+    if (!dims.length) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (e.isIntersecting) continue;
+          const host = e.target as HostEl;
+          const idx = Number(host.dataset.page);
+          // Not rendered yet: just drop any pending queue entry.
+          if (!host.__done) { dequeue(idx); continue; }
+          const img = host.querySelector("img");
+          host.replaceChildren();
+          host.classList.add("pdf-page--skeleton");
+          host.__done = false;
+          if (img?.src) {
+            URL.revokeObjectURL(img.src);
+            const i = urlsRef.current.indexOf(img.src);
+            if (i >= 0) urlsRef.current.splice(i, 1);
+          }
+        }
+      },
+      { rootMargin: "2400px 0px" },
+    );
+    for (const el of pageRefs.current) if (el) io.observe(el);
+    return () => io.disconnect();
+  }, [dims]);
+
+  function dequeue(idx: number) {
+    if (!queuedRef.current.delete(idx)) return;
+    const qi = queueRef.current.indexOf(idx);
+    if (qi >= 0) queueRef.current.splice(qi, 1);
+  }
+
+  function enqueueRender(idx: number) {
+    const host = pageRefs.current[idx] as HostEl | null;
+    if (!host || host.__done || queuedRef.current.has(idx)) return;
+    queuedRef.current.add(idx);
+    queueRef.current.push(idx);
+    pump();
+  }
+
+  // Drain the queue one page per tick, only while the pointer is quiet.
+  function pump() {
+    if (pumpingRef.current) return;
+    pumpingRef.current = true;
+    const step = () => {
+      if (!queueRef.current.length) { pumpingRef.current = false; return; }
+      if (Date.now() - lastBusyRef.current < 250) { setTimeout(step, 250); return; }
+      const idx = queueRef.current.shift()!;
+      queuedRef.current.delete(idx);
+      renderPage(idx);
+      setTimeout(step, 0);
+    };
+    setTimeout(step, 0);
+  }
+
   function renderPage(idx: number) {
-    const host = pageRefs.current[idx] as (HTMLDivElement & { __done?: boolean }) | null;
+    const host = pageRefs.current[idx] as HostEl | null;
     const doc = docRef.current, mupdf = mupdfRef.current;
     if (!host || !doc || !mupdf || host.__done) return;
     host.__done = true;

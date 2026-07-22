@@ -782,8 +782,12 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
 
     function down(e: PointerEvent) {
       if (e.pointerType !== "pen") return;
-      // Interactive elements (tool rail, note cards, word taps) keep working
-      if ((e.target as HTMLElement).closest('button, a, input, select, textarea, [role="button"], .anc-note, .free-textbox')) return;
+      // Interactive elements (tool rail, note cards, word taps) keep working.
+      // The WHOLE rail + HUD areas are excluded, not just their buttons — the
+      // rail is floating icons with gaps, and unlike finger taps (which iOS
+      // snaps to the nearest button), pencil taps are exact: a tap 2px off a
+      // button used to land on the canvas and draw a line.
+      if ((e.target as HTMLElement).closest('button, a, input, select, textarea, [role="button"], .anc-note, .free-textbox, .canvas-tool-rail, .mode-b-zoom-controls, .fa-toolbar')) return;
       parent!.dataset.penActive = "1"; // suppress Android compat-touch panning
       e.preventDefault();
       e.stopPropagation();
