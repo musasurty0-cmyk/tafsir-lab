@@ -843,6 +843,12 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     function up(e: PointerEvent) {
       if (e.pointerType !== "pen") return;
       parent!.dataset.penActive = "";
+      // Explicitly release the capture taken on stroke start. Implicit
+      // release after pointerup is spec'd, but iPadOS WebKit has been flaky
+      // about it for the Pencil — a stuck capture retargets EVERY later pen
+      // event to this container, so taps on the tool rail never reach the
+      // buttons ("eraser keeps drawing; only my finger works").
+      try { if (parent!.hasPointerCapture(e.pointerId)) parent!.releasePointerCapture(e.pointerId); } catch { /* ok */ }
       if (!isDrawingRef.current) return;
       e.preventDefault();
       appendFinalPoint(e.clientX, e.clientY);

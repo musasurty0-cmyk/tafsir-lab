@@ -217,6 +217,9 @@ export default function LoginPage() {
         <div style={{ marginTop: 14, display: "flex", justifyContent: "center" }}>
           <LanguageSwitcher compact />
         </div>
+
+        {/* Build stamp — lets anyone confirm which deploy a device is running */}
+        <p className="login-build">build {process.env.NEXT_PUBLIC_BUILD_ID || "dev"}</p>
       </div>
     </div>
   );
