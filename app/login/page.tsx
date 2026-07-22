@@ -8,6 +8,7 @@ import {
 } from "firebase/auth";
 import { getFirebaseAuth, googleProvider, microsoftProvider } from "@/lib/firebase/client";
 import { useT, LanguageSwitcher } from "@/lib/i18n/LocaleProvider";
+import { BUILD_ID } from "@/lib/build-id";
 
 /** Popup failures that mean "the user aborted" — don't fall back to redirect. */
 const USER_ABORTED = new Set([
@@ -219,7 +220,7 @@ export default function LoginPage() {
         </div>
 
         {/* Build stamp — lets anyone confirm which deploy a device is running */}
-        <p className="login-build">build {process.env.NEXT_PUBLIC_BUILD_ID || "dev"}</p>
+        <p className="login-build">build {BUILD_ID}</p>
       </div>
     </div>
   );

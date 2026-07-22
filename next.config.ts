@@ -20,12 +20,6 @@ const authProxyTarget =
     : null);
 
 const nextConfig: NextConfig = {
-  // Short commit hash baked into the client so any device can show which
-  // deploy it's running (login page "build …" stamp). Vercel injects the SHA.
-  env: {
-    NEXT_PUBLIC_BUILD_ID: (process.env.VERCEL_GIT_COMMIT_SHA || "dev").slice(0, 7),
-  },
-
   // MuPDF's WASM glue (used client-side to rasterise book PDFs) imports Node's
   // built-in "module" inside a Node-only branch. Stub it for the BROWSER build
   // so turbopack can resolve it; the branch never runs in a browser.

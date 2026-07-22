@@ -44,3 +44,4 @@ public/showcase/
 
 # MuPDF WASM — copied from node_modules by scripts/copy-mupdf-wasm.mjs (postinstall)
 public/mupdf/
+lib/build-id.ts
