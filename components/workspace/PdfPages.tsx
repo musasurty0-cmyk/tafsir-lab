@@ -130,6 +130,7 @@ export default function PdfPages({ src, pageWidth = 900 }: Props) {
       img.src = url; img.alt = "";
       img.style.width = "100%"; img.style.height = "100%"; img.style.display = "block";
       host.replaceChildren(img);
+      host.classList.remove("pdf-page--skeleton"); // page is real now
     } catch {
       host.__done = false; // allow a retry
     }
@@ -145,17 +146,26 @@ export default function PdfPages({ src, pageWidth = 900 }: Props) {
   }
 
   return (
-    <div className="pdf-pages">
+    <div className="pdf-pages" aria-busy={dims.length === 0}>
       {dims.map((d, i) => (
         <div
           key={i}
           ref={(el) => { pageRefs.current[i] = el; }}
           data-page={i}
-          className="pdf-page"
+          className="pdf-page pdf-page--skeleton"
           style={{ width: d.w, height: d.h, marginBottom: GAP }}
         />
       ))}
-      {dims.length === 0 && <div className="pdf-pages-loading">Loading book…</div>}
+      {/* Measuring the document: show shimmering skeleton pages so the space
+          reads as "a book is coming", not a blank canvas. */}
+      {dims.length === 0 &&
+        [0, 1, 2].map((i) => (
+          <div
+            key={`sk-${i}`}
+            className="pdf-page pdf-page--skeleton"
+            style={{ width: pageWidth, height: Math.round(pageWidth * 1.35), marginBottom: GAP }}
+          />
+        ))}
     </div>
   );
 }

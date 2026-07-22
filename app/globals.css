@@ -57,6 +57,11 @@
   --sp-7:  48px;
   --sp-8:  64px;
 
+  /* Black hand cursors — the native grab/grabbing render as WHITE gloves on
+     Windows + iPad pointer, which reads as a broken cursor on our light UI. */
+  --cursor-grab: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20'><path d='M5.6 9.2V5.4a1.15 1.15 0 0 1 2.3 0V8.6 M7.9 8.4V3.9a1.15 1.15 0 0 1 2.3 0v4.3 M10.2 8.2V4.4a1.15 1.15 0 0 1 2.3 0v4.6 M12.5 9.3V6a1.15 1.15 0 0 1 2.3 0v5.9c0 3.3-2.2 5.6-5.4 5.6-2.6 0-4-1.2-5.1-3.2L3 11.7c-.5-.9.6-1.8 1.4-1.1l1.2 1.1' fill='none' stroke='%23111' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/></svg>") 10 10, grab;
+  --cursor-grabbing: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20'><path d='M5.8 10.2V8.4a1.1 1.1 0 0 1 2.2 0 M8 9.6V7.6a1.1 1.1 0 0 1 2.2 0 M10.2 9.6V7.9a1.1 1.1 0 0 1 2.2 0 M12.4 10V8.7a1.1 1.1 0 0 1 2.2 0v3.2c0 3.2-2.1 5.4-5.2 5.4-2.5 0-3.9-1.1-5-3.1l-1.2-2.2c-.5-.9.6-1.8 1.4-1.1l1.2 1.1' fill='none' stroke='%23111' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/></svg>") 10 10, grabbing;
+
   --font-sans:     "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-serif:    "IBM Plex Serif", Georgia, serif;
   --font-mono:     "IBM Plex Mono", ui-monospace, monospace;
@@ -434,7 +439,7 @@ input, textarea { font: inherit; color: inherit; }
 .block { position: relative; padding: 3px 0; margin: 0; }
 .block-handle { position: absolute; left: -34px; top: 50%; transform: translateY(-50%); display: flex; gap: 2px; opacity: 0; transition: opacity .12s; }
 .block:hover .block-handle { opacity: 1; }
-.handle-btn { width: 18px; height: 22px; display: grid; place-items: center; border-radius: 4px; color: var(--ink-4); cursor: grab; }
+.handle-btn { width: 18px; height: 22px; display: grid; place-items: center; border-radius: 4px; color: var(--ink-4); cursor: var(--cursor-grab); }
 .handle-btn:hover { background: var(--hover); color: var(--ink-2); }
 .block p, .block-p { font-family: var(--font-serif); font-size: 16.5px; line-height: 1.65; margin: 0; color: var(--ink); }
 .block-h1 { font-family: var(--font-serif); font-size: 30px; font-weight: 600; letter-spacing: -0.015em; line-height: 1.2; margin: 32px 0 4px 0; color: var(--ink); }
@@ -1954,8 +1959,8 @@ input, textarea { font: inherit; color: inherit; }
 /* Cursor driven by data-tool set from JS — no stale inline styles.
    Drawing tools use explicit BLACK SVG cursors — the native crosshair/cell
    render white on several platforms (iPad pointer, Windows cell). */
-.mode-b-canvas[data-tool="hand"]      { cursor: grab; }
-.mode-b-canvas[data-panning="true"]   { cursor: grabbing !important; }
+.mode-b-canvas[data-tool="hand"]      { cursor: var(--cursor-grab); }
+.mode-b-canvas[data-panning="true"]   { cursor: var(--cursor-grabbing) !important; }
 .mode-b-canvas[data-tool="pen"],
 .mode-b-canvas[data-tool="arrow"],
 .mode-b-canvas[data-tool="highlight"] {
@@ -3152,13 +3157,13 @@ input, textarea { font: inherit; color: inherit; }
   margin: -4px -12px 6px; /* cancel container padding → edge-to-edge */
   background: var(--panel);
   border-bottom: 1px solid var(--line);
-  cursor: grab;
+  cursor: var(--cursor-grab);
   user-select: none;
   touch-action: none;
   opacity: 0;
   transition: opacity 0.15s;
 }
-.free-textbox-chrome:active { cursor: grabbing; }
+.free-textbox-chrome:active { cursor: var(--cursor-grabbing); }
 .free-textbox-chrome[data-visible="true"] { opacity: 1; }
 .free-textbox-gripdots {
   font-size: 12px;
@@ -4360,7 +4365,7 @@ input, textarea { font: inherit; color: inherit; }
   border: 1px solid var(--line-strong);
   border-bottom: none;
   border-radius: 0;
-  cursor: grab;
+  cursor: var(--cursor-grab);
   user-select: none;
   touch-action: none;
   opacity: 0;
@@ -4368,7 +4373,7 @@ input, textarea { font: inherit; color: inherit; }
   transition: opacity 0.15s;
   z-index: 6;
 }
-.main-doc-bar:active { cursor: grabbing; }
+.main-doc-bar:active { cursor: var(--cursor-grabbing); }
 .main-doc-container:hover .main-doc-bar,
 .main-doc-container:focus-within .main-doc-bar {
   opacity: 1;
@@ -4640,14 +4645,14 @@ input, textarea { font: inherit; color: inherit; }
   padding: 14px 6px 14px 8px;
   color: var(--ink-4);
   font-size: 13px;
-  cursor: grab;
+  cursor: var(--cursor-grab);
   flex-shrink: 0;
   user-select: none;
   opacity: 0;
   transition: opacity var(--dur-mid) ease;
 }
 .ayah-block-node:hover .ayah-block-drag { opacity: 1; }
-.ayah-block-drag:active { cursor: grabbing; }
+.ayah-block-drag:active { cursor: var(--cursor-grabbing); }
 
 /* Inner content area */
 .ayah-block-inner {
@@ -4796,7 +4801,7 @@ input, textarea { font: inherit; color: inherit; }
   align-items: flex-start;
   padding: 2px 6px 0 8px;
   opacity: 0;
-  cursor: grab;
+  cursor: var(--cursor-grab);
   color: var(--ink-4);
   font-size: 14px;
   line-height: 1.6;
@@ -4804,7 +4809,7 @@ input, textarea { font: inherit; color: inherit; }
   transition: opacity .15s;
 }
 .tafsir-block-node:hover .tafsir-block-drag { opacity: 1; }
-.tafsir-block-drag:active { cursor: grabbing; }
+.tafsir-block-drag:active { cursor: var(--cursor-grabbing); }
 
 .tafsir-block-inner { flex: 1; min-width: 0; padding-right: 4px; }
 
@@ -7940,6 +7945,34 @@ input, textarea { font: inherit; color: inherit; }
   flex-shrink: 0;
 }
 .pdf-page img { pointer-events: none; }
+
+/* Skeleton page — shown while the document is measured and until each page's
+   raster lands. Faded text-line bars + a slow sheen say "loading", clearly. */
+.pdf-page--skeleton {
+  position: relative;
+  background:
+    /* fake text lines, inset from the page edges like a real text block */
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0 26px,
+      oklch(0.22 0.012 80 / 0.055) 26px 38px
+    ) content-box no-repeat,
+    #fff;
+  padding: 72px 84px;          /* the content-box inset for the fake lines */
+  background-clip: content-box, border-box;
+}
+.pdf-page--skeleton::after {
+  content: "";
+  position: absolute; inset: 0;
+  background: linear-gradient(100deg, transparent 32%, oklch(1 0 0 / 0.75) 50%, transparent 68%);
+  transform: translateX(-100%);
+  animation: pdf-skeleton-sheen 1.5s ease-in-out infinite;
+}
+@keyframes pdf-skeleton-sheen { to { transform: translateX(100%); } }
+@media (prefers-reduced-motion: reduce) {
+  .pdf-page--skeleton::after { animation: none; }
+}
+
 .pdf-pages-loading,
 .pdf-pages-error {
   padding: 44px 60px; color: var(--ink-4); font-size: 14px;
