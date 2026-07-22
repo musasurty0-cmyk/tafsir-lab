@@ -34,7 +34,9 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
-    const kind = body.kind === "boards" ? "boards" : "study";
+    const kind = body.kind === "boards" ? "boards"
+               : body.kind === "books"  ? "books"
+               : "study";
 
     const workspace = await WorkspacesService.createWorkspace(
       userId,

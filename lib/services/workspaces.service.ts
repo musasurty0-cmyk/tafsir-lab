@@ -136,7 +136,7 @@ export async function createWorkspace(
   userId: string,
   name: string,
   type: "private" | "group",
-  kind: "study" | "boards" = "study",
+  kind: "study" | "boards" | "books" = "study",
 ) {
   const workspace = await db.$transaction(async (tx) => {
     const ws = await tx.workspace.create({
@@ -153,6 +153,13 @@ export async function createWorkspace(
       });
       await tx.page.create({
         data: { workspaceSurahId: container.id, title: "Board 1", orderIndex: 0, status: "draft", createdById: userId },
+      });
+    }
+    // Books workspace: just the sentinel container (books are added by the
+    // user from the library or by uploading, so we don't scaffold one).
+    if (kind === "books") {
+      await tx.workspaceSurah.create({
+        data: { workspaceId: ws.id, surahNumber: 0 },
       });
     }
     return ws;

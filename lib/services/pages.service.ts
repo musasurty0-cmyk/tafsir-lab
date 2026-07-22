@@ -377,3 +377,67 @@ export async function getWorkspaceBoard(workspaceId: string, boardId: string, us
   });
   return page; // null when not found / not a board of this workspace
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// BOOK STUDY — a "book" is a Page carrying a pdfUrl, hosted on the same
+// sentinel surah (0) as boards but inside a kind:"books" workspace. The PDF is
+// either a static library path ("/books/slug.pdf") or "local" (uploaded, bytes
+// in the reader's IndexedDB). Annotations sync via the normal notes/drawings.
+// ─────────────────────────────────────────────────────────────────────────
+
+/** List all books in a workspace, newest first. */
+export async function listWorkspaceBooks(workspaceId: string, userId: string) {
+  await getWorkspaceWithRole(workspaceId, userId);
+  const container = await db.workspaceSurah.findUnique({
+    where:  { workspaceId_surahNumber: { workspaceId, surahNumber: WHITEBOARD_SURAH } },
+    select: { id: true },
+  });
+  if (!container) return [];
+  return db.page.findMany({
+    where:   { workspaceSurahId: container.id, pdfUrl: { not: null } },
+    orderBy: { orderIndex: "asc" },
+    select:  { id: true, title: true, pdfUrl: true, pdfName: true, createdAt: true },
+  });
+}
+
+/** Add a book to a workspace (from the library, or an uploaded "local" PDF). */
+export async function createWorkspaceBook(
+  workspaceId: string,
+  userId: string,
+  book: { title: string; pdfUrl: string; pdfName?: string | null },
+) {
+  await getWorkspaceWithRole(workspaceId, userId);
+  const container = await db.workspaceSurah.upsert({
+    where:  { workspaceId_surahNumber: { workspaceId, surahNumber: WHITEBOARD_SURAH } },
+    update: {},
+    create: { workspaceId, surahNumber: WHITEBOARD_SURAH },
+    select: { id: true },
+  });
+  const last = await db.page.findFirst({
+    where:   { workspaceSurahId: container.id },
+    orderBy: { orderIndex: "desc" },
+    select:  { orderIndex: true },
+  });
+  return db.page.create({
+    data: {
+      workspaceSurahId: container.id,
+      title:      book.title.trim() || "Untitled book",
+      pdfUrl:     book.pdfUrl,
+      pdfName:    book.pdfName ?? null,
+      orderIndex: (last?.orderIndex ?? -1) + 1,
+      status:     "draft",
+      createdById: userId,
+    },
+    select: { id: true, title: true, pdfUrl: true, pdfName: true },
+  });
+}
+
+/** Validate a book page belongs to this workspace, returning its PDF info. */
+export async function getWorkspaceBook(workspaceId: string, bookId: string, userId: string) {
+  await getWorkspaceWithRole(workspaceId, userId);
+  const page = await db.page.findFirst({
+    where:  { id: bookId, workspaceSurah: { workspaceId, surahNumber: WHITEBOARD_SURAH }, pdfUrl: { not: null } },
+    select: { id: true, title: true, pdfUrl: true, pdfName: true },
+  });
+  return page; // null when not found / not a book of this workspace
+}

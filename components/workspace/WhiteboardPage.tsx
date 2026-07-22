@@ -15,7 +15,7 @@
  * separate from Mode B's Mushaf annotations on the same page id.
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import type { NoteData } from "./NoteCard";
 import FreeTextBox, { TEXTBOX_DEFAULT_WIDTH } from "./FreeTextBox";
 import DrawingCanvas, { type DrawTool, type DrawingCanvasHandle } from "./DrawingCanvas";
@@ -47,11 +47,17 @@ interface Props {
   onNoteCreated:   (note: NoteData) => void;
   onNoteUpdated:   (note: NoteData) => void;
   onNoteDeleted:   (noteId: string) => void;
+  /** Rendered in world space BEHIND the note containers — e.g. the PDF pages
+   *  for a book. Ink and containers annotate over/around it. */
+  background?:     ReactNode;
+  /** Show the "Blank whiteboard" hint on an empty board (off for book study). */
+  showBlankHint?:  boolean;
 }
 
 export default function WhiteboardPage({
   pageId, notes, roomSocket, currentUserId, currentUserName,
   onNoteCreated, onNoteUpdated, onNoteDeleted,
+  background, showBlankHint = true,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const drawingRef   = useRef<DrawingCanvasHandle>(null);
@@ -297,7 +303,7 @@ export default function WhiteboardPage({
 
   // Hint shows only on a truly blank board — it disappears the moment a
   // container is added OR a stroke exists (canUndo reflects own strokes).
-  const empty = notes.length === 0 && !canUndo;
+  const empty = showBlankHint && notes.length === 0 && !canUndo;
 
   return (
     <div
@@ -313,6 +319,7 @@ export default function WhiteboardPage({
         className="mode-b-inner"
         style={{ transform: `translate(${viewport.x}px,${viewport.y}px) scale(${viewport.zoom})` }}
       >
+        {background}
         {notes.map((note) => (
           <FreeTextBox
             key={keyAliasRef.current.get(note.id) ?? note.id}

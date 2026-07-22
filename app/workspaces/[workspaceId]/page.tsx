@@ -14,6 +14,7 @@ import { db } from "@/lib/db";
 import { fetchChapters } from "@/lib/quran-api";
 import WorkspaceHome from "@/components/workspace/WorkspaceHome";
 import BoardsHome from "@/components/workspace/BoardsHome";
+import BooksHome from "@/components/workspace/BooksHome";
 import * as PagesService from "@/lib/services/pages.service";
 
 export type WorkspaceSurahSummary = {
@@ -43,6 +44,19 @@ export default async function WorkspaceHomePage({
         workspace={gate.workspace}
         role={gate.role}
         boards={boards.map((b) => ({ id: b.id, title: b.title, createdAt: b.createdAt }))}
+      />
+    );
+  }
+
+  // Books workspace → the book library is home (no surah grid).
+  if (gate.workspace.kind === "books") {
+    const books = await PagesService.listWorkspaceBooks(workspaceId, userId);
+    return (
+      <BooksHome
+        workspaceId={workspaceId}
+        workspace={gate.workspace}
+        role={gate.role}
+        books={books.map((b) => ({ id: b.id, title: b.title, pdfUrl: b.pdfUrl!, pdfName: b.pdfName, createdAt: b.createdAt }))}
       />
     );
   }

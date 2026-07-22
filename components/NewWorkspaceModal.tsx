@@ -24,7 +24,7 @@ export default function NewWorkspaceModal({ onClose }: Props) {
 
   const [name,    setName]    = useState("");
   const [type,    setType]    = useState<"private" | "group">("private");
-  const [kind,    setKind]    = useState<"study" | "boards">("study");
+  const [kind,    setKind]    = useState<"study" | "boards" | "books">("study");
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState<string | null>(null);
 
@@ -145,6 +145,20 @@ export default function NewWorkspaceModal({ onClose }: Props) {
               <div>
                 <div className="modal-type-name">{t("modal.boards")}</div>
                 <div className="modal-type-desc">{t("modal.boardsDesc")}</div>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              className="modal-type-btn"
+              data-active={kind === "books" ? "true" : "false"}
+              onClick={() => setKind("books")}
+              disabled={loading}
+            >
+              <span className="modal-type-icon">📚</span>
+              <div>
+                <div className="modal-type-name">{t("modal.books")}</div>
+                <div className="modal-type-desc">{t("modal.booksDesc")}</div>
               </div>
             </button>
           </div>

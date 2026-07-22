@@ -42,6 +42,7 @@ model Workspace {
   type       String   // 'private' | 'group'  (visibility)
   // 'study'  → 114-surah grid + a single blank board (default)
   // 'boards' → no surahs; several free blank boards (e.g. a weekly class)
+  // 'books'  → no surahs; a library of PDFs to annotate around (book study)
   kind       String   @default("study")
   ownerId    String   @db.Uuid
   avatarUrl  String?
@@ -116,6 +117,12 @@ model Page {
   // 'draft' | 'published' | 'archived'
   status           String    @default("draft")
   tiptapContent    Json?
+
+  // Book study: a page can BE a book (a PDF to annotate around). pdfUrl is a
+  // static library path ("/books/slug.pdf") or the sentinel "local" for a PDF
+  // the user uploaded (bytes live in the browser's IndexedDB, keyed by pageId).
+  pdfUrl           String?
+  pdfName          String?
 
   // Signals admin-authored content is present on this page.
   // Does NOT prevent members from adding their own notes.
