@@ -1951,14 +1951,20 @@ input, textarea { font: inherit; color: inherit; }
   /* Prevent native browser scroll/zoom on touch — all gestures handled via pointer events */
   touch-action: none;
 }
-/* Cursor driven by data-tool set from JS — no stale inline styles */
+/* Cursor driven by data-tool set from JS — no stale inline styles.
+   Drawing tools use explicit BLACK SVG cursors — the native crosshair/cell
+   render white on several platforms (iPad pointer, Windows cell). */
 .mode-b-canvas[data-tool="hand"]      { cursor: grab; }
 .mode-b-canvas[data-panning="true"]   { cursor: grabbing !important; }
 .mode-b-canvas[data-tool="pen"],
-.mode-b-canvas[data-tool="arrow"]     { cursor: crosshair; }
-.mode-b-canvas[data-tool="highlight"] { cursor: cell; }
-.mode-b-canvas[data-tool="eraser"]    { cursor: cell; }
-.mode-b-canvas[data-tool="text"]      { cursor: text; }
+.mode-b-canvas[data-tool="arrow"],
+.mode-b-canvas[data-tool="highlight"] {
+  cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='19' height='19'><g stroke='%23111' stroke-width='1.8' fill='none'><path d='M9.5 1v17M1 9.5h17'/></g></svg>") 9 9, crosshair;
+}
+.mode-b-canvas[data-tool="eraser"]    { cursor: none; } /* the ring IS the cursor */
+.mode-b-canvas[data-tool="text"]      {
+  cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='17' height='17'><g stroke='%23111' stroke-width='1.4' fill='none'><path d='M5.5 2h6M5.5 15h6M8.5 2v13'/></g></svg>") 8 8, text;
+}
 .mode-b-canvas--empty {
   display: flex; align-items: center; justify-content: center;
 }
@@ -1974,6 +1980,12 @@ input, textarea { font: inherit; color: inherit; }
   flex-direction: column;
   gap: 10px;
   /* width is set inline from BLOCK_WIDTH constant */
+  /* The pan/zoom math assumes scaling about the top-left corner. The default
+     transform-origin (50% 50%) is invisible while the element has ~no
+     intrinsic size (absolute-positioned notes), but with a PDF book in flow
+     the element is tens of thousands of px tall — scaling about its centre
+     shifted the whole book off-screen when zooming out. */
+  transform-origin: 0 0;
 }
 
 /* ── Zoom controls HUD ── */

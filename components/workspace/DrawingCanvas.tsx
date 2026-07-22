@@ -1039,10 +1039,13 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
         ref={canvasRef}
         className="drawing-canvas-el"
         style={{
-          cursor: tool === "pen" || tool === "arrow" ? "crosshair"
-                : tool === "highlight"               ? "cell"
-                : tool === "eraser"                  ? "none"   // the ring IS the cursor
-                : tool === "text"                    ? "text"
+          // Explicit BLACK cursors — native crosshair/cell render white on
+          // several platforms (iPad pointer, Windows "cell").
+          cursor: tool === "pen" || tool === "arrow" || tool === "highlight"
+                    ? `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='19' height='19'><g stroke='%23111' stroke-width='1.8' fill='none'><path d='M9.5 1v17M1 9.5h17'/></g></svg>") 9 9, crosshair`
+                : tool === "eraser" ? "none"   // the ring IS the cursor
+                : tool === "text"
+                    ? `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='17' height='17'><g stroke='%23111' stroke-width='1.4' fill='none'><path d='M5.5 2h6M5.5 15h6M8.5 2v13'/></g></svg>") 8 8, text`
                 : "default",
         }}
         onPointerDown={e => {
