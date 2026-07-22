@@ -1,15 +1,13 @@
 "use client";
 
 /**
- * BookShell — one book: the PDF beside a note canvas.
+ * BookShell — one book, rendered INTO the canvas so you annotate directly on
+ * the pages (like the Mushaf). MuPDF rasterises the PDF pages; they sit behind
+ * the whiteboard's ink + movable note containers, sharing the same pan/zoom.
  *
- * The PDF renders in the browser's own native viewer (an <iframe>) — reliable
- * and fast for any PDF, unlike client-side rasterising. Beside it is the full
- * whiteboard note canvas (pen, highlighter, movable rich cards, /ayah + /tafsir)
- * so you take notes AROUND the book. Library books load from a static URL;
- * uploaded books load their bytes from the browser (IndexedDB) — if they're not
- * on this device we show a friendly re-upload prompt (the notes are synced; only
- * the PDF bytes are local).
+ * Library books load from a static URL; uploaded books load their bytes from
+ * the browser (IndexedDB) — if they're not on this device we show a friendly
+ * re-upload prompt (the notes are synced; only the PDF bytes are local).
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -22,6 +20,7 @@ import { useRoom } from "@/lib/collab/useRoom";
 import { usePresence } from "@/lib/collab/usePresence";
 import { getBookPdf, putBookPdf } from "@/lib/books/pdf-store";
 import WhiteboardPage from "./WhiteboardPage";
+import PdfPages from "./PdfPages";
 import TafsirDrawer from "./TafsirDrawer";
 
 interface Props {
@@ -35,7 +34,10 @@ interface Props {
   currentUserName: string;
 }
 
-type Source = { kind: "loading" } | { kind: "ready"; src: string } | { kind: "missing" };
+type Source =
+  | { kind: "loading" }
+  | { kind: "ready"; data: string | ArrayBuffer }
+  | { kind: "missing" };
 
 export default function BookShell({
   workspaceId, workspaceName, pageId, bookTitle, pdfUrl,
@@ -43,12 +45,11 @@ export default function BookShell({
 }: Props) {
   const [notes, setNotes] = useState<NoteData[]>([]);
   const recentCreatedRef  = useRef<Map<string, number>>(new Map());
-  // Library books resolve synchronously (a static URL); uploaded ("local")
+  // Library books resolve synchronously to their static URL; uploaded ("local")
   // books start loading and the effect below fetches their bytes.
   const [source, setSource] = useState<Source>(() =>
-    pdfUrl !== "local" ? { kind: "ready", src: pdfUrl + "#view=FitH" } : { kind: "loading" },
+    pdfUrl !== "local" ? { kind: "ready", data: pdfUrl } : { kind: "loading" },
   );
-  const objectUrlRef = useRef<string | null>(null);
   const uploadRef = useRef<HTMLInputElement>(null);
 
   const room = useRoom(pageId);
@@ -56,20 +57,16 @@ export default function BookShell({
     socket: room.socket, userId: currentUserId, name: currentUserName, mode: "board",
   });
 
-  // ── Resolve the PDF source (static URL, or an object URL for local bytes) ─
+  // ── Resolve uploaded ("local") PDF bytes from IndexedDB ──────────────────
   const loadLocal = useCallback(async () => {
     const blob = await getBookPdf(pageId).catch(() => null);
     if (!blob) { setSource({ kind: "missing" }); return; }
-    if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
-    objectUrlRef.current = URL.createObjectURL(blob);
-    // #view=FitH gives a sensible default zoom in the native viewer.
-    setSource({ kind: "ready", src: objectUrlRef.current + "#view=FitH" });
+    setSource({ kind: "ready", data: await blob.arrayBuffer() });
   }, [pageId]);
 
   useEffect(() => {
     if (pdfUrl !== "local") return; // library book already resolved in state
     loadLocal();
-    return () => { if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current); };
   }, [pdfUrl, loadLocal]);
 
   async function onReupload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -77,7 +74,7 @@ export default function BookShell({
     e.target.value = "";
     if (!file) return;
     await putBookPdf(pageId, file);
-    await loadLocal();
+    setSource({ kind: "ready", data: await file.arrayBuffer() });
   }
 
   // ── Tafsir drawer ────────────────────────────────────────────────────────
@@ -151,30 +148,20 @@ export default function BookShell({
         </div>
       </header>
 
-      <div className="whiteboard-shell-body book-split">
-        {/* ── PDF pane (native browser viewer) ── */}
-        <div className="book-pdf-pane">
-          {source.kind === "missing" ? (
-            <div className="book-missing">
-              <p className="book-missing-title">This PDF isn’t on this device</p>
-              <p className="book-missing-body">
-                You uploaded “{bookTitle}” on another device. Your notes are saved — just re-open the
-                PDF here to read alongside them.
-              </p>
-              <button className="ws-new-btn" onClick={() => uploadRef.current?.click()}>
-                <Upload size={15} style={{ marginRight: 6, verticalAlign: "-2px" }} /> Choose the PDF
-              </button>
-              <input ref={uploadRef} type="file" accept="application/pdf,.pdf" hidden onChange={onReupload} />
-            </div>
-          ) : source.kind === "ready" ? (
-            <iframe className="book-pdf-frame" src={source.src} title={bookTitle} />
-          ) : (
-            <div className="book-missing"><p className="book-missing-body">Opening book…</p></div>
-          )}
-        </div>
-
-        {/* ── Note canvas pane ── */}
-        <div className="book-notes-pane">
+      <div className="whiteboard-shell-body">
+        {source.kind === "missing" ? (
+          <div className="book-missing">
+            <p className="book-missing-title">This PDF isn’t on this device</p>
+            <p className="book-missing-body">
+              You uploaded “{bookTitle}” on another device. Your notes are saved — just re-open the
+              PDF here to see them in place.
+            </p>
+            <button className="ws-new-btn" onClick={() => uploadRef.current?.click()}>
+              <Upload size={15} style={{ marginRight: 6, verticalAlign: "-2px" }} /> Choose the PDF
+            </button>
+            <input ref={uploadRef} type="file" accept="application/pdf,.pdf" hidden onChange={onReupload} />
+          </div>
+        ) : (
           <EditorContextProvider value={ctx}>
             <WhiteboardPage
               pageId={pageId}
@@ -185,9 +172,11 @@ export default function BookShell({
               onNoteCreated={handleNoteCreated}
               onNoteUpdated={handleNoteUpdated}
               onNoteDeleted={handleNoteDeleted}
+              showBlankHint={false}
+              background={source.kind === "ready" ? <PdfPages src={source.data} /> : null}
             />
           </EditorContextProvider>
-        </div>
+        )}
       </div>
 
       <TafsirDrawer open={tafsirOpen} verseKey={tafsirVerse} verses={[]} onClose={() => setTafsirOpen(false)} />

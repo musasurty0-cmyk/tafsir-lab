@@ -20,6 +20,15 @@ const authProxyTarget =
     : null);
 
 const nextConfig: NextConfig = {
+  // MuPDF's WASM glue (used client-side to rasterise book PDFs) imports Node's
+  // built-in "module" inside a Node-only branch. Stub it for the BROWSER build
+  // so turbopack can resolve it; the branch never runs in a browser.
+  turbopack: {
+    resolveAlias: {
+      module: { browser: "./lib/mupdf-module-stub.js" },
+    },
+  },
+
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "api.quran.com" },

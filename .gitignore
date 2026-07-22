@@ -41,3 +41,6 @@ remotion/out
 
 # Remotion render-only footage segments (large, local only)
 public/showcase/
+
+# MuPDF WASM — copied from node_modules by scripts/copy-mupdf-wasm.mjs (postinstall)
+public/mupdf/
