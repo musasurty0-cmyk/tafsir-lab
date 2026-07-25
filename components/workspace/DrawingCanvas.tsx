@@ -150,6 +150,19 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
   const eraserRadiusRef = useRef(eraserRadius);
   useEffect(() => { eraserRadiusRef.current = eraserRadius; }, [eraserRadius]);
 
+  const roomSocketRef = useRef(roomSocket ?? null);
+  useEffect(() => { roomSocketRef.current = roomSocket ?? null; }, [roomSocket]);
+
+  // Pen-eraser press state. iPadOS WebKit reports buttons:0 on Pencil
+  // pointermove even while the tip is pressed, so a `buttons & 1` gate made
+  // the stylus eraser dead (only the single down-point erased). Track the
+  // press ourselves from pointerdown → pointerup.
+  const penErasingRef = useRef(false);
+
+  // Live-stroke broadcast bookkeeping (see queueLiveSegment)
+  const liveSentRef  = useRef(0);
+  const liveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // onTextPlace via ref: the native stylus handlers are registered once, so a
   // direct closure captured the MOUNT-TIME callback — text boxes placed with a
   // pen inside a word/ayah layer were anchored to the stale (no-layer) state
@@ -526,8 +539,15 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
       try { msg = JSON.parse(evt.data); } catch { return; }
 
       if (msg.type === "stroke-segment" && msg.connectionId && msg.points) {
+        // Senders stream DELTAS (append: true) — concat onto the in-progress
+        // stroke. A full-array message (first packet, or a legacy client)
+        // replaces it.
+        const prev = remoteActiveRef.current.get(msg.connectionId);
+        const points = (msg as { append?: boolean }).append && prev
+          ? [...prev.points, ...msg.points]
+          : msg.points;
         remoteActiveRef.current.set(msg.connectionId, {
-          points:     msg.points,
+          points,
           mushafPage: msg.mushafPage,
           color:      msg.color ?? "#3b82f6",
           width:      msg.width ?? 3,
@@ -799,7 +819,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
       // direct prop call would use the mount-time callback and anchor the
       // box to the wrong (no-layer) state.
       if (eff === "text") { parent!.dataset.penActive = ""; onTextPlaceRef.current?.(wx, wy); return; }
-      if (eff === "eraser") { eraseAt(wx, wy); return; }
+      if (eff === "eraser") { penErasingRef.current = true; eraseAt(wx, wy); return; }
 
       try { parent!.setPointerCapture(e.pointerId); } catch { /* ok */ }
       isDrawingRef.current   = true;
@@ -807,6 +827,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
       activeColorRef.current = strokeColorRef.current;
       activeWidthRef.current = strokeWidthRef.current;
       activePtsRef.current   = [[wx, wy, Math.max(0.1, e.pressure || 0.5)]];
+      liveSentRef.current    = 0;
       scheduleRender();
     }
 
@@ -814,35 +835,34 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
       if (e.pointerType !== "pen") return;
       if (penTool() === "eraser") {
         moveEraserRing(e.clientX, e.clientY); // stylus hover shows the rubber
-        if (e.buttons & 1) { const [wx, wy] = toWorld(e.clientX, e.clientY); eraseAt(wx, wy); }
+        // penErasingRef, not e.buttons — iPadOS reports buttons:0 on Pencil
+        // moves even while pressed, which left the stylus eraser dead.
+        if (penErasingRef.current || (e.buttons & 1) || e.pressure > 0) {
+          const [wx, wy] = toWorld(e.clientX, e.clientY); eraseAt(wx, wy);
+        }
         return;
       }
       if (!isDrawingRef.current) return;
       e.preventDefault();
       e.stopPropagation();
 
-      const events = e.getCoalescedEvents?.() ?? [e];
+      // Some WebKit versions return an EMPTY coalesced list (not undefined) —
+      // falling back only on null lost every sample of the parent event.
+      const list = e.getCoalescedEvents?.();
+      const events = list && list.length ? list : [e];
       for (const ev of events) {
         const [wx, wy] = toWorld(ev.clientX, ev.clientY);
         activePtsRef.current.push([wx, wy, Math.max(0.1, ev.pressure || 0.5)]);
       }
 
-      if (roomSocket?.readyState === WebSocket.OPEN) {
-        roomSocket.send(JSON.stringify({
-          type:       "stroke-segment",
-          points:     activePtsRef.current,
-          mushafPage: mushafPageRef.current,
-          color:      activeColorRef.current,
-          width:      activeWidthRef.current,
-          anchor:     anchorRef.current ?? undefined,
-        }));
-      }
+      queueLiveSegment();
       scheduleRender();
     }
 
     function up(e: PointerEvent) {
       if (e.pointerType !== "pen") return;
       parent!.dataset.penActive = "";
+      penErasingRef.current = false;
       // Explicitly release the capture taken on stroke start. Implicit
       // release after pointerup is spec'd, but iPadOS WebKit has been flaky
       // about it for the Pencil — a stuck capture retargets EVERY later pen
@@ -936,6 +956,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     activeColorRef.current = strokeColor;
     activeWidthRef.current = strokeWidth;
     activePtsRef.current   = [[wx, wy, 0.5]];
+    liveSentRef.current    = 0;
     scheduleRender();
   }
 
@@ -948,7 +969,8 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     if (!isDrawingRef.current) return;
     e.stopPropagation();
 
-    const events = e.nativeEvent.getCoalescedEvents?.() ?? [e.nativeEvent];
+    const list = e.nativeEvent.getCoalescedEvents?.();
+    const events = list && list.length ? list : [e.nativeEvent];
     for (const ev of events) {
       const [wx, wy] = toWorld(ev.clientX, ev.clientY);
       if (toolRef.current === "eraser") { if (e.buttons & 1) eraseAt(wx, wy); continue; }
@@ -956,18 +978,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
       activePtsRef.current.push([wx, wy, pressure]);
     }
 
-    // Broadcast active points to peers so they see the stroke in real time
-    if (roomSocket?.readyState === WebSocket.OPEN) {
-      roomSocket.send(JSON.stringify({
-        type:       "stroke-segment",
-        points:     activePtsRef.current,
-        mushafPage: mushafPageRef.current,
-        color:      activeColorRef.current,
-        width:      activeWidthRef.current,
-        anchor:     anchorRef.current ?? undefined,
-      }));
-    }
-
+    queueLiveSegment();
     scheduleRender();
   }
 
@@ -982,11 +993,44 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     if (Math.hypot(wx - last[0], wy - last[1]) > 1e-3) pts.push([wx, wy, last[2]]);
   }
 
+  // Live-stroke broadcast: peers see the stroke as it's drawn. Send only the
+  // points ADDED since the last flush, at most every LIVE_SEND_MS — the old
+  // code re-serialized the WHOLE array on every pointermove (O(n²) per
+  // stroke), which starved pen sampling on iPads and made handwriting jagged.
+  const LIVE_SEND_MS = 50;
+  function queueLiveSegment() {
+    if (liveTimerRef.current !== null) return;
+    liveTimerRef.current = setTimeout(() => {
+      liveTimerRef.current = null;
+      if (!isDrawingRef.current) return;
+      const sock = roomSocketRef.current;
+      if (!sock || sock.readyState !== WebSocket.OPEN) return;
+      const pts = activePtsRef.current;
+      if (liveSentRef.current >= pts.length) return;
+      const fresh = pts.slice(liveSentRef.current);
+      const first = liveSentRef.current === 0;
+      liveSentRef.current = pts.length;
+      sock.send(JSON.stringify({
+        type:       "stroke-segment",
+        points:     fresh,
+        append:     !first,
+        mushafPage: mushafPageRef.current,
+        color:      activeColorRef.current,
+        width:      activeWidthRef.current,
+        anchor:     anchorRef.current ?? undefined,
+      }));
+    }, LIVE_SEND_MS);
+  }
+
   // Commit whatever's in activePtsRef as a finished stroke (shared by the
   // React mouse handlers and the native stylus handlers).
   function commitActiveStroke() {
     if (!isDrawingRef.current) return;
     isDrawingRef.current = false;
+    // Cancel any pending live flush — stroke-complete supersedes it, and a
+    // flush AFTER completion would resurrect a ghost stroke on peers.
+    if (liveTimerRef.current !== null) { clearTimeout(liveTimerRef.current); liveTimerRef.current = null; }
+    liveSentRef.current = 0;
     const pts = activePtsRef.current;
     activePtsRef.current = [];
 
