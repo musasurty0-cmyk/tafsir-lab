@@ -25,7 +25,7 @@ import { loadFont as loadAmiri } from "@remotion/google-fonts/Amiri";
 import { loadFont as loadGaramond } from "@remotion/google-fonts/EBGaramond";
 import { loadFont as loadCaveat } from "@remotion/google-fonts/Caveat";
 import { C, FONT, s, cameraAt, camTransform, ramp, pulse, EASE_OUT, EASE_SOFT, Pose } from "./theme";
-import { AppShell, EditorDoc, CanvasDoc, TafsirDrawerReal, WordNote, APP_W, APP_H, P } from "./app";
+import { AppShell, EditorDoc, CanvasDoc, TafsirDrawerReal, APP_W, APP_H, P } from "./app";
 import { AppWindow, Cursor, At } from "./ui";
 
 loadInter("normal", { weights: ["400", "500", "600", "700"], subsets: ["latin"], ignoreTooManyRequestsWarning: true });
@@ -138,8 +138,8 @@ export const Guided: React.FC = () => {
 
   /* The word and its note */
   const wordGlow = ramp(frame, s(35.6), s(36.2));
-  const noteOpen = spring({ frame: frame - s(36.4), fps, config: { damping: 200, stiffness: 88, mass: 0.9 } });
-  const noteInk = ramp(frame, s(37.2), s(39.2), EASE_SOFT);
+  /* no invented note card: the word-note beat is carried by the real
+     selection ring on the glyph plus the Tafsir word-by-word tab. */
 
   /* Guides */
   const g1 = pulse(frame, s(8.6), s(9.2), s(10.8), s(11.3));    // Study every ayah.
@@ -237,12 +237,6 @@ export const Guided: React.FC = () => {
             </AppShell>
           </At>
 
-          {/* the word's own note, opened in place on the canvas */}
-          {noteOpen > 0.02 && (
-            <At x={wx(1010)} y={wy(700)} z={60} opacity={Math.min(1, noteOpen * 2)}>
-              <WordNote open={noteOpen} ink={noteInk} />
-            </At>
-          )}
 
           {/* cursor — the cause of every state change above */}
           <At x={cur.x} y={cur.y} z={95} opacity={curVis}>

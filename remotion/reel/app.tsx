@@ -460,30 +460,30 @@ export const CanvasDoc: React.FC<{
         <QCFPage fontSize={44} mark={{ key: "1:5", pos: 1 }} markInk={hl} markRing={wordGlow} />
       </div>
 
-      {/* Real study ink. Coordinates are in the CONTENT box (app minus the
-          72px rail and 62px top bar). The Mushaf column sits right-of-centre,
-          so the margin note goes LEFT, into the empty half — exactly where a
-          real annotator would put it. One circle, one arrow, one sentence,
-          one underline. Nothing more. */}
+      {/* Real study ink, measured against the QCF page as it actually renders.
+          Coordinates are CONTENT-box (app minus the 72px rail, 62px top bar).
+          The marked word sits at ~(1029,489); line 5 runs through y~605; the
+          empty left margin starts around x 300. One circle, one arrow, one
+          sentence, one underline — the four marks a person actually makes. */}
       <svg style={{ position: "absolute", inset: 0, overflow: "visible" }} width="100%" height="100%">
-        {/* circle around إِيَّاكَ (ayah 5, rightmost word) */}
-        <path d="M1180 386 C 1120 368, 1042 378, 1032 414 C 1022 452, 1090 476, 1170 474 C 1248 472, 1300 450, 1294 414 C 1288 384, 1240 372, 1188 384"
-              fill="none" stroke={P.ink3} strokeWidth={3.4} strokeLinecap="round"
-              strokeDasharray={860} strokeDashoffset={860 * (1 - seg(0, 0.34))} />
+        {/* circle around إِيَّاكَ */}
+        <path d="M1026 462 C 986 448, 934 452, 926 480 C 918 510, 964 528, 1020 528 C 1074 528, 1110 510, 1106 482 C 1102 460, 1068 450, 1032 460"
+              fill="none" stroke={P.ink3} strokeWidth={3.2} strokeLinecap="round"
+              strokeDasharray={620} strokeDashoffset={620 * (1 - seg(0, 0.32))} />
         {/* arrow out to the left margin */}
-        <path d="M1028 442 C 940 486, 840 520, 742 540"
-              fill="none" stroke={P.ink3} strokeWidth={3} strokeLinecap="round"
-              strokeDasharray={310} strokeDashoffset={310 * (1 - seg(0.34, 0.54))} />
-        <path d="M742 540 L 774 532 M742 540 L 766 560"
-              fill="none" stroke={P.ink3} strokeWidth={3} strokeLinecap="round"
-              strokeDasharray={70} strokeDashoffset={70 * (1 - seg(0.54, 0.62))} />
+        <path d="M922 504 C 848 536, 770 556, 690 566"
+              fill="none" stroke={P.ink3} strokeWidth={2.8} strokeLinecap="round"
+              strokeDasharray={310} strokeDashoffset={310 * (1 - seg(0.32, 0.52))} />
+        <path d="M690 566 L 722 556 M690 566 L 716 584"
+              fill="none" stroke={P.ink3} strokeWidth={2.8} strokeLinecap="round"
+              strokeDasharray={72} strokeDashoffset={72 * (1 - seg(0.52, 0.60))} />
         {/* the handwritten sentence */}
-        <text x={330} y={556} fill={P.ink3} opacity={seg(0.62, 0.84)}
-              style={{ fontFamily: FONT.hand, fontSize: 40 }}>worship before help</text>
-        {/* one underline, under ayah 6 */}
-        <path d="M812 566 C 900 552, 1000 550, 1094 562"
-              fill="none" stroke={P.ink3} strokeWidth={3} strokeLinecap="round"
-              strokeDasharray={300} strokeDashoffset={300 * (1 - seg(0.86, 1))} />
+        <text x={330} y={582} fill={P.ink3} opacity={seg(0.60, 0.82)}
+              style={{ fontFamily: FONT.hand, fontSize: 38 }}>worship before help</text>
+        {/* one underline, under line 5 */}
+        <path d="M712 632 C 790 620, 876 618, 954 628"
+              fill="none" stroke={P.ink3} strokeWidth={2.8} strokeLinecap="round"
+              strokeDasharray={250} strokeDashoffset={250 * (1 - seg(0.84, 1))} />
       </svg>
     </div>
   );
