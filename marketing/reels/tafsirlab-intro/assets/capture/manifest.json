@@ -1,0 +1,70 @@
+{
+  "base": "http://localhost:3000",
+  "workspaceId": "58012881-82fb-45d5-9750-6e4d5ee1fab2",
+  "capturedAt": "2026-07-26T15:20:23.536Z",
+  "shots": [
+    {
+      "name": "landing-desktop",
+      "file": "landing-desktop.png",
+      "width": 1440,
+      "height": 900,
+      "dpr": 2
+    },
+    {
+      "name": "workspace-home-desktop",
+      "file": "workspace-home-desktop.png",
+      "width": 1440,
+      "height": 900,
+      "dpr": 2
+    },
+    {
+      "name": "mushaf-desktop",
+      "file": "mushaf-desktop.png",
+      "width": 1440,
+      "height": 900,
+      "dpr": 2
+    },
+    {
+      "name": "mushaf-tablet",
+      "file": "mushaf-tablet.png",
+      "width": 1194,
+      "height": 834,
+      "dpr": 2
+    },
+    {
+      "name": "mushaf-mobile",
+      "file": "mushaf-mobile.png",
+      "width": 390,
+      "height": 844,
+      "dpr": 3
+    },
+    {
+      "name": "split-desktop",
+      "file": "split-desktop.png",
+      "width": 1440,
+      "height": 900,
+      "dpr": 2
+    },
+    {
+      "name": "editor-desktop",
+      "file": "editor-desktop.png",
+      "width": 1440,
+      "height": 900,
+      "dpr": 2
+    },
+    {
+      "name": "notes-review-desktop",
+      "file": "notes-review-desktop.png",
+      "width": 1440,
+      "height": 900,
+      "dpr": 2
+    },
+    {
+      "name": "boards-desktop",
+      "file": "boards-desktop.png",
+      "width": 1440,
+      "height": 900,
+      "dpr": 2
+    }
+  ]
+}

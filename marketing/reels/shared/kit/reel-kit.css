@@ -1,0 +1,309 @@
+/* ============================================================================
+   reel-kit.css — TafsirLab marketing reel design system
+   ----------------------------------------------------------------------------
+   Canonical source: marketing/reels/shared/kit/  → synced into each reel
+   project by `node marketing/reels/shared/sync-kit.mjs`. Edit it HERE.
+
+   Apple-design alignment (skill: apple-design):
+     §15 typography — size-specific tracking (display text gets NEGATIVE
+          tracking, body sits near 0), leading tightens as size grows,
+          hierarchy from weight+size+leading as a set, system font first.
+     §12 materials  — translucent layers via backdrop-filter, bigger surfaces
+          read thicker (stronger blur + deeper shadow), never stack two light
+          translucent surfaces, shadows heavier over busy content.
+     §14 reduced motion / transparency / contrast are honoured so the same kit
+          can be embedded on the web, not only rendered to MP4.
+   ========================================================================== */
+
+:root {
+  /* ── Canvas ─────────────────────────────────────────────────────────── */
+  --reel-w: 1080px;
+  --reel-h: 1920px;
+
+  /* ── Ground. Deep, warm near-black: the product UI is light/cream, so a
+        dark ground makes each screen read as a lit object rather than a
+        pasted rectangle. Not pure #000 — pure black crushes the shadows. */
+  --ink-0: #07080a;
+  --ink-1: #0d0f12;
+  --ink-2: #16191d;
+
+  /* ── Foreground ─────────────────────────────────────────────────────── */
+  --fg: #f6f5f2;          /* warm white, matches the app's paper */
+  --fg-dim: #a7a29b;
+  --fg-faint: #6b6660;
+
+  /* ── Brand. Pulled from the app's own tokens (app/globals.css):
+        --accent: oklch(0.55 0.08 160) and the Mushaf highlight yellow. */
+  --accent: #4f9a7a;
+  --accent-soft: rgba(79, 154, 122, 0.14);
+  --highlight: #f2e3a4;   /* the real word-highlight colour on the Mushaf */
+
+  /* ── Instagram Reels safe zones ──────────────────────────────────────
+        Top strip holds the account/sound row; the bottom holds caption +
+        action rail; the right edge holds the action icons. All *key* content
+        (headlines, CTA, product focal points) must live inside the box below.
+        Verified against a 1080x1920 Reels frame. */
+  --safe-top: 300px;
+  --safe-bottom: 470px;   /* caption + like/comment/share stack */
+  --safe-x: 96px;
+  --safe-right: 190px;    /* action rail */
+
+  /* ── Type scale. Tracking is size-specific per apple-design §15. ────── */
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI",
+          system-ui, "Helvetica Neue", Arial, sans-serif;
+  /* Arabic is always carried by real app captures (the renderer has no
+     deterministic Arabic font), so no Arabic face is declared here. */
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  width: var(--reel-w);
+  height: var(--reel-h);
+  overflow: hidden;
+  background: var(--ink-0);
+  font-family: var(--font);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: geometricPrecision;
+}
+
+/* ── Ground layer ───────────────────────────────────────────────────────
+   Per hyperframes-core: a full-screen fill must ride on a full-bleed CHILD
+   (position:absolute; inset:0), never on the composition root — the
+   producer's frame compositing can drop the root's own background and the
+   frame renders black. */
+.ground {
+  position: absolute;
+  inset: 0;
+  background: var(--ink-0);
+}
+
+/* A very soft, static vignette + one low-saturation glow. Static on purpose:
+   apple-design §14 warns against full-viewport moving backgrounds. */
+.ground--lit::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(120% 80% at 50% 22%, rgba(79, 154, 122, 0.10), transparent 60%),
+    radial-gradient(100% 70% at 50% 100%, rgba(0, 0, 0, 0.55), transparent 70%);
+}
+
+/* ============================================================================
+   MotionText — the headline / super system
+   ========================================================================== */
+
+.stack {
+  position: absolute;
+  left: var(--safe-x);
+  width: calc(var(--reel-w) - var(--safe-x) * 2);
+}
+
+/* Display headline. Large ⇒ tight leading + negative tracking (§15). */
+.display {
+  font-size: 92px;
+  font-weight: 600;
+  line-height: 1.04;
+  letter-spacing: -0.032em;
+  color: var(--fg);
+}
+.display--sm { font-size: 74px; letter-spacing: -0.026em; line-height: 1.08; }
+.display--lg { font-size: 116px; letter-spacing: -0.038em; line-height: 1.0; }
+
+/* Supporting super. Smaller ⇒ tracking returns toward 0, leading loosens. */
+.super {
+  font-size: 46px;
+  font-weight: 500;
+  line-height: 1.26;
+  letter-spacing: -0.008em;
+  color: var(--fg);
+}
+.caption {
+  font-size: 34px;
+  font-weight: 450;
+  line-height: 1.35;
+  letter-spacing: 0.004em;   /* small text: slightly POSITIVE for legibility */
+  color: var(--fg-dim);
+}
+.eyebrow {
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.14em;    /* all-caps micro-type wants open tracking */
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+/* Word-by-word reveal unit. GSAP animates `.w > span`; the outer clip keeps
+   the mask so each word rises out of its own line box. */
+.w { display: inline-block; overflow: hidden; vertical-align: bottom; }
+.w > span { display: inline-block; will-change: transform, opacity; }
+
+/* ============================================================================
+   DeviceFrame — restrained, realistic. No marketplace gloss, no fake
+   reflections, no rotation gimmicks. Bezel widths and corner radii are scaled
+   from the real hardware so the proportions read as correct.
+   ========================================================================== */
+
+.device { position: absolute; will-change: transform, opacity; }
+.device__screen {
+  position: relative;
+  overflow: hidden;
+  background: #f7f6f3;   /* app paper — prevents a black flash before paint */
+}
+
+/* Laptop — the hero. Thin bezel, subtle base, no logo. */
+.device--laptop .device__screen {
+  border-radius: 10px;
+  border: 12px solid #1b1e22;
+  box-shadow:
+    0 2px 0 rgba(255, 255, 255, 0.06) inset,
+    0 60px 120px rgba(0, 0, 0, 0.62),
+    0 18px 44px rgba(0, 0, 0, 0.44);
+}
+.device--laptop .device__base {
+  height: 16px;
+  margin: 0 auto;
+  border-radius: 0 0 14px 14px;
+  background: linear-gradient(#23272c, #15181b);
+  box-shadow: 0 22px 40px rgba(0, 0, 0, 0.5);
+}
+
+/* Tablet — the annotation device. Uniform bezel, as on iPad. */
+.device--tablet .device__screen {
+  border-radius: 26px;
+  border: 14px solid #1b1e22;
+  box-shadow:
+    0 40px 90px rgba(0, 0, 0, 0.55),
+    0 12px 30px rgba(0, 0, 0, 0.4);
+}
+
+/* Phone — availability only. Deliberately the smallest, furthest back. */
+.device--phone .device__screen {
+  border-radius: 30px;
+  border: 10px solid #1b1e22;
+  box-shadow:
+    0 30px 70px rgba(0, 0, 0, 0.55),
+    0 8px 22px rgba(0, 0, 0, 0.4);
+}
+
+/* ============================================================================
+   ProductCapture — a masked, scaled window onto a real screenshot.
+   This is the "feature zoom" + "screen-recording mask" primitive: instead of
+   shrinking a whole 1440px desktop screen (which makes UI text illegible on a
+   phone), it crops a REGION of the capture and scales it up.
+
+   The crop is {sx, sy, scale} in the capture's own pixel space; see
+   ReelKit.crop / setCrop / featureZoom, which own the transform (CSS only
+   fixes the origin, so there is exactly one writer and no conflict).
+
+   IMPORTANT: the transform rides on `.pc__inner`, NOT on the <img>. With
+   `media.autoProxy` the compiler rewrites media elements, which would leave a
+   GSAP tween pointing at a detached <img> and silently apply nothing. The
+   wrapper div is never rewritten, so the crop always lands.
+   ========================================================================== */
+
+.pc { position: relative; overflow: hidden; background: #f7f6f3; }
+.pc__inner {
+  position: absolute;
+  top: 0; left: 0;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+.pc__inner > img {
+  display: block;
+  image-rendering: -webkit-optimize-contrast;
+}
+
+/* ============================================================================
+   Materials — translucent chrome (§12). Bigger surface ⇒ thicker read.
+   Never stack two light translucent surfaces.
+   ========================================================================== */
+
+.glass {
+  background: rgba(22, 25, 29, 0.55);
+  backdrop-filter: blur(28px) saturate(150%);
+  -webkit-backdrop-filter: blur(28px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 22px;
+  /* bright top edge = light catching the material */
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 30px 60px rgba(0, 0, 0, 0.45);
+}
+
+/* Vibrancy: text over a translucent surface needs more weight + a touch more
+   tracking than text on a solid ground, or it dissolves (§12). */
+.glass .caption { color: #ded9d2; font-weight: 500; letter-spacing: 0.01em; }
+
+/* Soft focus ring used to point at a real UI element (word highlight, tool). */
+.spot {
+  position: absolute;
+  border-radius: 999px;
+  border: 2px solid rgba(242, 227, 164, 0.9);
+  box-shadow: 0 0 0 8px rgba(242, 227, 164, 0.14), 0 0 40px rgba(242, 227, 164, 0.35);
+  will-change: transform, opacity;
+}
+
+/* Cursor / tap indicator — the "someone is using it" cue. */
+.tap {
+  position: absolute;
+  width: 46px; height: 46px;
+  border-radius: 999px;
+  background: rgba(246, 245, 242, 0.92);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+  will-change: transform, opacity;
+}
+.tap__ring {
+  position: absolute; inset: -14px;
+  border-radius: 999px;
+  border: 3px solid rgba(246, 245, 242, 0.5);
+  will-change: transform, opacity;
+}
+
+/* ── Brand mark ─────────────────────────────────────────────────────────── */
+.brand { position: absolute; display: flex; align-items: center; gap: 22px; }
+.brand__glyph {
+  width: 92px; height: 92px;
+  border-radius: 22px;
+  background: var(--fg);
+  color: var(--ink-0);
+  font-size: 58px; font-weight: 700;
+  letter-spacing: -0.04em;
+  display: flex; align-items: center; justify-content: center;
+}
+.brand__word {
+  font-size: 76px; font-weight: 600;
+  letter-spacing: -0.03em;
+  color: var(--fg);
+}
+
+/* CTA pill — solid, high contrast, reads at phone size. */
+.cta {
+  display: inline-flex; align-items: center; gap: 14px;
+  padding: 26px 44px;
+  border-radius: 999px;
+  background: var(--fg);
+  color: var(--ink-0);
+  font-size: 38px; font-weight: 600;
+  letter-spacing: -0.012em;
+}
+
+/* ============================================================================
+   Accessibility (§14). The MP4 render is unaffected — these exist so the same
+   kit is safe to embed as live HTML.
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  /* Replace travel with a short opacity cross-fade; drop all overshoot. */
+  .device, .pc > img, .w > span, .spot, .tap, .tap__ring {
+    transform: none !important;
+    animation: none !important;
+    transition: opacity 200ms ease !important;
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .glass { background: #14171a; backdrop-filter: none; -webkit-backdrop-filter: none; }
+}
+@media (prefers-contrast: more) {
+  .glass { background: #0c0e10; border-color: rgba(255, 255, 255, 0.5); }
+  .caption { color: #efece7; }
+}

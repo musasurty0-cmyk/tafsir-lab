@@ -45,3 +45,8 @@ public/showcase/
 # MuPDF WASM — copied from node_modules by scripts/copy-mupdf-wasm.mjs (postinstall)
 public/mupdf/
 lib/build-id.ts
+
+# Marketing reels — generated artifacts
+marketing/reels/*/node_modules/
+marketing/reels/*/kit/          # synced from shared/kit by sync-kit.mjs
+marketing/reels/*/snapshots/    # QA stills, regenerate with `hyperframes snapshot`

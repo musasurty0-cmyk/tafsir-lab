@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <link rel="stylesheet" href="kit/reel-kit.css" />
+    <script src="kit/reel-kit.js"></script>
+  </head>
+  <body>
+    <!-- ======================================================================
+         TafsirLab — Instagram Reel  ·  1080x1920  ·  30fps  ·  24s
+         Storyboard + rationale: STORYBOARD.md
+         Design system + motion: kit/  (canonical in ../shared/kit/)
+         All product imagery in assets/capture/ is a REAL screenshot of the
+         running app, captured by ../shared/capture-product.mjs.
+         ==================================================================== -->
+    <div
+      id="root"
+      data-composition-id="main"
+      data-start="0"
+      data-duration="24"
+      data-width="1080"
+      data-height="1920"
+    >
+      <!-- Ground. Full-bleed CHILD, never the root (hyperframes-core: a
+           background on the root can be dropped by frame compositing). -->
+      <div id="ground" class="clip ground ground--lit" data-start="0" data-duration="24" data-track-index="0"></div>
+
+      <!-- ============================================================
+           SCENE 1 — THE QUESTION · 0.0–2.5
+           Near-silent, minimal. Word-by-word so the viewer reads WITH the
+           reveal. No logo, no product yet: curiosity first.
+           ============================================================ -->
+      <div id="s1" class="clip stack" data-start="0" data-duration="2.9" data-track-index="1"
+           style="top: 620px">
+        <div class="display" id="s1-line">
+          <span class="w"><span>Have</span></span> <span class="w"><span>you</span></span>
+          <span class="w"><span>ever</span></span> <span class="w"><span>wanted</span></span>
+          <span class="w"><span>to</span></span> <span class="w"><span>study</span></span>
+          <span class="w"><span>the</span></span>
+          <span class="w"><span style="color: var(--accent)">Qur&#x2019;an&#x2026;</span></span>
+        </div>
+      </div>
+
+      <!-- ============================================================
+           SCENE 2 — THE MUSHAF APPEARS · 2.5–5.0
+           The page materialises FROM the question's own position (the text sat
+           at y620; the page grows from that same point) — apple-design §7,
+           motion originates at its trigger. A real word already carries the
+           app's own highlight, so the spotlight points at something true.
+           ============================================================ -->
+      <div id="s2" class="clip" data-start="2.4" data-duration="2.6" data-track-index="2"
+           style="position: absolute; inset: 0">
+        <div id="s2-page" class="pc" style="left: 96px; top: 470px; width: 888px; height: 690px; position: absolute; border-radius: 8px; box-shadow: 0 40px 100px rgba(0,0,0,0.55)">
+          <div class="pc__inner" id="s2-crop"><img id="s2-img" src="assets/capture/mushaf-desktop.png" alt="" data-layout-allow-overflow /></div>
+        </div>
+        <!-- Focus ring over the highlighted word الْكِتَٰبُ -->
+        <div id="s2-spot" class="spot" style="left: 520px; top: 636px; width: 128px; height: 96px; border-radius: 12px"></div>
+        <div class="stack" data-layout-allow-overlap id="s2-super" style="top: 1250px">
+          <div class="super"><span class="w"><span>Study</span></span> <span class="w"><span>every</span></span> <span class="w"><span>word.</span></span></div>
+        </div>
+      </div>
+
+      <!-- ============================================================
+           SCENE 3 — NOTES INSIDE THE WORD · 5.0–8.0
+           The differentiator. We stay on the SAME Mushaf page and zoom into
+           the tapped word; the note surfaces attached to it. Nothing navigates
+           away — that is the whole point of the feature.
+           ============================================================ -->
+      <div id="s3" class="clip" data-start="5.0" data-duration="3.0" data-track-index="3"
+           style="position: absolute; inset: 0">
+        <div id="s3-page" class="pc" style="left: 96px; top: 400px; width: 888px; height: 560px; position: absolute; border-radius: 8px; box-shadow: 0 40px 100px rgba(0,0,0,0.55)">
+          <div class="pc__inner" id="s3-crop"><img id="s3-img" src="assets/capture/mushaf-desktop.png" alt="" data-layout-allow-overflow /></div>
+        </div>
+        <!-- Tap indicator lands on the word, and the note answers on the same frame -->
+        <div id="s3-tap" class="tap" style="left: 508px; top: 640px"><div class="tap__ring"></div></div>
+
+        <!-- The word's own note space. Translucent (§12) so the page stays
+             visible underneath — the notes live INSIDE the Qur'an word. -->
+        <div id="s3-note" class="glass" style="position: absolute; left: 96px; top: 1010px; width: 888px; padding: 40px 44px">
+          <div class="eyebrow" style="margin-bottom: 18px">Word note &#xB7; 2:2</div>
+          <!-- Arabic is carried by the real Mushaf capture above, never re-set
+               in HTML: the renderer has no deterministic Arabic font mapping,
+               so live Arabic here would fall back to tofu boxes. The app's own
+               QCF render is guaranteed correct and crisp. Transliteration
+               follows normal scholarly convention. -->
+          <div class="caption" style="font-size: 38px; color: var(--fg)">
+            <em style="font-style: italic; color: var(--highlight)">rayb</em>
+            &#x2014; doubt that unsettles. The ayah negates it entirely.
+          </div>
+          <!-- A handwritten annotation, drawn as a stroke path (Scene 3 shows
+               ink as well as type). Stroke is revealed by dashoffset. -->
+          <svg id="s3-ink" width="560" height="90" viewBox="0 0 560 90" style="margin-top: 26px; display: block">
+            <path d="M14 62 C 60 18, 92 20, 118 54 S 168 84, 196 50 C 214 28, 240 30, 258 58
+                     C 276 84, 306 80, 322 52 C 340 22, 372 26, 392 56 L 430 40 L 470 62"
+                  fill="none" stroke="#f2e3a4" stroke-width="5" stroke-linecap="round" />
+          </svg>
+        </div>
+
+        <div class="stack" data-layout-allow-overlap id="s3-super" style="top: 1430px">
+          <div class="super"><span class="w"><span>Write.</span></span> <span class="w"><span>Draw.</span></span> <span class="w"><span>Reflect.</span></span></div>
+        </div>
+      </div>
+
+      <!-- ============================================================
+           SCENE 4 — ONE NOTE, YOUR WAY · 8.0–11.0
+           Freeform editor: real typed study notes, an ayah embed, formatting.
+           ============================================================ -->
+      <div id="s4" class="clip" data-start="8.0" data-duration="3.0" data-track-index="4"
+           style="position: absolute; inset: 0">
+        <div id="s4-cap" class="pc" style="left: 96px; top: 480px; width: 888px; height: 620px; position: absolute; border-radius: 8px; box-shadow: 0 40px 100px rgba(0,0,0,0.55)">
+          <div class="pc__inner" id="s4-crop"><img id="s4-img" src="assets/capture/editor-desktop.png" alt="" data-layout-allow-overflow /></div>
+        </div>
+        <!-- A movable container being dragged: 1:1 with the pointer (§2), and
+             the pointer leads the surface so the motion telegraphs intent (§8). -->
+        <div id="s4-chip" class="glass" style="position: absolute; left: 96px; top: 1120px; width: 700px; padding: 30px 36px">
+          <div class="eyebrow" style="margin-bottom: 12px">/ayah</div>
+          <div class="caption" style="font-size: 34px; color: var(--fg)">Al-Baqarah 2:2 embedded inline</div>
+        </div>
+        <div id="s4-tap" class="tap" style="left: 740px; top: 1150px"><div class="tap__ring"></div></div>
+        <div class="stack" data-layout-allow-overlap id="s4-super" style="top: 1400px">
+          <div class="super"><span class="w"><span>Your</span></span> <span class="w"><span>study.</span></span> <span class="w"><span>Your</span></span> <span class="w"><span>structure.</span></span></div>
+        </div>
+      </div>
+
+      <!-- ============================================================
+           SCENE 5 — TAFSIR · 11.0–14.0
+           Claim verified against lib/services/tafsir.service.ts: the product
+           genuinely ships Ibn Kathīr (English), Maʿārif al-Qurʾān (English)
+           and Al-Saʿdī (Arabic) — so "Arabic and English" is truthful.
+           ============================================================ -->
+      <div id="s5" class="clip" data-start="11.0" data-duration="3.0" data-track-index="5"
+           style="position: absolute; inset: 0">
+        <div id="s5-cap" class="pc" style="left: 96px; top: 430px; width: 888px; height: 600px; position: absolute; border-radius: 8px; box-shadow: 0 40px 100px rgba(0,0,0,0.55)">
+          <div class="pc__inner" id="s5-crop"><img id="s5-img" src="assets/capture/split-desktop.png" alt="" data-layout-allow-overflow /></div>
+        </div>
+        <!-- Real source names, switching. -->
+        <div id="s5-srcs" style="position: absolute; left: 96px; top: 1080px; width: 888px">
+          <div class="glass s5-src" style="padding: 26px 34px; margin-bottom: 16px">
+            <div class="caption" style="font-size: 34px; color: var(--fg)">Ibn Kath&#x12B;r <span style="color: var(--fg-dim)">&#xB7; English</span></div>
+          </div>
+          <div class="glass s5-src" style="padding: 26px 34px; margin-bottom: 16px">
+            <div class="caption" style="font-size: 34px; color: var(--fg)">Ma&#x2CA;&#x101;rif al-Qur&#x2BC;&#x101;n <span style="color: var(--fg-dim)">&#xB7; English</span></div>
+          </div>
+          <div class="glass s5-src" style="padding: 26px 34px">
+            <div class="caption" style="font-size: 34px; color: var(--fg)">Al-Sa&#x2CA;d&#x12B; <span style="color: var(--fg-dim)">&#xB7; Arabic</span></div>
+          </div>
+        </div>
+        <div class="stack" data-layout-allow-overlap id="s5-super" style="top: 1430px">
+          <div class="super"><span class="w"><span>Explore</span></span> <span class="w"><span>tafsir</span></span> <span class="w"><span>in</span></span> <span class="w"><span>Arabic</span></span> <span class="w"><span>and</span></span> <span class="w"><span>English.</span></span></div>
+        </div>
+      </div>
+
+      <!-- ============================================================
+           SCENE 6 — STUDY TOGETHER · 14.0–17.0
+           Real workspace surface. Warm, not enterprise: initials + a single
+           collaborator note, no admin panels or org charts.
+           ============================================================ -->
+      <div id="s6" class="clip" data-start="14.0" data-duration="3.0" data-track-index="6"
+           style="position: absolute; inset: 0">
+        <div id="s6-cap" class="pc" style="left: 96px; top: 450px; width: 888px; height: 560px; position: absolute; border-radius: 8px; box-shadow: 0 40px 100px rgba(0,0,0,0.55)">
+          <div class="pc__inner" id="s6-crop"><img id="s6-img" src="assets/capture/workspace-home-desktop.png" alt="" data-layout-allow-overflow /></div>
+        </div>
+        <div id="s6-people" style="position: absolute; left: 96px; top: 1070px; display: flex; align-items: center; gap: 18px">
+          <div class="s6-av" style="width: 84px; height: 84px; border-radius: 999px; background: #4f9a7a; color: #07080a; font-size: 32px; font-weight: 650; display: flex; align-items: center; justify-content: center">TA</div>
+          <div class="s6-av" style="width: 84px; height: 84px; border-radius: 999px; background: #c8a24a; color: #07080a; font-size: 32px; font-weight: 650; display: flex; align-items: center; justify-content: center">YS</div>
+          <div class="s6-av" style="width: 84px; height: 84px; border-radius: 999px; background: #6f7fbf; color: #07080a; font-size: 32px; font-weight: 650; display: flex; align-items: center; justify-content: center">HM</div>
+          <div class="caption" style="margin-left: 12px">Tafsir Circle &#xB7; 3 studying</div>
+        </div>
+        <div id="s6-note" class="glass" style="position: absolute; left: 96px; top: 1200px; width: 888px; padding: 32px 38px">
+          <div class="eyebrow" style="margin-bottom: 14px; color: #c8a24a">Y&#x16B;suf added a note</div>
+          <div class="caption" style="font-size: 34px; color: var(--fg)">&#x201C;Guidance is promised to those who already carry taqw&#x101;.&#x201D;</div>
+        </div>
+        <div class="stack" data-layout-allow-overlap id="s6-super" style="top: 1430px">
+          <div class="super"><span class="w"><span>Study</span></span> <span class="w"><span>alone.</span></span> <span class="w"><span>Or</span></span> <span class="w"><span>together.</span></span></div>
+        </div>
+      </div>
+
+      <!-- ============================================================
+           SCENE 7 — ALL DEVICES · 17.0–20.5
+           Hierarchy is the message: laptop centre + largest, tablet second,
+           phone smallest and furthest back. Each frame shows the SAME study
+           context so continuity reads across devices.
+           ============================================================ -->
+      <div id="s7" class="clip" data-start="17.0" data-duration="3.7" data-track-index="7"
+           style="position: absolute; inset: 0">
+        <!-- Laptop — hero -->
+        <div id="s7-laptop" class="device device--laptop" style="left: 60px; top: 600px; width: 960px; z-index: 1">
+          <div class="pc device__screen" style="width: 960px; height: 624px">
+            <div class="pc__inner" id="s7-laptop-crop"><img id="s7-laptop-img" src="assets/capture/mushaf-desktop.png" alt="" data-layout-allow-overflow /></div>
+          </div>
+          <div class="device__base" style="width: 1040px; margin-left: -40px"></div>
+        </div>
+        <!-- Tablet — strongest annotation surface -->
+        <div id="s7-tablet" class="device device--tablet" style="left: 70px; top: 1170px; width: 500px; z-index: 2">
+          <div class="pc device__screen" style="width: 500px; height: 366px">
+            <div class="pc__inner" id="s7-tablet-crop"><img id="s7-tablet-img" src="assets/capture/mushaf-tablet.png" alt="" data-layout-allow-overflow /></div>
+          </div>
+        </div>
+        <!-- Phone — availability, deliberately smallest and behind -->
+        <div id="s7-phone" class="device device--phone" style="left: 660px; top: 1210px; width: 240px; z-index: 3">
+          <div class="pc device__screen" style="width: 240px; height: 420px">
+            <div class="pc__inner" id="s7-phone-crop"><img id="s7-phone-img" src="assets/capture/mushaf-mobile.png" alt="" data-layout-allow-overflow /></div>
+          </div>
+        </div>
+        <div class="stack" data-layout-allow-overlap id="s7-super" style="top: 400px">
+          <div class="super"><span class="w"><span>Available</span></span> <span class="w"><span>across</span></span> <span class="w"><span>your</span></span> <span class="w"><span>devices.</span></span></div>
+          <div class="caption" id="s7-qual" style="margin-top: 18px">Best experienced on desktop and tablet.</div>
+        </div>
+      </div>
+
+      <!-- ============================================================
+           SCENE 8 — BRAND + CTA · 20.5–24.0
+           Devices resolve into the mark. CTA is "Open the lab — free", which
+           matches the live landing page and a flow that actually works — the
+           product has no waitlist, so a waitlist CTA would lead nowhere.
+           ============================================================ -->
+      <div id="s8" class="clip" data-start="20.4" data-duration="3.6" data-track-index="8"
+           style="position: absolute; inset: 0">
+        <div id="s8-brand" class="brand" style="left: 96px; top: 780px">
+          <div class="brand__glyph">T</div>
+          <div class="brand__word">TafsirLab</div>
+        </div>
+        <div class="stack" data-layout-allow-overlap id="s8-line" style="top: 940px">
+          <div class="display display--sm">
+            <span class="w"><span>Go</span></span> <span class="w"><span>deeper</span></span>
+            <span class="w"><span>with</span></span>
+            <span class="w"><span style="color: var(--accent)">every</span></span>
+            <span class="w"><span style="color: var(--accent)">ayah.</span></span>
+          </div>
+        </div>
+        <div id="s8-cta" style="position: absolute; left: 96px; top: 1200px">
+          <div class="cta">Open the lab &#x2014; free</div>
+        </div>
+        <div class="caption" id="s8-url" style="position: absolute; left: 96px; top: 1320px">tafsirlab.com</div>
+      </div>
+    </div>
+
+    <script>
+      // ── Timeline ───────────────────────────────────────────────────────
+      // Exactly one paused timeline, registered under the root's
+      // data-composition-id, built synchronously at load (hyperframes-core).
+      const K = window.ReelKit;
+      // NB: nothing is destructured. The render runtime already defines globals
+      // named `T` and `EASE`, and re-declaring either throws
+      // "Identifier '…' has already been declared". Always reach through K.
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+
+      /* Capture geometry. Regions are in each screenshot's OWN pixels.
+         mushaf-desktop.png is 2880x1800 (a 1440x900 viewport at dpr 2). */
+      const MUSHAF_PAGE = { x: 1174, y: 331, w: 1188 };   // the whole Mushaf column
+      const MUSHAF_WORD = { x: 1520, y: 380, w: 600 };    // tight on الْكِتَٰبُ
+      const DESK_WIDE   = { x: 0,    y: 0,   w: 2880 };   // full desktop screen
+      const EDITOR_BODY = { x: 1010, y: 300, w: 1520 };   // the typed note body
+      const SPLIT_BODY  = { x: 900,  y: 150, w: 1900 };   // mushaf + notes together
+      const WS_GRID     = { x: 640,  y: 200, w: 2100 };   // surah grid
+
+      // ── S1 · The question ─────────────────────────────────────────────
+      K.revealWords(tl, "#s1-line", 0.15, { stagger: 0.105, dur: 0.78 });
+      // Exits upward; the Mushaf then arrives from that same point (§7).
+      K.hideWords(tl, "#s1-line", 2.28, { stagger: 0.022, dur: 0.4 });
+
+      // ── S2 · The Mushaf appears ───────────────────────────────────────
+      K.setCrop(tl, "#s2-crop", 2.4, K.crop(888, MUSHAF_PAGE));
+      // Grows from the question's y-position (620/1920 ≈ 32% of frame).
+      K.emergeFrom(tl, "#s2-page", 2.55, "50% 22%", { dur: 1.25, from: 0.78 });
+      // No cameraPush here: it would fight the crop for `scale` on the same
+      // element, and emergeFrom already supplies this scene's movement.
+      K.revealWords(tl, "#s2-super", 2.95, { stagger: 0.06, dur: 0.6 });
+      K.spotlight(tl, "#s2-spot", 3.5, { dur: 0.65, hold: 0.7 });
+      K.handOff(tl, "#s2", 4.50, { dur: 0.5, scale: 1.08, y: -60 });
+
+      // ── S3 · Notes inside the word ────────────────────────────────────
+      // Continue from S2's framing, then zoom to the word: same page, no jump.
+      K.featureZoom(tl, "#s3-crop", 5.05,
+        K.crop(888, MUSHAF_PAGE), K.crop(888, MUSHAF_WORD), { dur: 1.35 });
+      K.settleIn(tl, "#s3-page", 5.05, { dur: 0.5 });
+      K.tap(tl, "#s3-tap", 5.70);
+      // The note answers on the SAME frame as the tap (§1 response, §13 harmony).
+      K.materialize(tl, "#s3-note", 5.70, { dur: 0.85, from: 0.96, blur: 18 });
+      // Handwriting draws on after the note lands.
+      tl.fromTo("#s3-ink path",
+        { strokeDasharray: 900, strokeDashoffset: 900 },
+        { strokeDashoffset: 0, duration: 1.05, ease: "power1.inOut" }, 6.10);
+      K.revealWords(tl, "#s3-super", 5.35, { stagger: 0.06, dur: 0.6 });
+      K.handOff(tl, "#s3", 7.50, { dur: 0.5, scale: 1.06, y: -60 });
+
+      // ── S4 · One note, your way ───────────────────────────────────────
+      K.setCrop(tl, "#s4-crop", 8.0, K.crop(888, EDITOR_BODY));
+      K.materialize(tl, "#s4-cap", 8.1, { dur: 0.9, from: 0.95 });
+      K.revealWords(tl, "#s4-super", 8.25, { stagger: 0.05, dur: 0.6 });
+      // Container drag: pointer leads, surface tracks it 1:1 (§2).
+      K.materialize(tl, "#s4-chip", 8.9, { dur: 0.55, from: 0.97, blur: 12 });
+      tl.fromTo("#s4-tap", { opacity: 0 }, { opacity: 1, duration: 0.14, ease: K.EASE.settle }, 9.25);
+      tl.to("#s4-tap", { x: 130, y: 92, duration: 1.0, ease: K.EASE.settle }, 9.35);
+      tl.to("#s4-chip", { x: 130, y: 92, duration: 1.0, ease: K.EASE.settle }, 9.35);
+      tl.to("#s4-tap", { opacity: 0, duration: 0.2, ease: K.EASE.exit }, 10.4);
+      K.handOff(tl, "#s4", 10.50, { dur: 0.5, scale: 1.06, y: -60 });
+
+      // ── S5 · Tafsir ───────────────────────────────────────────────────
+      K.setCrop(tl, "#s5-crop", 11.0, K.crop(888, SPLIT_BODY));
+      K.materialize(tl, "#s5-cap", 11.1, { dur: 0.9, from: 0.95 });
+      K.revealWords(tl, "#s5-super", 11.20, { stagger: 0.04, dur: 0.5 });
+      // Sources arrive in sequence — clean switching, no clutter.
+      // Fast opacity + short slide: a slow fade would leave these cards at
+      // partial contrast for most of the scene.
+      tl.from(".s5-src", { opacity: 0, y: 22, duration: 0.35,
+                           ease: K.EASE.settle, stagger: 0.10 }, 11.40);
+      K.handOff(tl, "#s5", 13.50, { dur: 0.5, scale: 1.06, y: -60 });
+
+      // ── S6 · Study together ───────────────────────────────────────────
+      K.setCrop(tl, "#s6-crop", 14.0, K.crop(888, WS_GRID));
+      K.materialize(tl, "#s6-cap", 14.1, { dur: 0.9, from: 0.95 });
+      K.revealWords(tl, "#s6-super", 14.25, { stagger: 0.05, dur: 0.6 });
+      // Avatars pop in with a touch of momentum — people arriving.
+      tl.from(".s6-av", { opacity: 0, scale: 0.6, duration: 0.5,
+                          ease: K.EASE.momentum, stagger: 0.12 }, 14.7);
+      K.materialize(tl, "#s6-note", 15.10, { dur: 0.7, from: 0.97, blur: 14 });
+      K.handOff(tl, "#s6", 16.50, { dur: 0.5, scale: 1.06, y: -60 });
+
+      // ── S7 · All devices ──────────────────────────────────────────────
+      // Each device shows the same study context. Screen-time and scale encode
+      // the hierarchy: laptop → tablet → phone.
+      K.setCrop(tl, "#s7-laptop-crop", 17.0, K.crop(960, DESK_WIDE));
+      K.setCrop(tl, "#s7-tablet-crop", 17.0, K.crop(500, { x: 0, y: 0, w: 2388 }));
+      K.setCrop(tl, "#s7-phone-crop",  17.0, K.crop(240, { x: 0, y: 0, w: 1170 }));
+      K.revealWords(tl, "#s7-super", 17.15, { stagger: 0.05, dur: 0.6 });
+      K.revealDevice(tl, "#s7-laptop", 17.3, { dur: 1.2, y: 110, from: 0.88 });
+      K.revealDevice(tl, "#s7-tablet", 17.75, { dur: 1.05, y: 80, from: 0.9 });
+      K.revealDevice(tl, "#s7-phone",  18.0,  { dur: 1.0,  y: 70, from: 0.9 });
+      tl.from("#s7-qual", { opacity: 0, y: 16, duration: 0.4, ease: K.EASE.settle }, 18.30);
+      // Devices resolve toward the mark — they recede into S8's brand position.
+      tl.to("#s7-laptop, #s7-tablet, #s7-phone",
+        { opacity: 0, scale: 0.86, y: -70,
+          duration: 0.72, ease: K.EASE.exit, stagger: 0.05 }, 20.15);
+      tl.to("#s7-super, #s7-qual", { opacity: 0, y: -30, duration: 0.5, ease: K.EASE.exit }, 20.15);
+
+      // ── S8 · Brand + CTA ──────────────────────────────────────────────
+      // Arrives where the devices collapsed to, so the resolve is continuous.
+      K.materialize(tl, "#s8-brand", 20.55, { dur: 0.85, from: 0.9, blur: 16 });
+      K.revealWords(tl, "#s8-line", 21.0, { stagger: 0.075, dur: 0.7 });
+      K.materialize(tl, "#s8-cta", 21.75, { dur: 0.6, from: 0.94, blur: 10 });
+      tl.from("#s8-url", { opacity: 0, y: 14, duration: 0.5, ease: K.EASE.settle }, 22.05);
+      // Hold ~1.7s on the final frame so the CTA is comfortably readable.
+
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>
