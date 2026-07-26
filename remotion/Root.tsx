@@ -5,10 +5,20 @@ import { Showcase, SHOW_DURATION, SHOW_FPS } from "./Showcase";
 import { AppTrailer, APP_DURATION, APP_FPS } from "./AppTrailer";
 import { MasterTrailer, MASTER_DURATION, MASTER_FPS } from "./MasterTrailer";
 import { Walkthrough, WALK_DURATION, WALK_FPS } from "./Walkthrough";
+import { TafsirLabReel, REEL_DURATION, REEL_FPS } from "./reel/TafsirLabReel";
 
 export const RemotionRoot: React.FC = () => {
   return (
     <>
+      {/* Instagram Reel #1 — vertical, white, one continuous camera. */}
+      <Composition
+        id="TafsirLabReel"
+        component={TafsirLabReel}
+        durationInFrames={REEL_DURATION}
+        fps={REEL_FPS}
+        width={1080}
+        height={1920}
+      />
       <Composition
         id="Trailer"
         component={Trailer}

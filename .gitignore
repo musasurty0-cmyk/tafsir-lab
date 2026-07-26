@@ -50,3 +50,4 @@ lib/build-id.ts
 marketing/reels/*/node_modules/
 marketing/reels/*/kit/          # synced from shared/kit by sync-kit.mjs
 marketing/reels/*/snapshots/    # QA stills, regenerate with `hyperframes snapshot`
+marketing/reels/_stills/
