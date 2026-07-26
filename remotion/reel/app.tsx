@@ -326,6 +326,84 @@ export const EditorDoc: React.FC<{ scroll?: number; typed?: number; selection?: 
   );
 };
 
+/* ── The REAL Mushaf ──────────────────────────────────────────────────────
+   Not an approximation. The product renders Mushaf pages with Quran
+   Foundation's QCF v2 page fonts: every page has its own font file, and each
+   word is a Private Use Area glyph code (code_v2) placed on a real line. The
+   font *is* the page layout — which is why the genuine article has evenly
+   filled lines that no Amiri/Uthmani fallback can reproduce.
+
+   data/page1.json holds the exact glyph codes + line numbers the app fetches;
+   public/qcf/p1.woff2 is the exact font it loads. Layout constants
+   (centred RTL flex rows, 2.5 line-height, zero letter/word-spacing, kerning
+   off) are copied from .qcf-lines / .qcf-line in app/globals.css.          */
+
+import { staticFile } from "remotion";
+import page1 from "./data/page1.json";
+
+interface QWord { c: string; t: string; key: string; pos: number }
+interface QLine { n: number; words: QWord[] }
+const PAGE1 = page1 as { page: number; v2_page: number; lines: QLine[] };
+
+export const QCF_FONT_CSS = `
+@font-face {
+  font-family: "p${PAGE1.v2_page}-v2";
+  src: url("${staticFile(`qcf/p${PAGE1.v2_page}.woff2`)}") format("woff2");
+  font-display: block;
+}`;
+
+/**
+ * One Mushaf page, exactly as the product draws it.
+ * `mark` selects a SINGLE word to highlight — studying marks one word, not a
+ * rainbow across every ayah.
+ */
+export const QCFPage: React.FC<{
+  fontSize?: number;
+  /** verse key + word position of the one highlighted word, e.g. "1:5"/1 */
+  mark?: { key: string; pos: number } | null;
+  /** 0→1 highlighter ink laid down right→left under that word */
+  markInk?: number;
+  /** 0→1 selection ring on the same word (word-note affordance) */
+  markRing?: number;
+}> = ({ fontSize = 20, mark = null, markInk = 0, markRing = 0 }) => (
+  <div style={{
+    display: "flex", flexDirection: "column", width: "100%", direction: "rtl",
+    fontFamily: `"p${PAGE1.v2_page}-v2"`,
+    fontSize, lineHeight: 2.5, letterSpacing: 0, wordSpacing: 0,
+    fontKerning: "none", textRendering: "optimizeSpeed", color: P.ink,
+  }}>
+    {PAGE1.lines.map((ln) => (
+      <div key={ln.n} style={{
+        display: "flex", flexDirection: "row", justifyContent: "center",
+        alignItems: "center", direction: "rtl", whiteSpace: "nowrap",
+      }}>
+        {ln.words.map((w, i) => {
+          const isMark = !!mark && w.key === mark.key && w.pos === mark.pos;
+          return (
+            <span key={i} style={{ position: "relative", display: "inline-block" }}>
+              {isMark && markInk > 0 && (
+                <span style={{
+                  position: "absolute", left: 0, right: 0, top: "22%", bottom: "18%",
+                  background: P.hl.yellow, borderRadius: 3, zIndex: 0,
+                  transformOrigin: "right center", transform: `scaleX(${markInk})`,
+                }} />
+              )}
+              {isMark && markRing > 0 && (
+                <span style={{
+                  position: "absolute", left: -3, right: -3, top: "14%", bottom: "10%",
+                  border: `2px solid ${P.green}`, borderRadius: 6, zIndex: 2,
+                  background: "rgba(79,154,122,0.08)", opacity: markRing,
+                }} />
+              )}
+              <span style={{ position: "relative", zIndex: 1 }}>{w.c}</span>
+            </span>
+          );
+        })}
+      </div>
+    ))}
+  </div>
+);
+
 /* ── Canvas: the real Mushaf surface with the tool rail ──────────────── */
 
 export const CanvasDoc: React.FC<{
@@ -337,7 +415,6 @@ export const CanvasDoc: React.FC<{
   wordGlow?: number;
   tool?: number;
 }> = ({ hl = 0, ink = 0, wordGlow = 0, tool = 0 }) => {
-  const bands = [P.hl.blue, P.hl.green, P.hl.yellow, P.hl.pink, P.hl.orange, P.hl.violet, P.hl.blue];
   const seg = (a: number, b: number) => Math.max(0, Math.min(1, (ink - a) / (b - a)));
   return (
     <div style={{ position: "absolute", inset: 0, background: "#fff", overflow: "hidden" }}>
@@ -375,43 +452,12 @@ export const CanvasDoc: React.FC<{
         ))}
       </div>
 
-      {/* the Mushaf */}
+      {/* the real Mushaf — QCF v2 glyphs, one marked word, nothing else */}
+      <style>{QCF_FONT_CSS}</style>
       <div style={{
-        position: "absolute", left: 130, right: 90, top: 84,
-        fontFamily: SERIF, direction: "rtl", textAlign: "center",
+        position: "absolute", left: 150, right: 110, top: 96,
       }}>
-        {FATIHAH.map((v, i) => (
-          <div key={v.key} style={{ position: "relative", fontSize: 40, lineHeight: 2.3, marginBottom: 4 }}>
-            <span style={{ position: "relative", display: "inline-block", padding: "0 6px" }}>
-              {/* the colour band is laid down behind the ayah, right→left */}
-              <span style={{
-                position: "absolute", inset: "6px 0 4px 0", background: bands[i],
-                borderRadius: 4, transformOrigin: "right center",
-                transform: `scaleX(${Math.max(0, Math.min(1, hl * 7 - i))})`,
-                opacity: 0.9,
-              }} />
-              {v.words.map((w, wi) => {
-                const isHero = i === 4 && wi === 0; // إِيَّاكَ
-                return (
-                  <span key={wi} style={{ position: "relative", padding: "0 3px" }}>
-                    {isHero && wordGlow > 0 && (
-                      <span style={{
-                        position: "absolute", inset: "2px -3px 0 -3px",
-                        border: `2px solid ${P.green}`, borderRadius: 6,
-                        background: "rgba(79,154,122,0.10)",
-                        opacity: wordGlow, transform: `scale(${0.94 + 0.06 * wordGlow})`,
-                      }} />
-                    )}
-                    <span style={{ position: "relative" }}>{w.t}</span>
-                  </span>
-                );
-              })}
-              <span style={{ fontFamily: FONT.sans, fontSize: 19, color: P.grey2, margin: "0 8px" }}>
-                ۝{v.key.split(":")[1]}
-              </span>
-            </span>
-          </div>
-        ))}
+        <QCFPage fontSize={44} mark={{ key: "1:5", pos: 1 }} markInk={hl} markRing={wordGlow} />
       </div>
 
       {/* Real study ink. Coordinates are in the CONTENT box (app minus the
@@ -579,3 +625,4 @@ export const WordNote: React.FC<{ open?: number; ink?: number }> = ({ open = 0, 
     </svg>
   </div>
 );
+
