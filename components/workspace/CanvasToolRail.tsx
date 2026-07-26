@@ -309,6 +309,34 @@ export default function CanvasToolRail({
     if (popoverOpen) scheduleHide();
   }
 
+  // iOS Safari frequently does NOT synthesise a `click` for an Apple Pencil
+  // tap, so onClick-only buttons ignore the stylus (you "had to use a finger"
+  // to switch tools). Fire the same action on the pen's pointerup. If a late
+  // click DOES also arrive on some devices, penGuardRef makes onClick skip it,
+  // so nothing double-fires (which matters for undo/redo/clear).
+  const penGuardRef = useRef(0);
+  function penTap(fn: () => void) {
+    return (e: React.PointerEvent) => {
+      if (e.pointerType !== "pen") return;
+      e.preventDefault();
+      e.stopPropagation();
+      penGuardRef.current = Date.now();
+      fn();
+    };
+  }
+  function onTap(fn: () => void) {
+    return () => { if (Date.now() - penGuardRef.current < 600) return; fn(); };
+  }
+
+  function selectTool(id: DrawTool) {
+    onToolChange(id);
+    // Re-selecting an already-active palette tool: re-open and reset timer
+    if ((id === "pen" || id === "highlight" ||
+         (id === "eraser" && eraserHasPopover)) && id === activeTool) {
+      openAndSchedule();
+    }
+  }
+
   // ── Render ────────────────────────────────────────────────────────────
 
   return (
@@ -327,14 +355,8 @@ export default function CanvasToolRail({
           className="ctr-btn"
           data-active={activeTool === id ? "true" : "false"}
           title={title}
-          onClick={() => {
-            onToolChange(id);
-            // Re-clicking an already-active palette tool: re-open and reset timer
-            if ((id === "pen" || id === "highlight" ||
-                 (id === "eraser" && eraserHasPopover)) && id === activeTool) {
-              openAndSchedule();
-            }
-          }}
+          onClick={onTap(() => selectTool(id))}
+          onPointerUp={penTap(() => selectTool(id))}
         >
           <Icon />
           {id === "pen" && (
@@ -352,7 +374,8 @@ export default function CanvasToolRail({
       <button
         className="ctr-btn"
         title="Undo  ⌘Z"
-        onClick={onUndo}
+        onClick={onTap(onUndo)}
+        onPointerUp={penTap(onUndo)}
         disabled={!canUndo}
       >
         <UndoIcon />
@@ -360,7 +383,8 @@ export default function CanvasToolRail({
       <button
         className="ctr-btn"
         title="Redo  ⌘⇧Z"
-        onClick={onRedo}
+        onClick={onTap(onRedo)}
+        onPointerUp={penTap(onRedo)}
         disabled={!canRedo}
       >
         <RedoIcon />
@@ -373,7 +397,8 @@ export default function CanvasToolRail({
           <button
             className="ctr-btn ctr-btn--danger"
             title="Clear all strokes"
-            onClick={onClear}
+            onClick={onTap(onClear)}
+            onPointerUp={penTap(onClear)}
           >
             <ClearIcon />
           </button>
@@ -405,7 +430,8 @@ export default function CanvasToolRail({
                   className="ctr-width-btn"
                   title={`${w.label} — ${w.value}px`}
                   data-active={eraserSize === w.value ? "true" : "false"}
-                  onClick={() => handleEraserSize(w.value)}
+                  onClick={onTap(() => handleEraserSize(w.value))}
+                  onPointerUp={penTap(() => handleEraserSize(w.value))}
                 >
                   {/* preset circles at 40% scale so XL fits the popover */}
                   <span
@@ -444,7 +470,8 @@ export default function CanvasToolRail({
                   title={c.label}
                   data-active={activeColor === c.hex ? "true" : "false"}
                   style={{ background: c.hex }}
-                  onClick={() => handleColor(c.hex)}
+                  onClick={onTap(() => handleColor(c.hex))}
+                  onPointerUp={penTap(() => handleColor(c.hex))}
                 />
               ))}
             </div>
@@ -458,7 +485,8 @@ export default function CanvasToolRail({
                   title={`${w.label} — ${w.value}px`}
                   data-active={strokeSize === w.value ? "true" : "false"}
                   style={{ color: isHighlight ? "#ca8a04" : "#374151" }}
-                  onClick={() => handleWidth(w.value)}
+                  onClick={onTap(() => handleWidth(w.value))}
+                  onPointerUp={penTap(() => handleWidth(w.value))}
                 >
                   <WidthBar value={w.value} isHighlight={isHighlight} />
                 </button>

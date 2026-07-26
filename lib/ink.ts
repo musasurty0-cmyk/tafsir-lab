@@ -106,12 +106,22 @@ function strokeRadius(base: number, p: number): number {
  *   last points — nothing tapers away or gets cut off at pen-lift.
  */
 function penOutline(raw: Pt[], base: number): [number, number][] {
-  // Drop consecutive near-duplicate samples (pen resting in place)
+  // 1. Resample to a MINIMUM spacing. A stylus sampling densely while you
+  //    write slowly piles many points into a tiny area; each carries a little
+  //    position noise, and offsetting them perpendicular to their (wildly
+  //    swinging) local tangents spikes the edge into a sawtooth ("furry"
+  //    ink). Enforcing a floor on point spacing removes the clusters that
+  //    cause it, without simplifying the actual curve.
+  const MIN_SP = Math.max(1.6, base * 0.5);
   const P: Pt[] = [];
   for (const p of raw) {
     const last = P[P.length - 1];
-    if (!last || Math.hypot(p[0] - last[0], p[1] - last[1]) > 1e-3) P.push(p);
+    if (!last || Math.hypot(p[0] - last[0], p[1] - last[1]) >= MIN_SP) P.push(p);
   }
+  // Always keep the final sample so the ink reaches the exact pen-lift point.
+  const tail = raw[raw.length - 1];
+  const plast = P[P.length - 1];
+  if (tail && plast && Math.hypot(tail[0] - plast[0], tail[1] - plast[1]) > 1e-3) P.push(tail);
   const n = P.length;
   if (n < 2) return [];
 
@@ -125,14 +135,35 @@ function penOutline(raw: Pt[], base: number): [number, number][] {
   acc = P[n - 1][2];
   for (let i = n - 1; i >= 0; i--) { acc += (P[i][2] - acc) * ALPHA; bwd[i] = acc; }
 
-  // Tangent angle + offset points per sample
+  // 2. Tangent DIRECTION per sample, zero-phase smoothed as unit vectors
+  //    (cos/sin, so no angle-wraparound artefacts). The offset direction is
+  //    what draws the stroke's edge, so stabilising it — WITHOUT moving the
+  //    centreline — is what actually removes the sawtooth. The centreline
+  //    stays the raw path, so curves are never warped.
+  const rawTx = new Float32Array(n), rawTy = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    const a = P[Math.max(0, i - 1)];
+    const b = P[Math.min(n - 1, i + 1)];
+    let dx = b[0] - a[0], dy = b[1] - a[1];
+    const m = Math.hypot(dx, dy) || 1;
+    rawTx[i] = dx / m; rawTy[i] = dy / m;
+  }
+  const TA = 0.32;
+  const fX = new Float32Array(n), fY = new Float32Array(n);
+  const bX = new Float32Array(n), bY = new Float32Array(n);
+  let ax = rawTx[0], ay = rawTy[0];
+  for (let i = 0; i < n; i++) { ax += (rawTx[i] - ax) * TA; ay += (rawTy[i] - ay) * TA; fX[i] = ax; fY[i] = ay; }
+  ax = rawTx[n - 1]; ay = rawTy[n - 1];
+  for (let i = n - 1; i >= 0; i--) { ax += (rawTx[i] - ax) * TA; ay += (rawTy[i] - ay) * TA; bX[i] = ax; bY[i] = ay; }
+
+  // Offset points per sample, using the smoothed tangent.
   const left:  [number, number][] = [];
   const right: [number, number][] = [];
   const theta = new Float32Array(n);
   for (let i = 0; i < n; i++) {
-    const a = P[Math.max(0, i - 1)];
-    const b = P[Math.min(n - 1, i + 1)];
-    theta[i] = Math.atan2(b[1] - a[1], b[0] - a[0]);
+    let ux = (fX[i] + bX[i]) / 2, uy = (fY[i] + bY[i]) / 2;
+    const m = Math.hypot(ux, uy) || 1; ux /= m; uy /= m;
+    theta[i] = Math.atan2(uy, ux);
     const r = strokeRadius(base, (fwd[i] + bwd[i]) / 2);
     left.push ([P[i][0] + r * Math.cos(theta[i] - Math.PI / 2), P[i][1] + r * Math.sin(theta[i] - Math.PI / 2)]);
     right.push([P[i][0] + r * Math.cos(theta[i] + Math.PI / 2), P[i][1] + r * Math.sin(theta[i] + Math.PI / 2)]);
