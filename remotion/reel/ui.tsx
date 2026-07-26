@@ -392,3 +392,69 @@ export const At: React.FC<{
     transformOrigin: origin,
   }}>{children}</div>
 );
+
+/* ── Handwriting ───────────────────────────────────────────────────────────
+   A real demonstration, not a decorative squiggle: strokes are drawn in
+   sequence along their true paths (dashoffset), at page scale, so the viewer
+   watches the annotation being MADE — circle the word, rule under the phrase,
+   arrow out to a handwritten margin note. `draw` 0→1 sequences the whole set. */
+
+const seg = (draw: number, a: number, b: number) =>
+  Math.max(0, Math.min(1, (draw - a) / (b - a)));
+
+export const HandNotes: React.FC<{ draw?: number; width?: number }> = ({
+  draw = 0, width = 900,
+}) => {
+  const S = [
+    // circle around ٱلْكِتَـٰبُ
+    { d: "M395 96 C 350 76, 300 84, 292 112 C 284 142, 330 164, 392 162 C 452 160, 496 140, 492 112 C 488 88, 448 76, 402 92",
+      w: 4.6, len: 640, a: 0.00, b: 0.30, c: C.amberInk },
+    // underline beneath the rest of the phrase
+    { d: "M180 150 C 240 138, 300 140, 360 148", w: 4, len: 200, a: 0.30, b: 0.44, c: C.amberInk },
+    // arrow from the circle out to the margin
+    { d: "M300 175 C 268 232, 232 268, 196 296", w: 4, len: 190, a: 0.46, b: 0.66, c: C.blue },
+    { d: "M196 296 L 224 288 M196 296 L 204 268", w: 4, len: 70, a: 0.66, b: 0.74, c: C.blue },
+  ];
+  return (
+    <svg width={width} height={420} style={{ display: "block", overflow: "visible" }}>
+      {S.map((p, i) => (
+        <path key={i} d={p.d} fill="none" stroke={p.c} strokeWidth={p.w}
+              strokeLinecap="round" strokeLinejoin="round"
+              strokeDasharray={p.len}
+              strokeDashoffset={p.len * (1 - seg(draw, p.a, p.b))}
+              opacity={0.9} />
+      ))}
+      {/* the handwritten margin note itself */}
+      <text x={40} y={330} fill={C.blue} opacity={seg(draw, 0.74, 0.95)}
+            style={{ fontFamily: FONT.hand, fontSize: 44 }}>
+        definite — THE Book
+      </text>
+    </svg>
+  );
+};
+
+/* ── Label ─────────────────────────────────────────────────────────────────
+   Screen-space, not world-space: it must stay legible no matter where the
+   camera is. Names the interaction the viewer is watching, in as few words as
+   possible, and never competes with the product. */
+
+export const Label: React.FC<{ text: string; o: number; sub?: string }> = ({ text, o, sub }) => (
+  <div style={{
+    position: "absolute", left: 0, right: 0, bottom: 300,
+    display: "flex", flexDirection: "column", alignItems: "center", gap: 10,
+    opacity: o, transform: `translateY(${(1 - o) * 14}px)`,
+    pointerEvents: "none",
+  }}>
+    <div style={{ width: 34, height: 2, borderRadius: 2, background: C.hair2 }} />
+    <div style={{
+      fontFamily: FONT.sans, fontSize: 40, fontWeight: 600,
+      letterSpacing: "-0.02em", color: C.ink, textAlign: "center",
+    }}>{text}</div>
+    {sub && (
+      <div style={{
+        fontFamily: FONT.sans, fontSize: 25, fontWeight: 450,
+        letterSpacing: "0", color: C.grey, textAlign: "center",
+      }}>{sub}</div>
+    )}
+  </div>
+);

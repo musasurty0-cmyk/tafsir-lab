@@ -6,10 +6,20 @@ import { AppTrailer, APP_DURATION, APP_FPS } from "./AppTrailer";
 import { MasterTrailer, MASTER_DURATION, MASTER_FPS } from "./MasterTrailer";
 import { Walkthrough, WALK_DURATION, WALK_FPS } from "./Walkthrough";
 import { TafsirLabReel, REEL_DURATION, REEL_FPS } from "./reel/TafsirLabReel";
+import { Guided, GUIDED_DURATION, GUIDED_FPS } from "./reel/Guided";
 
 export const RemotionRoot: React.FC = () => {
   return (
     <>
+      {/* Launch film — one uninterrupted study session, 45s. */}
+      <Composition
+        id="Guided"
+        component={Guided}
+        durationInFrames={GUIDED_DURATION}
+        fps={GUIDED_FPS}
+        width={1080}
+        height={1920}
+      />
       {/* Instagram Reel #1 — vertical, white, one continuous camera. */}
       <Composition
         id="TafsirLabReel"
