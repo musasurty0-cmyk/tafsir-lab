@@ -105,7 +105,7 @@ export const AppShell: React.FC<{
       borderRadius: 12, overflow: "hidden",
       display: "flex", fontFamily: FONT.sans, position: "relative",
       boxShadow: flip > 0.01 ? "none" : "0 30px 90px rgba(20,20,20,0.09), 0 6px 20px rgba(20,20,20,0.05)",
-      transform: `perspective(2200px) rotateY(${-flip * 94}deg)`,
+      transform: `perspective(2200px) rotateY(${-flip * 180}deg)`,
       transformOrigin: "50% 50%",
       backfaceVisibility: "hidden",
     }}>

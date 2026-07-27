@@ -35,7 +35,7 @@ loadGaramond("normal", { weights: ["400", "500", "600", "700"], subsets: ["latin
 loadCaveat("normal", { weights: ["400", "600"], subsets: ["latin"], ignoreTooManyRequestsWarning: true });
 
 export const GUIDED_FPS = 30;
-export const GUIDED_DURATION = 1620; // 54.0s
+export const GUIDED_DURATION = 1710; // 57.0s
 
 /* The app sits at world origin. Its own coordinates run
    x −820…820, y −515…515, so a point (ax, ay) inside the app maps to
@@ -83,7 +83,7 @@ const CAM: Pose[] = [
   { f: s(45.00), x: wx(900),  y: wy(700), scale: 0.94 },
   // Back out to the whole workspace, which then turns edge-on and away.
   { f: s(46.80), x: 0, y: 0, scale: 0.60, ease: EASE_OUT },
-  { f: s(49.20), x: 0, y: 0, scale: 0.60 },
+  { f: s(52.60), x: 0, y: 0, scale: 0.60 },
 ];
 
 /* The six places a person's Qur'an study actually lives today. */
@@ -172,7 +172,9 @@ export const Guided: React.FC = () => {
   /* The workspace turns edge-on and is gone; the closing lines land on the
      white it leaves behind. backface-visibility removes it past 90deg, so no
      fade is needed to hide it. */
-  const flip = ramp(frame, s(47.10), s(48.40), EASE_SOFT);
+  const flip = ramp(frame, s(47.10), s(48.80), EASE_SOFT);   // 0→1 = 180°
+  /* The turned-over panel holds, then leaves so the logo has a clean white. */
+  const panelOut = ramp(frame, s(51.60), s(52.40), EASE_SOFT);
 
   /* Guides */
   const g1 = pulse(frame, s(15.00), s(15.60), s(17.20), s(17.70));    // Study every ayah.
@@ -182,11 +184,9 @@ export const Guided: React.FC = () => {
   const g5 = pulse(frame, s(43.00), s(43.60), s(45.20), s(45.70));  // Understand every word.
 
   /* Ending */
-  const worldOut = 1 - ramp(frame, s(48.30), s(48.55), EASE_SOFT);
-  const evr = pulse(frame, s(48.60), s(49.20), s(50.60), s(51.00));
-  const one = pulse(frame, s(49.40), s(50.00), s(50.60), s(51.00));
-  const logoIn = ramp(frame, s(51.30), s(52.00), EASE_OUT);
-  const endIn = ramp(frame, s(52.00), s(52.60), EASE_OUT);
+  const worldOut = 1 - ramp(frame, s(51.70), s(52.40), EASE_SOFT);
+  const logoIn = ramp(frame, s(52.90), s(53.60), EASE_OUT);
+  const endIn = ramp(frame, s(53.60), s(54.20), EASE_OUT);
 
   /* Cursor path — every state change above is caused by it. */
   const cursorAt = (pts: [number, number, number][]) => {
@@ -283,6 +283,30 @@ export const Guided: React.FC = () => {
             <Headline eyebrow="There should be" line1="one place for everything."
                       line2="Connected. Focused."
                       o={pulse(frame, s(8.20), s(8.80), s(14.90), s(15.40))} />
+          </At>
+
+          {/* ── The panel's reverse face. Pre-rotated 180°, so back-face
+                 culling keeps it hidden until the turn passes edge-on — then
+                 it is simply what you are looking at. ── */}
+          <At x={0} y={0} z={31} opacity={(1 - panelOut) * appIn}>
+            <div style={{
+              width: APP_W, height: APP_H, background: "#FFFFFF",
+              borderRadius: 12,
+              display: "flex", flexDirection: "column",
+              alignItems: "center", justifyContent: "center", gap: 30,
+              transform: `perspective(2200px) rotateY(${180 - flip * 180}deg)`,
+              transformOrigin: "50% 50%",
+              backfaceVisibility: "hidden",
+            }}>
+              <div style={{
+                fontFamily: FONT.sans, fontSize: 108, fontWeight: 600,
+                letterSpacing: "-0.03em", color: C.ink, whiteSpace: "nowrap",
+              }}>Everything.</div>
+              <div style={{
+                fontFamily: FONT.sans, fontSize: 108, fontWeight: 600,
+                letterSpacing: "-0.03em", color: C.ink, whiteSpace: "nowrap",
+              }}>One workspace.</div>
+            </div>
           </At>
 
           {/* ── The name, at the point the fragments converged ── */}
@@ -389,16 +413,6 @@ export const Guided: React.FC = () => {
         display: "flex", alignItems: "center", justifyContent: "center",
         flexDirection: "column", gap: 26, pointerEvents: "none",
       }}>
-        <div style={{
-          position: "absolute", fontFamily: FONT.sans, fontSize: 62, fontWeight: 600,
-          letterSpacing: "-0.028em", color: C.ink, opacity: evr,
-          transform: `translateY(${-40 + (1 - evr) * 10}px)`,
-        }}>Everything.</div>
-        <div style={{
-          position: "absolute", fontFamily: FONT.sans, fontSize: 62, fontWeight: 600,
-          letterSpacing: "-0.028em", color: C.ink, opacity: one,
-          transform: `translateY(${46 + (1 - one) * 10}px)`,
-        }}>One workspace.</div>
 
         <div style={{
           opacity: logoIn, transform: `translateY(${(1 - logoIn) * 16}px)`,
