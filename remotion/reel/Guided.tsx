@@ -83,7 +83,8 @@ const CAM: Pose[] = [
   { f: s(45.00), x: wx(900),  y: wy(700), scale: 0.94 },
   // Back out to the whole workspace, which then turns edge-on and away.
   { f: s(46.80), x: 0, y: 0, scale: 0.60, ease: EASE_OUT },
-  { f: s(52.60), x: 0, y: 0, scale: 0.60 },
+  { f: s(49.40), x: 0, y: 0, scale: 0.62 },
+  { f: s(52.60), x: 0, y: 0, scale: 0.68 },
 ];
 
 /* The six places a person's Qur'an study actually lives today. */
@@ -293,18 +294,20 @@ export const Guided: React.FC = () => {
               width: APP_W, height: APP_H, background: "#FFFFFF",
               borderRadius: 12,
               display: "flex", flexDirection: "column",
-              alignItems: "center", justifyContent: "center", gap: 30,
+              alignItems: "center", justifyContent: "center", gap: 18,
               transform: `perspective(2200px) rotateY(${180 - flip * 180}deg)`,
               transformOrigin: "50% 50%",
               backfaceVisibility: "hidden",
             }}>
               <div style={{
-                fontFamily: FONT.sans, fontSize: 108, fontWeight: 600,
-                letterSpacing: "-0.03em", color: C.ink, whiteSpace: "nowrap",
+                fontFamily: FONT.sans, fontSize: 190, fontWeight: 600,
+                letterSpacing: "-0.035em", color: C.ink, whiteSpace: "nowrap",
+                lineHeight: 1.05,
               }}>Everything.</div>
               <div style={{
-                fontFamily: FONT.sans, fontSize: 108, fontWeight: 600,
-                letterSpacing: "-0.03em", color: C.ink, whiteSpace: "nowrap",
+                fontFamily: FONT.sans, fontSize: 190, fontWeight: 600,
+                letterSpacing: "-0.035em", color: C.ink, whiteSpace: "nowrap",
+                lineHeight: 1.05,
               }}>One workspace.</div>
             </div>
           </At>
@@ -419,18 +422,18 @@ export const Guided: React.FC = () => {
           display: "flex", alignItems: "center", gap: 20,
         }}>
           <div style={{
-            width: 88, height: 88, borderRadius: 22, background: C.ink, color: "#fff",
-            fontFamily: FONT.sans, fontSize: 52, fontWeight: 700, letterSpacing: "-0.05em",
+            width: 110, height: 110, borderRadius: 27, background: C.ink, color: "#fff",
+            fontFamily: FONT.sans, fontSize: 66, fontWeight: 700, letterSpacing: "-0.05em",
             display: "flex", alignItems: "center", justifyContent: "center",
           }}>T</div>
           <div style={{
-            fontFamily: FONT.sans, fontSize: 68, fontWeight: 600,
+            fontFamily: FONT.sans, fontSize: 86, fontWeight: 600,
             letterSpacing: "-0.035em", color: C.ink,
           }}>TafsirLab</div>
         </div>
         <div style={{
           opacity: endIn, transform: `translateY(${(1 - endIn) * 12}px)`,
-          fontFamily: FONT.sans, fontSize: 34, fontWeight: 450,
+          fontFamily: FONT.sans, fontSize: 44, fontWeight: 450,
           letterSpacing: "-0.008em", color: "#8A8A8A", textAlign: "center",
         }}>Finally, a workspace built for the Qur’an.</div>
       </AbsoluteFill>
