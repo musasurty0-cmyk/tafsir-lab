@@ -388,6 +388,8 @@ export const Guided: React.FC = () => {
           tail always lands exactly on the final frame. */}
       <Audio
         src={staticFile("sfx/nasheed.mp3")}
+        // Start 35s into the track — the opening is a slow build we don't want.
+        startFrom={35 * GUIDED_FPS}
         volume={(f) => {
           const PEAK = 0.36;
           const fadeIn = interpolate(f, [0, 2 * GUIDED_FPS], [0, 1],
