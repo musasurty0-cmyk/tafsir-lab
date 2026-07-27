@@ -35,7 +35,7 @@ loadGaramond("normal", { weights: ["400", "500", "600", "700"], subsets: ["latin
 loadCaveat("normal", { weights: ["400", "600"], subsets: ["latin"], ignoreTooManyRequestsWarning: true });
 
 export const GUIDED_FPS = 30;
-export const GUIDED_DURATION = 1640; // 54.67s
+export const GUIDED_DURATION = 1706; // 56.87s
 
 /* The app sits at world origin. Its own coordinates run
    x −820…820, y −515…515, so a point (ax, ay) inside the app maps to
@@ -49,42 +49,42 @@ const CAM: Pose[] = [
   // Hold on the question, then settle over the scatter — wide enough to hold
   // all six cards (~1420px across), and completely still while they land.
   { f: 0,        x: 0, y: -3040, scale: 1.00 },
-  { f: s(2.60),  x: 0, y: -3040, scale: 1.00 },
-  { f: s(3.70),  x: 0, y: -1620, scale: 0.80 },
-  { f: s(7.30),  x: 0, y: -1600, scale: 0.81 },
-  { f: s(9.20),  x: 0, y: -1520, scale: 0.90 },
+  { f: s(5.00),  x: 0, y: -3040, scale: 1.00 },
+  { f: s(6.10),  x: 0, y: -1620, scale: 0.80 },
+  { f: s(9.50),  x: 0, y: -1600, scale: 0.81 },
+  { f: s(11.40),  x: 0, y: -1520, scale: 0.90 },
   // Hold, completely still, on the name. This is the brand moment.
-  { f: s(12.30), x: 0, y: -1520, scale: 0.90 },
+  { f: s(14.50), x: 0, y: -1520, scale: 0.90 },
   // Then the whole workspace — everything at once, so the viewer sees the
   // shape of the product before we go anywhere near a detail.
-  { f: s(13.90), x: 0, y: 0, scale: 0.60, ease: EASE_OUT },
-  { f: s(15.30), x: 0, y: 0, scale: 0.60 },
+  { f: s(16.10), x: 0, y: 0, scale: 0.60, ease: EASE_OUT },
+  { f: s(17.50), x: 0, y: 0, scale: 0.60 },
   // ...and only now push in to the Mushaf.
-  { f: s(16.80), x: wx(880), y: wy(520), scale: 1.16 },
-  { f: s(18.60), x: wx(880), y: wy(560), scale: 1.26 },
+  { f: s(19.00), x: wx(880), y: wy(520), scale: 1.16 },
+  { f: s(20.80), x: wx(880), y: wy(560), scale: 1.26 },
   // Editor — the notes column
-  { f: s(19.20),  x: wx(660), y: wy(360), scale: 1.24 },
-  { f: s(22.40),  x: wx(640), y: wy(520), scale: 1.38 },
-  { f: s(24.30),  x: wx(660), y: wy(470), scale: 1.28 },
+  { f: s(21.40),  x: wx(660), y: wy(360), scale: 1.24 },
+  { f: s(24.60),  x: wx(640), y: wy(520), scale: 1.38 },
+  { f: s(26.50),  x: wx(660), y: wy(470), scale: 1.28 },
   // Canvas — colour laid onto the ayat
-  { f: s(25.80),  x: wx(880), y: wy(500), scale: 1.18 },
-  { f: s(29.00),  x: wx(900), y: wy(540), scale: 1.28 },
+  { f: s(28.00),  x: wx(880), y: wy(500), scale: 1.18 },
+  { f: s(31.20),  x: wx(900), y: wy(540), scale: 1.28 },
   // Handwriting — closest we get
   // Wide enough to hold the circle, the arrow AND the margin sentence in one
   // frame — the annotation has to be watched being made as a whole.
-  { f: s(30.60),  x: wx(800), y: wy(520), scale: 0.98 },
-  { f: s(34.93),  x: wx(800), y: wy(520), scale: 0.98 },  // locked off while writing
+  { f: s(32.80),  x: wx(800), y: wy(520), scale: 0.98 },
+  { f: s(37.13),  x: wx(800), y: wy(520), scale: 0.98 },  // locked off while writing
   // Tafsir drawer (app x 1080..1640)
-  { f: s(35.47),  x: wx(1140), y: wy(470), scale: 0.96 },
-  { f: s(38.53),  x: wx(1150), y: wy(520), scale: 1.00 },
+  { f: s(37.67),  x: wx(1140), y: wy(470), scale: 0.96 },
+  { f: s(40.73),  x: wx(1150), y: wy(520), scale: 1.00 },
   // The word — close, then ease back just enough to hold its own notes.
-  { f: s(38.67), x: wx(1010), y: wy(551), scale: 1.50 },
-  { f: s(41.07), x: wx(900),  y: wy(700), scale: 0.94 },
-  { f: s(42.67), x: wx(900),  y: wy(700), scale: 0.94 },
+  { f: s(40.87), x: wx(1010), y: wy(551), scale: 1.50 },
+  { f: s(43.27), x: wx(900),  y: wy(700), scale: 0.94 },
+  { f: s(44.87), x: wx(900),  y: wy(700), scale: 0.94 },
   // Back out to the whole workspace, which then turns edge-on and away.
-  { f: s(44.47), x: 0, y: 0, scale: 0.60, ease: EASE_OUT },
-  { f: s(47.07), x: 0, y: 0, scale: 0.62 },
-  { f: s(50.27), x: 0, y: 0, scale: 0.68 },
+  { f: s(46.67), x: 0, y: 0, scale: 0.60, ease: EASE_OUT },
+  { f: s(49.27), x: 0, y: 0, scale: 0.62 },
+  { f: s(52.47), x: 0, y: 0, scale: 0.68 },
 ];
 
 /* The six places a person's Qur'an study actually lives today. */
@@ -120,74 +120,76 @@ export const Guided: React.FC = () => {
   const cam = cameraAt(CAM, frame);
 
   /* ── Act I ── */
-  const line1 = pulse(frame, s(0.60), s(1.50), s(3.00), s(3.50));
-  const line2 = pulse(frame, s(2.00), s(2.70), s(3.00), s(3.50));
+  /* The question is the whole hook, so it is allowed to breathe: the second
+     line lands, and BOTH hold for ~1.5s before the camera starts to leave. */
+  const line1 = pulse(frame, s(0.60), s(1.60), s(5.00), s(5.60));
+  const line2 = pulse(frame, s(2.70), s(3.50), s(5.00), s(5.60));
 
   /* ── The app itself ── */
-  const appIn = ramp(frame, s(12.40), s(13.40), EASE_OUT);
+  const appIn = ramp(frame, s(14.60), s(15.60), EASE_OUT);
 
   /* mode is driven by the cursor clicking a tab */
   const mode: "editor" | "canvas" =
-    frame < s(18.95) ? "canvas" : frame < s(24.60) ? "editor" : "canvas";
+    frame < s(21.15) ? "canvas" : frame < s(26.80) ? "editor" : "canvas";
   const sidebar = mode === "editor" ? 1 : 0;
 
   /* Editor beats */
-  const edScroll = interpolate(frame, [s(19.20), s(21.80)], [0, 300],
+  const edScroll = interpolate(frame, [s(21.40), s(24.00)], [0, 300],
     { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: EASE_SOFT });
-  const edSelect = ramp(frame, s(22.00), s(22.40));
-  const edTyped = ramp(frame, s(19.60), s(21.60), EASE_SOFT);
+  const edSelect = ramp(frame, s(24.20), s(24.60));
+  const edTyped = ramp(frame, s(21.80), s(23.80), EASE_SOFT);
 
   /* Canvas beats */
   /* The page arrives already annotated — prior study — and the later beat adds
      to it. A Mushaf that starts blank looks like a demo, not a workspace. */
-  const inception = ramp(frame, s(13.40), s(14.40), EASE_SOFT);
-  const hl = Math.max(inception * 0.55, ramp(frame, s(25.40), s(28.80), EASE_SOFT));
-  const ink = Math.max(inception * 0.50, ramp(frame, s(29.80), s(34.20), EASE_SOFT));
+  const inception = ramp(frame, s(15.60), s(16.60), EASE_SOFT);
+  const hl = Math.max(inception * 0.55, ramp(frame, s(27.60), s(31.00), EASE_SOFT));
+  const ink = Math.max(inception * 0.50, ramp(frame, s(32.00), s(36.40), EASE_SOFT));
 
   /* Tafsīr */
-  const drawer = spring({ frame: frame - s(34.80), fps, config: { damping: 200, stiffness: 62, mass: 1.1 } });
-  const tLang = frame >= s(37.87) ? 2 : 1;              // English → Arabic
-  const tTab = frame >= s(37.87) && frame < s(38.80) ? 0 : frame >= s(38.80) ? 1 : 0; // → Word-by-word
-  const drawerClose = 1 - ramp(frame, s(38.93), s(39.47), EASE_SOFT);
+  const drawer = spring({ frame: frame - s(37.00), fps, config: { damping: 200, stiffness: 62, mass: 1.1 } });
+  const tLang = frame >= s(40.07) ? 2 : 1;              // English → Arabic
+  const tTab = frame >= s(40.07) && frame < s(41.00) ? 0 : frame >= s(41.00) ? 1 : 0; // → Word-by-word
+  const drawerClose = 1 - ramp(frame, s(41.13), s(41.67), EASE_SOFT);
 
   /* The word and its note */
   /* Clicking the word clears the page-level annotations and opens that word's
      own space — no green box, an actual change of state. */
-  const wordGlow = pulse(frame, s(39.72), s(40.02), s(41.27), s(41.77));
-  const clearInk = ramp(frame, s(39.77), s(40.57), EASE_SOFT);
-  const wordInk  = ramp(frame, s(40.67), s(44.07), EASE_SOFT);
+  const wordGlow = pulse(frame, s(41.92), s(42.22), s(43.47), s(43.97));
+  const clearInk = ramp(frame, s(41.97), s(42.77), EASE_SOFT);
+  const wordInk  = ramp(frame, s(42.87), s(46.27), EASE_SOFT);
   /* no invented note card: the word-note beat is carried by the real
      selection ring on the glyph plus the Tafsir word-by-word tab. */
 
   /* The name, revealed where the fragments converged. */
-  const brand = pulse(frame, s(8.90), s(9.60), s(12.10), s(12.60));
+  const brand = pulse(frame, s(11.10), s(11.80), s(14.30), s(14.80));
 
   /* Editor slash command */
-  const slash = pulse(frame, s(22.10), s(22.40), s(23.20), s(23.40));
-  const embed = ramp(frame, s(23.30), s(23.90), EASE_SOFT);
+  const slash = pulse(frame, s(24.30), s(24.60), s(25.40), s(25.60));
+  const embed = ramp(frame, s(25.50), s(26.10), EASE_SOFT);
 
   /* Establishing shot: the workspace as an object on a blank page. */
-  const establish = pulse(frame, s(13.20), s(14.10), s(15.60), s(16.80));
+  const establish = pulse(frame, s(15.40), s(16.30), s(17.80), s(19.00));
 
 
   /* The workspace turns edge-on and is gone; the closing lines land on the
      white it leaves behind. backface-visibility removes it past 90deg, so no
      fade is needed to hide it. */
-  const flip = ramp(frame, s(44.77), s(46.47), EASE_SOFT);   // 0→1 = 180°
+  const flip = ramp(frame, s(46.97), s(48.67), EASE_SOFT);   // 0→1 = 180°
   /* The turned-over panel holds, then leaves so the logo has a clean white. */
-  const panelOut = ramp(frame, s(49.27), s(50.07), EASE_SOFT);
+  const panelOut = ramp(frame, s(51.47), s(52.27), EASE_SOFT);
 
   /* Guides */
-  const g1 = pulse(frame, s(15.00), s(15.60), s(17.20), s(17.70));    // Study every ayah.
-  const g2 = pulse(frame, s(19.60), s(20.20), s(21.60), s(22.10));  // Write what you understand.
-  const g3 = pulse(frame, s(26.20), s(26.80), s(28.60), s(29.10));  // Think visually.
-  const g4 = pulse(frame, s(35.73), s(36.13), s(37.47), s(37.80));  // Read classical tafsir.
-  const g5 = pulse(frame, s(40.67), s(41.27), s(42.87), s(43.37));  // Understand every word.
+  const g1 = pulse(frame, s(17.20), s(17.80), s(19.40), s(19.90));    // Study every ayah.
+  const g2 = pulse(frame, s(21.80), s(22.40), s(23.80), s(24.30));  // Write what you understand.
+  const g3 = pulse(frame, s(28.40), s(29.00), s(30.80), s(31.30));  // Think visually.
+  const g4 = pulse(frame, s(37.93), s(38.33), s(39.67), s(40.00));  // Read classical tafsir.
+  const g5 = pulse(frame, s(42.87), s(43.47), s(45.07), s(45.57));  // Understand every word.
 
   /* Ending */
-  const worldOut = 1 - ramp(frame, s(49.37), s(50.07), EASE_SOFT);
-  const logoIn = ramp(frame, s(50.57), s(51.27), EASE_OUT);
-  const endIn = ramp(frame, s(51.27), s(51.87), EASE_OUT);
+  const worldOut = 1 - ramp(frame, s(51.57), s(52.27), EASE_SOFT);
+  const logoIn = ramp(frame, s(52.77), s(53.47), EASE_OUT);
+  const endIn = ramp(frame, s(53.47), s(54.07), EASE_OUT);
 
   /* Cursor path — every state change above is caused by it. */
   const cursorAt = (pts: [number, number, number][]) => {
@@ -204,27 +206,27 @@ export const Guided: React.FC = () => {
      The cursor is ON the control at the frame it is pressed — the click is
      never mimed next to the thing it is supposed to be clicking. */
   const cur = cursorAt([
-    [s(17.20), wx(980),  wy(560)],
-    [s(18.70), wx(484),  wy(31)],    // travel to Editor tab
-    [s(18.95), wx(484),  wy(31)],    // press
-    [s(19.20), wx(620),  wy(300)],   // into the note body
-    [s(22.00), wx(600),  wy(300)],   // onto the /ayah row in the slash menu
-    [s(24.30), wx(584),  wy(31)],    // travel to Canvas tab
-    [s(24.55), wx(584),  wy(31)],    // press
-    [s(26.60), wx(980),  wy(470)],   // onto the ayah
-    [s(29.80), wx(980),  wy(470)],
-    [s(34.50), wx(1241), wy(31)],    // travel to Tafsīr
-    [s(34.75), wx(1241), wy(31)],    // press
-    [s(37.67), wx(1324), wy(92)],    // Arabic source
-    [s(37.83), wx(1324), wy(92)],    // press
-    [s(38.60), wx(1272), wy(138)],   // Word-by-word tab
-    [s(38.77), wx(1272), wy(138)],   // press
-    [s(39.47), wx(1101), wy(551)],   // the word itself
-    [s(39.72), wx(1101), wy(551)],   // press
-    [s(41.87), wx(1101), wy(600)],
+    [s(19.40), wx(980),  wy(560)],
+    [s(20.90), wx(484),  wy(31)],    // travel to Editor tab
+    [s(21.15), wx(484),  wy(31)],    // press
+    [s(21.40), wx(620),  wy(300)],   // into the note body
+    [s(24.20), wx(600),  wy(300)],   // onto the /ayah row in the slash menu
+    [s(26.50), wx(584),  wy(31)],    // travel to Canvas tab
+    [s(26.75), wx(584),  wy(31)],    // press
+    [s(28.80), wx(980),  wy(470)],   // onto the ayah
+    [s(32.00), wx(980),  wy(470)],
+    [s(36.70), wx(1241), wy(31)],    // travel to Tafsīr
+    [s(36.95), wx(1241), wy(31)],    // press
+    [s(39.87), wx(1324), wy(92)],    // Arabic source
+    [s(40.03), wx(1324), wy(92)],    // press
+    [s(40.80), wx(1272), wy(138)],   // Word-by-word tab
+    [s(40.97), wx(1272), wy(138)],   // press
+    [s(41.67), wx(1101), wy(551)],   // the word itself
+    [s(41.92), wx(1101), wy(551)],   // press
+    [s(44.07), wx(1101), wy(600)],
   ]);
-  const curVis = pulse(frame, s(17.00), s(17.40), s(43.47), s(43.97));
-  const CLICKS = [18.95, 23.25, 24.55, 34.75, 37.83, 38.77, 39.72];
+  const curVis = pulse(frame, s(19.20), s(19.60), s(45.67), s(46.17));
+  const CLICKS = [21.15, 25.45, 26.75, 36.95, 40.03, 40.97, 41.92];
   const press = Math.max(...CLICKS.map((c) => pulse(frame, s(c) - 1, s(c), s(c) + 2, s(c) + 5)));
 
   return (
@@ -255,36 +257,36 @@ export const Guided: React.FC = () => {
 
           {/* ── Act I · the six places study currently lives ── */}
           {FRAGMENTS.map((f, i) => {
-            const inS = spring({ frame: frame - s(3.30) - f.d, fps, config: { damping: 190, stiffness: 80, mass: 1 } });
+            const inS = spring({ frame: frame - s(5.50) - f.d, fps, config: { damping: 190, stiffness: 80, mass: 1 } });
             // They are not deleted — they are drawn INTO the workspace.
-            const pull = ramp(frame, s(7.60), s(8.90), EASE_SOFT);
+            const pull = ramp(frame, s(9.80), s(11.10), EASE_SOFT);
             return (
               <At key={f.kind}
                   x={interpolate(pull, [0, 1], [f.x, 0])}
                   y={interpolate(pull, [0, 1], [f.y, -1520])}
                   z={10 + i}
-                  opacity={inS * (1 - ramp(frame, s(8.40), s(9.05), EASE_SOFT))}
+                  opacity={inS * (1 - ramp(frame, s(10.60), s(11.25), EASE_SOFT))}
                   rotate={f.r * (1 - pull)}
                   scale={(0.94 + 0.06 * inS) * interpolate(pull, [0, 1], [1, 0.34])}>
                 <AppCard kind={f.kind} label={f.label} w={f.w} />
               </At>
             );
           })}
-          <At x={0} y={-1560} z={9} opacity={pulse(frame, s(4.20), s(4.80), s(7.40), s(7.90))}>
-            <ScatterArrows draw={ramp(frame, s(4.30), s(6.40), EASE_SOFT)} />
+          <At x={0} y={-1560} z={9} opacity={pulse(frame, s(6.40), s(7.00), s(9.60), s(10.10))}>
+            <ScatterArrows draw={ramp(frame, s(6.50), s(8.60), EASE_SOFT)} />
           </At>
           <At x={0} y={-820} z={40}>
-            <VerdictPill o={pulse(frame, s(5.90), s(6.50), s(7.40), s(7.90))} />
+            <VerdictPill o={pulse(frame, s(8.10), s(8.70), s(9.60), s(10.10))} />
           </At>
           <At x={0} y={-2430} z={41}>
             <Headline eyebrow="But studying the Qur’an" line1="often feels like"
                       line2="juggling too much."
-                      o={pulse(frame, s(3.10), s(3.80), s(7.30), s(7.80))} />
+                      o={pulse(frame, s(5.30), s(6.00), s(9.50), s(10.00))} />
           </At>
           <At x={0} y={-2430} z={41}>
             <Headline eyebrow="There should be" line1="one place for everything."
                       line2="Connected. Focused."
-                      o={pulse(frame, s(8.20), s(8.80), s(14.90), s(15.40))} />
+                      o={pulse(frame, s(10.40), s(11.00), s(17.10), s(17.60))} />
           </At>
 
           {/* ── The panel's reverse face. Pre-rotated 180°, so back-face
@@ -357,7 +359,7 @@ export const Guided: React.FC = () => {
                               slash={slash} embed={embed} />
                 : <CanvasDoc hl={hl} ink={ink} wordGlow={wordGlow}
                               clearInk={clearInk} wordInk={wordInk}
-                              tool={frame >= s(29.40) ? 1 : 0} />}
+                              tool={frame >= s(31.60) ? 1 : 0} />}
             </AppShell>
             </div>
           </At>
@@ -408,26 +410,26 @@ export const Guided: React.FC = () => {
         </Sequence>
       ))}
       {FRAGMENTS.map((f, i) => (
-        <Sequence key={`sh${i}`} from={Math.round(s(3.30) + f.d + 6)} durationInFrames={26}>
+        <Sequence key={`sh${i}`} from={Math.round(s(5.50) + f.d + 6)} durationInFrames={26}>
           <Audio src={staticFile("sfx/shutter.mp3")} volume={0.26} />
         </Sequence>
       ))}
       {/* the fragments being drawn into the workspace */}
-      <Sequence from={Math.round(s(7.60))} durationInFrames={44}>
+      <Sequence from={Math.round(s(9.80))} durationInFrames={44}>
         <Audio src={staticFile("sfx/whoosh.mp3")} volume={0.34} />
       </Sequence>
-      <Sequence from={Math.round(s(44.77))} durationInFrames={44}>
+      <Sequence from={Math.round(s(46.97))} durationInFrames={44}>
         <Audio src={staticFile("sfx/whoosh.mp3")} volume={0.30} />
       </Sequence>
       {/* the Tafsir drawer travelling in, and back out */}
-      <Sequence from={Math.round(s(34.80))} durationInFrames={44}>
+      <Sequence from={Math.round(s(37.00))} durationInFrames={44}>
         <Audio src={staticFile("sfx/whoosh.mp3")} volume={0.30} />
       </Sequence>
-      <Sequence from={Math.round(s(38.93))} durationInFrames={40}>
+      <Sequence from={Math.round(s(41.13))} durationInFrames={40}>
         <Audio src={staticFile("sfx/whoosh.mp3")} volume={0.22} />
       </Sequence>
       {/* keyboard runs ONLY while the sentence is actually being typed */}
-      <Sequence from={Math.round(s(19.60))} durationInFrames={Math.round(s(21.60) - s(19.60))}>
+      <Sequence from={Math.round(s(21.80))} durationInFrames={Math.round(s(23.80) - s(21.80))}>
         <Audio src={staticFile("sfx/typing.mp3")} volume={0.32} />
       </Sequence>
 
