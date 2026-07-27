@@ -35,7 +35,7 @@ loadGaramond("normal", { weights: ["400", "500", "600", "700"], subsets: ["latin
 loadCaveat("normal", { weights: ["400", "600"], subsets: ["latin"], ignoreTooManyRequestsWarning: true });
 
 export const GUIDED_FPS = 30;
-export const GUIDED_DURATION = 1710; // 57.0s
+export const GUIDED_DURATION = 1640; // 54.67s
 
 /* The app sits at world origin. Its own coordinates run
    x −820…820, y −515…515, so a point (ax, ay) inside the app maps to
@@ -73,18 +73,18 @@ const CAM: Pose[] = [
   // Wide enough to hold the circle, the arrow AND the margin sentence in one
   // frame — the annotation has to be watched being made as a whole.
   { f: s(30.60),  x: wx(800), y: wy(520), scale: 0.98 },
-  { f: s(35.00),  x: wx(800), y: wy(520), scale: 0.98 },  // locked off while writing
+  { f: s(34.93),  x: wx(800), y: wy(520), scale: 0.98 },  // locked off while writing
   // Tafsir drawer (app x 1080..1640)
-  { f: s(35.80),  x: wx(1140), y: wy(470), scale: 0.96 },
-  { f: s(40.40),  x: wx(1150), y: wy(520), scale: 1.00 },
+  { f: s(35.47),  x: wx(1140), y: wy(470), scale: 0.96 },
+  { f: s(38.53),  x: wx(1150), y: wy(520), scale: 1.00 },
   // The word — close, then ease back just enough to hold its own notes.
-  { f: s(40.60), x: wx(1010), y: wy(551), scale: 1.50 },
-  { f: s(43.40), x: wx(900),  y: wy(700), scale: 0.94 },
-  { f: s(45.00), x: wx(900),  y: wy(700), scale: 0.94 },
+  { f: s(38.67), x: wx(1010), y: wy(551), scale: 1.50 },
+  { f: s(41.07), x: wx(900),  y: wy(700), scale: 0.94 },
+  { f: s(42.67), x: wx(900),  y: wy(700), scale: 0.94 },
   // Back out to the whole workspace, which then turns edge-on and away.
-  { f: s(46.80), x: 0, y: 0, scale: 0.60, ease: EASE_OUT },
-  { f: s(49.40), x: 0, y: 0, scale: 0.62 },
-  { f: s(52.60), x: 0, y: 0, scale: 0.68 },
+  { f: s(44.47), x: 0, y: 0, scale: 0.60, ease: EASE_OUT },
+  { f: s(47.07), x: 0, y: 0, scale: 0.62 },
+  { f: s(50.27), x: 0, y: 0, scale: 0.68 },
 ];
 
 /* The six places a person's Qur'an study actually lives today. */
@@ -120,8 +120,8 @@ export const Guided: React.FC = () => {
   const cam = cameraAt(CAM, frame);
 
   /* ── Act I ── */
-  const line1 = pulse(frame, s(0.6), s(1.5), s(3.0), s(3.5));
-  const line2 = pulse(frame, s(2.0), s(2.7), s(3.0), s(3.5));
+  const line1 = pulse(frame, s(0.60), s(1.50), s(3.00), s(3.50));
+  const line2 = pulse(frame, s(2.00), s(2.70), s(3.00), s(3.50));
 
   /* ── The app itself ── */
   const appIn = ramp(frame, s(12.40), s(13.40), EASE_OUT);
@@ -146,16 +146,16 @@ export const Guided: React.FC = () => {
 
   /* Tafsīr */
   const drawer = spring({ frame: frame - s(34.80), fps, config: { damping: 200, stiffness: 62, mass: 1.1 } });
-  const tLang = frame >= s(39.40) ? 2 : 1;              // English → Arabic
-  const tTab = frame >= s(39.40) && frame < s(40.80) ? 0 : frame >= s(40.80) ? 1 : 0; // → Word-by-word
-  const drawerClose = 1 - ramp(frame, s(41.00), s(41.80), EASE_SOFT);
+  const tLang = frame >= s(37.87) ? 2 : 1;              // English → Arabic
+  const tTab = frame >= s(37.87) && frame < s(38.80) ? 0 : frame >= s(38.80) ? 1 : 0; // → Word-by-word
+  const drawerClose = 1 - ramp(frame, s(38.93), s(39.47), EASE_SOFT);
 
   /* The word and its note */
   /* Clicking the word clears the page-level annotations and opens that word's
      own space — no green box, an actual change of state. */
-  const wordGlow = pulse(frame, s(42.05), s(42.35), s(43.60), s(44.10));
-  const clearInk = ramp(frame, s(42.10), s(42.90), EASE_SOFT);
-  const wordInk  = ramp(frame, s(43.00), s(46.40), EASE_SOFT);
+  const wordGlow = pulse(frame, s(39.72), s(40.02), s(41.27), s(41.77));
+  const clearInk = ramp(frame, s(39.77), s(40.57), EASE_SOFT);
+  const wordInk  = ramp(frame, s(40.67), s(44.07), EASE_SOFT);
   /* no invented note card: the word-note beat is carried by the real
      selection ring on the glyph plus the Tafsir word-by-word tab. */
 
@@ -173,21 +173,21 @@ export const Guided: React.FC = () => {
   /* The workspace turns edge-on and is gone; the closing lines land on the
      white it leaves behind. backface-visibility removes it past 90deg, so no
      fade is needed to hide it. */
-  const flip = ramp(frame, s(47.10), s(48.80), EASE_SOFT);   // 0→1 = 180°
+  const flip = ramp(frame, s(44.77), s(46.47), EASE_SOFT);   // 0→1 = 180°
   /* The turned-over panel holds, then leaves so the logo has a clean white. */
-  const panelOut = ramp(frame, s(51.60), s(52.40), EASE_SOFT);
+  const panelOut = ramp(frame, s(49.27), s(50.07), EASE_SOFT);
 
   /* Guides */
   const g1 = pulse(frame, s(15.00), s(15.60), s(17.20), s(17.70));    // Study every ayah.
   const g2 = pulse(frame, s(19.60), s(20.20), s(21.60), s(22.10));  // Write what you understand.
   const g3 = pulse(frame, s(26.20), s(26.80), s(28.60), s(29.10));  // Think visually.
-  const g4 = pulse(frame, s(36.20), s(36.80), s(38.80), s(39.30));  // Read classical tafsir.
-  const g5 = pulse(frame, s(43.00), s(43.60), s(45.20), s(45.70));  // Understand every word.
+  const g4 = pulse(frame, s(35.73), s(36.13), s(37.47), s(37.80));  // Read classical tafsir.
+  const g5 = pulse(frame, s(40.67), s(41.27), s(42.87), s(43.37));  // Understand every word.
 
   /* Ending */
-  const worldOut = 1 - ramp(frame, s(51.70), s(52.40), EASE_SOFT);
-  const logoIn = ramp(frame, s(52.90), s(53.60), EASE_OUT);
-  const endIn = ramp(frame, s(53.60), s(54.20), EASE_OUT);
+  const worldOut = 1 - ramp(frame, s(49.37), s(50.07), EASE_SOFT);
+  const logoIn = ramp(frame, s(50.57), s(51.27), EASE_OUT);
+  const endIn = ramp(frame, s(51.27), s(51.87), EASE_OUT);
 
   /* Cursor path — every state change above is caused by it. */
   const cursorAt = (pts: [number, number, number][]) => {
@@ -215,16 +215,16 @@ export const Guided: React.FC = () => {
     [s(29.80), wx(980),  wy(470)],
     [s(34.50), wx(1241), wy(31)],    // travel to Tafsīr
     [s(34.75), wx(1241), wy(31)],    // press
-    [s(39.10), wx(1324), wy(92)],    // Arabic source
-    [s(39.35), wx(1324), wy(92)],    // press
-    [s(40.50), wx(1272), wy(138)],   // Word-by-word tab
-    [s(40.75), wx(1272), wy(138)],   // press
-    [s(41.80), wx(1101), wy(551)],   // the word itself
-    [s(42.05), wx(1101), wy(551)],   // press
-    [s(44.20), wx(1101), wy(600)],
+    [s(37.67), wx(1324), wy(92)],    // Arabic source
+    [s(37.83), wx(1324), wy(92)],    // press
+    [s(38.60), wx(1272), wy(138)],   // Word-by-word tab
+    [s(38.77), wx(1272), wy(138)],   // press
+    [s(39.47), wx(1101), wy(551)],   // the word itself
+    [s(39.72), wx(1101), wy(551)],   // press
+    [s(41.87), wx(1101), wy(600)],
   ]);
-  const curVis = pulse(frame, s(17.00), s(17.40), s(45.80), s(46.30));
-  const CLICKS = [18.95, 23.25, 24.55, 34.75, 39.35, 40.75, 42.05];
+  const curVis = pulse(frame, s(17.00), s(17.40), s(43.47), s(43.97));
+  const CLICKS = [18.95, 23.25, 24.55, 34.75, 37.83, 38.77, 39.72];
   const press = Math.max(...CLICKS.map((c) => pulse(frame, s(c) - 1, s(c), s(c) + 2, s(c) + 5)));
 
   return (
@@ -378,6 +378,25 @@ export const Guided: React.FC = () => {
       <Guide text="Understand every word."   o={g5} />
 
 
+
+      {/* ── Music ────────────────────────────────────────────────────────
+          Nasheed bed under the whole film, sitting at 36% so it never
+          competes with the interface sounds. Envelope is a 2s fade in and a
+          5s fade out, computed per frame rather than as a fixed clip so the
+          tail always lands exactly on the final frame. */}
+      <Audio
+        src={staticFile("sfx/nasheed.mp3")}
+        volume={(f) => {
+          const PEAK = 0.36;
+          const fadeIn = interpolate(f, [0, 2 * GUIDED_FPS], [0, 1],
+            { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+          const fadeOut = interpolate(
+            f, [GUIDED_DURATION - 5 * GUIDED_FPS, GUIDED_DURATION], [1, 0],
+            { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+          return PEAK * fadeIn * fadeOut;
+        }}
+      />
+
       {/* ── Sound design ────────────────────────────────────────────────
           Only diegetic interface sound: a click where a control is actually
           pressed, a shutter as each fragment card lands, a whoosh where a
@@ -397,14 +416,14 @@ export const Guided: React.FC = () => {
       <Sequence from={Math.round(s(7.60))} durationInFrames={44}>
         <Audio src={staticFile("sfx/whoosh.mp3")} volume={0.34} />
       </Sequence>
-      <Sequence from={Math.round(s(47.10))} durationInFrames={44}>
+      <Sequence from={Math.round(s(44.77))} durationInFrames={44}>
         <Audio src={staticFile("sfx/whoosh.mp3")} volume={0.30} />
       </Sequence>
       {/* the Tafsir drawer travelling in, and back out */}
       <Sequence from={Math.round(s(34.80))} durationInFrames={44}>
         <Audio src={staticFile("sfx/whoosh.mp3")} volume={0.30} />
       </Sequence>
-      <Sequence from={Math.round(s(41.00))} durationInFrames={40}>
+      <Sequence from={Math.round(s(38.93))} durationInFrames={40}>
         <Audio src={staticFile("sfx/whoosh.mp3")} volume={0.22} />
       </Sequence>
       {/* keyboard runs ONLY while the sentence is actually being typed */}
