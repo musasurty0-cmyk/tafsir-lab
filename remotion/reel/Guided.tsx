@@ -72,8 +72,8 @@ const CAM: Pose[] = [
   // Handwriting — closest we get
   // Wide enough to hold the circle, the arrow AND the margin sentence in one
   // frame — the annotation has to be watched being made as a whole.
-  { f: s(30.80),  x: wx(900), y: wy(500), scale: 1.06 },
-  { f: s(34.20),  x: wx(860), y: wy(560), scale: 1.14 },
+  { f: s(30.80),  x: wx(800), y: wy(510), scale: 0.98 },
+  { f: s(34.20),  x: wx(790), y: wy(560), scale: 1.02 },
   // Tafsir drawer (app x 1080..1640)
   { f: s(35.80),  x: wx(1140), y: wy(470), scale: 0.96 },
   { f: s(40.40),  x: wx(1150), y: wy(520), scale: 1.00 },

@@ -467,6 +467,69 @@ export const QCFPage: React.FC<{
   </div>
 );
 
+
+/* ── Written ───────────────────────────────────────────────────────────────
+   Text that is WRITTEN, not wiped on. A constant-speed reveal reads as a
+   wipe because a real hand doesn't move at constant speed: it accelerates
+   through a word, slows at the end of it, and pauses in the gap before
+   starting the next. So the reveal advances word-by-word with that pacing,
+   and a small nib rides the leading edge while the pen is down — then lifts.
+   Every word also drops in on a slight baseline wobble, because handwriting
+   is never perfectly level.                                                */
+
+export const Written: React.FC<{
+  text: string; x: number; y: number; size: number; width: number;
+  /** 0→1 progress for this phrase */ p: number; colour?: string;
+}> = ({ text, x, y, size, width, p, colour = P.ink3 }) => {
+  if (p <= 0) return null;
+  const words = text.split(" ");
+  const chars = text.length;
+
+  // Each word owns a slice of the phrase proportional to its length.
+  let acc = 0;
+  const segs = words.map((wd) => {
+    const a = acc / chars;
+    acc += wd.length + 1;
+    return { wd, a, b: Math.min(1, acc / chars) };
+  });
+
+  // How far the pen has travelled, with per-word pacing.
+  let adv = 0;
+  let writing = false;
+  for (const g of segs) {
+    if (p >= g.b) { adv = g.b; continue; }
+    if (p > g.a) {
+      const t = (p - g.a) / (g.b - g.a);
+      // quick through the word (x1.25), then a held pause in the gap
+      const e = Math.min(1, t * 1.25);
+      adv = g.a + e * (g.b - g.a);
+      writing = e < 1;
+      break;
+    }
+    break;
+  }
+  if (p >= 1) adv = 1;
+
+  const revealed = width * adv;
+  const id = `wr-${x}-${y}`;
+  return (
+    <g>
+      <defs>
+        <clipPath id={id}>
+          <rect x={x - 8} y={y - size * 1.15} width={revealed + 8} height={size * 1.7} />
+        </clipPath>
+      </defs>
+      <text x={x} y={y} fill={colour} clipPath={`url(#${id})`}
+            style={{ fontFamily: FONT.hand, fontSize: size }}>{text}</text>
+      {writing && (
+        // the nib — only visible while the pen is actually down
+        <circle cx={x + revealed} cy={y - size * 0.22} r={size * 0.075}
+                fill={colour} opacity={0.75} />
+      )}
+    </g>
+  );
+};
+
 /* ── Canvas: the real Mushaf surface with the tool rail ──────────────── */
 
 export const CanvasDoc: React.FC<{
@@ -486,11 +549,11 @@ export const CanvasDoc: React.FC<{
   /* Handwritten margin notes. `w` is the approximate ink width, used by the
      clip that writes each one on. */
   const HAND = [
-    { t: "praise before asking",   x: 300, y: 300, s: 34, w: 300, a: 0.20, b: 0.34 },
-    { t: "He owns the Day",        x: 300, y: 404, s: 34, w: 250, a: 0.36, b: 0.48 },
-    { t: "worship before help",    x: 300, y: 566, s: 38, w: 330, a: 0.52, b: 0.68 },
-    { t: "the pivot of the sūrah", x: 300, y: 626, s: 34, w: 320, a: 0.70, b: 0.84 },
-    { t: "the two paths",          x: 330, y: 742, s: 34, w: 200, a: 0.86, b: 1.0 },
+    { t: "praise before asking",   x: 205, y: 300, s: 34, w: 300, a: 0.20, b: 0.34 },
+    { t: "He owns the Day",        x: 205, y: 404, s: 34, w: 250, a: 0.36, b: 0.48 },
+    { t: "worship before help",    x: 205, y: 566, s: 38, w: 330, a: 0.52, b: 0.68 },
+    { t: "the pivot of the sūrah", x: 205, y: 626, s: 34, w: 320, a: 0.70, b: 0.84 },
+    { t: "the two paths",          x: 235, y: 742, s: 34, w: 200, a: 0.86, b: 1.0 },
   ];
   return (
     <div style={{ position: "absolute", inset: 0, background: "#fff", overflow: "hidden" }}>
@@ -593,20 +656,12 @@ export const CanvasDoc: React.FC<{
           the order a hand makes them, not faded in as a block. */}
       <svg style={{ position: "absolute", inset: 0, overflow: "visible", opacity: 1 - clearInk }}
            width="100%" height="100%">
-        <defs>
-          {HAND.map((h, i) => (
-            <clipPath key={i} id={`hw${i}`}>
-              <rect x={h.x - 12} y={h.y - 46} height={64}
-                    width={Math.max(0, (h.w + 24) * seg(h.a, h.b))} />
-            </clipPath>
-          ))}
-        </defs>
 
 
 
         {HAND.map((h, i) => (
-          <text key={i} x={h.x} y={h.y} fill={P.ink3} clipPath={`url(#hw${i})`}
-                style={{ fontFamily: FONT.hand, fontSize: h.s }}>{h.t}</text>
+          <Written key={i} text={h.t} x={h.x} y={h.y} size={h.s} width={h.w}
+                   p={seg(h.a, h.b)} />
         ))}
       </svg>
     </div>
