@@ -144,14 +144,15 @@ export const AppCard: React.FC<{ kind: string; label: string; w?: number }> = ({
 
 export const ScatterArrows: React.FC<{ draw: number }> = ({ draw }) => {
   const A = [
-    { d: "M40 92 C 96 26, 210 20, 258 74", len: 260, tip: "M258 74 L 236 62 M258 74 L 242 88" },
-    { d: "M470 40 C 520 96, 512 168, 452 200", len: 250, tip: "M452 200 L 474 194 M452 200 L 462 178" },
-    { d: "M96 300 C 40 246, 46 176, 110 152", len: 230, tip: "M110 152 L 88 158 M110 152 L 98 174" },
-    { d: "M300 366 C 372 402, 470 396, 520 350", len: 270, tip: "M520 350 L 498 356 M520 350 L 508 334" },
+    // routed between the scattered cards, not around a tidy grid
+    { d: "M120 60 C 250 8, 470 30, 560 120", len: 520, tip: "M560 120 L 536 106 M560 120 L 540 138" },
+    { d: "M600 300 C 520 386, 330 400, 210 352", len: 470, tip: "M210 352 L 236 344 M210 352 L 232 372" },
+    { d: "M96 470 C 40 560, 88 664, 200 690", len: 400, tip: "M200 690 L 176 678 M200 690 L 182 706" },
+    { d: "M420 760 C 540 800, 660 762, 700 668", len: 420, tip: "M700 668 L 678 686 M700 668 L 700 692" },
   ];
   const seg = (i: number) => Math.max(0, Math.min(1, draw * A.length - i));
   return (
-    <svg width={620} height={430} style={{ overflow: "visible" }}>
+    <svg width={800} height={860} style={{ overflow: "visible" }}>
       {A.map((a, i) => (
         <g key={i} stroke="#D9D5CE" strokeWidth={2.2} fill="none" strokeLinecap="round">
           <path d={a.d} strokeDasharray={a.len} strokeDashoffset={a.len * (1 - seg(i))} />

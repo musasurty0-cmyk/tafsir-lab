@@ -89,12 +89,12 @@ const CAM: Pose[] = [
 
 /* The six places a person's Qur'an study actually lives today. */
 const FRAGMENTS = [
-  { kind: "notes",   label: "Notes",      x: -258, y: -1990, w: 470, d: 0 },
-  { kind: "quran",   label: "Qur’an App", x:  262, y: -1960, w: 470, d: 5 },
-  { kind: "search",  label: "Search",     x: -258, y: -1560, w: 470, d: 10 },
-  { kind: "pdf",     label: "PDF",        x:  262, y: -1530, w: 470, d: 15 },
-  { kind: "onenote", label: "OneNote",    x: -258, y: -1130, w: 470, d: 20 },
-  { kind: "notion",  label: "Notion",     x:  262, y: -1150, w: 470, d: 25 },
+  { kind: "notes",   label: "Notes",      x: -312, y: -2020, w: 468, r: -3.4, d: 0 },
+  { kind: "quran",   label: "Qur’an App", x:  296, y: -1908, w: 452, r:  2.6, d: 5 },
+  { kind: "search",  label: "Search",     x: -348, y: -1566, w: 486, r:  1.8, d: 10 },
+  { kind: "pdf",     label: "PDF",        x:  286, y: -1472, w: 444, r: -3.1, d: 15 },
+  { kind: "onenote", label: "OneNote",    x: -262, y: -1094, w: 470, r:  3.2, d: 20 },
+  { kind: "notion",  label: "Notion",     x:  334, y: -1188, w: 448, r: -2.2, d: 25 },
 ];
 
 /** Guiding typography — present, never narrating. */
@@ -264,6 +264,7 @@ export const Guided: React.FC = () => {
                   y={interpolate(pull, [0, 1], [f.y, -1520])}
                   z={10 + i}
                   opacity={inS * (1 - ramp(frame, s(8.40), s(9.05), EASE_SOFT))}
+                  rotate={f.r * (1 - pull)}
                   scale={(0.94 + 0.06 * inS) * interpolate(pull, [0, 1], [1, 0.34])}>
                 <AppCard kind={f.kind} label={f.label} w={f.w} />
               </At>
