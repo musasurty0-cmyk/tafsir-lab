@@ -556,13 +556,24 @@ export const CanvasDoc: React.FC<{
 }> = ({ hl = 0, ink = 0, wordGlow = 0, tool = 0, clearInk = 0, wordInk = 0 }) => {
   const seg = (a: number, b: number) => Math.max(0, Math.min(1, (ink - a) / (b - a)));
   /* Handwritten margin notes. `w` is the approximate ink width, used by the
-     clip that writes each one on. */
+     clip that writes each one on.
+
+     `y` is derived, not eyeballed: QCFPage sits at top 96 and every line is
+     fontSize 44 × line-height 2.5 = 110px tall, so line n is centred at
+     41 + 110n. A note has to sit on the āyah it is about — a margin note
+     floating between two lines annotates nothing. LINE() adds the baseline
+     offset so the writing reads as vertically centred on its line. */
+  const LINE = (n: number, size: number) => 41 + 110 * n + size * 0.34;
   const HAND = [
-    { t: "praise before asking",   x: 205, y: 300, s: 34, w: 300, a: 0.20, b: 0.34 },
-    { t: "He owns the Day",        x: 205, y: 404, s: 34, w: 250, a: 0.36, b: 0.48 },
-    { t: "worship before help",    x: 205, y: 566, s: 38, w: 330, a: 0.52, b: 0.68 },
-    { t: "the pivot of the sūrah", x: 205, y: 626, s: 34, w: 320, a: 0.70, b: 0.84 },
-    { t: "the two paths",          x: 235, y: 742, s: 34, w: 200, a: 0.86, b: 1.0 },
+    // 2 · al-ḥamd — praise comes before the request
+    { t: "praise before asking",   x: 225, y: LINE(2, 34),      s: 34, w: 300, a: 0.20, b: 0.34 },
+    // 3 · māliki yawmi'd-dīn
+    { t: "He owns the Day",        x: 225, y: LINE(3, 34),      s: 34, w: 250, a: 0.36, b: 0.48 },
+    // 4 · iyyāka naʿbudu — two lines of one thought, so they stack
+    { t: "worship before help",    x: 225, y: LINE(4, 36) - 22, s: 36, w: 320, a: 0.52, b: 0.68 },
+    { t: "the pivot of the sūrah", x: 225, y: LINE(4, 32) + 24, s: 32, w: 300, a: 0.70, b: 0.84 },
+    // 6 · those favoured vs those astray
+    { t: "the two paths",          x: 255, y: LINE(6, 34),      s: 34, w: 200, a: 0.86, b: 1.0 },
   ];
   return (
     <div style={{ position: "absolute", inset: 0, background: "#fff", overflow: "hidden" }}>
@@ -585,14 +596,19 @@ export const CanvasDoc: React.FC<{
         position: "absolute", left: 22, top: "50%", transform: "translateY(-50%)",
         display: "flex", flexDirection: "column", gap: 6, zIndex: 5,
       }}>
-        {["✋", "✎", "🖍", "↗", "T", "⬠"].map((t, i) => (
+        {/* Text-presentation glyphs only. ✋ and 🖍 default to *emoji*
+            presentation in Chrome, so they rendered as full-colour cartoons
+            in a rail that is otherwise monochrome. */}
+        {["✥", "✎", "▬", "↗", "T", "⬠"].map((t, i) => (
           <div key={i} style={{
             width: 44, height: 44, borderRadius: 11,
             background: i === tool ? "#fff" : "transparent",
             border: `1px solid ${i === tool ? P.line2 : "transparent"}`,
             boxShadow: i === tool ? "0 1px 3px rgba(0,0,0,0.07)" : "none",
             display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 17, color: P.ink2,
+            // the highlighter chip carries the ink colour it lays down
+            fontSize: 17, color: i === 2 ? "#C7A93A" : P.ink2,
+            fontFamily: FONT.sans,
           }}>{t}</div>
         ))}
         <div style={{ width: 30, height: 1, background: P.line2, margin: "6px auto" }} />
@@ -619,12 +635,16 @@ export const CanvasDoc: React.FC<{
                 <path d="M958 512 C 992 504, 1046 502, 1092 510"
                       fill="none" stroke={P.ink3} strokeWidth={3} strokeLinecap="round"
                       strokeDasharray={150} strokeDashoffset={150 * (1 - g(0, 0.18))} />
-                {/* lead line down into the clear space BELOW the page, so the
-                    notes never sit on top of the Qur'anic text */}
-                <path d="M1010 528 C 980 640, 900 730, 806 782"
+                {/* Lead line down into the clear space BELOW the page, so the
+                    notes never sit on top of the Qur'anic text. It leaves the
+                    word through the gap between lines 4 and 5, then runs down
+                    the left margin at x≈500 — clear of every line, the widest
+                    of which starts at x 574. A lead line drawn straight to the
+                    notes would cut across three āyāt. */}
+                <path d="M1000 524 C 880 554, 700 558, 560 604 C 508 622, 496 706, 498 806"
                       fill="none" stroke={P.ink3} strokeWidth={2.6} strokeLinecap="round"
-                      strokeDasharray={330} strokeDashoffset={330 * (1 - g(0.18, 0.42))} />
-                <path d="M806 782 L 838 776 M806 782 L 822 806"
+                      strokeDasharray={640} strokeDashoffset={640 * (1 - g(0.18, 0.42))} />
+                <path d="M498 806 L 480 778 M498 806 L 520 780"
                       fill="none" stroke={P.ink3} strokeWidth={2.6} strokeLinecap="round"
                       strokeDasharray={72} strokeDashoffset={72 * (1 - g(0.42, 0.50))} />
                 {/* the word's own notes, in open space */}

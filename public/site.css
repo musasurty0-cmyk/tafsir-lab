@@ -811,120 +811,35 @@ main, .nav, .foot{position:relative; z-index:1;}
 }
 
 /* MUSHAF */
-.mushaf{position:relative;}
-.mushaf-pages{
-  display:grid; grid-template-columns:1fr 1fr; gap:14px;
-  background:oklch(0.95 0.012 80);
-  padding:18px;
-  border-radius:var(--radius-xl);
-  box-shadow:var(--shadow-lg), inset 0 0 0 1px oklch(0.22 0.012 80 / 0.08);
-  position:relative;
+/* The Mushaf is shown as a real render from the product (see
+   remotion/MushafStill.tsx), not an HTML pastiche. It has to be: the page is
+   drawn with the QCF v2 page font, whose glyph metrics *are* the Madinah
+   layout — no web Arabic face reproduces it, and a fake one is the first
+   thing a reader of the Mushaf notices. */
+.mushaf-shot{
+  margin:0;
+  border-radius:16px;
+  overflow:hidden;
+  background:#fff;
+  border:1px solid oklch(0.94 0.005 80 / 0.14);
+  box-shadow:0 40px 90px oklch(0.15 0.01 250 / 0.5);
 }
-.mushaf-pages::before{
-  content:""; position:absolute;
-  left:50%; top:14px;bottom:14px;width:1px;
-  background:oklch(0.22 0.012 80 / 0.18);
-  transform:translateX(-50%);
+.mushaf-shot img{
+  display:block;
+  width:100%;
+  height:auto;
 }
-.mushaf-page{
-  background:oklch(0.985 0.012 80);
-  border:1px solid oklch(0.22 0.012 80 / 0.1);
-  border-radius:6px;
-  padding:14px 16px;
-  position:relative;
-  font-family:var(--font-arabic);
-  color:oklch(0.22 0.012 80);
-}
-.mushaf-frame{position:relative; min-height:380px;}
-.mushaf-header-band{
-  text-align:center;
-  font-family:var(--font-arabic);
-  font-size:14px;
-  padding:6px 10px 8px;
-  border:1px double oklch(0.6 0.08 70 / 0.55);
-  border-radius:3px;
-  margin-bottom:14px;
-  color:oklch(0.35 0.04 70);
-}
-.mushaf-ar{
-  font-family:var(--font-arabic);
-  direction:rtl;
-  text-align:justify;
-  text-align-last:center;
-  font-size:14px;
-  line-height:2.0;
-  margin:0 0 8px;
-  color:oklch(0.22 0.012 80);
-  position:relative;
-}
-.mushaf-ar-marked{color:var(--accent);}
-.ink-wave{
-  position:absolute;
-  bottom:-4px; left:0; right:0;
-  width:100%; height:8px;
-  pointer-events:none;
-  color:var(--accent);
-}
-.mushaf-margin{
-  position:absolute; top:42%; left:-46px;
-  display:flex;flex-direction:column;align-items:center;gap:2px;
-  font-family:var(--font-mono); font-size:10px;
-  color:oklch(0.5 0.12 275);
-  width:50px;
-}
-.margin-arrow{width:34px; height:34px; color:oklch(0.5 0.12 275);}
-.mushaf-margin span{white-space:nowrap; font-size:9.5px;}
-.mushaf-scribble{
-  position:absolute; bottom:-2px; right:0;
-  color:var(--accent-ink);
-}
-.mushaf-scribble span{
-  font-family:var(--font-mono); font-size:10px; color:var(--accent-ink);
-}
-.mushaf-foot{
-  display:flex;justify-content:space-between;align-items:center;
-  margin-top:10px;
-  font-family:var(--font-arabic);
-  font-size:14px; color:oklch(0.4 0.012 80);
-}
-.mushaf-foot-num{font-size:18px;}
-.mushaf-foot-l{font-family:var(--font-mono); font-size:10px; letter-spacing:0.04em;}
-
-.ink-bar{
-  margin-top:18px;
-  display:inline-flex;align-items:center;gap:10px;
-  padding:8px 12px;
+.mushaf-shot figcaption{
+  display:flex;align-items:center;gap:8px;
+  padding:11px 16px;
   background:oklch(0.22 0.01 250);
-  border:1px solid oklch(0.94 0.005 80 / 0.1);
-  border-radius:14px;
-  box-shadow:var(--shadow-md);
-  color:oklch(0.94 0.005 80);
-}
-.ink-pen{
-  width:22px;height:22px;border-radius:50%;
-  background:var(--c, oklch(0.55 0.08 160));
-  border:2px solid transparent;
-  cursor:pointer;
-}
-.ink-pen.ink-active{border-color:#fff; box-shadow:0 0 0 2px var(--c);}
-.ink-sep{width:1px;height:18px;background:oklch(0.94 0.005 80 / 0.18);margin:0 4px;}
-.ink-tool{
-  width:28px;height:28px;border-radius:6px;
-  display:grid;place-items:center;
-  font-family:var(--font-mono); font-size:13px;
-  color:oklch(0.78 0.006 80);
-  cursor:pointer;
-}
-.ink-tool:hover{background:oklch(0.94 0.005 80 / 0.08);}
-.mushaf-presence{
-  margin-top:12px;
+  border-top:1px solid oklch(0.94 0.005 80 / 0.1);
   font-family:var(--font-mono);
   font-size:11.5px;
-  color:oklch(0.78 0.006 80);
   letter-spacing:0.04em;
-  display:inline-flex;align-items:center;gap:8px;
+  color:oklch(0.78 0.006 80);
 }
-.mushaf-presence .presence-pip{width:9px;height:9px;border:0;margin:0;}
+.mushaf-shot figcaption .presence-pip{width:9px;height:9px;border:0;margin:0;flex:none;}
 
 /* ─────────────── WORKSPACES ─────────────── */
 .ws-grid{

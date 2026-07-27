@@ -7,6 +7,7 @@ import { MasterTrailer, MASTER_DURATION, MASTER_FPS } from "./MasterTrailer";
 import { Walkthrough, WALK_DURATION, WALK_FPS } from "./Walkthrough";
 import { TafsirLabReel, REEL_DURATION, REEL_FPS } from "./reel/TafsirLabReel";
 import { Guided, GUIDED_DURATION, GUIDED_FPS } from "./reel/Guided";
+import { MushafStill, STILL_W, STILL_H } from "./MushafStill";
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -19,6 +20,15 @@ export const RemotionRoot: React.FC = () => {
         fps={GUIDED_FPS}
         width={1080}
         height={1920}
+      />
+      {/* Single frame — the marketing site's Mushaf hero image. */}
+      <Composition
+        id="MushafStill"
+        component={MushafStill}
+        durationInFrames={1}
+        fps={30}
+        width={STILL_W}
+        height={STILL_H}
       />
       {/* Instagram Reel #1 — vertical, white, one continuous camera. */}
       <Composition

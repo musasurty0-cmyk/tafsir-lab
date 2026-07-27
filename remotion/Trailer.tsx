@@ -25,6 +25,8 @@ import {
   useVideoConfig,
 } from "remotion";
 import { C, FONTS } from "./theme";
+import { CanvasDoc, APP_W, APP_H } from "./reel/app";
+import { MUSHAF_BOX } from "./MushafStill";
 
 export const TRAILER_FPS = 30;
 
@@ -582,205 +584,149 @@ const SLibrary: React.FC = () => {
 
 // ═══════════════════ 5 · THE MUSHAF (ink) ═══════════════════
 
-const MUSHAF_LINES = [
-  "قَالُوا۟ سُبْحَـٰنَكَ لَا عِلْمَ لَنَآ إِلَّا مَا عَلَّمْتَنَآ ۖ إِنَّكَ أَنتَ ٱلْعَلِيمُ ٱلْحَكِيمُ ۝",
-  "قَالَ يَـٰٓـَٔادَمُ أَنۢبِئْهُم بِأَسْمَآئِهِمْ ۖ فَلَمَّآ أَنۢبَأَهُم بِأَسْمَآئِهِمْ ۝",
-  "وَإِذْ قُلْنَا لِلْمَلَـٰٓئِكَةِ ٱسْجُدُوا۟ لِـَٔادَمَ فَسَجَدُوٓا۟ إِلَّآ إِبْلِيسَ ۝",
-  "وَقُلْنَا يَـٰٓـَٔادَمُ ٱسْكُنْ أَنتَ وَزَوْجُكَ ٱلْجَنَّةَ وَكُلَا مِنْهَا رَغَدًا ۝",
-  "فَأَزَلَّهُمَا ٱلشَّيْطَـٰنُ عَنْهَا فَأَخْرَجَهُمَا مِمَّا كَانَا فِيهِ ۝",
-];
+/* The Mushaf beat shows the product's ACTUAL annotation surface — the same
+   CanvasDoc the launch film uses. That matters: the page is drawn with the
+   QCF v2 page font (each glyph is a Private Use Area codepoint whose metrics
+   *are* the Madinah layout), and every highlight is anchored to a {sūrah:āyah,
+   word} pair rather than painted at a fixed coordinate, so a mark can never
+   slide off the word it belongs to. The earlier hand-built version used Amiri
+   with centred lines, whole-line highlight sweeps and a floating squiggle —
+   none of which the app can actually produce. */
 
 // phases (local frames)
-const P_PEN = 40, P_HL = 130, P_WASH = 210, P_ERASE = 300;
+const M_WRITE = 46;   // handwritten margin notes go down
+const M_HL    = 208;  // highlighter is picked up
+const M_RING  = 300;  // one word is selected
+const M_WORD  = 330;  // that word gets its own annotation space
+
+/* The panel frames the canvas's CONTENT, not its full 1640×1030 extent — in
+   the product the surrounding space is pannable, but on screen an unpanned
+   canvas reads as a small page adrift in white. Scaling and offsetting the
+   canvas as one unit keeps every mark on its word. */
+const M_PANEL = { w: 1180, h: 930, x: 640 };
+
+/** Fit a canvas-space box inside the panel with an even margin. */
+const fit = (b: { x: number; y: number; w: number; h: number }, pad = 40) => {
+  const k = Math.min((M_PANEL.w - pad * 2) / b.w, (M_PANEL.h - pad * 2) / b.h);
+  return {
+    k,
+    tx: (M_PANEL.w - b.w * k) / 2 - b.x * k,
+    ty: (M_PANEL.h - b.h * k) / 2 - b.y * k,
+  };
+};
+
+/* Two framings. The page alone for the ink and highlight beats; then, when a
+   word is opened, the frame eases open to take in the annotation space below
+   the page — which is where the app puts a word's notes, so that they never
+   sit on top of the Qur'anic text. */
+const M_FIT_PAGE = fit(MUSHAF_BOX);
+const M_FIT_WORD = fit({ x: MUSHAF_BOX.x, y: MUSHAF_BOX.y, w: MUSHAF_BOX.w, h: 940 - MUSHAF_BOX.y });
+
+const CAPTIONS: { at: number; h: string; s: string }[] = [
+  { at: 0,      h: "Write straight onto the page.",  s: "Pressure-sensitive ink — Apple Pencil, S-Pen, Wacom." },
+  { at: M_HL,   h: "Highlight what matters.",        s: "Every mark is bound to the word, not to a pixel — so it never drifts." },
+  { at: M_WORD, h: "Then open a single word.",       s: "It gets its own annotation space, in place, without leaving the page." },
+];
 
 const SMushaf: React.FC = () => {
   const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
 
-  const penDraw   = interpolate(frame, [P_PEN, P_PEN + 40], [100, 0], CLAMP);
-  const hlSweep   = interpolate(frame, [P_HL, P_HL + 34], [0, 100], CLAMP);
-  const wash      = interpolate(frame, [P_WASH, P_WASH + 26], [0, 1], CLAMP);
-  const squiggle  = interpolate(frame, [P_PEN + 46, P_PEN + 76], [100, 0], CLAMP);
-  const eraseX    = interpolate(frame, [P_ERASE, P_ERASE + 70], [0, 560], CLAMP);
-  const eraseOn   = frame >= P_ERASE - 14 && frame <= P_ERASE + 84;
+  const ramp = (a: number, b: number) => interpolate(frame, [a, b], [0, 1], CLAMP);
 
-  const caption =
-    frame < P_HL    ? "Pressure-sensitive ink — bound to the verse, not the page" :
-    frame < P_WASH  ? "Highlight, circle, scribble — like real paper" :
-    frame < P_ERASE ? "Note inside an ayah → the whole ayah lights up" :
-                      "And an eraser that behaves like one";
+  // The tool rail follows what the hand is doing: pen → highlighter → select.
+  const tool = frame >= M_RING ? 3 : frame >= M_HL ? 2 : 1;
 
-  const tools: { icon: string; active: boolean }[] = [
-    { icon: "✋", active: false },
-    { icon: "✒️", active: frame < P_HL },
-    { icon: "🖍", active: frame >= P_HL && frame < P_WASH },
-    { icon: "▢", active: frame >= P_WASH && frame < P_ERASE },
-    { icon: "◯", active: frame >= P_ERASE },
-  ];
+  const rise = spring({ frame, fps, config: { damping: 200, mass: 0.7 }, durationInFrames: 34 });
+
+  // Reframe to take in the word's annotation space, easing with the ink.
+  const open = interpolate(frame, [M_WORD, M_WORD + 30], [0, 1], CLAMP);
+  const mix = (a: number, b: number) => a + (b - a) * open;
+  const k  = mix(M_FIT_PAGE.k,  M_FIT_WORD.k);
+  const tx = mix(M_FIT_PAGE.tx, M_FIT_WORD.tx);
+  const ty = mix(M_FIT_PAGE.ty, M_FIT_WORD.ty);
+
+  const cap = CAPTIONS.filter((c) => frame >= c.at).pop()!;
+  const capIn = interpolate(frame, [cap.at, cap.at + 14], [0, 1], CLAMP);
 
   return (
     <Scene dur={LEN.mushaf} bg={C.dark}>
       <AbsoluteFill
         style={{
           background:
-            "radial-gradient(800px 520px at 30% 34%, rgba(62,142,110,0.14), transparent 65%)," +
-            "radial-gradient(640px 460px at 86% 82%, rgba(201,138,45,0.10), transparent 60%)",
+            "radial-gradient(760px 520px at 18% 30%, rgba(62,142,110,0.13), transparent 66%)," +
+            "radial-gradient(680px 480px at 88% 84%, rgba(201,138,45,0.09), transparent 62%)",
         }}
       />
-      <div style={{ position: "absolute", left: 120, top: 92 }}>
+
+      {/* copy column */}
+      <div style={{ position: "absolute", left: 112, top: 176, width: 452 }}>
         <Eyebrow light>04 · The Mushaf</Eyebrow>
-        <div style={{ fontFamily: FONTS.serif, fontSize: 62, fontWeight: 500, marginTop: 20, color: "#F6F4EE" }}>
-          Ink that doesn&apos;t belong to the device.
+        <div
+          style={{
+            fontFamily: FONTS.serif, fontSize: 56, fontWeight: 500,
+            lineHeight: 1.14, letterSpacing: "-0.015em",
+            marginTop: 20, color: "#F6F4EE",
+          }}
+        >
+          Ink that doesn&#8217;t belong to the device.
+        </div>
+
+        <div style={{ height: 1, background: "rgba(246,244,238,0.16)", margin: "38px 0 30px" }} />
+
+        <div style={{ opacity: capIn, transform: `translateY(${(1 - capIn) * 10}px)` }}>
+          <div style={{ fontFamily: FONTS.serif, fontSize: 33, color: "#F6F4EE", lineHeight: 1.3 }}>
+            {cap.h}
+          </div>
+          <div
+            style={{
+              fontFamily: FONTS.sans, fontSize: 20, lineHeight: 1.55, marginTop: 12,
+              color: "rgba(246,244,238,0.62)",
+            }}
+          >
+            {cap.s}
+          </div>
+        </div>
+
+        <div
+          style={{
+            position: "absolute", left: 0, top: 560,
+            fontFamily: FONTS.mono, fontSize: 18, color: "rgba(246,244,238,0.6)",
+            display: "flex", alignItems: "center", gap: 11, whiteSpace: "nowrap",
+          }}
+        >
+          <Pip color={C.warm} size={14} /> Ismail is annotating page ١
         </div>
       </div>
 
-      {/* Tool rail */}
+      {/* the real annotation canvas, 1:1 */}
       <div
         style={{
-          position: "absolute", left: 150, top: 400,
-          display: "flex", flexDirection: "column", gap: 12,
-          background: "#242833", borderRadius: 18, padding: 14,
-          border: "1px solid rgba(250,248,242,0.12)",
-          boxShadow: "0 18px 50px rgba(0,0,0,0.4)",
-        }}
-      >
-        {tools.map((t, i) => (
-          <div
-            key={i}
-            style={{
-              width: 62, height: 62, borderRadius: 12,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 28,
-              background: t.active ? "rgba(62,142,110,0.32)" : "transparent",
-              border: t.active ? `1.5px solid ${C.accent}` : "1.5px solid transparent",
-            }}
-          >
-            {t.icon}
-          </div>
-        ))}
-      </div>
-
-      {/* Mushaf page */}
-      <div
-        style={{
-          position: "absolute", left: 330, top: 250,
-          width: 900, background: C.paper,
-          borderRadius: 10, padding: "44px 56px 40px",
-          boxShadow: "0 50px 110px rgba(0,0,0,0.5)",
+          position: "absolute", left: M_PANEL.x, top: (1080 - M_PANEL.h) / 2,
+          width: M_PANEL.w, height: M_PANEL.h,
+          borderRadius: 16, overflow: "hidden", background: "#fff",
+          border: "1px solid rgba(250,248,242,0.14)",
+          boxShadow: "0 60px 130px rgba(0,0,0,0.55)",
+          opacity: rise,
+          transform: `translateY(${(1 - rise) * 26}px)`,
         }}
       >
         <div
           style={{
-            textAlign: "center", fontFamily: FONTS.arabic, fontSize: 30,
-            border: "1px double rgba(150,110,45,0.55)", borderRadius: 6,
-            padding: "10px 0 14px", marginBottom: 30, color: "#6E5320",
+            position: "absolute", width: APP_W, height: APP_H,
+            transform: `translate(${tx}px, ${ty}px) scale(${k})`,
+            transformOrigin: "0 0",
           }}
         >
-          سُورَةُ ٱلْبَقَرَةِ
+          <CanvasDoc
+            tool={tool}
+            ink={ramp(M_WRITE, M_WRITE + 150)}
+            hl={ramp(M_HL, M_HL + 82)}
+            wordGlow={ramp(M_RING, M_RING + 20)}
+            clearInk={ramp(M_WORD + 6, M_WORD + 34)}
+            wordInk={ramp(M_WORD + 20, M_WORD + 86)}
+          />
         </div>
-
-        {MUSHAF_LINES.map((line, i) => {
-          const isPenLine  = i === 2;
-          const isWashLine = i === 0;
-          const isHlLine   = i === 3;
-          return (
-            <div
-              key={i}
-              style={{
-                position: "relative",
-                fontFamily: FONTS.arabic, fontSize: 33, lineHeight: 2.15,
-                direction: "rtl", textAlign: "center",
-                color: isPenLine ? C.accentInk : "#26221C",
-                background: isWashLine ? `rgba(112,146,224,${0.42 * wash})` : "transparent",
-                borderRadius: 6,
-              }}
-            >
-              {isHlLine ? (
-                <span
-                  style={{
-                    backgroundImage: "linear-gradient(100deg, rgba(244,208,80,0.55), rgba(244,208,80,0.42))",
-                    backgroundRepeat: "no-repeat",
-                    backgroundSize: `${hlSweep}% 78%`,
-                    backgroundPosition: "right center",
-                    borderRadius: 8,
-                  }}
-                >
-                  {line}
-                </span>
-              ) : (
-                line
-              )}
-              {isPenLine && (
-                <svg
-                  style={{ position: "absolute", bottom: 2, left: "4%", width: "92%", height: 16, pointerEvents: "none" }}
-                  viewBox="0 0 200 14" preserveAspectRatio="none"
-                >
-                  <path
-                    d="M3 8 C 30 3.5, 62 11, 96 7 C 128 3, 162 10, 197 6"
-                    fill="none" stroke={C.accent} strokeWidth={2.4} strokeLinecap="round"
-                    pathLength={100} strokeDasharray={100} strokeDashoffset={penDraw}
-                  />
-                </svg>
-              )}
-            </div>
-          );
-        })}
-
-        {/* margin scribble that gets erased */}
-        <div style={{ position: "relative", height: 70, marginTop: 8 }}>
-          <svg style={{ position: "absolute", left: 120, top: 4, width: 560, height: 48 }} viewBox="0 0 560 48">
-            <path
-              d="M6 30 C 60 6, 110 44, 168 22 C 226 2, 280 46, 340 24 C 398 4, 452 42, 552 18"
-              fill="none" stroke={C.violet} strokeWidth={3.4} strokeLinecap="round"
-              pathLength={100} strokeDasharray={100} strokeDashoffset={squiggle}
-            />
-            {/* eraser wipe — paper-coloured rect follows the ring */}
-            <rect x={0} y={0} width={eraseX} height={48} fill={C.paper} />
-          </svg>
-          {eraseOn && (
-            <div
-              style={{
-                position: "absolute", left: 100 + eraseX, top: 14,
-                width: 56, height: 56, borderRadius: 99,
-                border: "2.5px solid rgba(60,55,48,0.65)",
-                background: "rgba(255,255,255,0.6)",
-                boxShadow: "0 3px 12px rgba(0,0,0,0.25), inset 0 0 0 3px rgba(255,255,255,0.7)",
-                transform: "translate(-50%, -50%)",
-              }}
-            />
-          )}
-          <span
-            style={{
-              position: "absolute", right: 30, top: 18,
-              fontFamily: FONTS.hand, fontSize: 27, fontWeight: 600, color: C.accentInk,
-              transform: "rotate(-2deg)",
-              opacity: interpolate(frame, [P_HL + 20, P_HL + 44], [0, 1], CLAMP),
-            }}
-          >
-            cf. al-Ṭabarī here
-          </span>
-        </div>
-      </div>
-
-      {/* caption */}
-      <div
-        style={{
-          position: "absolute", right: 130, bottom: 120, width: 480,
-          fontFamily: FONTS.serif, fontSize: 36, lineHeight: 1.45,
-          color: "rgba(246,244,238,0.92)",
-        }}
-      >
-        {caption}
-      </div>
-
-      {/* presence */}
-      <div
-        style={{
-          position: "absolute", left: 330, bottom: 96,
-          fontFamily: FONTS.mono, fontSize: 20, color: "rgba(246,244,238,0.72)",
-          display: "flex", alignItems: "center", gap: 12,
-        }}
-      >
-        <Pip color={C.warm} size={16} /> Ismail is annotating page ٣
       </div>
     </Scene>
   );
