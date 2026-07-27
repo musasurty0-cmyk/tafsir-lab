@@ -79,8 +79,8 @@ const CAM: Pose[] = [
   { f: s(40.40),  x: wx(1300), y: wy(560), scale: 1.30 },
   // The word — close, then ease back just enough to hold its own notes.
   { f: s(40.60), x: wx(1010), y: wy(551), scale: 1.50 },
-  { f: s(43.40), x: wx(880),  y: wy(630), scale: 1.04 },
-  { f: s(46.60), x: wx(870),  y: wy(650), scale: 1.08 },
+  { f: s(43.40), x: wx(900),  y: wy(700), scale: 0.94 },
+  { f: s(46.60), x: wx(890),  y: wy(720), scale: 0.98 },
 ];
 
 /* The six places a person's Qur'an study actually lives today. */
@@ -159,6 +159,9 @@ export const Guided: React.FC = () => {
   const slash = pulse(frame, s(22.10), s(22.40), s(23.20), s(23.40));
   const embed = ramp(frame, s(23.30), s(23.90), EASE_SOFT);
 
+  /* Establishing shot: the workspace as an object on a blank page. */
+  const establish = pulse(frame, s(13.20), s(14.10), s(15.60), s(16.80));
+
   /* Guides */
   const g1 = pulse(frame, s(15.00), s(15.60), s(17.20), s(17.70));    // Study every ayah.
   const g2 = pulse(frame, s(19.60), s(20.20), s(21.60), s(22.10));  // Write what you understand.
@@ -192,7 +195,7 @@ export const Guided: React.FC = () => {
     [s(18.70), wx(484),  wy(31)],    // travel to Editor tab
     [s(18.95), wx(484),  wy(31)],    // press
     [s(19.20), wx(620),  wy(300)],   // into the note body
-    [s(22.00), wx(620),  wy(430)],   // where "/" is typed
+    [s(22.00), wx(600),  wy(300)],   // onto the /ayah row in the slash menu
     [s(24.30), wx(584),  wy(31)],    // travel to Canvas tab
     [s(24.55), wx(584),  wy(31)],    // press
     [s(26.60), wx(980),  wy(470)],   // onto the ayah
@@ -291,6 +294,15 @@ export const Guided: React.FC = () => {
           {/* ── The application ── */}
           <At x={0} y={0} z={30} opacity={appIn}
               scale={interpolate(appIn, [0, 1], [0.9, 1])}>
+            <div style={{
+              transform: `perspective(3200px) rotateX(${establish * 7}deg) rotateY(${establish * -9}deg)`,
+              borderRadius: 18 + establish * 8,
+              overflow: "hidden",
+              boxShadow: establish > 0.01
+                ? `0 ${40 + establish * 60}px ${90 + establish * 90}px rgba(20,20,20,${0.10 + establish * 0.10}), 0 8px 26px rgba(20,20,20,0.07)`
+                : "0 30px 90px rgba(20,20,20,0.09)",
+              transformStyle: "preserve-3d",
+            }}>
             <AppShell
               mode={mode}
               sidebar={sidebar}
@@ -301,8 +313,11 @@ export const Guided: React.FC = () => {
               {mode === "editor"
                 ? <EditorDoc scroll={edScroll} typed={edTyped} selection={edSelect}
                               slash={slash} embed={embed} />
-                : <CanvasDoc hl={hl} ink={ink} wordGlow={wordGlow} tool={frame >= s(29.40) ? 1 : 0} />}
+                : <CanvasDoc hl={hl} ink={ink} wordGlow={wordGlow}
+                              clearInk={clearInk} wordInk={wordInk}
+                              tool={frame >= s(29.40) ? 1 : 0} />}
             </AppShell>
+            </div>
           </At>
 
 

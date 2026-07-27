@@ -529,17 +529,19 @@ export const CanvasDoc: React.FC<{
                 <path d="M958 512 C 992 504, 1046 502, 1092 510"
                       fill="none" stroke={P.ink3} strokeWidth={3} strokeLinecap="round"
                       strokeDasharray={150} strokeDashoffset={150 * (1 - g(0, 0.18))} />
-                {/* a short lead line down into the margin */}
-                <path d="M1020 524 C 1000 566, 946 596, 884 606"
+                {/* lead line down into the clear space BELOW the page, so the
+                    notes never sit on top of the Qur'anic text */}
+                <path d="M1010 528 C 980 640, 900 730, 806 782"
                       fill="none" stroke={P.ink3} strokeWidth={2.6} strokeLinecap="round"
-                      strokeDasharray={200} strokeDashoffset={200 * (1 - g(0.18, 0.36))} />
-                {/* the word's own notes */}
-                <text x={470} y={604} fill={P.ink3} opacity={g(0.36, 0.56)}
-                      style={{ fontFamily: FONT.hand, fontSize: 38 }}>fronted → “You alone”</text>
-                <text x={470} y={664} fill={P.ink3} opacity={g(0.58, 0.78)}
-                      style={{ fontFamily: FONT.hand, fontSize: 34 }}>not “we worship You”</text>
-                <text x={470} y={722} fill={P.ink3} opacity={g(0.80, 1)}
-                      style={{ fontFamily: FONT.hand, fontSize: 34 }}>exclusivity = tawḥīd</text>
+                      strokeDasharray={330} strokeDashoffset={330 * (1 - g(0.18, 0.42))} />
+                <path d="M806 782 L 838 776 M806 782 L 822 806"
+                      fill="none" stroke={P.ink3} strokeWidth={2.6} strokeLinecap="round"
+                      strokeDasharray={72} strokeDashoffset={72 * (1 - g(0.42, 0.50))} />
+                {/* the word's own notes, in open space */}
+                <text x={420} y={862} fill={P.ink3} opacity={g(0.50, 0.74)}
+                      style={{ fontFamily: FONT.hand, fontSize: 40 }}>fronted &#8594; &#8220;You alone&#8221;</text>
+                <text x={420} y={926} fill={P.ink3} opacity={g(0.76, 1)}
+                      style={{ fontFamily: FONT.hand, fontSize: 36 }}>not &#8220;we worship You&#8221;</text>
               </>
             );
           })()}
