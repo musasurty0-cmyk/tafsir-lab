@@ -478,6 +478,13 @@ export const CanvasDoc: React.FC<{
   tool?: number;
 }> = ({ hl = 0, ink = 0, wordGlow = 0, tool = 0, clearInk = 0, wordInk = 0 }) => {
   const seg = (a: number, b: number) => Math.max(0, Math.min(1, (ink - a) / (b - a)));
+  /* Handwritten margin notes. `w` is the approximate ink width, used by the
+     clip that writes each one on. */
+  const HAND = [
+    { t: "worship before help", x: 372, y: 566, s: 38, w: 330, a: 0.56, b: 0.72 },
+    { t: "the pivot of the sūrah", x: 372, y: 626, s: 34, w: 320, a: 0.76, b: 0.88 },
+    { t: "the two paths", x: 396, y: 742, s: 34, w: 200, a: 0.90, b: 1.0 },
+  ];
   return (
     <div style={{ position: "absolute", inset: 0, background: "#fff", overflow: "hidden" }}>
       {/* page pill */}
@@ -556,30 +563,48 @@ export const CanvasDoc: React.FC<{
         <QCFPage fontSize={44} mark={{ key: "1:5", pos: 1 }} markInk={hl} markRing={wordGlow} />
       </div>
 
-      {/* Real study ink, measured against the QCF page as it actually renders.
-          Coordinates are CONTENT-box (app minus the 72px rail, 62px top bar).
-          The marked word sits at ~(1029,489); line 5 runs through y~605; the
-          empty left margin starts around x 300. One circle, one arrow, one
-          sentence, one underline — the four marks a person actually makes. */}
-      <svg style={{ position: "absolute", inset: 0, overflow: "visible", opacity: 1 - clearInk }} width="100%" height="100%">
+      {/* ── Study marks ─────────────────────────────────────────────────
+          No underlines: a phrase that matters gets a purple highlight, the
+          way it would with a real highlighter. Handwriting is WRITTEN — each
+          note is revealed by a left-to-right clip so the strokes appear in
+          the order a hand makes them, not faded in as a block. */}
+      <svg style={{ position: "absolute", inset: 0, overflow: "visible", opacity: 1 - clearInk }}
+           width="100%" height="100%">
+        <defs>
+          {HAND.map((h, i) => (
+            <clipPath key={i} id={`hw${i}`}>
+              <rect x={h.x - 12} y={h.y - 46} height={64}
+                    width={Math.max(0, (h.w + 24) * seg(h.a, h.b))} />
+            </clipPath>
+          ))}
+        </defs>
+
+        {/* purple highlight on the phrase that carries the point */}
+        <rect x={742} y={352} width={210 * seg(0, 0.16)} height={54} rx={4}
+              fill={P.hl.violet} opacity={0.85} />
+        <rect x={640} y={578} width={220 * seg(0.62, 0.74)} height={54} rx={4}
+              fill={P.hl.violet} opacity={0.85} />
+
         {/* circle around إِيَّاكَ */}
-        <path d="M1026 462 C 986 448, 934 452, 926 480 C 918 510, 964 528, 1020 528 C 1074 528, 1110 510, 1106 482 C 1102 460, 1068 450, 1032 460"
+        <path d="M1002 452 C 964 438, 914 444, 906 470 C 898 498, 942 516, 994 516 C 1046 516, 1080 498, 1076 472 C 1072 450, 1040 442, 1008 450"
               fill="none" stroke={P.ink3} strokeWidth={3.2} strokeLinecap="round"
-              strokeDasharray={620} strokeDashoffset={620 * (1 - seg(0, 0.32))} />
+              strokeDasharray={560} strokeDashoffset={560 * (1 - seg(0.16, 0.36))} />
         {/* arrow out to the left margin */}
-        <path d="M922 504 C 848 536, 770 556, 690 566"
+        <path d="M900 490 C 826 522, 744 542, 676 552"
               fill="none" stroke={P.ink3} strokeWidth={2.8} strokeLinecap="round"
-              strokeDasharray={310} strokeDashoffset={310 * (1 - seg(0.32, 0.52))} />
-        <path d="M690 566 L 722 556 M690 566 L 716 584"
+              strokeDasharray={250} strokeDashoffset={250 * (1 - seg(0.36, 0.5))} />
+        <path d="M676 552 L 708 544 M676 552 L 702 570"
               fill="none" stroke={P.ink3} strokeWidth={2.8} strokeLinecap="round"
-              strokeDasharray={72} strokeDashoffset={72 * (1 - seg(0.52, 0.60))} />
-        {/* the handwritten sentence */}
-        <text x={330} y={582} fill={P.ink3} opacity={seg(0.60, 0.82)}
-              style={{ fontFamily: FONT.hand, fontSize: 38 }}>worship before help</text>
-        {/* one underline, under line 5 */}
-        <path d="M712 632 C 790 620, 876 618, 954 628"
-              fill="none" stroke={P.ink3} strokeWidth={2.8} strokeLinecap="round"
-              strokeDasharray={250} strokeDashoffset={250 * (1 - seg(0.84, 1))} />
+              strokeDasharray={64} strokeDashoffset={64 * (1 - seg(0.5, 0.56))} />
+        {/* a short bracket beside the closing pair of ayat */}
+        <path d="M536 668 C 508 694, 508 754, 536 780"
+              fill="none" stroke={P.ink3} strokeWidth={2.6} strokeLinecap="round"
+              strokeDasharray={150} strokeDashoffset={150 * (1 - seg(0.78, 0.88))} />
+
+        {HAND.map((h, i) => (
+          <text key={i} x={h.x} y={h.y} fill={P.ink3} clipPath={`url(#hw${i})`}
+                style={{ fontFamily: FONT.hand, fontSize: h.s }}>{h.t}</text>
+        ))}
       </svg>
     </div>
   );
