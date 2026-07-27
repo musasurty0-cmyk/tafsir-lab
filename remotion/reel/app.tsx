@@ -481,12 +481,17 @@ export const CanvasDoc: React.FC<{
   /* Handwritten margin notes. `w` is the approximate ink width, used by the
      clip that writes each one on. */
   const HAND = [
-    { t: "worship before help", x: 372, y: 566, s: 38, w: 330, a: 0.56, b: 0.72 },
-    { t: "the pivot of the sūrah", x: 372, y: 626, s: 34, w: 320, a: 0.76, b: 0.88 },
-    { t: "the two paths", x: 396, y: 742, s: 34, w: 200, a: 0.90, b: 1.0 },
+    { t: "praise before asking",   x: 300, y: 300, s: 34, w: 300, a: 0.20, b: 0.34 },
+    { t: "He owns the Day",        x: 300, y: 404, s: 34, w: 250, a: 0.36, b: 0.48 },
+    { t: "worship before help",    x: 300, y: 566, s: 38, w: 330, a: 0.52, b: 0.68 },
+    { t: "the pivot of the sūrah", x: 300, y: 626, s: 34, w: 320, a: 0.70, b: 0.84 },
+    { t: "the two paths",          x: 330, y: 742, s: 34, w: 200, a: 0.86, b: 1.0 },
   ];
   return (
     <div style={{ position: "absolute", inset: 0, background: "#fff", overflow: "hidden" }}>
+      {/* PAGE GROUP — Mushaf and every mark share this transform, so they are
+          rigidly locked together and sit clear of the 560px drawer column. */}
+      <div style={{ position: "absolute", inset: 0, transform: "translateX(-210px)" }}>
       {/* page pill */}
       <div style={{
         position: "absolute", top: 18, left: "50%", transform: "translateX(-50%)",
@@ -521,6 +526,7 @@ export const CanvasDoc: React.FC<{
         ))}
       </div>
 
+      </div>
       {/* ── Word focus ──────────────────────────────────────────────────
           Opening a word clears the page-level notes and gives that word its
           own annotation space, in place. These marks are about إِيَّاكَ
@@ -589,17 +595,6 @@ export const CanvasDoc: React.FC<{
         <path d="M1002 452 C 964 438, 914 444, 906 470 C 898 498, 942 516, 994 516 C 1046 516, 1080 498, 1076 472 C 1072 450, 1040 442, 1008 450"
               fill="none" stroke={P.ink3} strokeWidth={3.2} strokeLinecap="round"
               strokeDasharray={560} strokeDashoffset={560 * (1 - seg(0.16, 0.36))} />
-        {/* arrow out to the left margin */}
-        <path d="M900 490 C 826 522, 744 542, 676 552"
-              fill="none" stroke={P.ink3} strokeWidth={2.8} strokeLinecap="round"
-              strokeDasharray={250} strokeDashoffset={250 * (1 - seg(0.36, 0.5))} />
-        <path d="M676 552 L 708 544 M676 552 L 702 570"
-              fill="none" stroke={P.ink3} strokeWidth={2.8} strokeLinecap="round"
-              strokeDasharray={64} strokeDashoffset={64 * (1 - seg(0.5, 0.56))} />
-        {/* a short bracket beside the closing pair of ayat */}
-        <path d="M536 668 C 508 694, 508 754, 536 780"
-              fill="none" stroke={P.ink3} strokeWidth={2.6} strokeLinecap="round"
-              strokeDasharray={150} strokeDashoffset={150 * (1 - seg(0.78, 0.88))} />
 
         {HAND.map((h, i) => (
           <text key={i} x={h.x} y={h.y} fill={P.ink3} clipPath={`url(#hw${i})`}

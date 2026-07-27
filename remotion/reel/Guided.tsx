@@ -75,8 +75,8 @@ const CAM: Pose[] = [
   { f: s(30.80),  x: wx(900), y: wy(500), scale: 1.06 },
   { f: s(34.20),  x: wx(860), y: wy(560), scale: 1.14 },
   // Tafsir drawer (app x 1080..1640)
-  { f: s(35.80),  x: wx(1300), y: wy(460), scale: 1.22 },
-  { f: s(40.40),  x: wx(1300), y: wy(560), scale: 1.30 },
+  { f: s(35.80),  x: wx(1140), y: wy(470), scale: 0.96 },
+  { f: s(40.40),  x: wx(1150), y: wy(520), scale: 1.00 },
   // The word — close, then ease back just enough to hold its own notes.
   { f: s(40.60), x: wx(1010), y: wy(551), scale: 1.50 },
   { f: s(43.40), x: wx(900),  y: wy(700), scale: 0.94 },
