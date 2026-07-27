@@ -489,9 +489,10 @@ export const CanvasDoc: React.FC<{
   ];
   return (
     <div style={{ position: "absolute", inset: 0, background: "#fff", overflow: "hidden" }}>
-      {/* PAGE GROUP — Mushaf and every mark share this transform, so they are
-          rigidly locked together and sit clear of the 560px drawer column. */}
-      <div style={{ position: "absolute", inset: 0, transform: "translateX(-210px)" }}>
+      {/* Nothing in here is ever transformed: the Mushaf and every mark are
+          absolutely positioned in the same box, so an annotation cannot drift
+          off the word it describes. The drawer is handled by framing, not by
+          moving the page. */}
       {/* page pill */}
       <div style={{
         position: "absolute", top: 18, left: "50%", transform: "translateX(-50%)",
@@ -526,7 +527,6 @@ export const CanvasDoc: React.FC<{
         ))}
       </div>
 
-      </div>
       {/* ── Word focus ──────────────────────────────────────────────────
           Opening a word clears the page-level notes and gives that word its
           own annotation space, in place. These marks are about إِيَّاكَ

@@ -134,8 +134,11 @@ export const Guided: React.FC = () => {
   const edTyped = ramp(frame, s(19.60), s(21.60), EASE_SOFT);
 
   /* Canvas beats */
-  const hl = ramp(frame, s(25.40), s(28.80), EASE_SOFT);
-  const ink = ramp(frame, s(29.80), s(34.20), EASE_SOFT);
+  /* The page arrives already annotated — prior study — and the later beat adds
+     to it. A Mushaf that starts blank looks like a demo, not a workspace. */
+  const inception = ramp(frame, s(13.40), s(14.40), EASE_SOFT);
+  const hl = Math.max(inception * 0.55, ramp(frame, s(25.40), s(28.80), EASE_SOFT));
+  const ink = Math.max(inception * 0.50, ramp(frame, s(29.80), s(34.20), EASE_SOFT));
 
   /* Tafsīr */
   const drawer = spring({ frame: frame - s(34.80), fps, config: { damping: 200, stiffness: 62, mass: 1.1 } });
@@ -247,7 +250,7 @@ export const Guided: React.FC = () => {
             const pull = ramp(frame, s(7.60), s(8.90), EASE_SOFT);
             return (
               <At key={f.kind}
-                  x={interpolate(pull, [0, 1], [f.x, 220])}
+                  x={interpolate(pull, [0, 1], [f.x, 0])}
                   y={interpolate(pull, [0, 1], [f.y, -1520])}
                   z={10 + i}
                   opacity={inS * (1 - ramp(frame, s(8.40), s(9.05), EASE_SOFT))}
