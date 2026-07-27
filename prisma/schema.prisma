@@ -367,3 +367,23 @@ model PagePresence {
 
   @@unique([pageId, userId])
 }
+
+
+/// Waitlist signups from the public /waitlist page (linked from the IG bio).
+/// The row is the source of truth: the notification email to the team is
+/// best-effort, so a mail outage or a missing API key can never lose a signup.
+model WaitlistSignup {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String?
+  /// free-text: how they study today / what they want from it
+  context   String?
+  /// where the click came from, e.g. "instagram-bio"
+  source    String?
+  /// whether the notification email actually went out
+  notified  Boolean  @default(false)
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
