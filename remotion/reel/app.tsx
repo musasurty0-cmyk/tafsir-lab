@@ -205,7 +205,12 @@ export const AppShell: React.FC<{
           </div>
         </div>
 
-        <div style={{ flex: 1, minHeight: 0, position: "relative", overflow: "hidden" }}>
+        <div style={{
+          flex: 1, minHeight: 0, position: "relative", overflow: "hidden",
+          // The drawer takes real space — the canvas shifts to make room for
+          // it rather than being covered by it.
+          marginRight: 560 * drawerOpen,
+        }}>
           {children}
         </div>
       </div>
@@ -225,9 +230,13 @@ export const AppShell: React.FC<{
 
 /* ── Editor: the user's real Al-Fātiḥah notes ────────────────────────── */
 
-export const EditorDoc: React.FC<{ scroll?: number; typed?: number; selection?: number }> = ({
-  scroll = 0, typed = 0, selection = 0,
-}) => {
+export const EditorDoc: React.FC<{
+  scroll?: number; typed?: number; selection?: number;
+  /** 0→1 slash-command palette, opened by typing "/" */
+  slash?: number;
+  /** 0→1 the /ayah embed the command inserts */
+  embed?: number;
+}> = ({ scroll = 0, typed = 0, selection = 0, slash = 0, embed = 0 }) => {
   const NEW = "It is the opening of the Book and the opening of the prayer.";
   const shown = NEW.slice(0, Math.floor(typed * NEW.length));
   return (
@@ -273,6 +282,55 @@ export const EditorDoc: React.FC<{ scroll?: number; typed?: number; selection?: 
           <p style={{ fontSize: 19, color: P.ink2, marginBottom: 10 }}>
             — <i>Tafsīr Ibn Kathīr</i>, Arabic text (Dār Tayyibah).
           </p>
+          {/* the slash command — a real product affordance */}
+          {slash > 0 && embed < 0.02 && (
+            <div style={{
+              width: 380, background: "#fff", border: `1px solid ${P.line2}`,
+              borderRadius: 10, boxShadow: "0 18px 44px rgba(20,20,20,0.13)",
+              padding: 8, fontFamily: FONT.sans, marginBottom: 18,
+              opacity: Math.min(1, slash * 2), transformOrigin: "top left",
+              transform: `scale(${0.96 + 0.04 * Math.min(1, slash * 2)})`,
+            }}>
+              <div style={{
+                fontSize: 12, letterSpacing: "0.1em", color: P.grey2,
+                padding: "6px 10px 8px", textTransform: "uppercase",
+              }}>Insert</div>
+              {[
+                { k: "/ayah", d: "Embed a verse", on: true },
+                { k: "/tafsir", d: "Insert commentary" },
+                { k: "/word", d: "Word note" },
+              ].map((o) => (
+                <div key={o.k} style={{
+                  display: "flex", alignItems: "baseline", gap: 12,
+                  padding: "10px 10px", borderRadius: 7,
+                  background: o.on ? P.sel : "transparent",
+                }}>
+                  <span style={{
+                    fontSize: 15.5, fontWeight: 600,
+                    color: o.on ? P.green : P.ink,
+                  }}>{o.k}</span>
+                  <span style={{ fontSize: 14, color: P.grey }}>{o.d}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          {embed > 0.02 && (
+            <div style={{
+              border: `1px solid ${P.line}`, borderLeft: `3px solid ${P.green}`,
+              borderRadius: 8, padding: "16px 18px", marginBottom: 18,
+              background: "#FCFCFB", fontFamily: FONT.sans,
+              opacity: Math.min(1, embed * 2),
+              transform: `translateY(${(1 - Math.min(1, embed * 2)) * 8}px)`,
+            }}>
+              <div style={{ fontSize: 12.5, letterSpacing: "0.1em", color: P.grey2, marginBottom: 8 }}>
+                AYAH · 1:5
+              </div>
+              <div style={{ fontFamily: SERIF, fontSize: 26, direction: "rtl", textAlign: "right", color: P.ink }}>
+                إِيَّاكَ نَعْبُدُ وَإِيَّاكَ نَسْتَعِينُ
+              </div>
+            </div>
+          )}
+
           {/* the sentence being written during the film */}
           {typed > 0 && (
             <p style={{ fontSize: 21, lineHeight: 1.62, marginBottom: 26, color: P.ink }}>

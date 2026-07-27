@@ -93,13 +93,22 @@ const pose = (p: Pose): CamState => ({
 
 /** The CSS transform that puts world point (cam.x, cam.y) at screen centre. */
 export function camTransform(cam: CamState): string {
+  /* Snap the camera translate to whole DEVICE pixels.
+     Arabic glyphs sit on a sub-pixel grid; when the camera translates by
+     fractional amounts the renderer re-rasterises them slightly differently
+     every frame, which reads as the Mushaf "shimmering" or shaking as the
+     camera moves — a real motion-sickness trigger. Rounding the translation
+     (after scale) keeps every glyph on the same sub-pixel phase for the whole
+     move. Scale itself is left continuous so the motion stays smooth. */
+  const tx = Math.round(-cam.x * cam.scale) / cam.scale;
+  const ty = Math.round(-cam.y * cam.scale) / cam.scale;
   return [
     `translate(${W / 2}px, ${H / 2}px)`,
     `rotateX(${cam.rx}deg)`,
     `rotateY(${cam.ry}deg)`,
     `rotateZ(${cam.rz}deg)`,
     `scale(${cam.scale})`,
-    `translate(${-cam.x}px, ${-cam.y}px)`,
+    `translate(${tx}px, ${ty}px)`,
   ].join(" ");
 }
 

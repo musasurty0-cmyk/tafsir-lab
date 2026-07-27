@@ -19,7 +19,7 @@
  *  42.5–45.0  white · logo · closing line
  */
 import React from "react";
-import { AbsoluteFill, useCurrentFrame, useVideoConfig, interpolate, spring } from "remotion";
+import { AbsoluteFill, Audio, Sequence, staticFile, useCurrentFrame, useVideoConfig, interpolate, spring } from "remotion";
 import { loadFont as loadInter } from "@remotion/google-fonts/Inter";
 import { loadFont as loadAmiri } from "@remotion/google-fonts/Amiri";
 import { loadFont as loadGaramond } from "@remotion/google-fonts/EBGaramond";
@@ -35,7 +35,7 @@ loadGaramond("normal", { weights: ["400", "500", "600", "700"], subsets: ["latin
 loadCaveat("normal", { weights: ["400", "600"], subsets: ["latin"], ignoreTooManyRequestsWarning: true });
 
 export const GUIDED_FPS = 30;
-export const GUIDED_DURATION = 1420; // 47.3s
+export const GUIDED_DURATION = 1530; // 51.0s
 
 /* The app sits at world origin. Its own coordinates run
    x −820…820, y −515…515, so a point (ax, ay) inside the app maps to
@@ -56,29 +56,29 @@ const CAM: Pose[] = [
   // Into the app. Scales stay >=1.1 for every working beat: a 16:10 desktop in
   // a 9:16 frame only fills the screen when we frame a REGION of it, and the
   // brief's hard rule is that the UI must always be readable.
-  { f: s(10.40),   x: wx(880), y: wy(520), scale: 1.16, ease: EASE_OUT },
-  { f: s(13.40),  x: wx(880), y: wy(560), scale: 1.26 },
+  { f: s(12.00),   x: wx(880), y: wy(520), scale: 1.16, ease: EASE_OUT },
+  { f: s(15.00),  x: wx(880), y: wy(560), scale: 1.26 },
   // Editor — the notes column
-  { f: s(15.00),  x: wx(660), y: wy(360), scale: 1.24 },
-  { f: s(18.20),  x: wx(640), y: wy(520), scale: 1.38 },
-  { f: s(20.10),  x: wx(660), y: wy(470), scale: 1.28 },
+  { f: s(16.60),  x: wx(660), y: wy(360), scale: 1.24 },
+  { f: s(19.80),  x: wx(640), y: wy(520), scale: 1.38 },
+  { f: s(21.70),  x: wx(660), y: wy(470), scale: 1.28 },
   // Canvas — colour laid onto the ayat
-  { f: s(21.60),  x: wx(880), y: wy(500), scale: 1.18 },
-  { f: s(24.80),  x: wx(900), y: wy(540), scale: 1.28 },
+  { f: s(23.20),  x: wx(880), y: wy(500), scale: 1.18 },
+  { f: s(26.40),  x: wx(900), y: wy(540), scale: 1.28 },
   // Handwriting — closest we get
   // Wide enough to hold the circle, the arrow AND the margin sentence in one
   // frame — the annotation has to be watched being made as a whole.
-  { f: s(26.60),  x: wx(900), y: wy(500), scale: 1.06 },
-  { f: s(30.00),  x: wx(860), y: wy(560), scale: 1.14 },
+  { f: s(28.20),  x: wx(900), y: wy(500), scale: 1.06 },
+  { f: s(31.60),  x: wx(860), y: wy(560), scale: 1.14 },
   // Tafsir drawer (app x 1080..1640)
-  { f: s(31.60),  x: wx(1300), y: wy(460), scale: 1.22 },
-  { f: s(36.20),  x: wx(1300), y: wy(560), scale: 1.30 },
+  { f: s(33.20),  x: wx(1300), y: wy(460), scale: 1.22 },
+  { f: s(37.80),  x: wx(1300), y: wy(560), scale: 1.30 },
   // The word, then its note
-  { f: s(38.00),  x: wx(1010), y: wy(560), scale: 1.55 },
-  { f: s(41.20),  x: wx(1000), y: wy(690), scale: 1.34 },
+  { f: s(39.60),  x: wx(1010), y: wy(560), scale: 1.55 },
+  { f: s(42.80),  x: wx(1000), y: wy(690), scale: 1.34 },
   // The only wide shot in the film — and only to say "one workspace".
-  { f: s(43.60),  x: 0, y: 0, scale: 0.64 },
-  { f: s(47.20),  x: 0, y: 0, scale: 0.64 },
+  { f: s(45.20),  x: 0, y: 0, scale: 0.64 },
+  { f: s(48.80),  x: 0, y: 0, scale: 0.64 },
 ];
 
 /* The six places a person's Qur'an study actually lives today. */
@@ -118,47 +118,54 @@ export const Guided: React.FC = () => {
   const line2 = pulse(frame, s(2.0), s(2.7), s(3.0), s(3.5));
 
   /* ── The app itself ── */
-  const appIn = ramp(frame, s(6.4), s(9.60), EASE_OUT);
+  const appIn = ramp(frame, s(11.10), s(12.10), EASE_OUT);
 
   /* mode is driven by the cursor clicking a tab */
   const mode: "editor" | "canvas" =
-    frame < s(13.80) ? "canvas" : frame < s(20.40) ? "editor" : "canvas";
+    frame < s(15.40) ? "canvas" : frame < s(22.00) ? "editor" : "canvas";
   const sidebar = mode === "editor" ? 1 : 0;
 
   /* Editor beats */
-  const edScroll = interpolate(frame, [s(15.00), s(17.60)], [0, 300],
+  const edScroll = interpolate(frame, [s(16.60), s(19.20)], [0, 300],
     { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: EASE_SOFT });
-  const edSelect = ramp(frame, s(17.80), s(18.20));
-  const edTyped = ramp(frame, s(18.40), s(20.10), EASE_SOFT);
+  const edSelect = ramp(frame, s(19.40), s(19.80));
+  const edTyped = ramp(frame, s(17.00), s(19.00), EASE_SOFT);
 
   /* Canvas beats */
-  const hl = ramp(frame, s(21.20), s(24.60), EASE_SOFT);
-  const ink = ramp(frame, s(25.60), s(30.00), EASE_SOFT);
+  const hl = ramp(frame, s(22.80), s(26.20), EASE_SOFT);
+  const ink = ramp(frame, s(27.20), s(31.60), EASE_SOFT);
 
   /* Tafsīr */
-  const drawer = spring({ frame: frame - s(30.60), fps, config: { damping: 200, stiffness: 62, mass: 1.1 } });
-  const tLang = frame >= s(35.20) ? 2 : 1;              // English → Arabic
-  const tTab = frame >= s(35.20) && frame < s(36.60) ? 0 : frame >= s(36.60) ? 1 : 0; // → Word-by-word
-  const drawerClose = 1 - ramp(frame, s(36.80), s(37.60), EASE_SOFT);
+  const drawer = spring({ frame: frame - s(32.20), fps, config: { damping: 200, stiffness: 62, mass: 1.1 } });
+  const tLang = frame >= s(36.80) ? 2 : 1;              // English → Arabic
+  const tTab = frame >= s(36.80) && frame < s(38.20) ? 0 : frame >= s(38.20) ? 1 : 0; // → Word-by-word
+  const drawerClose = 1 - ramp(frame, s(38.40), s(39.20), EASE_SOFT);
 
   /* The word and its note */
-  const wordGlow = ramp(frame, s(37.80), s(38.40));
+  const wordGlow = ramp(frame, s(39.40), s(40.00));
   /* no invented note card: the word-note beat is carried by the real
      selection ring on the glyph plus the Tafsir word-by-word tab. */
 
+  /* The name, revealed where the fragments converged. */
+  const brand = pulse(frame, s(9.30), s(10.00), s(11.30), s(11.80));
+
+  /* Editor slash command */
+  const slash = pulse(frame, s(19.50), s(19.80), s(20.60), s(20.80));
+  const embed = ramp(frame, s(20.70), s(21.30), EASE_SOFT);
+
   /* Guides */
-  const g1 = pulse(frame, s(10.80), s(11.40), s(13.00), s(13.50));    // Study every ayah.
-  const g2 = pulse(frame, s(15.40), s(16.00), s(17.40), s(17.90));  // Write what you understand.
-  const g3 = pulse(frame, s(22.00), s(22.60), s(24.40), s(24.90));  // Think visually.
-  const g4 = pulse(frame, s(32.00), s(32.60), s(34.60), s(35.10));  // Read classical tafsir.
-  const g5 = pulse(frame, s(38.80), s(39.40), s(41.00), s(41.50));  // Understand every word.
+  const g1 = pulse(frame, s(12.40), s(13.00), s(14.60), s(15.10));    // Study every ayah.
+  const g2 = pulse(frame, s(17.00), s(17.60), s(19.00), s(19.50));  // Write what you understand.
+  const g3 = pulse(frame, s(23.60), s(24.20), s(26.00), s(26.50));  // Think visually.
+  const g4 = pulse(frame, s(33.60), s(34.20), s(36.20), s(36.70));  // Read classical tafsir.
+  const g5 = pulse(frame, s(40.40), s(41.00), s(42.60), s(43.10));  // Understand every word.
 
   /* Ending */
-  const worldOut = 1 - ramp(frame, s(44.40), s(45.10), EASE_SOFT);
-  const evr = pulse(frame, s(42.40), s(42.90), s(44.20), s(44.60));
-  const one = pulse(frame, s(43.20), s(43.70), s(44.20), s(44.60));
-  const logoIn = ramp(frame, s(45.20), s(45.90), EASE_OUT);
-  const endIn = ramp(frame, s(45.90), s(46.50), EASE_OUT);
+  const worldOut = 1 - ramp(frame, s(44.20), s(45.00), EASE_SOFT);
+  const evr = pulse(frame, s(45.40), s(46.00), s(47.30), s(47.70));
+  const one = pulse(frame, s(46.20), s(46.80), s(47.30), s(47.70));
+  const logoIn = ramp(frame, s(48.30), s(49.00), EASE_OUT);
+  const endIn = ramp(frame, s(49.00), s(49.60), EASE_OUT);
 
   /* Cursor path — every state change above is caused by it. */
   const cursorAt = (pts: [number, number, number][]) => {
@@ -168,29 +175,35 @@ export const Guided: React.FC = () => {
       y: interpolate(frame, fs, pts.map((p) => p[2]), { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: EASE_SOFT }),
     };
   };
+  /* Measured control centres in app coordinates (see app.tsx layout):
+       Editor tab (484,31) · Canvas tab (584,31) · Tafsīr (1189,31)
+       Arabic source (1324,92) · Word-by-word tab (1272,138)
+       the marked word إِيَّاكَ (1101,551)
+     The cursor is ON the control at the frame it is pressed — the click is
+     never mimed next to the thing it is supposed to be clicking. */
   const cur = cursorAt([
-    [s(13.20), wx(1100), wy(560)],
-    [s(13.70), wx(560),  wy(93)],   // Editor tab
-    [s(17.60), wx(560),  wy(93)],
-    [s(18.00), wx(430),  wy(300)],  // select the sentence
-    [s(20.10), wx(700),  wy(430)],
-    [s(20.30), wx(690),  wy(93)],   // Canvas tab
-    [s(24.80), wx(690),  wy(93)],
-    [s(25.40), wx(980),  wy(470)],  // pen strokes
-    [s(29.80), wx(520),  wy(690)],
-    [s(30.40), wx(1400), wy(93)],   // Tafsīr
-    [s(36.60), wx(1400), wy(93)],
-    [s(37.60), wx(1080), wy(560)],  // the word
-    [s(38.60), wx(1080), wy(560)],
-    [s(41.40), wx(1080), wy(620)],
+    [s(13.20), wx(980),  wy(560)],
+    [s(15.20), wx(484),  wy(31)],    // travel to Editor tab
+    [s(15.45), wx(484),  wy(31)],    // press
+    [s(16.60), wx(620),  wy(300)],   // into the note body
+    [s(19.40), wx(620),  wy(430)],   // where "/" is typed
+    [s(21.70), wx(584),  wy(31)],    // travel to Canvas tab
+    [s(21.95), wx(584),  wy(31)],    // press
+    [s(24.00), wx(980),  wy(470)],   // onto the ayah
+    [s(27.20), wx(980),  wy(470)],
+    [s(31.90), wx(1189), wy(31)],    // travel to Tafsīr
+    [s(32.15), wx(1189), wy(31)],    // press
+    [s(36.50), wx(1324), wy(92)],    // Arabic source
+    [s(36.75), wx(1324), wy(92)],    // press
+    [s(37.90), wx(1272), wy(138)],   // Word-by-word tab
+    [s(38.15), wx(1272), wy(138)],   // press
+    [s(39.20), wx(1101), wy(551)],   // the word itself
+    [s(39.45), wx(1101), wy(551)],   // press
+    [s(41.60), wx(1101), wy(600)],
   ]);
-  const curVis = pulse(frame, s(12.80), s(13.20), s(41.60), s(42.10));
-  const press = Math.max(
-    pulse(frame, s(13.68), s(13.75), s(13.82), s(13.95)),
-    pulse(frame, s(20.28), s(20.35), s(20.42), s(20.55)),
-    pulse(frame, s(30.38), s(30.45), s(30.52), s(30.65)),
-    pulse(frame, s(37.68), s(37.75), s(37.82), s(37.95)),
-  );
+  const curVis = pulse(frame, s(14.40), s(14.80), s(43.20), s(43.70));
+  const CLICKS = [15.45, 20.65, 21.95, 32.15, 36.75, 38.15, 39.45];
+  const press = Math.max(...CLICKS.map((c) => pulse(frame, s(c) - 1, s(c), s(c) + 2, s(c) + 5)));
 
   return (
     <AbsoluteFill style={{ background: "#FFFFFF", overflow: "hidden" }}>
@@ -199,17 +212,22 @@ export const Guided: React.FC = () => {
           position: "absolute", left: 0, top: 0, width: 0, height: 0,
           transform: camTransform(cam), transformOrigin: "0 0", transformStyle: "preserve-3d",
         }}>
-          {/* ── Act I · the question ── */}
+          {/* ── Act I · the question. Each line is its own nowrap block, so
+                 the ellipsis always stays welded to "Qur’an". ── */}
           <At x={0} y={-3080} z={40} opacity={line1}>
             <div style={{
-              width: 940, textAlign: "center", fontFamily: FONT.sans, fontSize: 74,
-              fontWeight: 600, letterSpacing: "-0.03em", lineHeight: 1.18, color: C.ink,
-            whiteSpace: "nowrap" }}>Have you ever wanted<br />to study the Qur’an…</div>
+              fontFamily: FONT.sans, fontSize: 74, fontWeight: 600,
+              letterSpacing: "-0.03em", lineHeight: 1.22, color: C.ink,
+              textAlign: "center", whiteSpace: "nowrap",
+            }}>
+              <div>Have you ever wanted</div>
+              <div>to study the Qur’an…</div>
+            </div>
           </At>
-          <At x={0} y={-2930} z={40} opacity={line2}>
+          <At x={0} y={-2900} z={40} opacity={line2}>
             <div style={{
               fontFamily: FONT.sans, fontSize: 74, fontWeight: 600,
-              letterSpacing: "-0.03em", color: C.ink,
+              letterSpacing: "-0.03em", color: C.ink, whiteSpace: "nowrap",
             }}>…truly?</div>
           </At>
 
@@ -243,7 +261,25 @@ export const Guided: React.FC = () => {
           <At x={0} y={-2140} z={41}>
             <Headline eyebrow="There should be" line1="one place for everything."
                       line2="Connected. Focused."
-                      o={pulse(frame, s(8.20), s(8.80), s(10.70), s(11.20))} />
+                      o={pulse(frame, s(8.20), s(8.80), s(12.30), s(12.80))} />
+          </At>
+
+          {/* ── The name, at the point the fragments converged ── */}
+          <At x={220} y={-1520} z={44} opacity={brand}>
+            <div style={{
+              display: "flex", alignItems: "center", gap: 22,
+              transform: `scale(${0.94 + 0.06 * brand})`,
+            }}>
+              <div style={{
+                width: 88, height: 88, borderRadius: 22, background: C.ink, color: "#fff",
+                fontFamily: FONT.sans, fontSize: 52, fontWeight: 700, letterSpacing: "-0.05em",
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>T</div>
+              <div style={{
+                fontFamily: FONT.sans, fontSize: 72, fontWeight: 600,
+                letterSpacing: "-0.035em", color: C.ink, whiteSpace: "nowrap",
+              }}>TafsirLab</div>
+            </div>
           </At>
 
           {/* ── The application ── */}
@@ -257,8 +293,9 @@ export const Guided: React.FC = () => {
               drawer={<TafsirDrawerReal lang={tLang} tab={tTab} />}
             >
               {mode === "editor"
-                ? <EditorDoc scroll={edScroll} typed={edTyped} selection={edSelect} />
-                : <CanvasDoc hl={hl} ink={ink} wordGlow={wordGlow} tool={frame >= s(25.20) ? 1 : 0} />}
+                ? <EditorDoc scroll={edScroll} typed={edTyped} selection={edSelect}
+                              slash={slash} embed={embed} />
+                : <CanvasDoc hl={hl} ink={ink} wordGlow={wordGlow} tool={frame >= s(26.80) ? 1 : 0} />}
             </AppShell>
           </At>
 
@@ -276,6 +313,38 @@ export const Guided: React.FC = () => {
       <Guide text="Think visually."          o={g3} />
       <Guide text="Read classical tafsir."   o={g4} />
       <Guide text="Understand every word."   o={g5} />
+
+
+      {/* ── Sound design ────────────────────────────────────────────────
+          Only diegetic interface sound: a click where a control is actually
+          pressed, a shutter as each fragment card lands, a whoosh where a
+          panel travels, and keyboard only for the exact span of typing.
+          Everything sits low; silence is the default. */}
+      {CLICKS.map((c, i) => (
+        <Sequence key={`clk${i}`} from={Math.round(s(c))} durationInFrames={22}>
+          <Audio src={staticFile("sfx/click.mp3")} volume={0.5} />
+        </Sequence>
+      ))}
+      {FRAGMENTS.map((f, i) => (
+        <Sequence key={`sh${i}`} from={Math.round(s(3.30) + f.d + 6)} durationInFrames={26}>
+          <Audio src={staticFile("sfx/shutter.mp3")} volume={0.26} />
+        </Sequence>
+      ))}
+      {/* the fragments being drawn into the workspace */}
+      <Sequence from={Math.round(s(7.60))} durationInFrames={44}>
+        <Audio src={staticFile("sfx/whoosh.mp3")} volume={0.34} />
+      </Sequence>
+      {/* the Tafsir drawer travelling in, and back out */}
+      <Sequence from={Math.round(s(32.20))} durationInFrames={44}>
+        <Audio src={staticFile("sfx/whoosh.mp3")} volume={0.30} />
+      </Sequence>
+      <Sequence from={Math.round(s(38.40))} durationInFrames={40}>
+        <Audio src={staticFile("sfx/whoosh.mp3")} volume={0.22} />
+      </Sequence>
+      {/* keyboard runs ONLY while the sentence is actually being typed */}
+      <Sequence from={Math.round(s(17.00))} durationInFrames={Math.round(s(19.00) - s(17.00))}>
+        <Audio src={staticFile("sfx/typing.mp3")} volume={0.32} />
+      </Sequence>
 
       {/* ── Resolve ── */}
       <AbsoluteFill style={{
