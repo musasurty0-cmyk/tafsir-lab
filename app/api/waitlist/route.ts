@@ -14,7 +14,7 @@ import { db } from "@/lib/db";
 
 export const runtime = "nodejs";
 
-const TEAM_INBOX = "studywithtafsirlab@gmail.com";
+const TEAM_INBOX = "salaam@tafsir-lab.com";
 
 /** Deliberately permissive but real: one @, a dot in the domain, no spaces. */
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;

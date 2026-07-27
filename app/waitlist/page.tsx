@@ -60,7 +60,7 @@ export default async function WaitlistPage({
 
         <footer className="wl-foot">
           <span>© TafsirLab</span>
-          <a href="mailto:studywithtafsirlab@gmail.com">studywithtafsirlab@gmail.com</a>
+          <a href="mailto:salaam@tafsir-lab.com">salaam@tafsir-lab.com</a>
         </footer>
       </div>
     </main>
