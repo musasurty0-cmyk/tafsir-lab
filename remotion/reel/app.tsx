@@ -465,6 +465,10 @@ export const QCFPage: React.FC<{
 /* ── Canvas: the real Mushaf surface with the tool rail ──────────────── */
 
 export const CanvasDoc: React.FC<{
+  /** 0→1 fades the page-level annotations away when a word is opened */
+  clearInk?: number;
+  /** 0→1 draws the annotations that belong to that one word */
+  wordInk?: number;
   /** 0→1 per-ayah colour highlights being laid down */
   hl?: number;
   /** 0→1 ink strokes drawn in sequence */
@@ -472,7 +476,7 @@ export const CanvasDoc: React.FC<{
   /** 0→1 glow on the single word that owns a note */
   wordGlow?: number;
   tool?: number;
-}> = ({ hl = 0, ink = 0, wordGlow = 0, tool = 0 }) => {
+}> = ({ hl = 0, ink = 0, wordGlow = 0, tool = 0, clearInk = 0, wordInk = 0 }) => {
   const seg = (a: number, b: number) => Math.max(0, Math.min(1, (ink - a) / (b - a)));
   return (
     <div style={{ position: "absolute", inset: 0, background: "#fff", overflow: "hidden" }}>
@@ -510,6 +514,38 @@ export const CanvasDoc: React.FC<{
         ))}
       </div>
 
+      {/* ── Word focus ──────────────────────────────────────────────────
+          Opening a word clears the page-level notes and gives that word its
+          own annotation space, in place. These marks are about إِيَّاكَ
+          specifically: the fronting that makes it "You ALONE". */}
+      {wordInk > 0.001 && (
+        <svg style={{ position: "absolute", inset: 0, overflow: "visible", zIndex: 4 }}
+             width="100%" height="100%">
+          {(() => {
+            const g = (a: number, b: number) => Math.max(0, Math.min(1, (wordInk - a) / (b - a)));
+            return (
+              <>
+                {/* underline directly beneath the word */}
+                <path d="M958 512 C 992 504, 1046 502, 1092 510"
+                      fill="none" stroke={P.ink3} strokeWidth={3} strokeLinecap="round"
+                      strokeDasharray={150} strokeDashoffset={150 * (1 - g(0, 0.18))} />
+                {/* a short lead line down into the margin */}
+                <path d="M1020 524 C 1000 566, 946 596, 884 606"
+                      fill="none" stroke={P.ink3} strokeWidth={2.6} strokeLinecap="round"
+                      strokeDasharray={200} strokeDashoffset={200 * (1 - g(0.18, 0.36))} />
+                {/* the word's own notes */}
+                <text x={470} y={604} fill={P.ink3} opacity={g(0.36, 0.56)}
+                      style={{ fontFamily: FONT.hand, fontSize: 38 }}>fronted → “You alone”</text>
+                <text x={470} y={664} fill={P.ink3} opacity={g(0.58, 0.78)}
+                      style={{ fontFamily: FONT.hand, fontSize: 34 }}>not “we worship You”</text>
+                <text x={470} y={722} fill={P.ink3} opacity={g(0.80, 1)}
+                      style={{ fontFamily: FONT.hand, fontSize: 34 }}>exclusivity = tawḥīd</text>
+              </>
+            );
+          })()}
+        </svg>
+      )}
+
       {/* the real Mushaf — QCF v2 glyphs, one marked word, nothing else */}
       <style>{QCF_FONT_CSS}</style>
       <div style={{
@@ -523,7 +559,7 @@ export const CanvasDoc: React.FC<{
           The marked word sits at ~(1029,489); line 5 runs through y~605; the
           empty left margin starts around x 300. One circle, one arrow, one
           sentence, one underline — the four marks a person actually makes. */}
-      <svg style={{ position: "absolute", inset: 0, overflow: "visible" }} width="100%" height="100%">
+      <svg style={{ position: "absolute", inset: 0, overflow: "visible", opacity: 1 - clearInk }} width="100%" height="100%">
         {/* circle around إِيَّاكَ */}
         <path d="M1026 462 C 986 448, 934 452, 926 480 C 918 510, 964 528, 1020 528 C 1074 528, 1110 510, 1106 482 C 1102 460, 1068 450, 1032 460"
               fill="none" stroke={P.ink3} strokeWidth={3.2} strokeLinecap="round"
