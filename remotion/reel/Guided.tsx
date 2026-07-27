@@ -72,15 +72,18 @@ const CAM: Pose[] = [
   // Handwriting — closest we get
   // Wide enough to hold the circle, the arrow AND the margin sentence in one
   // frame — the annotation has to be watched being made as a whole.
-  { f: s(30.80),  x: wx(800), y: wy(510), scale: 0.98 },
-  { f: s(34.20),  x: wx(790), y: wy(560), scale: 1.02 },
+  { f: s(30.60),  x: wx(800), y: wy(520), scale: 0.98 },
+  { f: s(35.00),  x: wx(800), y: wy(520), scale: 0.98 },  // locked off while writing
   // Tafsir drawer (app x 1080..1640)
   { f: s(35.80),  x: wx(1140), y: wy(470), scale: 0.96 },
   { f: s(40.40),  x: wx(1150), y: wy(520), scale: 1.00 },
   // The word — close, then ease back just enough to hold its own notes.
   { f: s(40.60), x: wx(1010), y: wy(551), scale: 1.50 },
   { f: s(43.40), x: wx(900),  y: wy(700), scale: 0.94 },
-  { f: s(46.60), x: wx(890),  y: wy(720), scale: 0.98 },
+  { f: s(45.00), x: wx(900),  y: wy(700), scale: 0.94 },
+  // Back out to the whole workspace, which then dissolves to white.
+  { f: s(46.80), x: 0, y: 0, scale: 0.60, ease: EASE_OUT },
+  { f: s(49.20), x: 0, y: 0, scale: 0.60 },
 ];
 
 /* The six places a person's Qur'an study actually lives today. */
@@ -165,6 +168,7 @@ export const Guided: React.FC = () => {
   /* Establishing shot: the workspace as an object on a blank page. */
   const establish = pulse(frame, s(13.20), s(14.10), s(15.60), s(16.80));
 
+
   /* Guides */
   const g1 = pulse(frame, s(15.00), s(15.60), s(17.20), s(17.70));    // Study every ayah.
   const g2 = pulse(frame, s(19.60), s(20.20), s(21.60), s(22.10));  // Write what you understand.
@@ -173,11 +177,11 @@ export const Guided: React.FC = () => {
   const g5 = pulse(frame, s(43.00), s(43.60), s(45.20), s(45.70));  // Understand every word.
 
   /* Ending */
-  const worldOut = 1 - ramp(frame, s(46.80), s(47.60), EASE_SOFT);
-  const evr = pulse(frame, s(48.00), s(48.60), s(49.90), s(50.30));
-  const one = pulse(frame, s(48.80), s(49.40), s(49.90), s(50.30));
-  const logoIn = ramp(frame, s(50.90), s(51.60), EASE_OUT);
-  const endIn = ramp(frame, s(51.60), s(52.20), EASE_OUT);
+  const worldOut = 1 - ramp(frame, s(47.90), s(48.25), EASE_SOFT);
+  const evr = pulse(frame, s(48.60), s(49.20), s(50.60), s(51.00));
+  const one = pulse(frame, s(49.40), s(50.00), s(50.60), s(51.00));
+  const logoIn = ramp(frame, s(51.30), s(52.00), EASE_OUT);
+  const endIn = ramp(frame, s(52.00), s(52.60), EASE_OUT);
 
   /* Cursor path — every state change above is caused by it. */
   const cursorAt = (pts: [number, number, number][]) => {
@@ -357,6 +361,9 @@ export const Guided: React.FC = () => {
       {/* the fragments being drawn into the workspace */}
       <Sequence from={Math.round(s(7.60))} durationInFrames={44}>
         <Audio src={staticFile("sfx/whoosh.mp3")} volume={0.34} />
+      </Sequence>
+      <Sequence from={Math.round(s(47.10))} durationInFrames={44}>
+        <Audio src={staticFile("sfx/whoosh.mp3")} volume={0.30} />
       </Sequence>
       {/* the Tafsir drawer travelling in, and back out */}
       <Sequence from={Math.round(s(34.80))} durationInFrames={44}>
