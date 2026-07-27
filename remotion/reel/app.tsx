@@ -417,13 +417,16 @@ export const QCF_FONT_CSS = `
  */
 export const QCFPage: React.FC<{
   fontSize?: number;
-  /** verse key + word position of the one highlighted word, e.g. "1:5"/1 */
-  mark?: { key: string; pos: number } | null;
-  /** 0→1 highlighter ink laid down right→left under that word */
+  /** Every highlight is anchored to a real word, so it cannot drift off the
+   *  text: {key, pos} identifies the glyph, `c` the colour, and `at` the point
+   *  in the 0→1 `markInk` progress at which that mark is laid down. */
+  marks?: { key: string; pos: number; c: string; at: number }[];
+  /** 0→1 progress that lays the marks down, right→left, like a highlighter */
   markInk?: number;
-  /** 0→1 selection ring on the same word (word-note affordance) */
+  /** 0→1 selection ring on the primary word */
   markRing?: number;
-}> = ({ fontSize = 20, mark = null, markInk = 0, markRing = 0 }) => (
+  ringOn?: { key: string; pos: number } | null;
+}> = ({ fontSize = 20, marks = [], markInk = 0, markRing = 0, ringOn = null }) => (
   <div style={{
     display: "flex", flexDirection: "column", width: "100%", direction: "rtl",
     fontFamily: `"p${PAGE1.v2_page}-v2"`,
@@ -436,17 +439,19 @@ export const QCFPage: React.FC<{
         alignItems: "center", direction: "rtl", whiteSpace: "nowrap",
       }}>
         {ln.words.map((w, i) => {
-          const isMark = !!mark && w.key === mark.key && w.pos === mark.pos;
+          const m = marks.find((k) => k.key === w.key && k.pos === w.pos);
+          const grow = m ? Math.max(0, Math.min(1, (markInk - m.at) / 0.18)) : 0;
+          const isRing = !!ringOn && w.key === ringOn.key && w.pos === ringOn.pos;
           return (
             <span key={i} style={{ position: "relative", display: "inline-block" }}>
-              {isMark && markInk > 0 && (
+              {m && grow > 0 && (
                 <span style={{
-                  position: "absolute", left: 0, right: 0, top: "22%", bottom: "18%",
-                  background: P.hl.yellow, borderRadius: 3, zIndex: 0,
-                  transformOrigin: "right center", transform: `scaleX(${markInk})`,
+                  position: "absolute", left: -2, right: -2, top: "20%", bottom: "16%",
+                  background: m.c, borderRadius: 3, zIndex: 0,
+                  transformOrigin: "right center", transform: `scaleX(${grow})`,
                 }} />
               )}
-              {isMark && markRing > 0 && (
+              {isRing && markRing > 0 && (
                 <span style={{
                   position: "absolute", left: -3, right: -3, top: "14%", bottom: "10%",
                   border: `2px solid ${P.green}`, borderRadius: 6, zIndex: 2,
@@ -566,7 +571,19 @@ export const CanvasDoc: React.FC<{
       <div style={{
         position: "absolute", left: 150, right: 110, top: 96,
       }}>
-        <QCFPage fontSize={44} mark={{ key: "1:5", pos: 1 }} markInk={hl} markRing={wordGlow} />
+        <QCFPage
+          fontSize={44}
+          markInk={hl}
+          markRing={wordGlow}
+          ringOn={{ key: "1:5", pos: 1 }}
+          marks={[
+            { key: "1:4", pos: 1, c: P.hl.violet, at: 0.00 },
+            { key: "1:4", pos: 2, c: P.hl.violet, at: 0.06 },
+            { key: "1:5", pos: 1, c: P.hl.yellow, at: 0.22 },
+            { key: "1:6", pos: 2, c: P.hl.violet, at: 0.40 },
+            { key: "1:6", pos: 3, c: P.hl.violet, at: 0.46 },
+          ]}
+        />
       </div>
 
       {/* ── Study marks ─────────────────────────────────────────────────
@@ -585,16 +602,7 @@ export const CanvasDoc: React.FC<{
           ))}
         </defs>
 
-        {/* purple highlight on the phrase that carries the point */}
-        <rect x={742} y={352} width={210 * seg(0, 0.16)} height={54} rx={4}
-              fill={P.hl.violet} opacity={0.85} />
-        <rect x={640} y={578} width={220 * seg(0.62, 0.74)} height={54} rx={4}
-              fill={P.hl.violet} opacity={0.85} />
 
-        {/* circle around إِيَّاكَ */}
-        <path d="M1002 452 C 964 438, 914 444, 906 470 C 898 498, 942 516, 994 516 C 1046 516, 1080 498, 1076 472 C 1072 450, 1040 442, 1008 450"
-              fill="none" stroke={P.ink3} strokeWidth={3.2} strokeLinecap="round"
-              strokeDasharray={560} strokeDashoffset={560 * (1 - seg(0.16, 0.36))} />
 
         {HAND.map((h, i) => (
           <text key={i} x={h.x} y={h.y} fill={P.ink3} clipPath={`url(#hw${i})`}
