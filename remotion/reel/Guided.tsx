@@ -50,8 +50,8 @@ const CAM: Pose[] = [
   // all six cards (~1420px across), and completely still while they land.
   { f: 0,        x: 0, y: -3040, scale: 1.00 },
   { f: s(2.60),  x: 0, y: -3040, scale: 1.00 },
-  { f: s(3.70),  x: 0, y: -1670, scale: 0.74 },
-  { f: s(7.30),  x: 0, y: -1650, scale: 0.75 },
+  { f: s(3.70),  x: 0, y: -1620, scale: 0.80 },
+  { f: s(7.30),  x: 0, y: -1600, scale: 0.81 },
   { f: s(9.20),  x: 0, y: -1520, scale: 0.90 },
   // Hold, completely still, on the name. This is the brand moment.
   { f: s(12.30), x: 0, y: -1520, scale: 0.90 },
@@ -89,12 +89,12 @@ const CAM: Pose[] = [
 
 /* The six places a person's Qur'an study actually lives today. */
 const FRAGMENTS = [
-  { kind: "notes",   label: "Notes",      x: -520, y: -1770, w: 300, d: 0 },
-  { kind: "quran",   label: "Qur’an App", x: 470, y: -1810, w: 320, d: 5 },
-  { kind: "search",  label: "Search",     x:  -40, y: -1610, w: 330, d: 10 },
-  { kind: "pdf",     label: "PDF",        x: -520, y: -1430, w: 310, d: 15 },
-  { kind: "onenote", label: "OneNote",    x:   30, y: -1300, w: 320, d: 20 },
-  { kind: "notion",  label: "Notion",     x:  505, y: -1380, w: 300, d: 25 },
+  { kind: "notes",   label: "Notes",      x: -258, y: -1990, w: 470, d: 0 },
+  { kind: "quran",   label: "Qur’an App", x:  262, y: -1960, w: 470, d: 5 },
+  { kind: "search",  label: "Search",     x: -258, y: -1560, w: 470, d: 10 },
+  { kind: "pdf",     label: "PDF",        x:  262, y: -1530, w: 470, d: 15 },
+  { kind: "onenote", label: "OneNote",    x: -258, y: -1130, w: 470, d: 20 },
+  { kind: "notion",  label: "Notion",     x:  262, y: -1150, w: 470, d: 25 },
 ];
 
 /** Guiding typography — present, never narrating. */
@@ -269,18 +269,18 @@ export const Guided: React.FC = () => {
               </At>
             );
           })}
-          <At x={-30} y={-1555} z={9} opacity={pulse(frame, s(4.20), s(4.80), s(7.40), s(7.90))}>
+          <At x={0} y={-1560} z={9} opacity={pulse(frame, s(4.20), s(4.80), s(7.40), s(7.90))}>
             <ScatterArrows draw={ramp(frame, s(4.30), s(6.40), EASE_SOFT)} />
           </At>
-          <At x={0} y={-1085} z={40}>
+          <At x={0} y={-820} z={40}>
             <VerdictPill o={pulse(frame, s(5.90), s(6.50), s(7.40), s(7.90))} />
           </At>
-          <At x={0} y={-2140} z={41}>
+          <At x={0} y={-2430} z={41}>
             <Headline eyebrow="But studying the Qur’an" line1="often feels like"
                       line2="juggling too much."
                       o={pulse(frame, s(3.10), s(3.80), s(7.30), s(7.80))} />
           </At>
-          <At x={0} y={-2140} z={41}>
+          <At x={0} y={-2430} z={41}>
             <Headline eyebrow="There should be" line1="one place for everything."
                       line2="Connected. Focused."
                       o={pulse(frame, s(8.20), s(8.80), s(14.90), s(15.40))} />

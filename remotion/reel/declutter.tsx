@@ -20,7 +20,7 @@ const SERIF = '"EB Garamond", Georgia, serif';
 const Mark: React.FC<{ kind: string }> = ({ kind }) => {
   const box = (bg: string, children: React.ReactNode, radius = 7) => (
     <span style={{
-      width: 26, height: 26, borderRadius: radius, background: bg, flexShrink: 0,
+      width: 36, height: 36, borderRadius: radius, background: bg, flexShrink: 0,
       display: "flex", alignItems: "center", justifyContent: "center",
       fontSize: 14, fontWeight: 700, color: "#fff", lineHeight: 1,
     }}>{children}</span>
@@ -44,7 +44,7 @@ const Mark: React.FC<{ kind: string }> = ({ kind }) => {
 };
 
 const Line: React.FC<{ w: string; dim?: boolean }> = ({ w, dim }) => (
-  <div style={{ height: 6, borderRadius: 4, background: dim ? "#EFEDE9" : "#E7E4DF", width: w }} />
+  <div style={{ height: 9, borderRadius: 5, background: dim ? "#EFEDE9" : "#E7E4DF", width: w }} />
 );
 
 /* ── One fragment card ───────────────────────────────────────────────── */
@@ -54,16 +54,16 @@ export const AppCard: React.FC<{ kind: string; label: string; w?: number }> = ({
     <div style={{ width: w, position: "relative", fontFamily: FONT.sans }}>
       {/* floating brand tab, overlapping the card's top edge */}
       <div style={{
-        position: "absolute", left: 22, top: -18, zIndex: 2,
+        position: "absolute", left: 26, top: -24, zIndex: 2,
         display: "flex", alignItems: "center", gap: 9,
-        background: "#fff", borderRadius: 12, padding: "7px 14px 7px 8px",
+        background: "#fff", borderRadius: 12, padding: "9px 18px 9px 10px",
         boxShadow: "0 6px 18px rgba(20,20,20,0.07)",
       }}>
         <Mark kind={kind} />
-        <span style={{ fontSize: 14, fontWeight: 600, color: P.ink }}>{label}</span>
+        <span style={{ fontSize: 20, fontWeight: 600, color: P.ink }}>{label}</span>
       </div>
       <div style={{
-        background: "#fff", borderRadius: 16, padding: "34px 22px 20px",
+        background: "#fff", borderRadius: 16, padding: "46px 30px 28px",
         boxShadow: "0 14px 40px rgba(20,20,20,0.07), 0 2px 8px rgba(20,20,20,0.04)",
       }}>{children}</div>
     </div>
@@ -71,17 +71,17 @@ export const AppCard: React.FC<{ kind: string; label: string; w?: number }> = ({
 
   if (kind === "notes") return card(
     <>
-      <div style={{ fontSize: 17, fontWeight: 700, color: P.ink, marginBottom: 12 }}>Reflection on Ayah</div>
+      <div style={{ fontSize: 25, fontWeight: 700, color: P.ink, marginBottom: 12 }}>Reflection on Ayah</div>
       {["Think", "Reflect", "Write…"].map((t) => (
-        <div key={t} style={{ fontSize: 14.5, color: P.ink2, marginBottom: 7 }}>• {t}</div>
+        <div key={t} style={{ fontSize: 21, color: P.ink2, marginBottom: 10 }}>• {t}</div>
       ))}
     </>
   );
   if (kind === "quran") return card(
     <div style={{ fontFamily: SERIF, direction: "rtl", textAlign: "right", lineHeight: 2.1 }}>
       {["بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ", "ٱلْحَمْدُ لِلَّهِ رَبِّ ٱلْعَـٰلَمِينَ", "ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ"].map((t, i) => (
-        <div key={i} style={{ fontSize: 16, color: P.ink, marginBottom: 4 }}>
-          <span style={{ fontSize: 11, color: P.grey2 }}>۝{i + 1} </span>{t}
+        <div key={i} style={{ fontSize: 22, color: P.ink, marginBottom: 6 }}>
+          <span style={{ fontSize: 15, color: P.grey2 }}>۝{i + 1} </span>{t}
         </div>
       ))}
     </div>
@@ -93,9 +93,9 @@ export const AppCard: React.FC<{ kind: string; label: string; w?: number }> = ({
         borderRadius: 999, padding: "8px 13px", marginBottom: 12,
       }}>
         <span style={{ color: P.grey2, fontSize: 13 }}>⌕</span>
-        <span style={{ fontSize: 14, color: P.ink2 }}>tafsir of al-fatiha</span>
+        <span style={{ fontSize: 20, color: P.ink2 }}>tafsir of al-fatiha</span>
       </div>
-      <div style={{ display: "flex", gap: 14, marginBottom: 14, fontSize: 12.5 }}>
+      <div style={{ display: "flex", gap: 18, marginBottom: 18, fontSize: 18 }}>
         {["All", "Images", "Videos", "News", "Books"].map((t, i) => (
           <span key={t} style={{
             color: i === 0 ? P.ink : P.grey, fontWeight: i === 0 ? 600 : 500,
@@ -104,16 +104,16 @@ export const AppCard: React.FC<{ kind: string; label: string; w?: number }> = ({
         ))}
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        <div style={{ height: 6, borderRadius: 4, background: "#C9CFF0", width: "58%" }} />
+        <div style={{ height: 9, borderRadius: 5, background: "#C9CFF0", width: "58%" }} />
         <Line w="88%" dim /><Line w="72%" dim />
       </div>
     </>
   );
   if (kind === "pdf") return card(
     <>
-      <div style={{ fontSize: 17, fontWeight: 700, color: P.ink, marginBottom: 6 }}>Tafsir Ibn Kathir</div>
-      <div style={{ fontSize: 14, color: P.grey, marginBottom: 10 }}>Al-Fatihah</div>
-      <div style={{ fontSize: 14.5, color: P.ink2, marginBottom: 12 }}>1. Introduction</div>
+      <div style={{ fontSize: 25, fontWeight: 700, color: P.ink, marginBottom: 6 }}>Tafsir Ibn Kathir</div>
+      <div style={{ fontSize: 20, color: P.grey, marginBottom: 14 }}>Al-Fatihah</div>
+      <div style={{ fontSize: 21, color: P.ink2, marginBottom: 16 }}>1. Introduction</div>
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {["92%", "84%", "88%", "66%"].map((w, i) => <Line key={i} w={w} dim />)}
       </div>
@@ -121,17 +121,17 @@ export const AppCard: React.FC<{ kind: string; label: string; w?: number }> = ({
   );
   if (kind === "onenote") return card(
     <>
-      <div style={{ fontSize: 17, fontWeight: 700, color: P.ink, marginBottom: 12 }}>Al-Fatihah – Study</div>
+      <div style={{ fontSize: 25, fontWeight: 700, color: P.ink, marginBottom: 12 }}>Al-Fatihah – Study</div>
       {["Word meanings", "Themes", "Reflections", "Connections"].map((t) => (
-        <div key={t} style={{ fontSize: 14.5, color: P.ink2, marginBottom: 7 }}>• {t}</div>
+        <div key={t} style={{ fontSize: 21, color: P.ink2, marginBottom: 10 }}>• {t}</div>
       ))}
     </>
   );
   if (kind === "notion") return card(
     <>
-      <div style={{ fontSize: 17, fontWeight: 700, color: P.ink, marginBottom: 12 }}>Qur’an Study Hub</div>
+      <div style={{ fontSize: 25, fontWeight: 700, color: P.ink, marginBottom: 12 }}>Qur’an Study Hub</div>
       {["Surahs", "Themes", "Notes", "Resources"].map((t) => (
-        <div key={t} style={{ fontSize: 14.5, color: P.grey, marginBottom: 8 }}>
+        <div key={t} style={{ fontSize: 21, color: P.grey, marginBottom: 12 }}>
           <span style={{ color: P.grey2, marginRight: 8 }}>›</span>{t}
         </div>
       ))}
