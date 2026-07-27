@@ -91,14 +91,23 @@ export const AppShell: React.FC<{
   drawer?: React.ReactNode;
   /** 0→1 drawer slide */
   drawerOpen?: number;
-}> = ({ mode, crumb = ["Study Group", "Al-Fatihah", "A"], children, sidebar = 1, drawer, drawerOpen = 0 }) => {
+  /** 0→1 turns the whole panel edge-on and away. The transform lives on THIS
+   *  element rather than a wrapper: an extra wrapper flattens the 3D context
+   *  set up by the camera, so the rotation renders as a flat fade. */
+  flip?: number;
+}> = ({ mode, crumb = ["Study Group", "Al-Fatihah", "A"], children, sidebar = 1, drawer, drawerOpen = 0, flip = 0 }) => {
   const sideW = 268 * sidebar;
   return (
     <div style={{
-      width: APP_W, height: APP_H, background: P.page,
-      border: `1px solid ${P.line}`, borderRadius: 12, overflow: "hidden",
+      width: APP_W, height: APP_H,
+      background: flip > 0.01 ? "transparent" : P.page,
+      border: `1px solid ${flip > 0.01 ? "transparent" : P.line}`,
+      borderRadius: 12, overflow: "hidden",
       display: "flex", fontFamily: FONT.sans, position: "relative",
-      boxShadow: "0 30px 90px rgba(20,20,20,0.09), 0 6px 20px rgba(20,20,20,0.05)",
+      boxShadow: flip > 0.01 ? "none" : "0 30px 90px rgba(20,20,20,0.09), 0 6px 20px rgba(20,20,20,0.05)",
+      transform: `perspective(2200px) rotateY(${-flip * 94}deg)`,
+      transformOrigin: "50% 50%",
+      backfaceVisibility: "hidden",
     }}>
       {/* icon rail */}
       <div style={{

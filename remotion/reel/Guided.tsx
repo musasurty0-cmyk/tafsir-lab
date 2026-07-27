@@ -81,7 +81,7 @@ const CAM: Pose[] = [
   { f: s(40.60), x: wx(1010), y: wy(551), scale: 1.50 },
   { f: s(43.40), x: wx(900),  y: wy(700), scale: 0.94 },
   { f: s(45.00), x: wx(900),  y: wy(700), scale: 0.94 },
-  // Back out to the whole workspace, which then dissolves to white.
+  // Back out to the whole workspace, which then turns edge-on and away.
   { f: s(46.80), x: 0, y: 0, scale: 0.60, ease: EASE_OUT },
   { f: s(49.20), x: 0, y: 0, scale: 0.60 },
 ];
@@ -169,6 +169,11 @@ export const Guided: React.FC = () => {
   const establish = pulse(frame, s(13.20), s(14.10), s(15.60), s(16.80));
 
 
+  /* The workspace turns edge-on and is gone; the closing lines land on the
+     white it leaves behind. backface-visibility removes it past 90deg, so no
+     fade is needed to hide it. */
+  const flip = ramp(frame, s(47.10), s(48.40), EASE_SOFT);
+
   /* Guides */
   const g1 = pulse(frame, s(15.00), s(15.60), s(17.20), s(17.70));    // Study every ayah.
   const g2 = pulse(frame, s(19.60), s(20.20), s(21.60), s(22.10));  // Write what you understand.
@@ -177,7 +182,7 @@ export const Guided: React.FC = () => {
   const g5 = pulse(frame, s(43.00), s(43.60), s(45.20), s(45.70));  // Understand every word.
 
   /* Ending */
-  const worldOut = 1 - ramp(frame, s(47.90), s(48.25), EASE_SOFT);
+  const worldOut = 1 - ramp(frame, s(48.30), s(48.55), EASE_SOFT);
   const evr = pulse(frame, s(48.60), s(49.20), s(50.60), s(51.00));
   const one = pulse(frame, s(49.40), s(50.00), s(50.60), s(51.00));
   const logoIn = ramp(frame, s(51.30), s(52.00), EASE_OUT);
@@ -300,7 +305,8 @@ export const Guided: React.FC = () => {
 
           {/* ── The application ── */}
           <At x={0} y={0} z={30} opacity={appIn}
-              scale={interpolate(appIn, [0, 1], [0.9, 1])}>
+              scale={interpolate(appIn, [0, 1], [0.9, 1])}
+              origin="50% 50%">
             <div style={{
               transform: `perspective(3200px) rotateX(${establish * 7}deg) rotateY(${establish * -9}deg)`,
               borderRadius: 18 + establish * 8,
@@ -314,6 +320,7 @@ export const Guided: React.FC = () => {
               mode={mode}
               sidebar={sidebar}
               crumb={["Study Group", "Al-Fatihah", "A"]}
+              flip={flip}
               drawerOpen={drawer * drawerClose}
               drawer={<TafsirDrawerReal lang={tLang} tab={tTab} />}
             >
