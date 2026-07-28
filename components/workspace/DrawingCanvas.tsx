@@ -54,6 +54,10 @@ import {
 
 export type DrawTool = "hand" | "pen" | "highlight" | "arrow" | "eraser" | "text";
 
+/** How long erased ink takes to fade out. Short enough that erasing still
+ *  feels instant, long enough to read as a disappearance rather than a blink. */
+const ERASE_FADE_MS = 180;
+
 export interface DrawingCanvasHandle {
   undo:  () => void;
   redo:  () => void;
@@ -145,6 +149,16 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
 
   const anchorRef = useRef<string | null>(activeAnchor);
   useEffect(() => { anchorRef.current = activeAnchor; }, [activeAnchor]);
+
+  /* ── Eraser ────────────────────────────────────────────────────────────
+     lastErasePtRef: the previous sample, so a fast drag erases along the
+     whole segment instead of only at the points a pointer event happened to
+     land on — that sampling gap is what made erasing feel dotted.
+     fadingRef: strokes already removed from the data model but still painted
+     for a moment, fading out. Purely visual: persistence, undo and the
+     collaboration broadcast all treat them as gone immediately. */
+  const lastErasePtRef = useRef<{ x: number; y: number } | null>(null);
+  const fadingRef      = useRef<{ stroke: Stroke; t0: number }[]>([]);
 
   // Adjustable eraser size (screen px) — ref so native handlers stay fresh
   const eraserRadiusRef = useRef(eraserRadius);
@@ -354,6 +368,21 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     for (const s of myStrokesRef.current) {
       if (s.tool !== "highlight") paintStroke(ctx, s);
     }
+    /* Erased ink on its way out. Alpha only — the geometry is untouched, so
+       nothing appears to move or shrink oddly, and a stroke that is half
+       faded still sits exactly where it was drawn. */
+    if (fadingRef.current.length > 0) {
+      const now = performance.now();
+      for (const f of fadingRef.current) {
+        const p = Math.min(1, (now - f.t0) / ERASE_FADE_MS);
+        const a = 1 - p * p;                     // ease-out: quick, then gentle
+        if (a <= 0) continue;
+        ctx.globalAlpha = a * (f.stroke.tool === "highlight" ? TOOL_OPACITY.highlight : 1);
+        paintStroke(ctx, f.stroke);
+      }
+      ctx.globalAlpha = 1;
+    }
+
     if (
       isDrawingRef.current &&
       activeToolRef.current !== "highlight" &&
@@ -400,6 +429,26 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     cancelAnimationFrame(rafRef.current);
     rafRef.current = requestAnimationFrame(render);
   }, [render]);
+
+  /* Drives repaints while any erased stroke is still fading, then stops. Runs
+     only for the length of a fade, so an idle canvas costs nothing. */
+  const fadeRafRef = useRef<number>(0);
+  const startFadeLoop = useCallback(() => {
+    if (fadeRafRef.current) return;             // already running
+    const tick = () => {
+      const now = performance.now();
+      fadingRef.current = fadingRef.current.filter(f => now - f.t0 < ERASE_FADE_MS);
+      render();
+      if (fadingRef.current.length > 0) {
+        fadeRafRef.current = requestAnimationFrame(tick);
+      } else {
+        fadeRafRef.current = 0;
+        render();                               // final clean frame
+      }
+    };
+    fadeRafRef.current = requestAnimationFrame(tick);
+  }, [render]);
+  useEffect(() => () => { if (fadeRafRef.current) cancelAnimationFrame(fadeRafRef.current); }, []);
 
   // Re-render when committed strokes, viewport, mushafPage, or other layers change
   useEffect(() => { scheduleRender(); }, [viewport, myStrokes, otherLayers, mushafPage, scheduleRender]);
@@ -819,7 +868,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
       // direct prop call would use the mount-time callback and anchor the
       // box to the wrong (no-layer) state.
       if (eff === "text") { parent!.dataset.penActive = ""; onTextPlaceRef.current?.(wx, wy); return; }
-      if (eff === "eraser") { penErasingRef.current = true; eraseAt(wx, wy); return; }
+      if (eff === "eraser") { penErasingRef.current = true; lastErasePtRef.current = null; eraseStroke(wx, wy); return; }
 
       try { parent!.setPointerCapture(e.pointerId); } catch { /* ok */ }
       isDrawingRef.current   = true;
@@ -838,7 +887,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
         // penErasingRef, not e.buttons — iPadOS reports buttons:0 on Pencil
         // moves even while pressed, which left the stylus eraser dead.
         if (penErasingRef.current || (e.buttons & 1) || e.pressure > 0) {
-          const [wx, wy] = toWorld(e.clientX, e.clientY); eraseAt(wx, wy);
+          const [wx, wy] = toWorld(e.clientX, e.clientY); eraseStroke(wx, wy);
         }
         return;
       }
@@ -910,14 +959,47 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     if (eraserRingRef.current) eraserRingRef.current.style.opacity = "0";
   }
 
-  function eraseAt(wx: number, wy: number) {
+  /** Erase along the segment from the last sample to this one. Pointer events
+   *  arrive far apart during a quick drag, so testing only at each event
+   *  leaves untouched gaps between them. Stepping at half the eraser radius
+   *  guarantees the swept discs overlap. */
+  function eraseStroke(wx: number, wy: number) {
+    const r    = eraserRadiusRef.current / viewportRef.current.zoom;
+    const last = lastErasePtRef.current;
+    lastErasePtRef.current = { x: wx, y: wy };
+    if (!last) { eraseAt(wx, wy); return; }
+
+    const dx = wx - last.x, dy = wy - last.y;
+    const dist = Math.hypot(dx, dy);
+    const step = Math.max(r * 0.5, 1);
+    const n = Math.min(Math.ceil(dist / step), 64); // cap: never lock the frame
+
+    // Build the sample list first and test the whole segment in ONE pass.
+    // Calling eraseAt per step would re-filter every stroke up to 64 times
+    // per pointer event and commit state each time.
+    const pts: { x: number; y: number }[] = [];
+    for (let i = 1; i <= n; i++) {
+      pts.push({ x: last.x + (dx * i) / n, y: last.y + (dy * i) / n });
+    }
+    eraseAtMany(pts);
+  }
+
+  function eraseAt(wx: number, wy: number) { eraseAtMany([{ x: wx, y: wy }]); }
+
+  function eraseAtMany(samples: { x: number; y: number }[]) {
+    if (samples.length === 0) return;
     const r    = eraserRadiusRef.current / viewportRef.current.zoom;
     const prev = myStrokesRef.current;
     // prev is already scoped to OWN strokes, this page, this surface, and the
     // ACTIVE annotation layer — so the eraser can only ever touch the user's
     // own visible pen/highlight/arrow strokes, nothing else.
     const removedIds = new Set(
-      prev.filter(s => hitTest(normPts(s.points as unknown[]), wx, wy, r)).map(s => s.id),
+      prev
+        .filter(s => {
+          const pts = normPts(s.points as unknown[]);
+          return samples.some(p => hitTest(pts, p.x, p.y, r));
+        })
+        .map(s => s.id),
     );
     if (removedIds.size === 0) return;
     for (const id of removedIds) tombstonesRef.current.add(id);
@@ -925,6 +1007,14 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     // Remove STRICTLY BY ID. The previous survive-by-visibility sync dropped
     // every same-page stroke hidden in other word/ayah layers — erasing on
     // the main Mushaf silently destroyed all embedded annotation layers.
+    // Hand the removed strokes to the fade buffer before dropping them, so
+    // the ink contracts away instead of blinking out.
+    const now = performance.now();
+    for (const st of prev) {
+      if (removedIds.has(st.id)) fadingRef.current.push({ stroke: st, t0: now });
+    }
+    startFadeLoop();
+
     const next = prev.filter(s => !removedIds.has(s.id));
     allMyStrokesRef.current = allMyStrokesRef.current.filter(s => !removedIds.has(s.id));
     redoStackRef.current = [];
@@ -948,7 +1038,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
 
     const [wx, wy] = toWorld(e.clientX, e.clientY);
     if (toolRef.current === "text")   { onTextPlace?.(wx, wy); return; }
-    if (toolRef.current === "eraser") { eraseAt(wx, wy); return; }
+    if (toolRef.current === "eraser") { lastErasePtRef.current = null; eraseStroke(wx, wy); return; }
 
     // Mouse-only path now (touch + pen return earlier) — neutral pressure.
     isDrawingRef.current   = true;
@@ -973,7 +1063,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     const events = list && list.length ? list : [e.nativeEvent];
     for (const ev of events) {
       const [wx, wy] = toWorld(ev.clientX, ev.clientY);
-      if (toolRef.current === "eraser") { if (e.buttons & 1) eraseAt(wx, wy); continue; }
+      if (toolRef.current === "eraser") { if (e.buttons & 1) eraseStroke(wx, wy); continue; }
       const pressure = ev.pointerType === "pen" ? Math.max(0.1, ev.pressure) : 0.5;
       activePtsRef.current.push([wx, wy, pressure]);
     }
@@ -1071,7 +1161,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     if (e.pointerType === "pen")   return; // native capture handlers own the pen
     e.preventDefault();
     if (!isDrawingRef.current) return;
-    if (toolRef.current === "eraser") { isDrawingRef.current = false; activePtsRef.current = []; return; }
+    if (toolRef.current === "eraser") { isDrawingRef.current = false; activePtsRef.current = []; lastErasePtRef.current = null; return; }
     appendFinalPoint(e.clientX, e.clientY);
     commitActiveStroke();
   }
