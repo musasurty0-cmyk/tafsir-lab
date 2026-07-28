@@ -15,9 +15,13 @@ import { useRouter } from "next/navigation";
 
 interface Props {
   onClose: () => void;
+  /** Viewport centre of the control that opened this, so the card can grow
+   *  from there instead of arriving from nowhere. Optional — without it the
+   *  card simply scales from its own centre. */
+  originPoint?: { x: number; y: number } | null;
 }
 
-export default function NewWorkspaceModal({ onClose }: Props) {
+export default function NewWorkspaceModal({ onClose, originPoint }: Props) {
   const router   = useRouter();
   const t        = useT();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -28,9 +32,20 @@ export default function NewWorkspaceModal({ onClose }: Props) {
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState<string | null>(null);
 
-  // Auto-focus name input; Escape closes.
+  /* Focus lands after the entrance settles. Focusing on the very first frame
+     scrolls the field into place mid-animation on tablets and fights the
+     transform; 180ms in, the card has arrived but the user has not yet
+     started typing. preventScroll stops any residual jump. */
   useEffect(() => {
-    inputRef.current?.focus();
+    const t = window.setTimeout(
+      () => inputRef.current?.focus({ preventScroll: true }),
+      180,
+    );
+    return () => window.clearTimeout(t);
+  }, []);
+
+  // Escape closes.
+  useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
     }
@@ -71,7 +86,19 @@ export default function NewWorkspaceModal({ onClose }: Props) {
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="modal-card"
+        onClick={(e) => e.stopPropagation()}
+        style={
+          originPoint
+            ? ({
+                "--modal-origin-x": `${originPoint.x}px`,
+                "--modal-origin-y": `${originPoint.y}px`,
+              } as React.CSSProperties)
+            : undefined
+        }
+        data-from-origin={originPoint ? "true" : "false"}
+      >
         <h2 className="modal-title">{t("modal.newWorkspace")}</h2>
 
         <form onSubmit={handleSubmit}>

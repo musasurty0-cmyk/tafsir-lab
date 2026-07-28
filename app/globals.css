@@ -5181,6 +5181,42 @@ input, textarea { font: inherit; color: inherit; }
   overflow-y: auto;                 /* never clip a tall modal on tablet/phone */
 }
 .modal-card { margin: auto 0; max-height: none; }
+
+/* ── "+ New" creation flow entrance ──────────────────────────────────────
+   The panel used to appear on the same frame as the click — a full-screen
+   flash with no sense of where it came from. The backdrop now fades and the
+   card grows out of the control that opened it: --modal-origin-x/y are set
+   inline from that button's rect, so transform-origin points back at it and
+   the scale reads as the panel unfolding from the press.
+   Short enough that it never feels like waiting. */
+.modal-backdrop { animation: modal-backdrop-in 160ms var(--ease-out) both; }
+@keyframes modal-backdrop-in { from { opacity: 0; } to { opacity: 1; } }
+
+.modal-card {
+  animation: modal-card-in 220ms var(--ease-out) both;
+  transform-origin: center center;
+}
+.modal-card[data-from-origin="true"] {
+  /* Origin is viewport-relative; the card is inside a fixed backdrop that
+     also spans the viewport, so the coordinates line up directly. */
+  transform-origin: var(--modal-origin-x) var(--modal-origin-y);
+}
+@keyframes modal-card-in {
+  from { opacity: 0; transform: scale(0.94); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* Immediate feedback on press — before any of the above runs. */
+.hw-ws-new-btn { transition: transform 90ms var(--ease-out), background var(--dur-hover) var(--ease-soft); }
+.hw-ws-new-btn:active { transform: scale(0.96); }
+
+@media (prefers-reduced-motion: reduce) {
+  /* Still a state change, not a flash: the backdrop fades, the card does not
+     travel or scale. */
+  .modal-card { animation: modal-card-fade 120ms var(--ease-out) both; }
+  @keyframes modal-card-fade { from { opacity: 0; } to { opacity: 1; } }
+  .hw-ws-new-btn:active { transform: none; }
+}
 .modal-card {
   background: var(--bg-elev);
   border: 1px solid var(--line);

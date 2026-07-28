@@ -400,6 +400,8 @@ export default function HomeClient({
   const router = useRouter();
   const [workspaces,   setWorkspaces]   = useState(initial);
   const [modalOpen,    setModalOpen]    = useState(false);
+  /** Where the "+ New" press happened, so the panel grows from it. */
+  const [modalOrigin,  setModalOrigin]  = useState<{ x: number; y: number } | null>(null);
   const [joinOpen,     setJoinOpen]     = useState(false);
   const [tutKey,       setTutKey]       = useState(0);
   const [isNavigating, setIsNavigating] = useState(false);
@@ -520,7 +522,16 @@ export default function HomeClient({
         <section className="hw-ws-section">
           <div className="hw-ws-header">
             <h2 className="hw-ws-title">Your workspaces</h2>
-            <button className="hw-ws-new-btn" onClick={() => setModalOpen(true)}>
+            <button
+              className="hw-ws-new-btn"
+              onClick={(e) => {
+                // Remember where the press happened so the panel can grow
+                // out of this control rather than appearing from nowhere.
+                const r = e.currentTarget.getBoundingClientRect();
+                setModalOrigin({ x: r.left + r.width / 2, y: r.top + r.height / 2 });
+                setModalOpen(true);
+              }}
+            >
               + New
             </button>
           </div>
@@ -565,7 +576,12 @@ export default function HomeClient({
       <TutorialOverlay key={tutKey} />
       <TourBubble />
 
-      {modalOpen && <NewWorkspaceModal onClose={() => setModalOpen(false)} />}
+      {modalOpen && (
+        <NewWorkspaceModal
+          originPoint={modalOrigin}
+          onClose={() => { setModalOpen(false); setModalOrigin(null); }}
+        />
+      )}
       {joinOpen && (
         <JoinWorkspaceModal
           onClose={() => {
