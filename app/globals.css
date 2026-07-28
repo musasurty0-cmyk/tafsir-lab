@@ -7392,30 +7392,24 @@ input, textarea { font: inherit; color: inherit; }
   /* Keep collaborator labels visible (no fade) when motion is reduced */
   .collaboration-cursor__label { animation: none !important; opacity: 1 !important; }
 
-  /* Blanket kill for everything not handled explicitly below. This suppresses
-     travel, parallax and scale — the things the preference is actually about. */
-  * { transition-duration: 0.01ms !important; }
-
-  /* …but a panel that teleports in is disorienting in its own right, which is
-     the opposite of what the preference asks for. Surfaces that ENTER the
-     screen keep a short opacity fade — no travel, no scale — so they still
-     read as arriving. Class selectors outrank the `*` rule above, so these
-     need !important to win back a real duration. */
+  /* NO blanket `* { transition-duration: 0.01ms }` here.
+     That rule killed every transition in the app — colour fades, opacity,
+     hover states — and left the UI snapping between states, which is harsher
+     than the motion it replaced and is not what this preference asks for.
+     Reduced motion means suppress TRAVEL: movement across the screen,
+     parallax, scale and spin. Colour and opacity stay.
+     Anything that genuinely travels is neutralised explicitly below. */
+  /* NOTE: .mode-b-inner is deliberately absent — its transform IS the
+     viewport (pan and zoom), not decoration. Neutralising it would snap the
+     canvas back to the origin. */
   .drawer-overlay,
-  .study-layer, .study-rail-wrap, .study-bar {
-    transition-property: opacity !important;
-    transition-duration: 120ms !important;
-    transition-delay: 0ms !important;
+  .study-rail-wrap, .study-bar {
+    transform: none !important;
   }
-  /* A colour cross-fade involves no movement at all, so it is not what this
-     preference is guarding against — and an instant colour flip under the
-     cursor is harsher than the fade it replaces. Kept at full duration. */
-  .qcf-word {
-    transition-property: background-color !important;
-    transition-duration: 180ms !important;
+  .anchored-note-card, .free-textbox, .slash-palette,
+  .et-popover, .ctr-popover, .study-layer {
+    animation-name: none !important;
   }
-  .qcf-word:hover  { transition-duration: 120ms !important; }
-  .qcf-word:active { transition-duration:  60ms !important; }
 
   /* No travel: the drawer is simply present or not. */
   .drawer-overlay                    { transform: none !important; opacity: 0; }

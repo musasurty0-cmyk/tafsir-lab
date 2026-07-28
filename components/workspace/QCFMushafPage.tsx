@@ -22,7 +22,7 @@
  *   Never render code_v2 before the matching font file is confirmed loaded.
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import type { QCFVerse, Chapter } from "@/lib/types";
 
 // ── Font loading ────────────────────────────────────────────────────────────
@@ -123,7 +123,7 @@ function Skeleton({ cardRef }: { cardRef: React.RefObject<HTMLDivElement | null>
 
 // ── Component ───────────────────────────────────────────────────────────────
 
-export default function QCFMushafPage({
+function QCFMushafPage({
   verses, pageNumber, chapter, loading = false,
   cardRef, onRegisterAyahRef, onRegisterWordRef, onOpenFocus,
   notedWordColors,
@@ -175,40 +175,46 @@ export default function QCFMushafPage({
   }, [pageNumber, verses, retryCount]);
 
   // ── Build line map ────────────────────────────────────────────────────────
+  // Memoised on the data it derives from. This allocates a Map plus one
+  // object per word — several hundred per page — and it used to run on EVERY
+  // render, including every frame of a zoom gesture, where none of its inputs
+  // had changed.
+  const { sortedLines, showHeader } = useMemo(() => {
+    const lineMap = new Map<number, WordEntry[]>();
+    let lineCounter = 0;
 
-  const lineMap = new Map<number, WordEntry[]>();
-  let lineCounter = 0;
+    for (const verse of verses) {
+      let firstInVerse = true;
+      for (const word of verse.words) {
+        const lineKey = (word.line_number != null)
+          ? word.line_number
+          : --lineCounter;
 
-  for (const verse of verses) {
-    let firstInVerse = true;
-    for (const word of verse.words) {
-      const lineKey = (word.line_number != null)
-        ? word.line_number
-        : --lineCounter;
-
-      if (!lineMap.has(lineKey)) lineMap.set(lineKey, []);
-      lineMap.get(lineKey)!.push({
-        id:             word.id,
-        position:       word.position,
-        v2_page:        word.v2_page ?? pageNumber,
-        code_v2:        word.code_v2 ?? "",
-        text_qpc_hafs:  word.text_qpc_hafs ?? "",
-        char_type_name: word.char_type_name,
-        translation:    word.translation,
-        verseKey:       verse.verse_key,
-        ayahNum:        verse.verse_number,
-        isFirstInVerse: firstInVerse,
-      });
-      firstInVerse = false;
+        if (!lineMap.has(lineKey)) lineMap.set(lineKey, []);
+        lineMap.get(lineKey)!.push({
+          id:             word.id,
+          position:       word.position,
+          v2_page:        word.v2_page ?? pageNumber,
+          code_v2:        word.code_v2 ?? "",
+          text_qpc_hafs:  word.text_qpc_hafs ?? "",
+          char_type_name: word.char_type_name,
+          translation:    word.translation,
+          verseKey:       verse.verse_key,
+          ayahNum:        verse.verse_number,
+          isFirstInVerse: firstInVerse,
+        });
+        firstInVerse = false;
+      }
     }
-  }
 
-  const sortedLines = [...lineMap.entries()].sort(([a], [b]) => a - b);
-
-  const showHeader = verses.some((v) => {
-    const [sId, vNum] = v.verse_key.split(":").map(Number);
-    return sId === chapter.id && vNum === 1;
-  });
+    return {
+      sortedLines: [...lineMap.entries()].sort(([a], [b]) => a - b),
+      showHeader: verses.some((v) => {
+        const [sId, vNum] = v.verse_key.split(":").map(Number);
+        return sId === chapter.id && vNum === 1;
+      }),
+    };
+  }, [verses, pageNumber, chapter.id]);
 
   // ── Gate 1: data still loading ────────────────────────────────────────────
   if (loading) {
@@ -393,3 +399,10 @@ export default function QCFMushafPage({
     </div>
   );
 }
+
+/* Memoised. The parent re-renders on every viewport change — i.e. every frame
+   of a pan or zoom — and without this the whole glyph tree (several hundred
+   spans) reconciled each time, which is what made zooming lag. Every prop
+   passed from ModeBPage is already stable (useCallback / useMemo), so the
+   default shallow comparison holds. */
+export default memo(QCFMushafPage);
