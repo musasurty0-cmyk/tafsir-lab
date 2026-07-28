@@ -2063,17 +2063,18 @@ input, textarea { font: inherit; color: inherit; }
 .drawing-canvas-wrap { animation: study-ink-in 320ms var(--ease-out) both; }
 @keyframes study-ink-in { from { opacity: 0; } to { opacity: 1; } }
 
-/* Study Mode bar — top centre, clear of the mode tabs above it. */
+/* Study Mode bar — top RIGHT. Top centre is the page navigator's slot; the
+   two overlapped, and this one covered it. */
 .study-bar {
-  position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
+  position: absolute; top: 14px; right: 20px;
   display: flex; align-items: center; gap: 14px;
-  padding: 7px 8px 7px 16px; z-index: 30;
+  padding: 7px 8px 7px 16px; z-index: 31;
   background: var(--bg-elev); border: 1px solid var(--line-strong);
   border-radius: 999px; box-shadow: var(--shadow-md);
   font-size: 13px; color: var(--ink-2);
 }
-.study-bar[data-visible="false"] { transform: translateX(-50%) translateY(-8px); }
-.study-bar[data-visible="true"]  { transform: translateX(-50%); }
+.study-bar[data-visible="false"] { transform: translateY(-8px); }
+.study-bar[data-visible="true"]  { transform: none; }
 .study-bar-surah { color: var(--ink-4); }
 .study-bar-done {
   appearance: none; border: 0; cursor: pointer;
@@ -2120,6 +2121,10 @@ input, textarea { font: inherit; color: inherit; }
      shifted the whole book off-screen when zooming out. */
   transform-origin: 0 0;
 }
+/* Set only for the duration of a zoom gesture (see ModeBPage). Held
+   permanently it would keep the Mushaf rasterized at one scale and the
+   glyphs would go soft; held for the gesture it just stops the judder. */
+.mode-b-inner[data-zooming="true"] { will-change: transform; }
 
 /* ── Zoom controls HUD ── */
 .mode-b-zoom-controls {
@@ -2131,7 +2136,7 @@ input, textarea { font: inherit; color: inherit; }
   border-radius: var(--radius);
   box-shadow: var(--shadow-md);
   padding: 2px;
-  z-index: 10;
+  z-index: 30;            /* above .drawing-canvas-wrap (20) */
 }
 .mode-b-zoom-btn {
   width: 28px; height: 28px;
@@ -2662,7 +2667,7 @@ input, textarea { font: inherit; color: inherit; }
   border: 1px solid rgba(0,0,0,0.12);
   border-radius: 999px;
   padding: 3px 5px;
-  z-index: 10;
+  z-index: 30;            /* above .drawing-canvas-wrap (20) */
   box-shadow: 0 2px 8px rgba(0,0,0,0.10);
   pointer-events: all;
   user-select: none;
@@ -2882,12 +2887,23 @@ input, textarea { font: inherit; color: inherit; }
 
 .qcf-word {
   cursor:     pointer;
-  transition: background 80ms ease;
+  border-radius: 4px;
+  /* 80ms with a linear-ish ease still reads as a hard flash at this size.
+     Longer, eased, and asymmetric: the wash arrives gently and leaves a
+     little slower still, so sweeping across a line does not strobe. */
+  transition: background-color 180ms var(--ease-out);
+  background-color: rgba(255, 208, 80, 0);
 }
 
-/* Amber word highlight — no layout shift */
-.qcf-word:hover  { background: rgba(255, 208, 80, 0.32); }
-.qcf-word:active { background: rgba(255, 185, 40, 0.50); }
+/* Amber word highlight — colour only, so nothing reflows */
+.qcf-word:hover  {
+  background-color: rgba(255, 208, 80, 0.30);
+  transition-duration: 120ms;
+}
+.qcf-word:active {
+  background-color: rgba(255, 185, 40, 0.50);
+  transition-duration: 60ms;
+}
 
 /* Persistent note indicator — soft translucent highlight only (colour comes
    inline from the rotating palette). NO borders, NO box-shadows: hard edges
@@ -3406,7 +3422,10 @@ input, textarea { font: inherit; color: inherit; }
 .drawing-canvas-wrap {
   position: absolute;
   inset: 0;
-  z-index: 20;            /* above mode-b-inner (z-index auto), below HUDs */
+  /* Above mode-b-inner (z-index auto) but BELOW the HUDs, which sit at 30.
+     This said "below HUDs" while the HUDs were at 10, so the ink surface
+     covered the zoom and page controls the moment it was mounted. */
+  z-index: 20;
   -webkit-touch-callout: none;
   -webkit-user-select: none;
   user-select: none;

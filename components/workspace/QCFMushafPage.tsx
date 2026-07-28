@@ -308,11 +308,12 @@ export default function QCFMushafPage({
           }
 
           const renderGlyph = (word: WordEntry) => {
-            // Reading Mode: nothing on the page is a target. Treating every
-            // glyph as plain text (no role, no tabIndex, no handlers) is what
-            // makes the page feel like a Mushaf instead of a UI.
-            const isWord  = studyMode && word.char_type_name === "word";
-            const isEnd   = studyMode && word.char_type_name === "end";
+            // Words and ayah markers stay tappable in BOTH modes — tapping one
+            // is how you reach its notes, and requiring a trip through the
+            // surah menu first only adds a step. Reading Mode differs in what
+            // is *shown* (no rail, no ink, no cards), not in what is reachable.
+            const isWord  = word.char_type_name === "word";
+            const isEnd   = word.char_type_name === "end";
             const wordKey = `${word.ayahNum}:${word.position}`;
             // Word-level note colour sits on top of any ayah run wash.
             const noted = isWord ? notedWordColors?.get(wordKey) : undefined;

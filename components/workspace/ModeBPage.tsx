@@ -271,6 +271,12 @@ export default function ModeBPage({
   const [cameraAnim, setCameraAnim] = useState(false);
 
   const openFocus = useCallback((verseKey: string, wordPos: number | null) => {
+    // Tapping a word from Reading Mode is a request to study it, so bring the
+    // workspace up with it rather than opening a note into a hidden layer.
+    setStudyMode((on) => {
+      if (!on) requestAnimationFrame(() => requestAnimationFrame(() => setStudyVisible(true)));
+      return true;
+    });
     // INTERACTION LOCK: while a layer is open, every other word/ayah tap is
     // ignored — exit is only through Done.
     setFocusAnchor((cur) => {
@@ -720,6 +726,22 @@ export default function ModeBPage({
       patchViewport(next);
     }
 
+    /* Layer promotion, but only while the gesture is running. .qcf-page
+       deliberately avoids will-change so glyphs re-render at native
+       resolution — correct at rest, but it means every zoom frame
+       re-rasterizes the whole page, which is what makes the gesture judder.
+       Promoting for the duration and dropping it on idle buys smooth motion
+       without leaving the text rasterized at a stale scale. */
+    let idle = 0;
+    function markZooming() {
+      innerRef.current?.setAttribute("data-zooming", "true");
+      window.clearTimeout(idle);
+      idle = window.setTimeout(
+        () => innerRef.current?.removeAttribute("data-zooming"),
+        200,
+      );
+    }
+
     function onWheel(e: WheelEvent) {
       if (focusAnchor) return;
       if (tool !== "hand") return; // don't zoom while a drawing tool is selected
@@ -745,6 +767,7 @@ export default function ModeBPage({
       const mx = e.clientX - rect.left, my = e.clientY - rect.top;
       const scale = newZoom / prev.zoom;
       pending = { zoom: newZoom, x: mx - (mx - prev.x) * scale, y: my - (my - prev.y) * scale };
+      markZooming();
       if (!raf) raf = requestAnimationFrame(flush);
     }
 
@@ -752,6 +775,8 @@ export default function ModeBPage({
     return () => {
       el.removeEventListener("wheel", onWheel);
       if (raf) cancelAnimationFrame(raf);
+      window.clearTimeout(idle);
+      innerRef.current?.removeAttribute("data-zooming");
     };
   }, [patchViewport, focusAnchor, tool]);
 
@@ -834,6 +859,8 @@ export default function ModeBPage({
         const { dist: bd, zoom: bz, worldX: wx, worldY: wy } = pinchStart;
         const newZoom = clamp(bz * (dist / bd), ZOOM_MIN, ZOOM_MAX);
         const next: CanvasViewport = { zoom: newZoom, x: cx - wx * newZoom, y: cy - wy * newZoom };
+        // Same layer promotion as the wheel path — pinch judders identically.
+        innerRef.current?.setAttribute("data-zooming", "true");
         setViewport(next); patchViewport(next);
       } else if (pts.size === 1 && panStart) {
         const [p] = pts.values();
@@ -865,7 +892,11 @@ export default function ModeBPage({
         }
       }
       for (const t of e.changedTouches) pts.delete(t.identifier);
-      if (pts.size < 2) { pinchStart = null; }
+      if (pts.size < 2) {
+        pinchStart = null;
+        // Drop the layer so the Mushaf re-rasterizes crisp at the new scale.
+        innerRef.current?.removeAttribute("data-zooming");
+      }
       if (pts.size === 1 && panStart === null) startPanFromPts();
       if (pts.size === 0) { panStart = null; el.removeAttribute("data-panning"); }
     }
