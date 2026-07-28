@@ -588,8 +588,10 @@ input, textarea { font: inherit; color: inherit; }
 /* Closed: no animation state left behind to flash on the next open. */
 .drawer-overlay[data-open="false"] > * { animation: none; }
 
+/* Reduced-motion handling for the drawer lives with the global block at the
+   end of this file, so the `*` transition-duration override is countered in
+   one place rather than fought from two. */
 @media (prefers-reduced-motion: reduce) {
-  .drawer-overlay { transition: none; }
   .drawer-overlay[data-open="true"] > * { animation: none; }
 }
 
@@ -7357,7 +7359,27 @@ input, textarea { font: inherit; color: inherit; }
   }
   /* Keep collaborator labels visible (no fade) when motion is reduced */
   .collaboration-cursor__label { animation: none !important; opacity: 1 !important; }
+
+  /* Blanket kill for everything not handled explicitly below. This suppresses
+     travel, parallax and scale — the things the preference is actually about. */
   * { transition-duration: 0.01ms !important; }
+
+  /* …but a panel that teleports in is disorienting in its own right, which is
+     the opposite of what the preference asks for. Surfaces that ENTER the
+     screen keep a short opacity fade — no travel, no scale — so they still
+     read as arriving. Class selectors outrank the `*` rule above, so these
+     need !important to win back a real duration. */
+  .drawer-overlay,
+  .study-layer, .study-rail-wrap, .study-bar {
+    transition-property: opacity !important;
+    transition-duration: 120ms !important;
+    transition-delay: 0ms !important;
+  }
+  /* No travel: the drawer is simply present or not. */
+  .drawer-overlay                    { transform: none !important; opacity: 0; }
+  .drawer-overlay[data-open="true"]  { opacity: 1; }
+  .study-rail-wrap[data-visible="false"],
+  .study-bar[data-visible="false"]   { transform: none !important; }
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
