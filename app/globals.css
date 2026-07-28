@@ -570,6 +570,29 @@ input, textarea { font: inherit; color: inherit; }
 }
 .drawer-overlay[data-open="true"] { transform: translateX(0); }
 
+/* The panel slid in but its contents arrived fully formed, which read as a
+   single hard snap. Each band now settles just behind the panel edge, so the
+   drawer reads as opening rather than as being swapped in. Delays are short
+   and additive — the last one lands before the slide finishes. */
+.drawer-overlay[data-open="true"] > * {
+  animation: drawer-band-in 260ms var(--ease-out) both;
+}
+.drawer-overlay[data-open="true"] > *:nth-child(1) { animation-delay:  60ms; }
+.drawer-overlay[data-open="true"] > *:nth-child(2) { animation-delay:  96ms; }
+.drawer-overlay[data-open="true"] > *:nth-child(3) { animation-delay: 128ms; }
+.drawer-overlay[data-open="true"] > *:nth-child(n+4) { animation-delay: 156ms; }
+@keyframes drawer-band-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+/* Closed: no animation state left behind to flash on the next open. */
+.drawer-overlay[data-open="false"] > * { animation: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .drawer-overlay { transition: none; }
+  .drawer-overlay[data-open="true"] > * { animation: none; }
+}
+
 /* Header */
 .drawer-head {
   padding: 12px 16px; border-bottom: 1px solid var(--line);
@@ -1994,7 +2017,14 @@ input, textarea { font: inherit; color: inherit; }
    containing block identical to .mode-b-inner (which has no padding), so the
    absolutely positioned note cards and text boxes keep their exact
    coordinates. */
-.study-layer { position: absolute; inset: 0; }
+.study-layer {
+  position: absolute; inset: 0;
+  /* The layer covers the Mushaf, so it MUST be transparent to the pointer or
+     it swallows every word/ayah tap beneath it. Its own children opt back in
+     individually; the connector <svg> keeps pointer-events:none inline. */
+  pointer-events: none;
+}
+.study-layer > * { pointer-events: auto; }
 
 .study-layer,
 .study-rail-wrap,
@@ -2011,6 +2041,8 @@ input, textarea { font: inherit; color: inherit; }
   opacity: 0;
   pointer-events: none;
 }
+/* while fading out, the children must not stay clickable either */
+.study-layer[data-visible="false"] > * { pointer-events: none; }
 .study-layer[data-visible="true"],
 .study-rail-wrap[data-visible="true"],
 .study-bar[data-visible="true"] {

@@ -29,20 +29,22 @@ const plexMono = IBM_Plex_Mono({
    notes on the Mushaf read as annotations rather than typed text when they
    are set in a hand.
 
-   --font-hand is the DEFAULT "Handwriting" option: a rounded marker hand.
-   Comic Sans MS is the same genre but does not ship on iPadOS — the primary
-   drawing device here — so a webfont is used rather than a system stack. */
-const comicNeue = Comic_Neue({
-  subsets: ["latin"],
-  weight: ["400", "700"],
-  variable: "--font-hand",
-  display: "swap",
-});
-/* Joined script, as a second hand. */
+   --font-hand stays pointed at Caveat. Notes already saved carry the literal
+   string "var(--font-hand), ..." in their textStyle mark, so repointing this
+   variable silently restyles existing handwriting — the marker face gets its
+   own variable instead of taking this one over. */
 const caveat = Caveat({
   subsets: ["latin"],
   weight: ["400", "600"],
-  variable: "--font-script",
+  variable: "--font-hand",
+  display: "swap",
+});
+/* Rounded marker hand. Comic Sans MS is the face itself but does not ship on
+   iPadOS — the primary drawing device here — so Comic Neue backs it up. */
+const comicNeue = Comic_Neue({
+  subsets: ["latin"],
+  weight: ["400", "700"],
+  variable: "--font-marker",
   display: "swap",
 });
 const patrickHand = Patrick_Hand({
@@ -73,7 +75,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body
-        className={`${plex.variable} ${plexSerif.variable} ${plexMono.variable} ${comicNeue.variable} ${caveat.variable} ${patrickHand.variable}`}
+        className={`${plex.variable} ${plexSerif.variable} ${plexMono.variable} ${caveat.variable} ${comicNeue.variable} ${patrickHand.variable}`}
         style={{ fontFamily: "var(--font-sans), system-ui, sans-serif" }}
       >
         <LocaleProvider>
