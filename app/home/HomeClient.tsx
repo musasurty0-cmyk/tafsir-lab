@@ -15,6 +15,7 @@ import { useRef, useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { getFirebaseAuth } from "@/lib/firebase/client";
 import NewWorkspaceModal from "@/components/NewWorkspaceModal";
+import SettingsMenu from "@/components/SettingsMenu";
 import JoinWorkspaceModal from "@/components/JoinWorkspaceModal";
 import TutorialOverlay from "@/components/TutorialOverlay";
 import TourBubble      from "@/components/TourBubble";
@@ -493,15 +494,17 @@ export default function HomeClient({
           <div className="home-brand-logo">T</div>
           <span className="home-brand-name">TafsirLab</span>
         </div>
-        <button
-          className="home-user-avatar"
-          title={`${user?.name ?? "User"} · Sign out`}
-          onClick={handleSignOut}
-        >
-          {user?.avatarUrl
-            ? <img src={user.avatarUrl} alt={user.name} />
-            : userInitials}
-        </button>
+        <div className="home-header-right">
+          {/* Sign out moved into the settings menu — the avatar was a
+              one-click sign-out with no confirmation, which is easy to hit
+              by accident when reaching for account settings. */}
+          <div className="home-user-avatar home-user-avatar--static" title={user?.name ?? "User"}>
+            {user?.avatarUrl
+              ? <img src={user.avatarUrl} alt={user.name} />
+              : userInitials}
+          </div>
+          <SettingsMenu user={user} onSignOut={handleSignOut} />
+        </div>
       </header>
 
       {/* Content */}
