@@ -593,13 +593,10 @@ export default function WorkspacePageView({
             }
             setTafsirOpen((o) => !o);
           }}
-          showTweaks={showTweaks}
-          onToggleTweaks={() => setShowTweaks((s) => !s)}
           formattingOpen={formattingOpen}
           onToggleFormatting={handleToggleFormatting}
           presenceOthers={presenceOthers}
           liveStatus={room.status}
-          onExport={page ? handleExport : undefined}
         />
         <EditorToolbar editor={activeEditor} open={formattingOpen && mode !== "canvas" && mode !== "board"} />
 

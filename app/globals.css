@@ -107,8 +107,8 @@
 [data-theme="dark"][data-accent="indigo"]  { --accent: oklch(0.7 0.13 275);  --accent-soft: oklch(0.7 0.13 275 / 0.15);  --accent-ink: oklch(0.78 0.12 275); }
 
 /* Drawer blur */
-[data-glass="medium"] .drawer-overlay { background: color-mix(in oklch, var(--bg-elev) 78%, transparent); backdrop-filter: blur(20px) saturate(140%); }
-[data-glass="heavy"]  .drawer-overlay { background: color-mix(in oklch, var(--bg-elev) 60%, transparent); backdrop-filter: blur(30px) saturate(180%); }
+/* The glass tweaks deliberately skip the Tafsir drawer — see .drawer-overlay:
+   it stays opaque at every glass level so the text is always legible. */
 
 /* ── Reset ── */
 *, *::before, *::after { box-sizing: border-box; }
@@ -560,8 +560,11 @@ input, textarea { font: inherit; color: inherit; }
 .drawer-overlay {
   position: fixed; inset: 0 0 0 auto;
   width: var(--drawer); z-index: 30;
-  background: color-mix(in oklch, var(--bg-elev) 92%, transparent);
-  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  /* Fully opaque. Tafsir is dense reference text read for minutes at a time;
+     Mushaf glyphs bleeding through from behind made it noticeably harder to
+     read. No translucency, no backdrop blur — the blur also forced a
+     compositing layer for the whole panel on every scroll. */
+  background: var(--bg-elev);
   border-left: 1px solid var(--line-strong);
   box-shadow: var(--shadow-lg);
   display: flex; flex-direction: column;

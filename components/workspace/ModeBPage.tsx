@@ -34,6 +34,7 @@ import CanvasToolRail, {
   DEFAULT_HIGHLIGHT_SIZE,
   DEFAULT_ERASER_SIZE,
   ERASER_SIZE_KEY,
+  PEN_SIZE_KEY,
 } from "./CanvasToolRail";
 
 // ── Re-exported types ──────────────────────────────────────────────────────
@@ -368,7 +369,7 @@ export default function ModeBPage({
   // ── Drawing tool + per-tool colour/width settings ────────────────────
   const [tool,     setTool]     = useState<DrawTool>("hand");
   const [penColor, setPenColor] = useState(DEFAULT_PEN_COLOR);
-  const [penSize,  setPenSize]  = useState(DEFAULT_PEN_SIZE);
+  const [penSize,  setPenSizeState] = useState(DEFAULT_PEN_SIZE);
   const [hlColor,  setHlColor]  = useState(DEFAULT_HIGHLIGHT_COLOR);
   const [hlSize,   setHlSize]   = useState(DEFAULT_HIGHLIGHT_SIZE);
   const [canUndo, setCanUndo]   = useState(false);
@@ -378,6 +379,19 @@ export default function ModeBPage({
   // Native touch handlers are registered once — they read the tool via ref.
   const toolRef = useRef(tool);
   useEffect(() => { toolRef.current = tool; }, [tool]);
+
+  /* Pen width — remembered across sessions, same contract as the eraser.
+     Without this the size reset to the default on every mount, so a chosen
+     width never survived a mode change or a page reload. A stored value is
+     honoured; only a first-time user starts at DEFAULT_PEN_SIZE. */
+  useEffect(() => {
+    const v = Number(localStorage.getItem(PEN_SIZE_KEY));
+    if (v >= 0.25 && v <= 14) setPenSizeState(v);
+  }, []);
+  const setPenSize = useCallback((s: number) => {
+    setPenSizeState(s);
+    try { localStorage.setItem(PEN_SIZE_KEY, String(s)); } catch { /* ignore */ }
+  }, []);
 
   // Eraser radius (screen px) — remembered across sessions.
   const [eraserSize, setEraserSizeState] = useState(DEFAULT_ERASER_SIZE);

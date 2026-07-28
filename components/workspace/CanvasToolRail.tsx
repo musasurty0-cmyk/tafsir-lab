@@ -66,12 +66,16 @@ const ERASER_RANGE    = { min: 6,    max: 60, step: 1    };
 // ── Exported defaults ─────────────────────────────────────────────────────
 
 export const DEFAULT_PEN_COLOR       = "#18181b";
-export const DEFAULT_PEN_SIZE        = 2.5;
+/** 1.5px. Within PEN_RANGE (0.25–14, step 0.25) so the slider lands on it
+ *  exactly and the preview dot matches the rendered stroke width. */
+export const DEFAULT_PEN_SIZE        = 1.5;
 export const DEFAULT_HIGHLIGHT_COLOR = "#fbbf24";
 export const DEFAULT_HIGHLIGHT_SIZE  = 14;
 export const DEFAULT_ERASER_SIZE     = 20;
 /** localStorage key remembering the last used eraser size */
 export const ERASER_SIZE_KEY         = "tl-eraser-size";
+/** localStorage key remembering the last used pen width */
+export const PEN_SIZE_KEY            = "tl-pen-size";
 
 const HIDE_DELAY_MS = 1250;
 

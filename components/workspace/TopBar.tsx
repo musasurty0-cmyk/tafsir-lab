@@ -9,11 +9,10 @@
  */
 
 import Link from "next/link";
-import { Sliders, Download } from "lucide-react";
 import type { Chapter } from "@/lib/types";
 import PresenceBar from "./PresenceBar";
 import type { PresenceData } from "@/lib/collab/usePresence";
-import { useT, LanguageSwitcher } from "@/lib/i18n/LocaleProvider";
+import { useT } from "@/lib/i18n/LocaleProvider";
 
 // ── Icons ──────────────────────────────────────────────────────────────────
 
@@ -83,16 +82,12 @@ interface Props {
   progressLoading?:   boolean;
   tafsirOpen:         boolean;
   onToggleTafsir:     () => void;
-  showTweaks:         boolean;
-  onToggleTweaks:     () => void;
   formattingOpen:     boolean;
   onToggleFormatting: () => void;
   /** Live collaborators — provided by WorkspacePageView via usePresence */
   presenceOthers?:    PresenceData[];
   /** Realtime room connection state — drives the Live indicator */
   liveStatus?:        "connecting" | "connected" | "disconnected";
-  /** Download the current page (content + notes) as Markdown */
-  onExport?:          () => void;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────
@@ -108,13 +103,10 @@ export default function TopBar({
   progressLoading,
   tafsirOpen,
   onToggleTafsir,
-  showTweaks,
-  onToggleTweaks,
   formattingOpen,
   onToggleFormatting,
   presenceOthers = [],
   liveStatus,
-  onExport,
 }: Props) {
   const t = useT();
   return (
@@ -228,34 +220,10 @@ export default function TopBar({
           <BookOpenIcon /> {t("topbar.tafsir")}
         </button>
 
-        <div className="tb-divider" />
-
-        {/* Visual tweaks */}
-        <button
-          className="tb-btn"
-          data-active={showTweaks ? "true" : "false"}
-          onClick={onToggleTweaks}
-          title="Visual tweaks"
-        >
-          <Sliders size={14} /> Tweaks
-        </button>
-
-        {/* Markdown export */}
-        {onExport && (
-          <>
-            <div className="tb-divider" />
-            <button
-              className="tb-btn"
-              onClick={onExport}
-              title="Download this page as Markdown"
-            >
-              <Download size={14} /> {t("topbar.export")}
-            </button>
-          </>
-        )}
-
-        <div className="tb-divider" />
-        <LanguageSwitcher compact />
+        {/* Tweaks, Export and the language switcher used to sit here. They
+            crowded the bar with things that are not per-page actions; language
+            and appearance now live in dashboard settings. The trailing
+            divider went with them so the bar does not end on a separator. */}
       </div>
     </div>
   );
