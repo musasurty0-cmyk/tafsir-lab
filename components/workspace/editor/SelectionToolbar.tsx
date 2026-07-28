@@ -14,9 +14,9 @@ import type { Editor } from "@tiptap/core";
 import {
   BoldIcon, ItalicIcon, UnderlineIcon, StrikeIcon,
   BulletIcon, NumberedIcon, QuoteIcon,
-  HighlightIcon, ColorIcon,
+  HighlightIcon, ColorIcon, FontIcon,
   Btn, Sep, Popover,
-  HighlightSwatches, ColorSwatches,
+  HighlightSwatches, ColorSwatches, FontList,
 } from "./editorShared";
 
 interface Props { editor: Editor | null }
@@ -40,6 +40,7 @@ export default function SelectionToolbar({ editor }: Props) {
   const [pos,      setPos]      = useState<Pos | null>(null);
   const [hlOpen,   setHlOpen]   = useState(false);
   const [clOpen,   setClOpen]   = useState(false);
+  const [fnOpen,   setFnOpen]   = useState(false);
   const [mounted,  setMounted]  = useState(false);
 
   useEffect(() => { setMounted(true); }, []);
@@ -47,7 +48,7 @@ export default function SelectionToolbar({ editor }: Props) {
   const updatePos = useCallback(() => {
     if (!editor) { setPos(null); return; }
     const { empty } = editor.state.selection;
-    if (empty) { setPos(null); setHlOpen(false); setClOpen(false); return; }
+    if (empty) { setPos(null); setHlOpen(false); setClOpen(false); setFnOpen(false); return; }
 
     // Small RAF to let the DOM selection settle after Tiptap updates
     requestAnimationFrame(() => {
@@ -58,8 +59,8 @@ export default function SelectionToolbar({ editor }: Props) {
       let left = rect.left + rect.width / 2;
       const top  = rect.top - TOOLBAR_H - GAP;
 
-      // Clamp left so the toolbar (≈260px wide) doesn't overflow
-      const halfW = 130;
+      // Clamp left so the toolbar (≈290px wide) doesn't overflow
+      const halfW = 145;
       left = Math.max(MARGIN + halfW, Math.min(window.innerWidth - MARGIN - halfW, left));
 
       setPos({ top: Math.max(MARGIN, top), left });
@@ -72,7 +73,7 @@ export default function SelectionToolbar({ editor }: Props) {
     editor.on("selectionUpdate", updatePos);
     editor.on("focus",           updatePos);
     // Hide when focus leaves the editor entirely
-    const hide = () => { setPos(null); setHlOpen(false); setClOpen(false); };
+    const hide = () => { setPos(null); setHlOpen(false); setClOpen(false); setFnOpen(false); };
     editor.on("blur", hide);
     return () => {
       editor.off("selectionUpdate", updatePos);
@@ -113,6 +114,14 @@ export default function SelectionToolbar({ editor }: Props) {
       <Btn active={editor.isActive("blockquote")} title="Quote" onClick={() => editor.chain().focus().toggleBlockquote().run()}><QuoteIcon /></Btn>
 
       <Sep />
+
+      <Popover open={fnOpen} onClose={() => setFnOpen(false)} trigger={
+        <Btn active={!!editor.getAttributes("textStyle").fontFamily} title="Font" onClick={() => setFnOpen((o) => !o)}>
+          <FontIcon />
+        </Btn>
+      }>
+        <FontList editor={editor} onClose={() => setFnOpen(false)} />
+      </Popover>
 
       <Popover open={hlOpen} onClose={() => setHlOpen(false)} trigger={
         <Btn active={editor.isActive("highlight")} title="Highlight" onClick={() => setHlOpen((o) => !o)}>

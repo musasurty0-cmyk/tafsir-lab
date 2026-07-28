@@ -60,6 +60,11 @@ export const HighlightIcon = () => (
     <path d="m9 11-6 6v3h3l6-6"/><path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/>
   </svg>
 );
+export const FontIcon = () => (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M4 20h4"/><path d="M14 20h6"/><path d="m6.5 20 4.5-14 4.5 14"/><path d="M8.2 15h6.6"/>
+  </svg>
+);
 export const ColorIcon = () => (
   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/>
@@ -77,6 +82,19 @@ export const HIGHLIGHTS = [
   { label: "Blue",    color: "#bae6fd" },
   { label: "Orange",  color: "#fed7aa" },
   { label: "Clear",   color: "" },
+];
+
+/* Font families offered per selection. `css` is written verbatim into the
+   textStyle mark's fontFamily attribute, so each entry carries its own
+   fallback chain — the stored value has to stand on its own if it is ever
+   rendered outside the app (export, print, a stale cache).
+   An empty `css` clears the mark and returns to the document face. */
+export const FONT_FAMILIES = [
+  { label: "Default",     css: "" },
+  { label: "Serif",       css: "var(--font-serif), Georgia, serif" },
+  { label: "Mono",        css: "var(--font-mono), ui-monospace, monospace" },
+  { label: "Handwriting", css: "var(--font-hand), 'Segoe Script', cursive" },
+  { label: "Neat hand",   css: "var(--font-hand-print), 'Comic Sans MS', cursive" },
 ];
 
 export const TEXT_COLORS = [
@@ -159,6 +177,36 @@ export function HighlightSwatches({
           }}
         >
           {!h.color && <span className="et-swatch-x">×</span>}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ── Font family list ──────────────────────────────────────────────────────────
+// Each row previews itself in its own face, so the choice is made by looking
+// rather than by reading a name.
+
+export function FontList({
+  editor, onClose,
+}: { editor: Editor; onClose: () => void }) {
+  const current = (editor.getAttributes("textStyle").fontFamily as string) || "";
+  return (
+    <div className="et-font-list">
+      {FONT_FAMILIES.map((f) => (
+        <button
+          key={f.label}
+          type="button"
+          className={`et-font-item${current === f.css ? " et-font-item--active" : ""}`}
+          style={{ fontFamily: f.css || "var(--font-sans), system-ui, sans-serif" }}
+          onMouseDown={(e) => {
+            e.preventDefault();
+            if (!f.css) editor.chain().focus().unsetFontFamily().run();
+            else editor.chain().focus().setFontFamily(f.css).run();
+            onClose();
+          }}
+        >
+          {f.label}
         </button>
       ))}
     </div>

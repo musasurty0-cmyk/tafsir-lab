@@ -7111,6 +7111,19 @@ input, textarea { font: inherit; color: inherit; }
 .et-swatch:hover { transform: scale(1.18); box-shadow: var(--shadow-sm); }
 .et-swatch-x { font-size: 13px; color: var(--ink-4); line-height: 1; }
 
+/* Font picker — each row is set in the face it applies, so the choice is
+   made by looking rather than by reading a name. */
+.et-font-list { display: flex; flex-direction: column; gap: 1px; min-width: 132px; }
+.et-font-item {
+  appearance: none; border: 0; background: none; cursor: pointer;
+  text-align: left; padding: 7px 10px; border-radius: var(--radius-sm);
+  font-size: 15px; line-height: 1.25; color: var(--ink);
+  white-space: nowrap;
+  transition: background var(--dur-fast) ease;
+}
+.et-font-item:hover { background: var(--hover); }
+.et-font-item--active { background: var(--selected, var(--hover)); font-weight: 500; }
+
 /* ── Collapsible top ribbon ── */
 .et-ribbon {
   position: sticky; top: 48px; z-index: 3;
