@@ -77,6 +77,12 @@ interface Props {
   notedAyahColors?:  ReadonlyMap<number, string>;
   /** Ayah whose annotation layer is open ("1:2" verseKey) */
   selectedEndKey?:   string | null;
+  /** Reading Mode (false) leaves the page inert: words and ayah markers are
+   *  not selectable, so the default experience is reading rather than
+   *  annotating. The Mushaf itself renders identically in both modes. */
+  studyMode?:        boolean;
+  /** Reading Mode only — the surah title is the entry point into Study Mode. */
+  onEnterStudy?:     () => void;
 }
 
 /** Wash for the ayah whose annotation layer is currently open. */
@@ -124,6 +130,8 @@ export default function QCFMushafPage({
   selectedWordKey,
   notedAyahColors,
   selectedEndKey,
+  studyMode = true,
+  onEnterStudy,
 }: Props) {
 
   const [fontReady, setFontReady] = useState(false);
@@ -246,7 +254,24 @@ export default function QCFMushafPage({
       {showHeader && (
         <div className="qcf-surah-header">
           <div className="qcf-surah-ornament">
-            <span className="qcf-surah-name">{chapter.name_arabic}</span>
+            {/* In Reading Mode the title is the door into Study Mode — it is
+                the one affordance on an otherwise inert page. In Study Mode
+                it is plain text again, since the workspace is already open. */}
+            {studyMode ? (
+              <span className="qcf-surah-name">{chapter.name_arabic}</span>
+            ) : (
+              <button
+                type="button"
+                className="qcf-surah-name qcf-surah-name--btn"
+                onClick={onEnterStudy}
+                onMouseDown={(e) => e.stopPropagation()}
+                onPointerDown={(e) => e.stopPropagation()}
+                title="Open study notes"
+              >
+                {chapter.name_arabic}
+                <span className="qcf-surah-caret" aria-hidden>▾</span>
+              </button>
+            )}
           </div>
           {chapter.bismillah_pre && (
             <div className="qcf-basmala">
@@ -283,8 +308,11 @@ export default function QCFMushafPage({
           }
 
           const renderGlyph = (word: WordEntry) => {
-            const isWord  = word.char_type_name === "word";
-            const isEnd   = word.char_type_name === "end";
+            // Reading Mode: nothing on the page is a target. Treating every
+            // glyph as plain text (no role, no tabIndex, no handlers) is what
+            // makes the page feel like a Mushaf instead of a UI.
+            const isWord  = studyMode && word.char_type_name === "word";
+            const isEnd   = studyMode && word.char_type_name === "end";
             const wordKey = `${word.ayahNum}:${word.position}`;
             // Word-level note colour sits on top of any ayah run wash.
             const noted = isWord ? notedWordColors?.get(wordKey) : undefined;

@@ -1981,6 +1981,96 @@ input, textarea { font: inherit; color: inherit; }
   font-size: 14px; color: var(--ink-4);
 }
 
+/* ── Reading Mode ↔ Study Mode ──────────────────────────────────────────────
+   The Mushaf never animates — only the study layer on top of it does. Each
+   group has its own delay so the workspace unfolds (toolbar, then markers,
+   then notes) instead of appearing in one block. On the way out the delays
+   collapse to zero so Done feels immediate. --study-exit must stay in sync
+   with STUDY_EXIT_MS in ModeBPage.tsx. */
+:root { --study-exit: 260ms; }
+
+/* Out of flow. .mode-b-inner is a flex column with a gap, so a static wrapper
+   would insert a gap above the Mushaf and shift the page. inset:0 keeps the
+   containing block identical to .mode-b-inner (which has no padding), so the
+   absolutely positioned note cards and text boxes keep their exact
+   coordinates. */
+.study-layer { position: absolute; inset: 0; }
+
+.study-layer,
+.study-rail-wrap,
+.study-bar,
+.drawing-canvas-wrap {
+  transition: opacity var(--study-exit) var(--ease-out),
+              transform var(--study-exit) var(--ease-out);
+}
+
+/* Entry: mounted at 0, flipped to visible on the next frame. */
+.study-layer[data-visible="false"],
+.study-rail-wrap[data-visible="false"],
+.study-bar[data-visible="false"] {
+  opacity: 0;
+  pointer-events: none;
+}
+.study-layer[data-visible="true"],
+.study-rail-wrap[data-visible="true"],
+.study-bar[data-visible="true"] {
+  opacity: 1;
+}
+
+/* Staggered arrival — rail first, then the note layer. */
+.study-rail-wrap[data-visible="true"] { transition-delay: 40ms; }
+.study-layer[data-visible="true"]     { transition-delay: 140ms; }
+.study-bar[data-visible="true"]       { transition-delay: 0ms; }
+
+.study-rail-wrap[data-visible="false"] { transform: translateX(-8px); }
+.study-bar[data-visible="false"]       { transform: translateY(-8px); }
+
+/* Ink fades in with the note layer rather than snapping on with the mount. */
+.drawing-canvas-wrap { animation: study-ink-in 320ms var(--ease-out) both; }
+@keyframes study-ink-in { from { opacity: 0; } to { opacity: 1; } }
+
+/* Study Mode bar — top centre, clear of the mode tabs above it. */
+.study-bar {
+  position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 14px;
+  padding: 7px 8px 7px 16px; z-index: 30;
+  background: var(--bg-elev); border: 1px solid var(--line-strong);
+  border-radius: 999px; box-shadow: var(--shadow-md);
+  font-size: 13px; color: var(--ink-2);
+}
+.study-bar[data-visible="false"] { transform: translateX(-50%) translateY(-8px); }
+.study-bar[data-visible="true"]  { transform: translateX(-50%); }
+.study-bar-surah { color: var(--ink-4); }
+.study-bar-done {
+  appearance: none; border: 0; cursor: pointer;
+  background: var(--ink); color: var(--bg);
+  font: inherit; font-weight: 600;
+  padding: 6px 16px; border-radius: 999px;
+  transition: opacity var(--dur-hover) var(--ease-soft);
+}
+.study-bar-done:hover { opacity: 0.86; }
+
+/* The surah title is the door into Study Mode. */
+.qcf-surah-name--btn {
+  appearance: none; border: 0; background: none; cursor: pointer;
+  font: inherit; color: inherit;
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 4px 12px; border-radius: 10px;
+  transition: background var(--dur-hover) var(--ease-soft);
+}
+.qcf-surah-name--btn:hover { background: var(--hover); }
+.qcf-surah-caret {
+  font-size: 0.5em; color: var(--ink-4);
+  transition: transform var(--dur-hover) var(--ease-soft);
+}
+.qcf-surah-name--btn:hover .qcf-surah-caret { transform: translateY(2px); }
+
+@media (prefers-reduced-motion: reduce) {
+  .study-layer, .study-rail-wrap, .study-bar, .drawing-canvas-wrap {
+    transition: none; animation: none; transition-delay: 0ms !important;
+  }
+}
+
 /* ── Inner transformed layer ── */
 .mode-b-inner {
   position: absolute;

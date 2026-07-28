@@ -66,6 +66,8 @@ const ZOOM_WHEEL_MAX_STEP    = 0.18;
 const ZOOM_BUTTON_STEP       = 1.2;
 /** How long the button/reset zoom glides for, in ms. */
 const ZOOM_TWEEN_MS          = 180;
+/** Study layer fade-out duration — must match --study-exit in globals.css. */
+const STUDY_EXIT_MS          = 260;
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -385,6 +387,38 @@ export default function ModeBPage({
   // Active stroke params forwarded to DrawingCanvas
   const strokeColor = tool === "highlight" ? hlColor : penColor;
   const strokeWidth = tool === "highlight" ? hlSize : penSize; // arrow inherits pen width
+
+  /* ── Reading Mode ↔ Study Mode ────────────────────────────────────────────
+     A surah always OPENS as a Mushaf: no rail, no ink, no note cards, nothing
+     to click. The study layer is opt-in via the surah title and dismissed via
+     Done. This is deliberately NOT persisted — "always open in Reading Mode"
+     is the point, so a stale flag must never carry a workspace back in.
+
+     `studyMode` drives interactivity; `studyVisible` drives the fade, and
+     trails it by a frame on entry and by the animation length on exit, so the
+     layer is mounted while it animates out. Nothing is unmounted early —
+     annotations are only ever hidden, never destroyed. */
+  const [studyMode,    setStudyMode]    = useState(false);
+  const [studyVisible, setStudyVisible] = useState(false);
+
+  const enterStudy = useCallback(() => {
+    setStudyMode(true);
+    // Mount inert, then flip to visible next frame so the CSS transition runs.
+    requestAnimationFrame(() => requestAnimationFrame(() => setStudyVisible(true)));
+  }, []);
+
+  const exitStudy = useCallback(() => {
+    setStudyVisible(false);                     // fade out, still mounted
+    setFocusAnchor(null);                       // close any open annotation layer
+    setTool("hand");                            // no drawing tool armed on return
+    window.setTimeout(() => setStudyMode(false), STUDY_EXIT_MS);
+  }, []);
+
+  // Leaving the page or switching surah always returns to a clean Mushaf.
+  useEffect(() => {
+    setStudyVisible(false);
+    setStudyMode(false);
+  }, [pageId]);
 
   // ── Free text box placement (text tool) ───────────────────────────────
   // Whiteboard-style OPTIMISTIC lifecycle: render a local temp container
@@ -943,12 +977,24 @@ export default function ModeBPage({
           onRegisterAyahRef={registerAyahRef}
           onRegisterWordRef={registerWordRef}
           onOpenFocus={openFocus}
-          notedWordColors={notedWordColors}
-          notedAyahColors={notedEndColors}
+          studyMode={studyMode}
+          onEnterStudy={enterStudy}
+          /* Note-derived highlights belong to the study layer, not the page */
+          notedWordColors={studyVisible ? notedWordColors : undefined}
+          notedAyahColors={studyVisible ? notedEndColors  : undefined}
           selectedWordKey={focusAnchor && focusAnchor.wordPos != null ? `${focusAnchor.verseKey}:${focusAnchor.wordPos}` : null}
           selectedEndKey={focusAnchor && focusAnchor.wordPos == null ? focusAnchor.verseKey : null}
         />
 
+        {/* ── Study layer ──────────────────────────────────────────────────
+            Connectors, note cards and text boxes. Mounted only in Study Mode
+            and faded as a group, staggered so the workspace unfolds rather
+            than appearing all at once. */}
+        {studyMode && (
+        <div
+          className="study-layer"
+          data-visible={studyVisible ? "true" : "false"}
+        >
         {/* SVG connector lines (Main Notes chrome — hidden in a layer) */}
         {focusAnchor ? null : <svg className="mode-b-connectors" style={{ position: "absolute", top: 0, left: 0, width: 0, height: 0, overflow: "visible", pointerEvents: "none" }} aria-hidden="true">
           {pageNotes.map((note) => {
@@ -1004,11 +1050,16 @@ export default function ModeBPage({
               onPersistTemp={persistTextBoxTemp}
             />
           ))}
+        </div>
+        )}
       </div>
 
       {/* ── Drawing canvas overlay ── */}
-      {/* mushafPage scopes drawings to the current Mushaf page (fix #8) */}
-      <DrawingCanvas
+      {/* mushafPage scopes drawings to the current Mushaf page (fix #8).
+          Reading Mode unmounts it entirely: the ink is study-layer content,
+          and with it gone the surface is inert without special-casing every
+          pointer path. Strokes are untouched on the server. */}
+      {studyMode && <DrawingCanvas
         ref={drawingRef}
         pageId={pageId}
         mushafPage={currentMushafahPage}
@@ -1022,7 +1073,7 @@ export default function ModeBPage({
         onTextPlace={placeTextBox}
         eraserRadius={eraserSize}
         onAnchorsChange={setStrokeAnchors}
-      />
+      />}
 
       {/* ── Annotation session chip — the ONLY exit is Done ── */}
       {focusAnchor && (
@@ -1038,7 +1089,21 @@ export default function ModeBPage({
         </div>
       )}
 
+      {/* ── Study Mode bar — the discoverable way back to reading ── */}
+      {studyMode && (
+        <div className="study-bar" data-visible={studyVisible ? "true" : "false"}>
+          <span className="study-bar-label">
+            Study&nbsp;mode<span className="study-bar-surah"> · {chapter?.name_simple ?? ""}</span>
+          </span>
+          <button className="study-bar-done" onClick={exitStudy} title="Back to reading">
+            Done
+          </button>
+        </div>
+      )}
+
       {/* ── Vertical tool rail (left side) ── */}
+      {studyMode && (
+      <div className="study-rail-wrap" data-visible={studyVisible ? "true" : "false"}>
       <CanvasToolRail
         activeTool={tool}
         onToolChange={setTool}
@@ -1055,6 +1120,8 @@ export default function ModeBPage({
         onUndo={() => drawingRef.current?.undo()}
         onRedo={() => drawingRef.current?.redo()}
       />
+      </div>
+      )}
 
       {/* ── Zoom HUD ── */}
       <div className="mode-b-zoom-controls">
@@ -1097,8 +1164,8 @@ export default function ModeBPage({
         </div>
       )}
 
-      {/* ── Word-tap hint chip ── */}
-      {showHint && !focusAnchor && (
+      {/* ── Word-tap hint chip — study-only; it describes a study action ── */}
+      {studyMode && showHint && !focusAnchor && (
         <div className="mode-b-word-hint">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="M12 20h9"/><path d="M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.854z"/>
