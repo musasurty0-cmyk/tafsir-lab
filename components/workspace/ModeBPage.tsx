@@ -743,8 +743,11 @@ export default function ModeBPage({
     }
 
     function onWheel(e: WheelEvent) {
-      if (focusAnchor) return;
-      if (tool !== "hand") return; // don't zoom while a drawing tool is selected
+      // Zoom is always available. It used to bail out whenever a drawing tool
+      // was armed or a word layer was open — which is exactly when you most
+      // want to zoom in, to place a highlight accurately. A wheel is not a
+      // drawing gesture, so there is nothing to protect against here: the
+      // pen only ever acts on pointer events.
       e.preventDefault();
 
       // deltaMode: 0 = pixels, 1 = lines, 2 = pages. Normalise to pixels so
@@ -778,7 +781,8 @@ export default function ModeBPage({
       window.clearTimeout(idle);
       innerRef.current?.removeAttribute("data-zooming");
     };
-  }, [patchViewport, focusAnchor, tool]);
+    // No longer re-binds on tool/focus change — the handler reads neither.
+  }, [patchViewport]);
 
   // ── Touch pan / pinch-zoom — native touch events ─────────────────────────
   //

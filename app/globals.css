@@ -569,6 +569,19 @@ input, textarea { font: inherit; color: inherit; }
   transition: transform var(--dur-slow) var(--ease-out);
 }
 .drawer-overlay[data-open="true"] { transform: translateX(0); }
+/* A closed drawer must never be a hit target. It is normally parked
+   off-screen by the translate, but under reduced motion that translate is
+   removed in favour of a fade — leaving a full-height, opacity-0 panel
+   sitting over the right edge of the window and swallowing every click
+   behind it, the Tafsir button included. Opacity alone does not stop
+   pointer events. */
+.drawer-overlay[data-open="false"] {
+  pointer-events: none;
+  visibility: hidden;
+  transition: transform var(--dur-slow) var(--ease-out),
+              visibility 0s linear var(--dur-slow);
+}
+.drawer-overlay[data-open="true"] { visibility: visible; transition-delay: 0s; }
 
 /* The panel slid in but its contents arrived fully formed, which read as a
    single hard snap. Each band now settles just behind the panel edge, so the
@@ -7394,6 +7407,16 @@ input, textarea { font: inherit; color: inherit; }
     transition-duration: 120ms !important;
     transition-delay: 0ms !important;
   }
+  /* A colour cross-fade involves no movement at all, so it is not what this
+     preference is guarding against — and an instant colour flip under the
+     cursor is harsher than the fade it replaces. Kept at full duration. */
+  .qcf-word {
+    transition-property: background-color !important;
+    transition-duration: 180ms !important;
+  }
+  .qcf-word:hover  { transition-duration: 120ms !important; }
+  .qcf-word:active { transition-duration:  60ms !important; }
+
   /* No travel: the drawer is simply present or not. */
   .drawer-overlay                    { transform: none !important; opacity: 0; }
   .drawer-overlay[data-open="true"]  { opacity: 1; }
