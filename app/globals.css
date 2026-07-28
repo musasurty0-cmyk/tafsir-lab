@@ -2114,16 +2114,26 @@ input, textarea { font: inherit; color: inherit; }
 .qcf-surah-name--btn {
   appearance: none; border: 0; background: none; cursor: pointer;
   font: inherit; color: inherit;
-  display: inline-flex; align-items: center; gap: 10px;
-  padding: 4px 12px; border-radius: 10px;
+  /* The caret is taken OUT of flow. As a flex sibling it added width to one
+     side only, so flex centred the name-plus-caret group and the name itself
+     sat visibly off-centre in the pill. Symmetric padding + an absolutely
+     positioned caret centres the actual text. */
+  position: relative;
+  display: inline-flex; align-items: center; justify-content: center;
   transition: background var(--dur-hover) var(--ease-soft);
 }
+.qcf-surah-name--btn.qcf-surah-name { padding: 5px 34px; }
 .qcf-surah-name--btn:hover { background: var(--hover); }
 .qcf-surah-caret {
+  position: absolute;
+  /* Logical, so it follows the RTL page to the correct side. */
+  inset-inline-end: 13px;
+  top: 50%;
+  transform: translateY(-50%);
   font-size: 0.5em; color: var(--ink-4);
-  transition: transform var(--dur-hover) var(--ease-soft);
+  transition: opacity var(--dur-hover) var(--ease-soft);
 }
-.qcf-surah-name--btn:hover .qcf-surah-caret { transform: translateY(2px); }
+.qcf-surah-name--btn:hover .qcf-surah-caret { opacity: 0.65; }
 
 @media (prefers-reduced-motion: reduce) {
   .study-layer, .study-rail-wrap, .study-bar, .drawing-canvas-wrap {
@@ -2777,7 +2787,8 @@ input, textarea { font: inherit; color: inherit; }
   font-size:   18px;
   /* Quieter than the Qur'anic text it labels: lighter, smaller, softened. */
   font-weight: 600;
-  color:       rgba(26, 26, 26, 0.72);
+  /* Same ink as the glyphs — a washed-out grey read as disabled. */
+  color:       #1a1a1a;
   line-height: 1.5;
   white-space: nowrap;
   /* A pill, not a card — hairline border, no shadow, no fill weight. */
