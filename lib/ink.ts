@@ -95,33 +95,71 @@ function strokeRadius(base: number, p: number): number {
   return (pressureWidth(base, p) * 1.9) / 2;
 }
 
+/** Streamline strength, 0..1. The proportion of the previous point retained
+ *  when each new sample arrives — the core of how perfect-freehand (and so
+ *  tldraw) turns raw stylus input into a flowing line. Higher is smoother but
+ *  lags the pen tip more; this sits just below tldraw's default because the
+ *  Mushaf is annotated with small, deliberate marks where lag is felt sooner
+ *  than on an open canvas. */
+const STREAMLINE = 0.42;
+
 /**
  * Build the closed outline polygon for a pressure stroke.
  *
- * - Centreline is the raw input path — no streamline/simplification, so the
- *   rendered ink follows the user's hand exactly at any size.
- * - Pressure (width) is zero-phase smoothed (forward+backward EMA) so width
- *   never jitters into beads, without shifting the path geometry.
- * - Both ends get sampled semicircular caps centred on the exact first and
- *   last points — nothing tapers away or gets cut off at pen-lift.
+ * Centreline is STREAMLINED, not raw. A stylus reports several hundred samples
+ * a second and every one carries a little position noise; following them
+ * exactly renders that noise as visible wobble, which is what made the pen
+ * feel like it was fighting the hand rather than flowing with it. Each sample
+ * is now pulled a fraction of the way from the previous point toward the raw
+ * reading — a first-order low-pass on position, the same technique
+ * perfect-freehand uses.
+ *
+ * This replaces the old minimum-spacing filter, which DISCARDED samples closer
+ * than half the pen width. That removed the noisy clusters but quantised the
+ * path to a floor of ~1.6px, so drawing slowly — exactly when you are being
+ * careful — produced the most visibly stepped line. Smoothing the samples
+ * keeps every one of them and removes the noise instead of the detail.
+ *
+ * Pressure (width) is zero-phase smoothed (forward+backward EMA) so width
+ * never jitters into beads, without shifting the path geometry. Both ends get
+ * sampled semicircular caps centred on the exact first and last points —
+ * nothing tapers away or gets cut off at pen-lift.
  */
 function penOutline(raw: Pt[], base: number): [number, number][] {
-  // 1. Resample to a MINIMUM spacing. A stylus sampling densely while you
-  //    write slowly piles many points into a tiny area; each carries a little
-  //    position noise, and offsetting them perpendicular to their (wildly
-  //    swinging) local tangents spikes the edge into a sawtooth ("furry"
-  //    ink). Enforcing a floor on point spacing removes the clusters that
-  //    cause it, without simplifying the actual curve.
-  const MIN_SP = Math.max(1.6, base * 0.5);
+  if (raw.length < 2) return [];
+
+  // 1. Streamline. Applied at RENDER time, so the stored points stay the true
+  //    input: smoothing is a presentation choice we can retune later, and
+  //    strokes drawn before this existed pick it up too.
+  const t = 1 - STREAMLINE;
+  const S: Pt[] = [raw[0]];
+  for (let i = 1; i < raw.length; i++) {
+    const prev = S[S.length - 1];
+    S.push([
+      prev[0] + (raw[i][0] - prev[0]) * t,
+      prev[1] + (raw[i][1] - prev[1]) * t,
+      raw[i][2],
+    ]);
+  }
+  // The filter always trails the input, so the smoothed path stops short of
+  // where the pen actually lifted. Pin the true endpoint back on, or short
+  // strokes visibly fall short of the mark the user made.
+  const rawTail = raw[raw.length - 1];
+  const sTail   = S[S.length - 1];
+  if (Math.hypot(rawTail[0] - sTail[0], rawTail[1] - sTail[1]) > 1e-3) {
+    S.push([rawTail[0], rawTail[1], rawTail[2]]);
+  }
+
+  // 2. Drop only genuinely coincident samples. Degenerate spacing makes the
+  //    local tangent undefined; anything above that threshold is real detail
+  //    and is kept, unlike the old width-proportional decimation.
+  const MIN_SP = 0.35;
   const P: Pt[] = [];
-  for (const p of raw) {
+  for (const p of S) {
     const last = P[P.length - 1];
     if (!last || Math.hypot(p[0] - last[0], p[1] - last[1]) >= MIN_SP) P.push(p);
   }
-  // Always keep the final sample so the ink reaches the exact pen-lift point.
-  const tail = raw[raw.length - 1];
-  const plast = P[P.length - 1];
-  if (tail && plast && Math.hypot(tail[0] - plast[0], tail[1] - plast[1]) > 1e-3) P.push(tail);
+  if (P.length < 2 && S.length >= 2) { P.length = 0; P.push(S[0], S[S.length - 1]); }
   const n = P.length;
   if (n < 2) return [];
 
@@ -148,7 +186,12 @@ function penOutline(raw: Pt[], base: number): [number, number][] {
     const m = Math.hypot(dx, dy) || 1;
     rawTx[i] = dx / m; rawTy[i] = dy / m;
   }
-  const TA = 0.32;
+  // Tangent EMA weight. Higher = follows the true direction more closely.
+  // This was 0.32 — heavy smoothing, needed when the centreline was raw and
+  // noisy. With the path streamlined the noise is already gone, and that much
+  // smoothing only rounded off genuine direction changes, blunting corners
+  // and deliberate flicks. Lighter now, so intent survives.
+  const TA = 0.5;
   const fX = new Float32Array(n), fY = new Float32Array(n);
   const bX = new Float32Array(n), bY = new Float32Array(n);
   let ax = rawTx[0], ay = rawTy[0];

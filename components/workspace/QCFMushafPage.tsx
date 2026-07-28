@@ -179,7 +179,7 @@ function QCFMushafPage({
   // object per word — several hundred per page — and it used to run on EVERY
   // render, including every frame of a zoom gesture, where none of its inputs
   // had changed.
-  const { sortedLines, showHeader } = useMemo(() => {
+  const { sortedLines, isSurahStart } = useMemo(() => {
     const lineMap = new Map<number, WordEntry[]>();
     let lineCounter = 0;
 
@@ -209,7 +209,9 @@ function QCFMushafPage({
 
     return {
       sortedLines: [...lineMap.entries()].sort(([a], [b]) => a - b),
-      showHeader: verses.some((v) => {
+      /* True only on the surah's OPENING page. The name label shows on every
+         page; the basmala belongs to the surah's start, not to each sheet. */
+      isSurahStart: verses.some((v) => {
         const [sId, vNum] = v.verse_key.split(":").map(Number);
         return sId === chapter.id && vNum === 1;
       }),
@@ -256,9 +258,9 @@ function QCFMushafPage({
       onMouseDown={(e) => e.stopPropagation()}
       dir="rtl"
     >
-      {/* ── Surah header ── */}
-      {showHeader && (
-        <div className="qcf-surah-header">
+      {/* ── Surah header — on EVERY page, so you always know which surah you
+             are reading. Only the basmala is limited to the opening page. ── */}
+      <div className="qcf-surah-header">
           <div className="qcf-surah-ornament">
             {/* In Reading Mode the title is the door into Study Mode — it is
                 the one affordance on an otherwise inert page. In Study Mode
@@ -279,13 +281,12 @@ function QCFMushafPage({
               </button>
             )}
           </div>
-          {chapter.bismillah_pre && (
+          {isSurahStart && chapter.bismillah_pre && (
             <div className="qcf-basmala">
               بِسۡمِ ٱللَّهِ ٱلرَّحۡمَـٰنِ ٱلرَّحِيمِ
             </div>
           )}
-        </div>
-      )}
+      </div>
 
       {/* ── Page lines ── */}
       <div className="qcf-lines">
