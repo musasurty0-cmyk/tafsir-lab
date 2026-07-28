@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /workspace/
+Disallow: /workspaces/
+Disallow: /api/
+
+Sitemap: https://tafsir-lab.com/sitemap.xml
