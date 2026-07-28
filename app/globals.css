@@ -7713,7 +7713,34 @@ input, textarea { font: inherit; color: inherit; }
   direction:     rtl;
   align-items:   stretch;   /* glyphs fill the run's full height — solid band */
   flex-shrink:   0;
-  border-radius: 0;
+  border-radius: 0;         /* rectangular band — deliberately not rounded */
+}
+
+/* Selecting a whole ayah lifts it off the page once, then settles.
+
+   translateY + shadow ONLY — no scale. Scaling re-rasterises the QCF glyphs
+   and distorts them, and it would move the words relative to each other; a
+   uniform 2px rise keeps every glyph's shape and spacing exact. A multi-line
+   ayah is several runs, all carrying this class, so they rise together and
+   the selection reads as one object.
+
+   `both` holds the raised state, and the animation only re-runs when the
+   class is re-applied — i.e. on a new selection, not on every re-render. */
+.qcf-ayah-run--active {
+  position: relative;
+  z-index: 1;               /* shadow sits over neighbours, never clipped */
+  animation: qcf-ayah-lift 260ms var(--ease-out) both;
+}
+@keyframes qcf-ayah-lift {
+  from { transform: translateY(0);    box-shadow: 0 0 0 rgba(26, 26, 26, 0); }
+  to   { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(26, 26, 26, 0.18); }
+}
+@media (prefers-reduced-motion: reduce) {
+  /* Keep the depth cue, drop the movement. */
+  .qcf-ayah-run--active {
+    animation: none;
+    box-shadow: 0 4px 12px rgba(26, 26, 26, 0.18);
+  }
 }
 
 /* Eraser rubber — round, sized to the real hit radius, follows the pointer */

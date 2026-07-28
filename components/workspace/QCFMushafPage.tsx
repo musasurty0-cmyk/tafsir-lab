@@ -380,7 +380,15 @@ function QCFMushafPage({
                 run.wash ? (
                   <span
                     key={`run-${lineKey}-${ri}`}
-                    className="qcf-ayah-run"
+                    /* Only the ACTIVE ayah lifts; ayāt merely carrying notes
+                       keep their flat wash. A multi-line ayah produces one run
+                       per line and they all get the class, so they rise by the
+                       same amount and read as a single selection. */
+                    className={
+                      run.wash === AYAH_ACTIVE_WASH
+                        ? "qcf-ayah-run qcf-ayah-run--active"
+                        : "qcf-ayah-run"
+                    }
                     style={{ background: run.wash }}
                   >
                     {run.entries.map(renderGlyph)}
