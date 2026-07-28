@@ -1949,7 +1949,10 @@ input, textarea { font: inherit; color: inherit; }
   position: relative;
   flex: 1 1 0;
   overflow: hidden;
-  background: #f0f0f0;
+  /* Plain white. The Mushaf page carries no background of its own, so this
+     is the paper — a tinted surround made the page read as a card floating
+     on a desk rather than as the sheet you are writing on. */
+  background: #ffffff;
   cursor: default;
   user-select: none;
   -webkit-user-select: none;
