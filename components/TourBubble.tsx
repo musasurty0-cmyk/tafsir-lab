@@ -19,13 +19,16 @@ import { pushWithSplash } from "@/lib/nav-splash";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { getTour, setTour, clearTour, type TourState } from "@/lib/tour";
+import TourSpotlight, { useSpotlightTarget } from "./TourSpotlight";
 
 // ── Route matchers ────────────────────────────────────────────────────────────
 const onHome  = (p: string) => p.startsWith("/home");
 const onSurah = (p: string) => /^\/workspaces\/[^/]+\/surahs/.test(p);
 
 // ── Step content ──────────────────────────────────────────────────────────────
-const STEPS = [
+const STEPS: readonly {
+  title: string; body: string; cta: string; target?: string;
+}[] = [
   {
     title: "Welcome to TafsirLab",
     body:  "We'll create a tutorial workspace and open the editor so you can see how everything works.",
@@ -35,23 +38,27 @@ const STEPS = [
     title: "Write your tafsir",
     body:  "This is your writing space. Type your notes, press '/' for commands — try /ayah 1:1 to embed a verse with Arabic text and translation.",
     cta:   "Next: annotate the Mushaf →",
+    target: ".page-editor-content",
   },
   {
     title: "Annotate the Mushaf",
-    body:  "You're now in Mushaf view. Draw directly on the Quran text — circle a word, underline a verse, or highlight as you study.",
+    body:  "You're now in Mushaf view. Tap the surah name to open study mode, then draw straight onto the page.",
     cta:   "Next: try split mode →",
+    target: ".qcf-page",
   },
   {
     title: "Study side by side",
     body:  "Split mode shows the editor and the Mushaf at the same time. Write your notes while keeping the Quran open beside you.",
     cta:   "Next: view the tafsir →",
+    target: ".mode-toggle",
   },
   {
     title: "Ibn Kathīr tafsir",
     body:  "The tafsir panel loads classical commentary. In the editor type /tafsir 1:1 to embed it directly into your notes.",
     cta:   "Done →",
+    target: ".drawer-overlay[data-open='true']",
   },
-] as const;
+];
 
 const TOTAL_STEPS = STEPS.length; // 5 bubble steps; step 5 is the finale
 
@@ -86,9 +93,35 @@ export default function TourBubble() {
   }, [pathname]);
 
   // ── Dismiss ───────────────────────────────────────────────────────────────
+  /* Hooks must run unconditionally, so the target is resolved here rather
+     than beside the render where the early returns live. */
+  const spotRect = useSpotlightTarget(
+    tour && tour.step < TOTAL_STEPS ? STEPS[tour.step]?.target : null,
+  );
+
   const dismiss = useCallback(() => {
     setLeaving(true);
     setTimeout(() => { clearTour(); setLocal(null); setLeaving(false); }, 300);
+  }, []);
+
+  /* Back. Only ever moves the pointer and re-emits that step's view mode —
+     it never undoes anything, because no step beyond the first creates data.
+     Step 0 is excluded in the UI: it is the one step that DOES create the
+     tutorial workspace, so returning to it must not be possible. */
+  const back = useCallback(() => {
+    const t = getTour();
+    if (!t || busy.current || t.step <= 1) {
+      if (t && t.step === 1) return;  // nothing to return to
+      return;
+    }
+    const prev = t.step - 1;
+    setTour({ ...t, step: prev });
+    setLocal({ ...t, step: prev });
+    setError(null);
+    // Restore the view that step was explaining.
+    if (prev === 2) emitMode("canvas");
+    else if (prev === 3) emitMode("split");
+    else if (prev >= 1) emitMode("editor");
   }, []);
 
   // ── Emit mode/action events to WorkspacePageView ──────────────────────────
@@ -207,6 +240,11 @@ export default function TourBubble() {
   const s = STEPS[step];
 
   return (
+    <>
+    {/* Dims the page and cuts a hole around whatever this step is about.
+        Renders nothing when the step has no target or the target is not on
+        screen, so the bubble always works even if a selector goes stale. */}
+    <TourSpotlight rect={spotRect} />
     <div className={`tr-bubble${leaving ? " tr-out" : " tr-in"}`}>
       <div className="tr-bubble-top">
         <div className="tr-dots">
@@ -228,13 +266,23 @@ export default function TourBubble() {
 
       {error && <p className="tr-error">{error}</p>}
 
-      <button
-        className="tr-next-btn"
-        onClick={next}
-        disabled={loading}
-      >
-        {loading ? "Setting up…" : s.cta}
-      </button>
+      <div className="tr-actions">
+        {/* Back appears from the second step on — nothing to go back to
+            from the first, and a permanently disabled control is noise. */}
+        {step > 0 && (
+          <button className="tr-back-btn" onClick={back} disabled={loading}>
+            Back
+          </button>
+        )}
+        <button
+          className="tr-next-btn"
+          onClick={next}
+          disabled={loading}
+        >
+          {loading ? "Setting up…" : s.cta}
+        </button>
+      </div>
     </div>
+    </>
   );
 }

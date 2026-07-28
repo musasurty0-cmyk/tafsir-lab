@@ -6652,6 +6652,48 @@ input, textarea { font: inherit; color: inherit; }
   flex-direction: column;
   gap:            8px;
 }
+/* ── Tour spotlight ──────────────────────────────────────────────────────
+   Sits just BELOW the bubble (8000) so the bubble is never dimmed, and
+   above everything else. pointer-events:none throughout — the spotlit
+   control has to stay usable, since the tour demonstrates real work rather
+   than describing it. */
+.tr-spotlight {
+  position: fixed; inset: 0;
+  z-index: 7990;
+  pointer-events: none;
+  animation: tr-spot-in 220ms var(--ease-out) both;
+}
+.tr-spotlight svg { display: block; width: 100%; height: 100%; }
+.tr-spotlight-veil { fill: oklch(0.12 0.01 250 / 0.5); }
+.tr-spotlight-ring {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.5;
+  opacity: 0.85;
+}
+@keyframes tr-spot-in { from { opacity: 0; } to { opacity: 1; } }
+
+/* Back sits beside Next; Next keeps the emphasis. */
+.tr-actions { display: flex; align-items: center; gap: 8px; }
+.tr-actions .tr-next-btn { flex: 1; }
+.tr-back-btn {
+  flex: 0 0 auto;
+  padding: 0 14px; height: 34px;
+  border-radius: 8px;
+  border: 1px solid var(--line-strong);
+  background: none;
+  color: var(--ink-2);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background var(--dur-hover) var(--ease-soft);
+}
+.tr-back-btn:hover:not(:disabled) { background: var(--hover); }
+.tr-back-btn:disabled { opacity: 0.5; cursor: default; }
+
+@media (prefers-reduced-motion: reduce) {
+  .tr-spotlight { animation: none; }
+}
+
 .tr-bubble.tr-in  { animation: tr-bubble-in  0.28s cubic-bezier(0.22,1,0.36,1) both; }
 .tr-bubble.tr-out { animation: tr-bubble-out 0.22s ease both; pointer-events: none; }
 
