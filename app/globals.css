@@ -1667,10 +1667,15 @@ input, textarea { font: inherit; color: inherit; }
 
 /* ── Sidebar expand button (shown in canvas-area when sidebar is collapsed) ── */
 .sidebar-expand-btn {
-  /* Top-left, NOT vertically centred — the centred position sat exactly
-     under the pen tool rail (left: 14px, top: 50%) and blocked it. */
+  /* BOTTOM-left. Every other position on this edge is taken:
+       top ~64px  → the formatting bar's band (it overlapped it)
+       top 50%    → the pen tool rail, which is vertically centred
+       centre     → the Mushaf itself
+       bottom-right → the zoom HUD
+     The bottom-left corner is the only spot that stays clear whether the
+     formatting bar is open or closed, and in every mode. */
   position: absolute;
-  top: 64px;
+  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
   left: 6px;
   z-index: 35; /* above the rail so it stays tappable when adjacent */
   width: 24px; height: 40px;
@@ -2784,30 +2789,31 @@ input, textarea { font: inherit; color: inherit; }
 }
 
 /* Rule – name – rule ornament, matching printed-Quran convention */
+/* The surah name sits in its own compact container, centred on the Mushaf
+   content. The full-width rules that used to run out to both margins were
+   the heaviest thing on an otherwise quiet page — they read as a divider
+   across the sheet rather than as a label for the surah. */
 .qcf-surah-ornament {
-  display:     flex;
-  align-items: center;
-  width:       100%;
-  gap:         10px;
-  color:       #1a1a1a;
-}
-
-.qcf-surah-ornament::before,
-.qcf-surah-ornament::after {
-  content:    "";
-  flex:       1;
-  height:     1px;
-  background: #1a1a1a;
-  opacity:    0.18;
+  display:         flex;
+  align-items:     center;
+  justify-content: center;
+  gap:             10px;
+  color:           #1a1a1a;
 }
 
 .qcf-surah-name {
   font-family: var(--font-arabic);
-  font-size:   21px;
-  font-weight: 700;
-  color:       #1a1a1a;
+  font-size:   18px;
+  /* Quieter than the Qur'anic text it labels: lighter, smaller, softened. */
+  font-weight: 600;
+  color:       rgba(26, 26, 26, 0.72);
   line-height: 1.5;
   white-space: nowrap;
+  /* A pill, not a card — hairline border, no shadow, no fill weight. */
+  padding:       5px 18px;
+  border:        1px solid rgba(26, 26, 26, 0.12);
+  border-radius: 999px;
+  background:    rgba(26, 26, 26, 0.02);
 }
 
 .qcf-basmala {
@@ -7405,10 +7411,12 @@ input, textarea { font: inherit; color: inherit; }
   /* NOTE: .mode-b-inner is deliberately absent — its transform IS the
      viewport (pan and zoom), not decoration. Neutralising it would snap the
      canvas back to the origin. */
-  .drawer-overlay,
-  .study-rail-wrap, .study-bar {
-    transform: none !important;
-  }
+  /* Only the drawer is neutralised wholesale — it is the one surface whose
+     transform is purely travel. .study-rail-wrap and .study-bar are handled
+     by their [data-visible="false"] rules below, which kill just the entry
+     offset; blanketing them here would also clobber any positioning
+     transform they or their children rely on. */
+  .drawer-overlay { transform: none !important; }
   .anchored-note-card, .free-textbox, .slash-palette,
   .et-popover, .ctr-popover, .study-layer {
     animation-name: none !important;
