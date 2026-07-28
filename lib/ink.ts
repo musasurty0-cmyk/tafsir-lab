@@ -229,6 +229,76 @@ function penOutline(raw: Pt[], base: number): [number, number][] {
   return ring;
 }
 
+/** A stroke's geometry, ready to paint. Built once per stroke and reused. */
+export interface BuiltPath { path: Path2D; mode: "fill" | "stroke"; lineWidth: number }
+
+/**
+ * Build the Path2D for a stroke. Split out of drawSmooth so the result can be
+ * CACHED: this is the expensive half (outline maths plus hundreds of curve
+ * segments) and for a committed stroke it produces the same path every time.
+ */
+export function buildStrokePath(
+  pts: Pt[], width: number, pressureSensitive: boolean,
+): BuiltPath | null {
+  if (!pts.length) return null;
+  const path = new Path2D();
+
+  if (pts.length === 1) {
+    const r = pressureSensitive ? strokeRadius(width, pts[0][2]) : width / 2;
+    path.arc(pts[0][0], pts[0][1], r, 0, Math.PI * 2);
+    return { path, mode: "fill", lineWidth: width };
+  }
+
+  if (!pressureSensitive) {
+    path.moveTo(pts[0][0], pts[0][1]);
+    if (pts.length === 2) {
+      path.lineTo(pts[1][0], pts[1][1]);
+    } else {
+      for (let i = 1; i < pts.length - 1; i++) {
+        const [x0, y0] = pts[i];
+        const [x1, y1] = pts[i + 1];
+        path.quadraticCurveTo(x0, y0, (x0 + x1) / 2, (y0 + y1) / 2);
+      }
+      path.lineTo(pts[pts.length - 1][0], pts[pts.length - 1][1]);
+    }
+    return { path, mode: "stroke", lineWidth: width };
+  }
+
+  const outline = penOutline(pts, width);
+  if (outline.length < 3) {
+    path.arc(pts[0][0], pts[0][1], strokeRadius(width, pts[0][2]), 0, Math.PI * 2);
+    return { path, mode: "fill", lineWidth: width };
+  }
+
+  path.moveTo(outline[0][0], outline[0][1]);
+  // Midpoint-quadratic around the outline keeps the polygon silky at any
+  // zoom. Body points sit on the true offset curve and caps are 8-segment
+  // arcs, so the smoothing rounds nothing off perceptibly.
+  for (let i = 1; i < outline.length; i++) {
+    const [x0, y0] = outline[i - 1];
+    const [x1, y1] = outline[i];
+    path.quadraticCurveTo(x0, y0, (x0 + x1) / 2, (y0 + y1) / 2);
+  }
+  path.closePath();
+  return { path, mode: "fill", lineWidth: width };
+}
+
+/** Paint a prebuilt path with the given ink settings. */
+export function paintBuiltPath(
+  ctx: CanvasRenderingContext2D, b: BuiltPath,
+  color: string, opacity: number,
+) {
+  ctx.save();
+  ctx.globalAlpha = opacity;
+  ctx.strokeStyle = color;
+  ctx.fillStyle   = color;
+  ctx.lineCap     = "round";
+  ctx.lineJoin    = "round";
+  if (b.mode === "stroke") { ctx.lineWidth = b.lineWidth; ctx.stroke(b.path); }
+  else                     { ctx.fill(b.path); }
+  ctx.restore();
+}
+
 export function drawSmooth(
   ctx:     CanvasRenderingContext2D,
   pts:     Pt[],
@@ -237,67 +307,9 @@ export function drawSmooth(
   opacity: number,
   pressureSensitive = false,
 ) {
-  if (!pts.length) return;
-  ctx.save();
-  ctx.globalAlpha = opacity;
-  ctx.strokeStyle = color;
-  ctx.fillStyle   = color;
-  ctx.lineCap     = "round";
-  ctx.lineJoin    = "round";
-
-  if (pts.length === 1) {
-    const r = pressureSensitive ? strokeRadius(width, pts[0][2]) : width / 2;
-    ctx.beginPath();
-    ctx.arc(pts[0][0], pts[0][1], r, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-    return;
-  }
-
-  if (!pressureSensitive) {
-    // Constant width — one continuous stroked path.
-    ctx.lineWidth = width;
-    ctx.beginPath();
-    ctx.moveTo(pts[0][0], pts[0][1]);
-    if (pts.length === 2) {
-      ctx.lineTo(pts[1][0], pts[1][1]);
-    } else {
-      for (let i = 1; i < pts.length - 1; i++) {
-        const mx = (pts[i][0] + pts[i + 1][0]) / 2;
-        const my = (pts[i][1] + pts[i + 1][1]) / 2;
-        ctx.quadraticCurveTo(pts[i][0], pts[i][1], mx, my);
-      }
-      ctx.lineTo(pts[pts.length - 1][0], pts[pts.length - 1][1]);
-    }
-    ctx.stroke();
-    ctx.restore();
-    return;
-  }
-
-  // Pressure path — single filled outline polygon (no joints, no beads).
-  const outline = penOutline(pts, width);
-
-  if (outline.length < 3) {
-    ctx.beginPath();
-    ctx.arc(pts[0][0], pts[0][1], strokeRadius(width, pts[0][2]), 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-    return;
-  }
-
-  ctx.beginPath();
-  ctx.moveTo(outline[0][0], outline[0][1]);
-  // Midpoint-quadratic around the outline keeps the polygon silky at any
-  // zoom. Body points sit on the true offset curve and caps are 8-segment
-  // arcs, so the smoothing rounds nothing off perceptibly.
-  for (let i = 1; i < outline.length; i++) {
-    const [x0, y0] = outline[i - 1];
-    const [x1, y1] = outline[i];
-    ctx.quadraticCurveTo(x0, y0, (x0 + x1) / 2, (y0 + y1) / 2);
-  }
-  ctx.closePath();
-  ctx.fill();
-  ctx.restore();
+  // Used for the ACTIVE stroke, which changes every frame — no cache here.
+  const b = buildStrokePath(pts, width, pressureSensitive);
+  if (b) paintBuiltPath(ctx, b, color, opacity);
 }
 
 export function drawArrow(
@@ -326,8 +338,37 @@ export function drawArrow(
   ctx.restore();
 }
 
+/* Committed strokes are immutable — the arrays that hold them are rebuilt on
+   edit, but the stroke objects themselves are carried over — so their geometry
+   can be built once and reused.
+
+   This matters a lot. paintStroke runs for EVERY stroke on EVERY frame, and
+   the canvas repaints continuously while drawing. Rebuilding each time meant
+   re-running normPts and penOutline per stroke per frame — six Float32Arrays
+   and three point arrays each — which is sustained allocation churn and
+   showed up as periodic freezes when the collector ran.
+
+   Keyed by the stroke object in a WeakMap, so entries disappear with the
+   strokes and nothing has to be invalidated by hand. Width and tool are
+   stored alongside: if either changes the stroke is a different shape and
+   the path is rebuilt. */
+const pathCache = new WeakMap<object, { built: BuiltPath | null; w: number; tool: string }>();
+
 export function paintStroke(ctx: CanvasRenderingContext2D, s: InkStroke, alphaScale = 1) {
-  const pts = normPts(s.points as unknown[]);
-  if (s.tool === "arrow") { drawArrow(ctx, pts, s.color, s.width); return; }
-  drawSmooth(ctx, pts, s.color, s.width, s.opacity * alphaScale, s.tool === "pen");
+  if (s.tool === "arrow") {
+    drawArrow(ctx, normPts(s.points as unknown[]), s.color, s.width);
+    return;
+  }
+
+  let entry = pathCache.get(s as unknown as object);
+  if (!entry || entry.w !== s.width || entry.tool !== s.tool) {
+    const pts = normPts(s.points as unknown[]);
+    entry = {
+      built: buildStrokePath(pts, s.width, s.tool === "pen"),
+      w: s.width,
+      tool: s.tool,
+    };
+    pathCache.set(s as unknown as object, entry);
+  }
+  if (entry.built) paintBuiltPath(ctx, entry.built, s.color, s.opacity * alphaScale);
 }

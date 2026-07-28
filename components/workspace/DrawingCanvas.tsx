@@ -193,6 +193,9 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
 
   const allMyStrokesRef = useRef<Stroke[]>([]);  // all strokes including other pages
   const myStrokesRef    = useRef<Stroke[]>([]);   // filtered to current mushafPage
+  /** id → when the server last CONFIRMED this stroke saved. Used to tell a
+   *  genuinely-deleted stroke apart from one a stale snapshot predates. */
+  const savedAtRef = useRef<Map<string, number>>(new Map());
   const [myStrokes, setMyStrokes] = useState<Stroke[]>([]);
   useEffect(() => { myStrokesRef.current = myStrokes; }, [myStrokes]);
 
@@ -228,17 +231,39 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
    *  add server strokes we don't have (drawn on another device), drop local
    *  strokes the server no longer has but once did (deleted on another
    *  device). Unsaved local strokes are always kept. */
-  const syncMyStrokes = useCallback((serverMine: Stroke[]) => {
+  /**
+   * Merge a server snapshot into local state.
+   *
+   * `issuedAt` is when the request that produced this snapshot went out. It
+   * closes a stale-read race that made fresh ink vanish and come back:
+   *
+   *   1. a poll's GET is issued
+   *   2. the debounced PUT lands and marks the new stroke saved
+   *   3. the GET returns state from BEFORE that PUT, so the stroke is absent
+   *   4. "saved, but the server does not list it" read as deleted elsewhere
+   *      and the stroke was dropped — until the next poll brought it back
+   *
+   * A stroke confirmed saved AFTER the snapshot was requested simply cannot
+   * be in it, so its absence proves nothing and must not delete anything.
+   */
+  const syncMyStrokes = useCallback((serverMine: Stroke[], issuedAt = 0) => {
     const canvasServer = serverMine.filter((s) => strokeSurface(s) === "canvas");
     const serverIds    = new Set(canvasServer.map((s) => s.id));
-    for (const id of serverIds) savedIdsRef.current.add(id);
+    const now = Date.now();
+    for (const id of serverIds) {
+      savedIdsRef.current.add(id);
+      if (!savedAtRef.current.has(id)) savedAtRef.current.set(id, now);
+    }
 
     const have  = new Set(allMyStrokesRef.current.map((s) => s.id));
     const added = canvasServer.filter(
       (s) => !have.has(s.id) && !tombstonesRef.current.has(s.id),
     );
     const kept = allMyStrokesRef.current.filter(
-      (s) => serverIds.has(s.id) || !savedIdsRef.current.has(s.id),
+      (s) =>
+        serverIds.has(s.id) ||
+        !savedIdsRef.current.has(s.id) ||
+        (savedAtRef.current.get(s.id) ?? 0) >= issuedAt,
     );
     if (added.length === 0 && kept.length === allMyStrokesRef.current.length) return;
 
@@ -477,6 +502,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     redoStackRef.current    = [];
     tombstonesRef.current   = new Set();
     savedIdsRef.current     = new Set();
+    savedAtRef.current      = new Map();
     setMyStrokes([]);
 
     function load() {
@@ -559,12 +585,13 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     if (!pageId) return;
     const id = setInterval(() => {
       if (document.visibilityState !== "visible") return;
+      const issuedAt = Date.now();   // anything saved after this cannot be in the reply
       fetch(`/api/pages/${pageId}/drawings`)
         .then(r => r.ok ? r.json() : null)
         .then((d: { myStrokes?: Stroke[]; otherLayers?: DrawingLayer[] } | null) => {
           if (!d) return;
           if (d.otherLayers) setOtherLayers(d.otherLayers);
-          if (d.myStrokes && loadedRef.current) syncMyStrokes(d.myStrokes);
+          if (d.myStrokes && loadedRef.current) syncMyStrokes(d.myStrokes, issuedAt);
         })
         .catch(() => {});
     }, 15000);
@@ -678,7 +705,10 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
       body,
       keepalive,
     }).then((r) => {
-      if (r.ok) for (const s of snapshot) savedIdsRef.current.add(s.id);
+      if (r.ok) {
+        const t = Date.now();
+        for (const s of snapshot) { savedIdsRef.current.add(s.id); savedAtRef.current.set(s.id, t); }
+      }
       return r;
     });
   }, [pageId]);
