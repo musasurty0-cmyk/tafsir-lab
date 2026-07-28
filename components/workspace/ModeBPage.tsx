@@ -17,6 +17,7 @@ import {
   useCallback, useEffect, useLayoutEffect, useMemo,
   useRef, useState,
 } from "react";
+import { createPortal } from "react-dom";
 
 const HINT_KEY        = "tl-word-tap-hint-dismissed";
 const MUSHAF_PAGE_KEY = (pageId: string) => `tl-mushaf-page:${pageId}`;
@@ -704,6 +705,11 @@ export default function ModeBPage({
   // ── Scroll to note (split-view sync) ─────────────────────────────────
   const containerRef = useRef<HTMLDivElement>(null);
 
+  /* The banner slot lives in TopBar, a sibling subtree, so it only exists
+     after the first commit — hence state rather than a ref. */
+  const [navSlot, setNavSlot] = useState<HTMLElement | null>(null);
+  useEffect(() => { setNavSlot(document.getElementById("topbar-canvas-slot")); }, []);
+
   useEffect(() => {
     if (!scrollToNoteId) return;
     const pos = notePositions.get(scrollToNoteId);
@@ -1180,11 +1186,15 @@ export default function ModeBPage({
         <button className="mode-b-zoom-btn" title="Reset view" onClick={() => tweenTo({ x: centeredX(1), y: 40, zoom: 1 })} style={{ fontSize: "0.7rem" }}>↺</button>
       </div>
 
-      {/* ── Mushaf page navigator ── */}
-      {availablePages.length > 1 && (
-        <div className="mushaf-nav" onPointerDown={(e) => e.stopPropagation()}>
+      {/* ── Mushaf page navigator — rendered into the TOP BANNER ──────────
+          Portalled rather than lifted: the page state belongs to the canvas,
+          and hoisting it into WorkspacePageView would drag the note and
+          collaboration plumbing along with it. The banner slot owns placement;
+          this owns behaviour. There is now exactly one page navigator. */}
+      {availablePages.length > 1 && navSlot && createPortal((
+        <div className="tb-page-nav" onPointerDown={(e) => e.stopPropagation()}>
           <button
-            className="mushaf-nav-btn"
+            className="tb-page-nav-btn"
             disabled={availablePages.indexOf(currentMushafahPage) <= 0}
             onClick={goToPrevPage}
             title="Previous Mushaf page"
@@ -1192,17 +1202,17 @@ export default function ModeBPage({
           >
             ‹
           </button>
-          <div className="mushaf-nav-info">
-            <span className="mushaf-nav-page">Page {currentMushafahPage}</span>
+          <div className="tb-page-nav-info">
+            <span className="tb-page-nav-page">Page {currentMushafahPage}</span>
             {pageVerses.length > 0 && (
               <>
-                <span className="mushaf-nav-sep">·</span>
-                <span className="mushaf-nav-surah">{chapter.name_simple}</span>
+                <span className="tb-page-nav-sep">·</span>
+                <span className="tb-page-nav-surah">{chapter.name_simple}</span>
               </>
             )}
           </div>
           <button
-            className="mushaf-nav-btn"
+            className="tb-page-nav-btn"
             disabled={availablePages.indexOf(currentMushafahPage) >= availablePages.length - 1}
             onClick={goToNextPage}
             title="Next Mushaf page"
@@ -1211,7 +1221,7 @@ export default function ModeBPage({
             ›
           </button>
         </div>
-      )}
+      ), navSlot)}
 
       {/* ── Word-tap hint chip — study-only; it describes a study action ── */}
       {studyMode && showHint && !focusAnchor && (

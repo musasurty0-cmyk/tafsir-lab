@@ -208,6 +208,12 @@ export default function TopBar({
           </>
         )}
 
+        {/* Canvas page navigation portals in here (see ModeBPage). The slot
+            keeps the controls inside the banner's flex flow so they align with
+            the mode toggle, while their state stays owned by the canvas. It
+            collapses to nothing when empty, so no gap in other modes. */}
+        <div className="tb-canvas-slot" id="topbar-canvas-slot" />
+
         <div className="tb-divider" />
 
         {/* Tafsīr drawer */}
