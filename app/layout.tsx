@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import {
   IBM_Plex_Sans, IBM_Plex_Serif, IBM_Plex_Mono,
-  Caveat, Patrick_Hand,
+  Caveat, Patrick_Hand, Comic_Neue,
 } from "next/font/google";
 import NavSplashCleaner from "@/components/NavSplashCleaner";
 import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
@@ -27,11 +27,22 @@ const plexMono = IBM_Plex_Mono({
 });
 /* Handwriting faces, offered per-selection in the editor toolbar. Margin
    notes on the Mushaf read as annotations rather than typed text when they
-   are set in a hand — Caveat is a joined script, Patrick Hand a neat print. */
+   are set in a hand.
+
+   --font-hand is the DEFAULT "Handwriting" option: a rounded marker hand.
+   Comic Sans MS is the same genre but does not ship on iPadOS — the primary
+   drawing device here — so a webfont is used rather than a system stack. */
+const comicNeue = Comic_Neue({
+  subsets: ["latin"],
+  weight: ["400", "700"],
+  variable: "--font-hand",
+  display: "swap",
+});
+/* Joined script, as a second hand. */
 const caveat = Caveat({
   subsets: ["latin"],
   weight: ["400", "600"],
-  variable: "--font-hand",
+  variable: "--font-script",
   display: "swap",
 });
 const patrickHand = Patrick_Hand({
@@ -62,7 +73,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body
-        className={`${plex.variable} ${plexSerif.variable} ${plexMono.variable} ${caveat.variable} ${patrickHand.variable}`}
+        className={`${plex.variable} ${plexSerif.variable} ${plexMono.variable} ${comicNeue.variable} ${caveat.variable} ${patrickHand.variable}`}
         style={{ fontFamily: "var(--font-sans), system-ui, sans-serif" }}
       >
         <LocaleProvider>

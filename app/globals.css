@@ -2700,7 +2700,10 @@ input, textarea { font: inherit; color: inherit; }
   direction:      rtl;
   /* QCF typography — do not override on child elements */
   font-size:      20px;
-  line-height:    2.5;
+  /* Tight enough to read as a printed page rather than a spaced-out list.
+     QCF glyphs carry full vocalisation above and below the baseline, so this
+     is the floor before marks from adjacent lines start to crowd. */
+  line-height:    1.95;
   letter-spacing: 0;
   word-spacing:   0;
   font-kerning:   none;       /* PUA glyphs have no kern pairs; skip the lookup */

@@ -93,7 +93,12 @@ export const FONT_FAMILIES = [
   { label: "Default",     css: "" },
   { label: "Serif",       css: "var(--font-serif), Georgia, serif" },
   { label: "Mono",        css: "var(--font-mono), ui-monospace, monospace" },
-  { label: "Handwriting", css: "var(--font-hand), 'Segoe Script', cursive" },
+  /* Comic Sans MS first — it is the requested face and ships on Windows and
+     macOS. It is NOT on iPadOS, so Comic Neue (a faithful webfont clone,
+     self-hosted) backs it up there rather than falling through to a generic
+     cursive. */
+  { label: "Handwriting", css: "'Comic Sans MS', var(--font-hand), cursive" },
+  { label: "Script",      css: "var(--font-script), 'Segoe Script', cursive" },
   { label: "Neat hand",   css: "var(--font-hand-print), 'Comic Sans MS', cursive" },
 ];
 

@@ -55,6 +55,18 @@ const MUSHAF_CARD_WIDTH    = 720;
 const VIEWPORT_DEBOUNCE_MS = 800;
 const NOTE_GAP             = 40;
 
+/* Wheel zoom. Zoom is exponential — each event multiplies by e^step — so a
+   notch is a constant RATIO at any zoom level, and in/out are exact inverses.
+   MAX_STEP caps a single event: a mouse reports deltaY≈100 per notch where a
+   trackpad reports ~1-4, and without a cap one mouse notch crosses the entire
+   zoom range in one go. */
+const ZOOM_WHEEL_SENSITIVITY = 0.0015;
+const ZOOM_WHEEL_MAX_STEP    = 0.18;
+/** Ratio per click of the +/− buttons. */
+const ZOOM_BUTTON_STEP       = 1.2;
+/** How long the button/reset zoom glides for, in ms. */
+const ZOOM_TWEEN_MS          = 180;
+
 // ── Helpers ───────────────────────────────────────────────────────────────
 
 function getOffsetRelativeTo(el: HTMLElement, ancestor: HTMLElement): { x: number; y: number } {
@@ -577,6 +589,42 @@ export default function ModeBPage({
   }, [pageId]);
   useEffect(() => () => { if (vDebounceRef.current) clearTimeout(vDebounceRef.current); }, []);
 
+  /* Glide the viewport to a target instead of snapping. Used by the +/− and
+     reset buttons; the wheel and pinch stay direct, because a tween on a
+     continuous gesture reads as lag. */
+  const tweenRef = useRef<number>(0);
+  const tweenTo = useCallback((target: CanvasViewport) => {
+    if (tweenRef.current) cancelAnimationFrame(tweenRef.current);
+    const from = viewportRef.current;
+    const t0   = performance.now();
+    const step = (now: number) => {
+      const t = Math.min(1, (now - t0) / ZOOM_TWEEN_MS);
+      const e = 1 - Math.pow(1 - t, 3); // easeOutCubic
+      setViewport({
+        zoom: from.zoom + (target.zoom - from.zoom) * e,
+        x:    from.x    + (target.x    - from.x)    * e,
+        y:    from.y    + (target.y    - from.y)    * e,
+      });
+      if (t < 1) tweenRef.current = requestAnimationFrame(step);
+      else { tweenRef.current = 0; patchViewport(target); }
+    };
+    tweenRef.current = requestAnimationFrame(step);
+  }, [patchViewport]);
+  useEffect(() => () => { if (tweenRef.current) cancelAnimationFrame(tweenRef.current); }, []);
+
+  /* Zoom by a ratio about the centre of the canvas, so the thing you are
+     looking at stays put. Changing zoom alone pins the top-left corner and
+     throws the content off to one side. */
+  const zoomByStep = useCallback((ratio: number) => {
+    const prev = viewportRef.current;
+    const zoom = clamp(prev.zoom * ratio, ZOOM_MIN, ZOOM_MAX);
+    const el   = containerRef.current;
+    const cx   = el ? el.clientWidth  / 2 : 0;
+    const cy   = el ? el.clientHeight / 2 : 0;
+    const s    = zoom / prev.zoom;
+    tweenTo({ zoom, x: cx - (cx - prev.x) * s, y: cy - (cy - prev.y) * s });
+  }, [tweenTo]);
+
   // ── Page navigation callbacks (after patchViewport to avoid TDZ) ──────
   const goToPage = useCallback((p: number) => {
     setCurrentMushafahPage(p);
@@ -623,21 +671,54 @@ export default function ModeBPage({
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
+    // Coalesce bursts of wheel events into one state update per frame. A
+    // trackpad can emit events faster than React can render, and committing
+    // each one turns a smooth gesture into a stutter.
+    let raf = 0;
+    let pending: CanvasViewport | null = null;
+
+    function flush() {
+      raf = 0;
+      if (!pending) return;
+      const next = pending;
+      pending = null;
+      setViewport(next);
+      patchViewport(next);
+    }
+
     function onWheel(e: WheelEvent) {
       if (focusAnchor) return;
       if (tool !== "hand") return; // don't zoom while a drawing tool is selected
       e.preventDefault();
-      const delta   = -e.deltaY * 0.001 * (e.deltaMode === 1 ? 16 : 1);
-      const prev    = viewportRef.current;
-      const newZoom = clamp(prev.zoom + prev.zoom * delta * 10, ZOOM_MIN, ZOOM_MAX);
-      const rect    = el!.getBoundingClientRect();
+
+      // deltaMode: 0 = pixels, 1 = lines, 2 = pages. Normalise to pixels so
+      // one notch means the same thing across browsers.
+      const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 100 : 1;
+      const step = clamp(
+        e.deltaY * unit * ZOOM_WHEEL_SENSITIVITY,
+        -ZOOM_WHEEL_MAX_STEP,
+        ZOOM_WHEEL_MAX_STEP,
+      );
+
+      // Zoom from the pending value, not committed state — otherwise every
+      // event in a burst computes off the same stale zoom and the gesture
+      // stalls.
+      const prev    = pending ?? viewportRef.current;
+      const newZoom = clamp(prev.zoom * Math.exp(-step), ZOOM_MIN, ZOOM_MAX);
+
+      // Keep the point under the cursor fixed.
+      const rect  = el!.getBoundingClientRect();
       const mx = e.clientX - rect.left, my = e.clientY - rect.top;
       const scale = newZoom / prev.zoom;
-      const next: CanvasViewport = { zoom: newZoom, x: mx - (mx - prev.x) * scale, y: my - (my - prev.y) * scale };
-      setViewport(next); patchViewport(next);
+      pending = { zoom: newZoom, x: mx - (mx - prev.x) * scale, y: my - (my - prev.y) * scale };
+      if (!raf) raf = requestAnimationFrame(flush);
     }
+
     el.addEventListener("wheel", onWheel, { passive: false });
-    return () => el.removeEventListener("wheel", onWheel);
+    return () => {
+      el.removeEventListener("wheel", onWheel);
+      if (raf) cancelAnimationFrame(raf);
+    };
   }, [patchViewport, focusAnchor, tool]);
 
   // ── Touch pan / pinch-zoom — native touch events ─────────────────────────
@@ -977,10 +1058,10 @@ export default function ModeBPage({
 
       {/* ── Zoom HUD ── */}
       <div className="mode-b-zoom-controls">
-        <button className="mode-b-zoom-btn" title="Zoom in"  onClick={() => { const next = { ...viewportRef.current, zoom: clamp(viewportRef.current.zoom * 1.2, ZOOM_MIN, ZOOM_MAX) }; setViewport(next); patchViewport(next); }}>+</button>
+        <button className="mode-b-zoom-btn" title="Zoom in"  onClick={() => zoomByStep(ZOOM_BUTTON_STEP)}>+</button>
         <span className="mode-b-zoom-label">{Math.round(viewport.zoom * 100)}%</span>
-        <button className="mode-b-zoom-btn" title="Zoom out" onClick={() => { const next = { ...viewportRef.current, zoom: clamp(viewportRef.current.zoom / 1.2, ZOOM_MIN, ZOOM_MAX) }; setViewport(next); patchViewport(next); }}>−</button>
-        <button className="mode-b-zoom-btn" title="Reset view" onClick={() => { const next: CanvasViewport = { x: centeredX(1), y: 40, zoom: 1 }; setViewport(next); patchViewport(next); }} style={{ fontSize: "0.7rem" }}>↺</button>
+        <button className="mode-b-zoom-btn" title="Zoom out" onClick={() => zoomByStep(1 / ZOOM_BUTTON_STEP)}>−</button>
+        <button className="mode-b-zoom-btn" title="Reset view" onClick={() => tweenTo({ x: centeredX(1), y: 40, zoom: 1 })} style={{ fontSize: "0.7rem" }}>↺</button>
       </div>
 
       {/* ── Mushaf page navigator ── */}
