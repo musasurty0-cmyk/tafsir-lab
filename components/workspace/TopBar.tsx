@@ -141,6 +141,13 @@ export default function TopBar({
         )}
       </div>
 
+      {/* Canvas page navigation portals in here (see ModeBPage). It sits
+          directly right of the breadcrumb because it names WHERE you are —
+          the same job as the crumbs — rather than what you are doing, which
+          is the actions cluster's role. The slot collapses to nothing when
+          empty, so other modes get no gap. State stays owned by the canvas. */}
+      <div className="tb-canvas-slot" id="topbar-canvas-slot" />
+
       {/* ── Live status + presence ── */}
       {liveStatus && (
         <span className="live-pill" data-status={liveStatus} title={
@@ -207,12 +214,6 @@ export default function TopBar({
             </button>
           </>
         )}
-
-        {/* Canvas page navigation portals in here (see ModeBPage). The slot
-            keeps the controls inside the banner's flex flow so they align with
-            the mode toggle, while their state stays owned by the canvas. It
-            collapses to nothing when empty, so no gap in other modes. */}
-        <div className="tb-canvas-slot" id="topbar-canvas-slot" />
 
         <div className="tb-divider" />
 

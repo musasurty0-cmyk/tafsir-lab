@@ -379,12 +379,16 @@ input, textarea { font: inherit; color: inherit; }
   padding: 10px 20px; gap: 10px;
   min-height: 48px;
 }
-.crumbs { display: flex; align-items: center; gap: 4px; font-size: 13px; color: var(--ink-3); flex: 1; min-width: 0; }
+/* Sized to content, not greedy: the page navigator sits immediately to its
+   right, so the crumbs must not grow and push it away. Slack is taken by
+   .topbar-actions' auto margin instead, which keeps the actions right-aligned
+   whether or not the navigator is present. */
+.crumbs { display: flex; align-items: center; gap: 4px; font-size: 13px; color: var(--ink-3); flex: 0 1 auto; min-width: 0; }
 .crumb { padding: 3px 6px; border-radius: 4px; white-space: nowrap; transition: background var(--dur-fast) ease, color var(--dur-fast) ease; }
 .crumb:hover { background: var(--hover); color: var(--ink); }
 .crumb[data-current="true"] { color: var(--ink); font-weight: 500; }
 .crumb-sep { color: var(--ink-4); font-size: 12px; }
-.topbar-actions { display: flex; align-items: center; gap: 4px; }
+.topbar-actions { display: flex; align-items: center; gap: 4px; margin-left: auto; }
 .tb-btn {
   height: 28px; padding: 0 10px;
   border-radius: 6px;
@@ -2685,6 +2689,12 @@ input, textarea { font: inherit; color: inherit; }
   align-items: center;
   gap: 1px;
   user-select: none;
+  /* A hairline tether to the breadcrumb it belongs to, so it reads as part
+     of "where you are" rather than as a floating control. */
+  padding-left: 10px;
+  margin-left: 4px;
+  border-left: 1px solid var(--line);
+  flex-shrink: 0;
 }
 .tb-page-nav-btn {
   background: none; border: none; cursor: pointer;
