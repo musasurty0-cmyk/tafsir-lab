@@ -31,6 +31,7 @@ model User {
   activityLogs     ActivityLog[]
   templates        PageTemplate[]
   pagePresence     PagePresence[]
+  segments         QuranSegment[]         @relation("SegmentCreatedBy")
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -57,6 +58,7 @@ model Workspace {
   members     WorkspaceMember[]
   surahs      WorkspaceSurah[]
   activityLog ActivityLog[]
+  segments    QuranSegment[]
 }
 
 model WorkspaceMember {
@@ -104,6 +106,35 @@ model WorkspaceSurah {
   pages     Page[]
 
   @@unique([workspaceId, surahNumber])
+}
+
+// ─────────────────────────────────────────────────────────────
+// SEGMENTS — user-defined ranges of consecutive ayat studied as one unit
+// ─────────────────────────────────────────────────────────────
+
+model QuranSegment {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId String   @db.Uuid
+  surahNumber Int
+  // Inclusive, consecutive, and within ONE surah. Disjoint ranges and
+  // cross-surah spans are deliberately out of scope for now; overlapping
+  // segments ARE allowed, so there is no exclusion constraint here.
+  startAyah   Int
+  endAyah     Int
+  title       String
+  description String?
+  color       String?
+  // Display order in the segment list only. Never affects Qur'anic order.
+  sortOrder   Int      @default(0)
+  createdById String   @db.Uuid
+  createdAt   DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @db.Timestamptz(6)
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy User      @relation("SegmentCreatedBy", fields: [createdById], references: [id])
+
+  // The common read is "every segment for this surah in this workspace".
+  @@index([workspaceId, surahNumber])
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -202,11 +233,14 @@ model StructuredNote {
   authorId     String   @db.Uuid
   // 'text' | 'callout' | 'linguistic' | 'thematic' | 'ruling' | 'question'
   noteType     String
-  // 'ayah' | 'word' | 'page'
+  // 'ayah' | 'word' | 'page' | 'segment' | 'surah'
   anchorType   String
   surahNumber  Int?
   ayahNumber   Int?
   wordPosition Int?
+  // Set only when anchorType = 'segment'. Nullable and additive, so every
+  // existing note row remains valid and the other anchor types are untouched.
+  segmentId    String?  @db.Uuid
   content      Json     // TipTap JSON — rich text, full-text searchable
   // 'amber' | 'emerald' | 'sky' | 'rose' | null
   color        String?
