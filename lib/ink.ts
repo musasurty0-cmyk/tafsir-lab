@@ -150,16 +150,45 @@ function penOutline(raw: Pt[], base: number): [number, number][] {
     S.push([rawTail[0], rawTail[1], rawTail[2]]);
   }
 
-  // 2. Drop only genuinely coincident samples. Degenerate spacing makes the
+  // 2. Upsample long gaps. Streamlining fixes noise but not SPARSITY: move the
+  //    pen quickly and consecutive samples land far apart, so the outline
+  //    polygon spans them with one long chord. The wider the pen, the further
+  //    those chords sit from the true offset curve, which is what shows up as
+  //    a faceted or broken edge on fast strokes at large thicknesses.
+  //
+  //    The cap scales with pen width but is bounded: a hairline does not need
+  //    sub-pixel sampling, and a thick pen gains nothing past ~4px. Points are
+  //    only ever ADDED where a gap exceeds the cap, so a slow stroke — already
+  //    densely sampled — is untouched and cannot bead up from over-sampling.
+  const MAX_GAP = Math.max(1.5, Math.min(4, base * 0.8));
+  const D: Pt[] = [S[0]];
+  for (let i = 1; i < S.length; i++) {
+    const a = D[D.length - 1], b = S[i];
+    const gap = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    if (gap > MAX_GAP) {
+      const steps = Math.min(Math.ceil(gap / MAX_GAP), 64); // bounded: never stall a frame
+      for (let k = 1; k < steps; k++) {
+        const f = k / steps;
+        D.push([
+          a[0] + (b[0] - a[0]) * f,
+          a[1] + (b[1] - a[1]) * f,
+          a[2] + (b[2] - a[2]) * f,   // pressure eased across the gap too
+        ]);
+      }
+    }
+    D.push(b);
+  }
+
+  // 3. Drop only genuinely coincident samples. Degenerate spacing makes the
   //    local tangent undefined; anything above that threshold is real detail
   //    and is kept, unlike the old width-proportional decimation.
   const MIN_SP = 0.35;
   const P: Pt[] = [];
-  for (const p of S) {
+  for (const p of D) {
     const last = P[P.length - 1];
     if (!last || Math.hypot(p[0] - last[0], p[1] - last[1]) >= MIN_SP) P.push(p);
   }
-  if (P.length < 2 && S.length >= 2) { P.length = 0; P.push(S[0], S[S.length - 1]); }
+  if (P.length < 2 && D.length >= 2) { P.length = 0; P.push(D[0], D[D.length - 1]); }
   const n = P.length;
   if (n < 2) return [];
 

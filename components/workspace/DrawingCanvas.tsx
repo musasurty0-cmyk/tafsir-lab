@@ -197,7 +197,16 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
    *  genuinely-deleted stroke apart from one a stale snapshot predates. */
   const savedAtRef = useRef<Map<string, number>>(new Map());
   const [myStrokes, setMyStrokes] = useState<Stroke[]>([]);
-  useEffect(() => { myStrokesRef.current = myStrokes; }, [myStrokes]);
+  /* NOTE: myStrokesRef is NOT synced from `myStrokes` by an effect.
+     It used to be, and that dropped strokes during fast writing.
+     The ref is the source of truth — every mutation site sets it imperatively
+     and then calls setMyStrokes with the same value — so an effect that
+     assigns ref = state can only ever write a STALER value. Finish one stroke
+     and start the next before React commits the first, and the effect fires
+     with the older array, overwriting the ref that already contained both;
+     the following stroke is then built from that truncated list and the one
+     in between is gone. This is the "strokes disappear when I write quickly"
+     bug. React state here exists only to trigger re-renders. */
 
   const otherLayersRef = useRef<DrawingLayer[]>([]);
   const [otherLayers, setOtherLayers] = useState<DrawingLayer[]>([]);
