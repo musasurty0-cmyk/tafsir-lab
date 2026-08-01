@@ -4558,6 +4558,30 @@ input, textarea { font: inherit; color: inherit; }
 /* Paragraph — generous spacing makes prose breathe */
 /* Tight, notebook-style line advance: Enter goes to the next line, not a
    blank-line gap. (Was 1em, which read as a double break on every Enter.) */
+/* ── Mixed Arabic / English ──────────────────────────────────────────────
+   Every block carries dir="auto" (see TextDirection), so the browser resolves
+   direction from its own first strong character. text-align:start then makes
+   alignment follow that direction — Arabic right, English left — without
+   either one imposing its direction on the other.
+
+   Deliberately NOT applied to the editor root: putting dir on the container
+   would flip the whole document because one paragraph is Arabic, which is the
+   behaviour being fixed. */
+.page-editor-content > *,
+.page-editor-content li,
+.page-editor-content blockquote {
+  text-align: start;
+}
+/* Arabic set in the reading face wherever it appears inline. */
+.page-editor-content [dir="rtl"],
+.page-editor-content [dir="auto"]:lang(ar) {
+  font-family: var(--font-arabic), var(--font-serif), serif;
+}
+/* An Arabic phrase inside an English sentence (and the reverse) is isolated,
+   so a trailing bracket or full stop cannot be dragged to the wrong end. */
+.page-editor-content bdi,
+.page-editor-content [data-dir-isolate] { unicode-bidi: isolate; }
+
 .page-editor-content p {
   margin: 0 0 0.2em;
 }
@@ -4590,11 +4614,16 @@ input, textarea { font: inherit; color: inherit; }
   border: none;
   border-inline-start: 3px solid var(--accent);
   margin: 0.9em 0;
-  padding: 8px 16px 8px 16px;
-  padding-inline-start: 16px;
+  padding-block: 8px;
+  padding-inline: 16px;
   color: var(--ink-2);
   background: color-mix(in oklch, var(--panel) 70%, transparent);
-  border-radius: 0 var(--radius) var(--radius) 0;
+  /* Logical radius: the flat edge follows the accent bar to whichever side
+     the block's direction puts it on. */
+  border-start-start-radius: 0;
+  border-end-start-radius: 0;
+  border-start-end-radius: var(--radius);
+  border-end-end-radius: var(--radius);
 }
 .page-editor-content blockquote p { margin-bottom: 0.2em; }
 .page-editor-content blockquote p:last-child { margin-bottom: 0; }
@@ -4671,7 +4700,10 @@ input, textarea { font: inherit; color: inherit; }
 /* Lists — OneNote style (Tailwind preflight strips list-style, so we restore) */
 .page-editor-content ul,
 .page-editor-content ol {
-  margin: 0.4em 0 0.8em; padding-left: 1.6em;
+  /* Logical, not padding-left: in an RTL block the markers and indentation
+     must sit on the right. A hard-coded left value put Arabic bullets on the
+     wrong side and indented the text away from its own margin. */
+  margin: 0.4em 0 0.8em; padding-inline-start: 1.6em;
 }
 .page-editor-content li { margin: 0.2em 0; line-height: 1.7; }
 /* Bullet levels */
@@ -7464,6 +7496,9 @@ input, textarea { font: inherit; color: inherit; }
 }
 .et-font-item:hover { background: var(--hover); }
 .et-font-item--active { background: var(--selected, var(--hover)); font-weight: 500; }
+/* Direction rows carry a hint, so they lay out as two columns. */
+.et-font-item:has(.et-dir-hint) { display: flex; align-items: baseline; gap: 12px; justify-content: space-between; }
+.et-dir-hint { font-size: 11px; color: var(--ink-4); }
 
 /* ── Collapsible top ribbon ── */
 .et-ribbon {

@@ -40,6 +40,7 @@ import type { SuggestionProps, SuggestionKeyDownProps } from "@tiptap/suggestion
 import { AyahBlockExtension } from "./editor/AyahBlockExtension";
 import { TafsirBlockExtension } from "./editor/TafsirBlockExtension";
 import { ToggleListExtension } from "./editor/ToggleListExtension";
+import { TextDirection } from "./editor/TextDirection";
 import {
   SlashCommandExtension,
   buildCommands,
@@ -336,6 +337,7 @@ function RichBody({
       AyahBlockExtension,
       TafsirBlockExtension,
       ToggleListExtension,
+      TextDirection,
 
       SlashCommandExtension.configure({
         suggestion: {

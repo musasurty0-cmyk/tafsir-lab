@@ -44,6 +44,7 @@ import { PARTYKIT_HOST } from "@/lib/collab/config";
 import { AyahBlockExtension } from "./AyahBlockExtension";
 import { TafsirBlockExtension } from "./TafsirBlockExtension";
 import { ToggleListExtension } from "./ToggleListExtension";
+import { TextDirection } from "./TextDirection";
 import EditorInkLayer from "./EditorInkLayer";
 import FreeTextBox, { TEXTBOX_DEFAULT_WIDTH } from "../FreeTextBox";
 import type { NoteData } from "../NoteCard";
@@ -367,6 +368,7 @@ export default function PageEditor({
       AyahBlockExtension,
       TafsirBlockExtension,
       ToggleListExtension,
+      TextDirection,
 
       // ── Collaboration (Yjs CRDT) ──────────────────────────────────────
       Collaboration.configure({

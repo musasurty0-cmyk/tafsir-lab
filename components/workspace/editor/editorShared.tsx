@@ -65,6 +65,18 @@ export const FontIcon = () => (
     <path d="M4 20h4"/><path d="M14 20h6"/><path d="m6.5 20 4.5-14 4.5 14"/><path d="M8.2 15h6.6"/>
   </svg>
 );
+export const RtlIcon = () => (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20 6H9a3 3 0 0 0 0 6h2"/><path d="M13 4v14"/><path d="M17 4v14"/>
+    <path d="M7 18l-3 3 3 3" transform="translate(0,-5)"/>
+  </svg>
+);
+export const LtrIcon = () => (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M4 6h11a3 3 0 0 1 0 6h-2"/><path d="M11 4v14"/><path d="M7 4v14"/>
+    <path d="M17 13l3 3-3 3"/>
+  </svg>
+);
 export const ColorIcon = () => (
   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/>
@@ -212,6 +224,43 @@ export function FontList({
           }}
         >
           {f.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ── Text direction ────────────────────────────────────────────────────────────
+// Auto is the default and is right almost always; the explicit options exist
+// for blocks auto cannot judge — one opening with a number, a citation, or a
+// Latin transliteration inside an otherwise Arabic passage.
+
+export function DirectionList({
+  editor, onClose,
+}: { editor: Editor; onClose: () => void }) {
+  const cur = (editor.getAttributes("paragraph").dir
+            ?? editor.getAttributes("heading").dir
+            ?? null) as string | null;
+  const opts: { label: string; value: "auto" | "ltr" | "rtl"; hint: string }[] = [
+    { label: "Automatic",    value: "auto", hint: "Follow the text" },
+    { label: "Left to right", value: "ltr", hint: "English" },
+    { label: "Right to left", value: "rtl", hint: "Arabic" },
+  ];
+  return (
+    <div className="et-font-list">
+      {opts.map((o) => (
+        <button
+          key={o.value}
+          type="button"
+          className={`et-font-item${(cur ?? "auto") === o.value ? " et-font-item--active" : ""}`}
+          onMouseDown={(e) => {
+            e.preventDefault();
+            editor.chain().focus().setTextDirection(o.value).run();
+            onClose();
+          }}
+        >
+          <span>{o.label}</span>
+          <span className="et-dir-hint">{o.hint}</span>
         </button>
       ))}
     </div>
