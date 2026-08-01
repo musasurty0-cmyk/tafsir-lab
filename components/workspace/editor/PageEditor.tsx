@@ -59,6 +59,8 @@ import { getUserColor } from "./RemoteCursorsExtension";
 import SelectionToolbar from "./SelectionToolbar";
 import { useEditorCtxOptional } from "./EditorContext";
 import TafsirVersePicker from "./TafsirVersePicker";
+import QuranSearch from "./QuranSearch";
+import { parseReference, type SearchTarget } from "@/lib/quran-search";
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
@@ -113,6 +115,14 @@ export default function PageEditor({
 
   // Tafsir verse picker: opened when a tafsir command is chosen WITHOUT a
   // verse key, so the user picks the āyah within the surah they're studying.
+  /* Open when /ayah is used without an explicit reference. Previously that
+     case silently inserted 1:1, so the command only worked if you already
+     knew the verse number — the thing the search exists to remove. */
+  const [ayahSearch, setAyahSearch] = useState<{
+    range: { from: number; to: number };
+    rect:  DOMRect;
+  } | null>(null);
+
   const [versePicker, setVersePicker] = useState<{
     slug: string; sourceName: string; range: { from: number; to: number }; rect: DOMRect;
   } | null>(null);
@@ -544,12 +554,37 @@ export default function PageEditor({
         return;
       }
 
+      // /ayah with no usable reference → search instead of guessing 1:1.
+      if (item.id === "ayah" && !parseReference(q.replace(/^\S+\s*/, ""))) {
+        const range = (palette.props as unknown as { range: { from: number; to: number } }).range;
+        setAyahSearch({ range, rect: palette.rect });
+        setPalette(null);
+        return;
+      }
+
       (item as SlashCommandItem & { _query: string })._query = q;
       palette.props.command({ ...(item as object) });
       setPalette(null);
     },
     [palette],
   );
+
+  /** Insert the chosen verse using the EXISTING ayah block — the search
+   *  changes how a verse is found, never how it is embedded. */
+  const insertAyahTarget = useCallback((t: SearchTarget) => {
+    if (!editor || !ayahSearch) return;
+    const surahNumber = t.surah ?? 1;
+    const ayahNumber  = t.ayah ?? 1;
+    editor.chain().focus().deleteRange(ayahSearch.range).insertContent([
+      {
+        type: "ayahBlock",
+        attrs: { verseKey: `${surahNumber}:${ayahNumber}`, surahNumber, ayahNumber },
+      },
+      { type: "paragraph" },
+    ]).scrollIntoView().run();
+    setAyahSearch(null);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editor, ayahSearch]);
 
   // Insert a tafsir block at the picker's saved range for the chosen verse.
   const insertTafsirVerse = useCallback((verseKey: string) => {
@@ -636,6 +671,30 @@ export default function PageEditor({
             return (
               <div className="slash-palette-anchor" data-open-up={openUp ? "true" : "false"} style={pos}>
                 <CommandList ref={commandListRef} items={palette.items} query={palette.query} onSelect={handleSelect} maxHeight={maxH} />
+              </div>
+            );
+          })(),
+          document.body,
+        )}
+
+      {/* Qurʾān search for /ayah — anchored where the command was typed. */}
+      {ayahSearch && typeof document !== "undefined" &&
+        createPortal(
+          (() => {
+            const MAX_H = 400, W = 380;
+            const left = Math.max(8, Math.min(ayahSearch.rect.left, window.innerWidth - W - 12));
+            const below = window.innerHeight - ayahSearch.rect.bottom;
+            const openUp = below < MAX_H + 12 && ayahSearch.rect.top > below;
+            const pos: React.CSSProperties = openUp
+              ? { position: "fixed", bottom: window.innerHeight - ayahSearch.rect.top + 6, left, zIndex: 9999 }
+              : { position: "fixed", top: ayahSearch.rect.bottom + 6, left, zIndex: 9999 };
+            return (
+              <div style={pos}>
+                <QuranSearch
+                  currentSurah={studySurah}
+                  onSelect={insertAyahTarget}
+                  onCancel={() => setAyahSearch(null)}
+                />
               </div>
             );
           })(),
