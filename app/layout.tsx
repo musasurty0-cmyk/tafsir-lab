@@ -4,6 +4,7 @@ import {
   Caveat, Patrick_Hand, Comic_Neue,
 } from "next/font/google";
 import NavSplashCleaner from "@/components/NavSplashCleaner";
+import AppearanceBoot from "@/components/AppearanceBoot";
 import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import "./globals.css";
 
@@ -80,6 +81,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       >
         <LocaleProvider>
           <NavSplashCleaner />
+          <AppearanceBoot />
           {children}
         </LocaleProvider>
       </body>

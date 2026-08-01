@@ -24,6 +24,46 @@ interface UserInfo { name: string; avatarUrl: string | null }
 const TWEAKS_KEY = "tl-tweaks";
 type Theme = "light" | "dark";
 
+/* Four named steps rather than a free slider: the values stay predictable,
+   every combination has been eyeballed, and there is no way to land on a
+   size that breaks the layout. Reset is simply picking Default. */
+type FontStep = "sm" | "md" | "lg" | "xl";
+const FONT_STEPS: { id: FontStep; label: string; scale: number }[] = [
+  { id: "sm", label: "Small",   scale: 0.9  },
+  { id: "md", label: "Default", scale: 1    },
+  { id: "lg", label: "Large",   scale: 1.15 },
+  { id: "xl", label: "Larger",  scale: 1.3  },
+];
+const stepScale = (id: FontStep) => FONT_STEPS.find(s => s.id === id)?.scale ?? 1;
+
+interface Typo { reading: FontStep; arabic: FontStep }
+const DEFAULT_TYPO: Typo = { reading: "md", arabic: "md" };
+
+function readTypo(): Typo {
+  if (typeof window === "undefined") return DEFAULT_TYPO;
+  try {
+    const raw = localStorage.getItem(TWEAKS_KEY);
+    const t = raw ? (JSON.parse(raw) as { typography?: Partial<Typo> }).typography : undefined;
+    return { ...DEFAULT_TYPO, ...(t ?? {}) };
+  } catch { return DEFAULT_TYPO; }
+}
+
+/** Applied to the document root so every reading surface picks it up at once. */
+function applyTypo(t: Typo) {
+  const r = document.documentElement;
+  r.style.setProperty("--fs-reading", String(stepScale(t.reading)));
+  r.style.setProperty("--fs-arabic",  String(stepScale(t.arabic)));
+}
+
+function writeTypo(t: Typo) {
+  try {
+    const raw = localStorage.getItem(TWEAKS_KEY);
+    const prev = raw ? JSON.parse(raw) : {};
+    localStorage.setItem(TWEAKS_KEY, JSON.stringify({ ...prev, typography: t }));
+  } catch { /* storage unavailable — the variables below still apply */ }
+  applyTypo(t);
+}
+
 /** Read the theme out of the shared tweaks blob without disturbing the rest. */
 function readTheme(): Theme {
   if (typeof window === "undefined") return "light";
@@ -59,6 +99,7 @@ export default function SettingsMenu({
 }: { user: UserInfo | null; onSignOut: () => void }) {
   const [open,  setOpen]  = useState(false);
   const [theme, setTheme] = useState<Theme>("light");
+  const [typo,  setTypo]  = useState<Typo>(DEFAULT_TYPO);
   const { locale, setLocale } = useLocale();
   const wrapRef = useRef<HTMLDivElement>(null);
 
@@ -68,6 +109,9 @@ export default function SettingsMenu({
     const t = readTheme();
     setTheme(t);
     document.documentElement.setAttribute("data-theme", t);
+    const ty = readTypo();
+    setTypo(ty);
+    applyTypo(ty);
   }, []);
 
   // Dismiss on outside click and on Escape.
@@ -86,6 +130,9 @@ export default function SettingsMenu({
   }, [open]);
 
   const pickTheme = useCallback((t: Theme) => { setTheme(t); writeTheme(t); }, []);
+  const pickTypo  = useCallback((patch: Partial<Typo>) => {
+    setTypo((prev) => { const next = { ...prev, ...patch }; writeTypo(next); return next; });
+  }, []);
 
   const restartTutorial = useCallback(() => {
     // Step 0 is the intro; it creates the tutorial workspace when the user
@@ -141,6 +188,41 @@ export default function SettingsMenu({
                   onClick={() => pickTheme(t)}
                 >
                   {t === "light" ? "Light" : "Dark"}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* ── Reading size ── */}
+          <div className="settings-group">
+            <div className="settings-label">Reading size</div>
+            <div className="settings-seg settings-seg--4" role="group" aria-label="Reading text size">
+              {FONT_STEPS.map(f => (
+                <button
+                  key={f.id}
+                  className="settings-seg-btn"
+                  data-active={typo.reading === f.id ? "true" : "false"}
+                  onClick={() => pickTypo({ reading: f.id })}
+                  title={f.label}
+                >
+                  {f.label === "Default" ? "Aa" : f.label[0] + (f.id === "xl" ? "+" : "")}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="settings-group">
+            <div className="settings-label">Arabic size</div>
+            <div className="settings-seg settings-seg--4" role="group" aria-label="Arabic text size">
+              {FONT_STEPS.map(f => (
+                <button
+                  key={f.id}
+                  className="settings-seg-btn settings-seg-btn--ar"
+                  data-active={typo.arabic === f.id ? "true" : "false"}
+                  onClick={() => pickTypo({ arabic: f.id })}
+                  title={f.label}
+                >
+                  ا
                 </button>
               ))}
             </div>
