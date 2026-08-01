@@ -27,6 +27,7 @@ import type { NoteData } from "./NoteCard";
 import QCFMushafPage from "./QCFMushafPage";
 import AnchoredNoteCard from "./AnchoredNoteCard";
 import FreeTextBox, { TEXTBOX_DEFAULT_WIDTH } from "./FreeTextBox";
+import SegmentBar, { type Range } from "./SegmentBar";
 import DrawingCanvas, { type DrawTool, type DrawingCanvasHandle } from "./DrawingCanvas";
 import CanvasToolRail, {
   DEFAULT_PEN_COLOR,
@@ -93,6 +94,7 @@ const TOOL_HOTKEYS: Record<string, DrawTool> = {
 interface Props {
   verses:           Verse[];
   pageId:           string;
+  workspaceId:      string;
   surahNumber:      number;
   chapter:          Chapter;
   userPrefs:        PageUserPrefsData | null;
@@ -112,7 +114,7 @@ interface Props {
 // ── Component ─────────────────────────────────────────────────────────────
 
 export default function ModeBPage({
-  verses, pageId, chapter,
+  verses, pageId, workspaceId, chapter,
   userPrefs,
   notes,
   roomSocket,
@@ -123,6 +125,76 @@ export default function ModeBPage({
   onAyahSelect,
   scrollToNoteId,
 }: Props) {
+
+  /* ── Segments ──────────────────────────────────────────────────────────
+     A drag across ayat produces `range`; releasing it raises the contextual
+     bar. Saved segments are fetched per surah and drawn as margin markers. */
+  const [range,      setRange]      = useState<Range | null>(null);
+  const [rangeBar,   setRangeBar]   = useState<{ x: number; y: number } | null>(null);
+  const [segments,   setSegments]   = useState<{ id: string; title: string; startAyah: number; endAyah: number; color?: string | null }[]>([]);
+  const [activeSegment, setActiveSegment] = useState<string | null>(null);
+  const [segBusy,    setSegBusy]    = useState(false);
+
+  const surahNo = chapter.id;
+
+  const loadSegments = useCallback(() => {
+    fetch(`/api/workspaces/${workspaceId}/segments?surah=${surahNo}`)
+      .then((r) => (r.ok ? r.json() : { segments: [] }))
+      .then((d) => setSegments(d.segments ?? []))
+      .catch(() => {});
+  }, [workspaceId, surahNo]);
+
+  useEffect(() => { loadSegments(); }, [loadSegments]);
+
+  /* Committed on pointer-up: only then is the bar raised, so it does not
+     chase the cursor mid-drag. Anchored to the pointer's last position. */
+  const handleRangeChange = useCallback((sel: Range | null, committed: boolean) => {
+    setRange(sel);
+    if (!committed) { setRangeBar(null); return; }
+    if (!sel) return;
+    const el = ayahRefs.current.get(sel.end) ?? ayahRefs.current.get(sel.start);
+    const r  = el?.getBoundingClientRect();
+    setRangeBar(r ? { x: r.left + r.width / 2, y: r.bottom } : null);
+  }, []);
+
+  const dismissRange = useCallback(() => { setRange(null); setRangeBar(null); }, []);
+
+  const createSegment = useCallback((input: { title: string; description?: string; color?: string }) => {
+    if (!range) return;
+    setSegBusy(true);
+    fetch(`/api/workspaces/${workspaceId}/segments`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        surahNumber: surahNo,
+        startAyah:   range.start,
+        endAyah:     range.end,
+        ...input,
+      }),
+    })
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+      .then((d) => {
+        if (d.segment) {
+          setSegments((prev) =>
+            prev.some((s) => s.id === d.segment.id) ? prev : [...prev, d.segment]);
+          setActiveSegment(d.segment.id);
+        }
+        dismissRange();
+      })
+      .catch(() => {})
+      .finally(() => setSegBusy(false));
+  }, [range, workspaceId, surahNo, dismissRange]);
+
+  /** Copy the selected range as a reference — the Arabic itself lives in the
+   *  Mushaf, and copying glyph PUA codes would paste as mojibake. */
+  const copyRange = useCallback(() => {
+    if (!range) return;
+    const ref = range.start === range.end
+      ? `${chapter.name_simple} ${surahNo}:${range.start}`
+      : `${chapter.name_simple} ${surahNo}:${range.start}-${range.end}`;
+    navigator.clipboard?.writeText(ref).catch(() => {});
+    dismissRange();
+  }, [range, chapter.name_simple, surahNo, dismissRange]);
 
   // ── Focus annotation state ────────────────────────────────────────────
   const [focusAnchor, setFocusAnchor] = useState<{
@@ -1034,6 +1106,17 @@ export default function ModeBPage({
           onOpenFocus={openFocus}
           studyMode={studyMode}
           onEnterStudy={enterStudy}
+          rangeSelection={range}
+          onRangeChange={handleRangeChange}
+          segments={segments}
+          activeSegmentId={activeSegment}
+          onSegmentClick={(id) => {
+            const sg = segments.find((x) => x.id === id);
+            setActiveSegment(id);
+            // Selecting a marker re-selects its range, so the same contextual
+            // actions are available without redrawing the drag by hand.
+            if (sg) handleRangeChange({ start: sg.startAyah, end: sg.endAyah }, true);
+          }}
           /* Note-derived highlights belong to the study layer, not the page */
           notedWordColors={studyVisible ? notedWordColors : undefined}
           notedAyahColors={studyVisible ? notedEndColors  : undefined}
@@ -1142,6 +1225,26 @@ export default function ModeBPage({
             Done
           </button>
         </div>
+      )}
+
+      {/* ── Range actions ── */}
+      {studyMode && range && rangeBar && (
+        <SegmentBar
+          range={range}
+          surahName={chapter.name_simple}
+          at={rangeBar}
+          busy={segBusy}
+          onCreate={createSegment}
+          onAddNote={() => {
+            // Reuse the existing ayah note flow for the range's first ayah;
+            // segment-anchored notes ride the same note engine.
+            openFocus(`${surahNo}:${range.start}`, null);
+            dismissRange();
+          }}
+          onOpenTafsir={() => { onOpenTafsir(`${surahNo}:${range.start}`); dismissRange(); }}
+          onCopy={copyRange}
+          onDismiss={dismissRange}
+        />
       )}
 
       {/* ── Study Mode bar — the discoverable way back to reading ── */}

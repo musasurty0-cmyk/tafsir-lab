@@ -6851,6 +6851,136 @@ input, textarea { font: inherit; color: inherit; }
   .settings-cog[data-open="true"] { transform: none; }
 }
 
+/* ── Segment contextual bar ──────────────────────────────────────────────
+   A popover, not a modal: it acts on a selection that is on the page behind
+   it, and a modal would cover the very thing being named. */
+.segbar {
+  position: fixed;
+  z-index: 60;
+  width: 268px;
+  transform: translate(-50%, 10px);
+  background: var(--bg-elev);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: 9px;
+  display: flex; flex-direction: column; gap: 8px;
+  animation: segbar-in 150ms var(--ease-out) both;
+}
+@keyframes segbar-in {
+  from { opacity: 0; transform: translate(-50%, 4px); }
+  to   { opacity: 1; transform: translate(-50%, 10px); }
+}
+.segbar-range {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.04em;
+  text-transform: uppercase; color: var(--ink-4);
+  padding: 0 2px;
+}
+.segbar-actions { display: flex; flex-wrap: wrap; gap: 4px; }
+.segbar-btn {
+  flex: 1 1 auto;
+  border: 1px solid var(--line-strong);
+  background: none; color: var(--ink-2);
+  font: inherit; font-size: 12.5px;
+  padding: 6px 10px; border-radius: 7px;
+  cursor: pointer; white-space: nowrap;
+  transition: background var(--dur-hover) var(--ease-soft),
+              color      var(--dur-hover) var(--ease-soft);
+}
+.segbar-btn:hover:not(:disabled) { background: var(--hover); color: var(--ink); }
+.segbar-btn:disabled { opacity: 0.55; cursor: default; }
+.segbar-btn--primary {
+  background: var(--ink); color: var(--bg); border-color: var(--ink);
+  font-weight: 500;
+}
+.segbar-btn--primary:hover:not(:disabled) { background: var(--ink); color: var(--bg); opacity: 0.88; }
+
+.segbar-form { display: flex; flex-direction: column; gap: 7px; }
+.segbar-input, .segbar-textarea {
+  width: 100%;
+  border: 1px solid var(--line-strong);
+  border-radius: 7px;
+  background: var(--bg);
+  color: var(--ink);
+  font: inherit; font-size: 13px;
+  padding: 7px 9px;
+  outline: none;
+  /* Arabic names align to their own side inside an LTR panel. */
+  text-align: start;
+}
+.segbar-textarea { resize: vertical; min-height: 44px; line-height: 1.5; }
+.segbar-input:focus, .segbar-textarea:focus { border-color: var(--accent); }
+
+.segbar-colors { display: flex; gap: 5px; padding: 1px 2px; }
+.segbar-color {
+  width: 18px; height: 18px; border-radius: 50%;
+  border: 2px solid transparent; padding: 0; cursor: pointer;
+  transition: transform var(--dur-hover) var(--ease-soft);
+}
+.segbar-color:hover { transform: scale(1.15); }
+.segbar-color[data-active="true"] { border-color: var(--ink); }
+.segbar-form-actions { display: flex; gap: 5px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .segbar { animation: none; }
+  .segbar-color { transition: none; }
+}
+
+/* ── Segment markers ─────────────────────────────────────────────────────
+   Margin strips, not backgrounds. Several segments may cover the same ayah,
+   and stacking full-width fills behind the text would make it unreadable and
+   make the overlaps impossible to tell apart. Each marker gets its own lane. */
+.qcf-seg-margin {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 10px;
+  width: 0;
+  pointer-events: none;
+}
+.qcf-seg-marker {
+  position: absolute; top: 0;
+  width: 3px; height: 100%;
+  border: 0; padding: 0;
+  border-radius: 2px;
+  background: var(--seg-color, var(--accent));
+  opacity: 0.28;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: opacity var(--dur-hover) var(--ease-soft),
+              width   var(--dur-hover) var(--ease-soft);
+}
+.qcf-seg-marker:hover              { opacity: 0.6; width: 4px; }
+.qcf-seg-marker[data-active="true"]{ opacity: 0.95; width: 4px; }
+
+/* The name appears on hover or when active — never permanently, so a page
+   with several segments is not covered in labels. */
+.qcf-seg-marker-label {
+  position: absolute;
+  inset-inline-start: 9px;
+  top: 0;
+  white-space: nowrap;
+  font-size: 11px;
+  color: var(--ink-2);
+  background: var(--bg-elev);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 2px 7px;
+  opacity: 0;
+  transform: translateX(-3px);
+  transition: opacity var(--dur-hover) var(--ease-soft),
+              transform var(--dur-hover) var(--ease-soft);
+  pointer-events: none;
+}
+.qcf-seg-marker:hover .qcf-seg-marker-label,
+.qcf-seg-marker[data-active="true"] .qcf-seg-marker-label {
+  opacity: 1; transform: none;
+}
+.qcf-seg-marker-range { color: var(--ink-4); }
+
+@media (prefers-reduced-motion: reduce) {
+  .qcf-seg-marker, .qcf-seg-marker-label { transition: none; }
+}
+
 /* ── Qurʾān target search ────────────────────────────────────────────────
    Shared by /ayah and, in time, /link, Segment ranges and Connections. */
 .qs-panel {

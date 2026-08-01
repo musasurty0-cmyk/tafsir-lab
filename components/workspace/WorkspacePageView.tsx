@@ -471,6 +471,7 @@ export default function WorkspacePageView({
         <ModeBPage
           verses={verses}
           pageId={activePageId}
+          workspaceId={workspaceId}
           surahNumber={surahNumber}
           chapter={chapter}
           userPrefs={page.userPrefs}

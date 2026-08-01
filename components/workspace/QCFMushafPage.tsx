@@ -22,7 +22,7 @@
  *   Never render code_v2 before the matching font file is confirmed loaded.
  */
 
-import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { QCFVerse, Chapter } from "@/lib/types";
 
 // ── Font loading ────────────────────────────────────────────────────────────
@@ -83,10 +83,31 @@ interface Props {
   studyMode?:        boolean;
   /** Reading Mode only — the surah title is the entry point into Study Mode. */
   onEnterStudy?:     () => void;
+  /** Ayah range currently being selected, inclusive. Rendered as ONE
+   *  continuous band across the whole range rather than per-ayah blocks. */
+  rangeSelection?:   { start: number; end: number } | null;
+  /** Fired continuously while dragging, and once more on release with
+   *  `committed` set, so the caller can show a toolbar only when the gesture
+   *  has finished. */
+  onRangeChange?:    (sel: { start: number; end: number } | null, committed: boolean) => void;
+  /** Saved segments covering this page — drawn as quiet margin markers. */
+  segments?:         { id: string; title: string; startAyah: number; endAyah: number; color?: string | null }[];
+  /** Segment whose notes are open — gets the stronger visual state. */
+  activeSegmentId?:  string | null;
+  onSegmentClick?:   (id: string) => void;
 }
 
 /** Wash for the ayah whose annotation layer is currently open. */
 const AYAH_ACTIVE_WASH = "oklch(0.85 0.1 250 / 0.5)";
+/** Wash for a range being selected — lighter, because it is transient. */
+const RANGE_WASH = "oklch(0.88 0.07 250 / 0.55)";
+/** Pointer travel before a press becomes a range drag rather than a tap.
+ *  Below this, a slightly unsteady tap would start selecting instead of
+ *  opening the word note it was aimed at. */
+const DRAG_PX = 6;
+/** Touch must be held before it selects: a finger drag is a pan until proven
+ *  otherwise, or the page could never be scrolled by touching the text. */
+const LONG_PRESS_MS = 380;
 
 // ── Word entry collapsed for line grouping ──────────────────────────────────
 
@@ -132,6 +153,11 @@ function QCFMushafPage({
   selectedEndKey,
   studyMode = true,
   onEnterStudy,
+  rangeSelection = null,
+  onRangeChange,
+  segments = [],
+  activeSegmentId = null,
+  onSegmentClick,
 }: Props) {
 
   const [fontReady, setFontReady] = useState(false);
@@ -173,6 +199,75 @@ function QCFMushafPage({
 
     return () => { cancelled = true; };
   }, [pageNumber, verses, retryCount]);
+
+  /* ── Range selection ────────────────────────────────────────────────────
+     A press on a glyph is ambiguous until it moves: held still it is the
+     existing tap that opens that word's notes, dragged it selects a range.
+     Resolving it by TRAVEL rather than by a separate mode means no extra tool
+     and no lost gesture — a tap keeps working exactly as before.
+
+     Selection always snaps to whole ayat: the anchor and the glyph under the
+     pointer contribute only their ayah numbers, so starting mid-ayah still
+     includes all of it. */
+  /** Set when a pointerup ended a real drag, so the click that follows is
+   *  swallowed instead of opening a word note. */
+  const dragEndedRef = useRef(false);
+  const dragRef = useRef<{
+    anchorAyah: number; x: number; y: number;
+    active: boolean; pointerId: number; longPress?: number;
+  } | null>(null);
+
+  const endDrag = useCallback(() => {
+    const d = dragRef.current;
+    if (d?.longPress) window.clearTimeout(d.longPress);
+    const wasActive = d?.active ?? false;
+    dragRef.current = null;
+    return wasActive;
+  }, []);
+
+  const beginDrag = useCallback((e: React.PointerEvent, ayahNum: number) => {
+    if (!studyMode || !onRangeChange) return;
+    const touch = e.pointerType === "touch";
+    dragRef.current = {
+      anchorAyah: ayahNum, x: e.clientX, y: e.clientY,
+      active: false, pointerId: e.pointerId,
+      // Touch commits to selecting only after a hold, so ordinary finger
+      // panning over the text is unaffected.
+      longPress: touch
+        ? window.setTimeout(() => {
+            const d = dragRef.current;
+            if (!d) return;
+            d.active = true;
+            onRangeChange({ start: ayahNum, end: ayahNum }, false);
+          }, LONG_PRESS_MS)
+        : undefined,
+    };
+  }, [studyMode, onRangeChange]);
+
+  const moveDrag = useCallback((e: React.PointerEvent, ayahNum: number) => {
+    const d = dragRef.current;
+    if (!d || !onRangeChange) return;
+    if (!d.active) {
+      // Mouse and pen start selecting once travel passes the threshold;
+      // touch waits for its hold instead.
+      if (e.pointerType === "touch") return;
+      if (Math.hypot(e.clientX - d.x, e.clientY - d.y) < DRAG_PX) return;
+      d.active = true;
+    }
+    const start = Math.min(d.anchorAyah, ayahNum);
+    const end   = Math.max(d.anchorAyah, ayahNum);
+    onRangeChange({ start, end }, false);
+  }, [onRangeChange]);
+
+  const finishDrag = useCallback(() => {
+    const d = dragRef.current;
+    if (d?.active && onRangeChange) {
+      // Re-emit the same range as committed so the caller can raise its
+      // toolbar only once the gesture is over.
+      onRangeChange(rangeSelection, true);
+    }
+    return endDrag();
+  }, [onRangeChange, rangeSelection, endDrag]);
 
   // ── Build line map ────────────────────────────────────────────────────────
   // Memoised on the data it derives from. This allocates a Map plus one
@@ -256,6 +351,7 @@ function QCFMushafPage({
       ref={cardRef}
       className="qcf-page"
       onMouseDown={(e) => e.stopPropagation()}
+      onPointerLeave={() => { if (dragRef.current) endDrag(); }}
       dir="rtl"
     >
       {/* ── Surah header — on EVERY page, so you always know which surah you
@@ -288,6 +384,37 @@ function QCFMushafPage({
           )}
       </div>
 
+      {/* ── Segment markers ──────────────────────────────────────────────
+          Quiet strips in the margin, one per segment, rather than a filled
+          card behind every ayah: several overlapping segments would otherwise
+          stack competing full-width backgrounds over the text. Study Mode
+          only — Reading Mode keeps the Mushaf clean. */}
+      {studyMode && segments.length > 0 && (
+        <div className="qcf-seg-margin" aria-label="Segments on this page">
+          {segments.map((sg, i) => (
+            <button
+              key={sg.id}
+              type="button"
+              className="qcf-seg-marker"
+              data-active={sg.id === activeSegmentId ? "true" : "false"}
+              /* Overlapping segments are offset into their own lane so each
+                 stays individually visible and clickable. */
+              style={{
+                insetInlineStart: `${i * 7}px`,
+                ...(sg.color ? { ["--seg-color" as string]: sg.color } : {}),
+              }}
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => { e.stopPropagation(); onSegmentClick?.(sg.id); }}
+              title={`${sg.title} · ${sg.startAyah}–${sg.endAyah}`}
+            >
+              <span className="qcf-seg-marker-label">
+                {sg.title} <span className="qcf-seg-marker-range">{sg.startAyah}–{sg.endAyah}</span>
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* ── Page lines ── */}
       <div className="qcf-lines">
         {sortedLines.map(([lineKey, words]) => {
@@ -299,18 +426,30 @@ function QCFMushafPage({
           // Consecutive glyphs of the same washed ayah are grouped into ONE
           // wrapper span carrying the background, so the highlight reads as
           // a single continuous region — no per-word boxes, no gaps.
-          interface Run { wash: string | null; ayahNum: number; entries: WordEntry[] }
+          interface Run { wash: string | null; ayahNum: number; entries: WordEntry[]; range: boolean }
           const runs: Run[] = [];
           for (const word of words) {
-            const wash = selectedEndKey === word.verseKey
+            // A range selection outranks note washes: it is the thing the
+            // user is doing right now.
+            const inRange = !!rangeSelection
+              && word.ayahNum >= rangeSelection.start
+              && word.ayahNum <= rangeSelection.end;
+            const wash = inRange
+              ? RANGE_WASH
+              : selectedEndKey === word.verseKey
               ? AYAH_ACTIVE_WASH
               : (notedAyahColors?.get(word.ayahNum) ?? null);
             const prev = runs[runs.length - 1];
-            if (prev && prev.wash === wash &&
-                (wash === null || prev.ayahNum === word.ayahNum)) {
-              prev.entries.push(word);
+            /* Note washes break at every ayah boundary so each ayah reads as
+               its own mark. A RANGE deliberately does not — it continues
+               across boundaries so a multi-ayah selection is one unbroken
+               band rather than a row of adjacent blocks. */
+            const continues = prev && prev.wash === wash &&
+              (wash === null || (inRange && prev.range) || prev.ayahNum === word.ayahNum);
+            if (continues) {
+              prev!.entries.push(word);
             } else {
-              runs.push({ wash, ayahNum: word.ayahNum, entries: [word] });
+              runs.push({ wash, ayahNum: word.ayahNum, entries: [word], range: inRange });
             }
           }
 
@@ -352,11 +491,25 @@ function QCFMushafPage({
                 title={isWord ? (word.translation?.text ?? "") : undefined}
                 role={isWord || isEnd ? "button" : undefined}
                 tabIndex={isWord || isEnd ? 0 : undefined}
+                onPointerDown={studyMode ? (e) => beginDrag(e, word.ayahNum) : undefined}
+                onPointerEnter={studyMode ? (e) => moveDrag(e, word.ayahNum) : undefined}
+                onPointerMove={studyMode ? (e) => moveDrag(e, word.ayahNum) : undefined}
+                onPointerUp={studyMode ? () => { dragEndedRef.current = finishDrag(); } : undefined}
                 onClick={
+                  // A click that concluded a drag selected a range; it must not
+                  // also open the note of whichever word it happened to end on.
                   isWord
-                    ? (e) => { e.stopPropagation(); onOpenFocus(word.verseKey, word.position); }
+                    ? (e) => {
+                        e.stopPropagation();
+                        if (dragEndedRef.current) { dragEndedRef.current = false; return; }
+                        onOpenFocus(word.verseKey, word.position);
+                      }
                     : isEnd
-                    ? (e) => { e.stopPropagation(); onOpenFocus(word.verseKey, null); }
+                    ? (e) => {
+                        e.stopPropagation();
+                        if (dragEndedRef.current) { dragEndedRef.current = false; return; }
+                        onOpenFocus(word.verseKey, null);
+                      }
                     : undefined
                 }
                 onKeyDown={
