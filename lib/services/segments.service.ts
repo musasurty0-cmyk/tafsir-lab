@@ -17,7 +17,7 @@ export interface SegmentInput {
   surahNumber: number;
   startAyah:   number;
   endAyah:     number;
-  title:       string;
+  name:        string;
   description?: string | null;
   color?:      string | null;
 }
@@ -67,7 +67,7 @@ export async function createSegment(
      moment its whiteboard opens and is NAMED when it is first closed. Filling
      in a placeholder here would make every new Selection look already-named
      and skip the naming step. */
-  const title = input.title.trim();
+  const name = input.name.trim();
 
   /* Simultaneous creation of the SAME range by two people is treated as one
      segment rather than two identical ones — the second editor gets the
@@ -78,14 +78,14 @@ export async function createSegment(
      opening their own scratch whiteboard over the same verses are doing two
      different things, and merging them would hand one person the other's
      canvas. */
-  if (title) {
+  if (name) {
     const existing = await db.quranSegment.findFirst({
       where: {
         workspaceId,
         surahNumber: input.surahNumber,
         startAyah:   input.startAyah,
         endAyah:     input.endAyah,
-        title,
+        name,
       },
     });
     if (existing) return existing;
@@ -103,7 +103,7 @@ export async function createSegment(
       surahNumber: input.surahNumber,
       startAyah:   input.startAyah,
       endAyah:     input.endAyah,
-      title,
+      name,
       description: input.description ?? null,
       color:       input.color ?? null,
       sortOrder:   (last?.sortOrder ?? 0) + 1,
@@ -137,7 +137,7 @@ export async function updateSegment(
     where: { id: segmentId },
     data: {
       surahNumber, startAyah, endAyah,
-      ...(patch.title !== undefined       ? { title: patch.title.trim() || current.title } : {}),
+      ...(patch.name !== undefined        ? { name: patch.name.trim() || current.name } : {}),
       ...(patch.description !== undefined ? { description: patch.description } : {}),
       ...(patch.color !== undefined       ? { color: patch.color } : {}),
       ...(patch.sortOrder !== undefined   ? { sortOrder: patch.sortOrder } : {}),
@@ -181,7 +181,7 @@ export async function duplicateSegment(
       surahNumber: src.surahNumber,
       startAyah:   src.startAyah,
       endAyah:     src.endAyah,
-      title:       `${src.title} copy`,
+      name:        `${src.name} copy`,
       description: src.description,
       color:       src.color,
       sortOrder:   src.sortOrder + 1,

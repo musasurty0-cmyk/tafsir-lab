@@ -143,7 +143,7 @@ export default function ModeBPage({
      bar. Saved segments are fetched per surah and drawn as margin markers. */
   const [range,      setRange]      = useState<Range | null>(null);
   const [rangeBar,   setRangeBar]   = useState<{ x: number; y: number } | null>(null);
-  const [segments,   setSegments]   = useState<{ id: string; title: string; startAyah: number; endAyah: number; color?: string | null }[]>([]);
+  const [segments,   setSegments]   = useState<{ id: string; name: string; startAyah: number; endAyah: number; color?: string | null }[]>([]);
   const [activeSegment, setActiveSegment] = useState<string | null>(null);
   const [segBusy,    setSegBusy]    = useState(false);
   /* The Selection currently open as a whiteboard. `unnamed` drives the naming
@@ -195,7 +195,7 @@ export default function ModeBPage({
     fetch(`/api/workspaces/${workspaceId}/segments/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: name }),
+      body: JSON.stringify({ name }),
     })
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
       .then((d) => {
@@ -213,11 +213,11 @@ export default function ModeBPage({
   /** Rename from the browser. Unlike the naming screen this does not end a
    *  session — the user is managing a list, not finishing a piece of work. */
   const renameSelectionInPlace = useCallback((id: string, name: string) => {
-    setSegments((prev) => prev.map((x) => (x.id === id ? { ...x, title: name } : x)));
+    setSegments((prev) => prev.map((x) => (x.id === id ? { ...x, name } : x)));
     fetch(`/api/workspaces/${workspaceId}/segments/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: name }),
+      body: JSON.stringify({ name }),
     }).catch(() => {});
   }, [workspaceId]);
 
@@ -263,12 +263,12 @@ export default function ModeBPage({
 
   /** Open a Segment's note layer. Segments are note targets in their own
    *  right, so this is the segment equivalent of tapping a word or ayah. */
-  const openSegment = useCallback((seg: { id: string; title: string; startAyah: number; endAyah: number }) => {
+  const openSegment = useCallback((seg: { id: string; name: string; startAyah: number; endAyah: number }) => {
     setSession({
       id: seg.id,
       range: { start: seg.startAyah, end: seg.endAyah },
       // Only a Selection with no name yet needs naming when it closes.
-      unnamed: !(seg.title || "").trim(),
+      unnamed: !(seg.name || "").trim(),
     });
     setListOpen(false);
     setActiveSegment(seg.id);
@@ -282,14 +282,14 @@ export default function ModeBPage({
       verseKey:     `${surahNo}:${seg.startAyah}`,
       wordPos:      null,
       segmentId:    seg.id,
-      segmentLabel: `${seg.title} · ${seg.startAyah}–${seg.endAyah}`,
+      segmentLabel: `${seg.name} · ${seg.startAyah}–${seg.endAyah}`,
     });
     dismissRange();
   }, [surahNo, dismissRange]);
 
   const createSegment = useCallback((
-    input: { title: string; description?: string; color?: string },
-    onDone?: (seg: { id: string; title: string; startAyah: number; endAyah: number }) => void,
+    input: { name: string; description?: string; color?: string },
+    onDone?: (seg: { id: string; name: string; startAyah: number; endAyah: number }) => void,
   ) => {
     if (!range) return;
     setSegBusy(true);
@@ -1426,7 +1426,7 @@ export default function ModeBPage({
           surahName={chapter.name_simple}
           busy={segBusy}
           onCancel={dismissRange}
-          onOpen={() => createSegment({ title: "" }, (seg) => openSegment(seg))}
+          onOpen={() => createSegment({ name: "" }, (seg) => openSegment(seg))}
         />
       )}
 

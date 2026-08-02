@@ -46,7 +46,7 @@ export async function POST(
       surahNumber: Number(b.surahNumber),
       startAyah:   Number(b.startAyah),
       endAyah:     Number(b.endAyah),
-      title:       String(b.title ?? ""),
+      name:        String(b.name ?? ""),
       description: b.description ?? null,
       color:       b.color ?? null,
     });

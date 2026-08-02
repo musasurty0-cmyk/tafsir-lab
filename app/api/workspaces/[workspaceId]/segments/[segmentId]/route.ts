@@ -29,7 +29,7 @@ export async function PATCH(req: Request, { params }: Ctx) {
       ...(b.surahNumber !== undefined ? { surahNumber: Number(b.surahNumber) } : {}),
       ...(b.startAyah   !== undefined ? { startAyah:   Number(b.startAyah) }   : {}),
       ...(b.endAyah     !== undefined ? { endAyah:     Number(b.endAyah) }     : {}),
-      ...(b.title       !== undefined ? { title:       String(b.title) }       : {}),
+      ...(b.name        !== undefined ? { name:        String(b.name) }        : {}),
       ...(b.description !== undefined ? { description: b.description }         : {}),
       ...(b.color       !== undefined ? { color:       b.color }               : {}),
       ...(b.sortOrder   !== undefined ? { sortOrder:   Number(b.sortOrder) }   : {}),

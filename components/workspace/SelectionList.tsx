@@ -15,7 +15,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 export interface SelectionRow {
   id: string;
-  title: string;
+  name: string;
   startAyah: number;
   endAyah: number;
   color?: string | null;
@@ -96,7 +96,7 @@ export default function SelectionList({
       const n = Number(asNum[0]);
       return rows.filter((r) => n >= r.startAyah && n <= r.endAyah);
     }
-    return rows.filter((r) => (r.title || "").toLowerCase().includes(query));
+    return rows.filter((r) => (r.name || "").toLowerCase().includes(query));
   }, [rows, q]);
 
   // Default order is Qurʾānic order, which is how the page reads.
@@ -159,7 +159,7 @@ export default function SelectionList({
                     {surahName} {r.startAyah}
                     {r.startAyah !== r.endAyah && <>{ARROW}{r.endAyah}</>}
                   </span>
-                  <span className="sellist-name">{r.title || "Unnamed Selection"}</span>
+                  <span className="sellist-name">{r.name || "Unnamed Selection"}</span>
                 </span>
                 {manageable && (
                   <span
@@ -170,10 +170,10 @@ export default function SelectionList({
                     onClick={(e) => {
                       e.stopPropagation();
                       setEditing((v) => (v === r.id ? null : r.id));
-                      setDraft(r.title || "");
+                      setDraft(r.name || "");
                       setDeleting(null);
                     }}
-                    onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); setEditing(r.id); setDraft(r.title || ""); } }}
+                    onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); setEditing(r.id); setDraft(r.name || ""); } }}
                   >
                     ⋯
                   </span>

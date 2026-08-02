@@ -121,7 +121,7 @@ model QuranSegment {
   // segments ARE allowed, so there is no exclusion constraint here.
   startAyah   Int
   endAyah     Int
-  title       String
+  name        String
   description String?
   color       String?
   // Display order in the segment list only. Never affects Qur'anic order.

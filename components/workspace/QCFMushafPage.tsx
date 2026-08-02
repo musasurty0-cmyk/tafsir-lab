@@ -91,7 +91,7 @@ interface Props {
    *  has finished. */
   onRangeChange?:    (sel: { start: number; end: number } | null, committed: boolean) => void;
   /** Saved segments covering this page — drawn as quiet margin markers. */
-  segments?:         { id: string; title: string; startAyah: number; endAyah: number; color?: string | null }[];
+  segments?:         { id: string; name: string; startAyah: number; endAyah: number; color?: string | null }[];
   /** Segment whose notes are open — gets the stronger visual state. */
   activeSegmentId?:  string | null;
   /** Receives every Selection covering the tapped ayah, innermost last. More
