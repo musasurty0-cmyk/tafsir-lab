@@ -32,7 +32,13 @@ export default async function ConnectionsPage({
     <ConnectionsCatalogue
       workspaceId={workspaceId}
       workspaceName={workspace.name}
-      chapters={chapters.map((c) => ({ id: c.id, name: c.name_simple }))}
+      chapters={chapters.map((c) => ({
+        id: c.id,
+        name: c.name_simple,
+        arabic: c.name_arabic,
+        verses: c.verses_count,
+        place: c.revelation_place,
+      }))}
     />
   );
 }

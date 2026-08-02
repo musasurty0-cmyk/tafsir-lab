@@ -32,7 +32,7 @@ interface Row {
 interface Props {
   workspaceId: string;
   workspaceName: string;
-  chapters: { id: number; name: string }[];
+  chapters: { id: number; name: string; arabic?: string; verses?: number; place?: string }[];
 }
 
 const SORTS = [
@@ -185,6 +185,7 @@ export default function ConnectionsCatalogue({
               edges={map.edges}
               total={map.total}
               surahName={surahLabel}
+              chapters={chapters}
               focus={focusSurah}
               onFocus={setFocusSurah}
             />

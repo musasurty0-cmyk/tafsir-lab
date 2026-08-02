@@ -6985,9 +6985,9 @@ input, textarea { font: inherit; color: inherit; }
 }
 .cxf-dupe { display: flex; flex-direction: column; gap: 10px; }
 
-/* Connection map. A fixed ring of Surahs in Qur'anic order — the layout never
-   moves, so the map becomes a place you learn rather than a picture that
-   rearranges itself on every load. */
+/* Connection map. Surahs sit as segments inside the four classical groups,
+   arranged as arcs; links curve between them. The layout is fixed, so the same
+   relationship always appears in the same place. */
 .cxcat-views { display: inline-flex; gap: 2px; padding: 3px; background: var(--panel); border-radius: 9px; align-self: flex-start; }
 .cxcat-view-btn {
   border: 0; background: none; cursor: pointer;
@@ -7001,7 +7001,7 @@ input, textarea { font: inherit; color: inherit; }
 }
 
 .cxmap { position: relative; }
-.cxmap-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; flex-wrap: wrap; }
+.cxmap-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 2px; flex-wrap: wrap; }
 .cxmap-stat { font-size: 11.5px; color: var(--ink-4); }
 .cxmap-clear {
   margin-inline-start: auto;
@@ -7011,52 +7011,65 @@ input, textarea { font: inherit; color: inherit; }
 }
 .cxmap-clear:hover { background: var(--hover); color: var(--ink); }
 
-.cxmap-svg { width: 100%; height: auto; display: block; max-height: 74vh; }
-.cxmap-ring { fill: none; stroke: var(--line); stroke-width: 1; }
+.cxmap-svg { width: 100%; height: auto; display: block; max-height: 76vh; }
+
+/* Each group gets its own hue so the four divisions read apart at a glance,
+   drawn from the app palette rather than a new colour language. */
+.cxmap-group-arc { fill: var(--panel); stroke: var(--line); stroke-width: 1; }
+.cxmap-group[data-group="fatiha"]   .cxmap-group-arc { fill: color-mix(in srgb, var(--accent) 16%, var(--panel)); }
+.cxmap-group[data-group="tiwal"]    .cxmap-group-arc { fill: color-mix(in srgb, oklch(0.55 0.15 15)  14%, var(--panel)); }
+.cxmap-group[data-group="miun"]     .cxmap-group-arc { fill: color-mix(in srgb, oklch(0.62 0.11 70)  14%, var(--panel)); }
+.cxmap-group[data-group="mathani"]  .cxmap-group-arc { fill: color-mix(in srgb, oklch(0.52 0.14 290) 14%, var(--panel)); }
+.cxmap-group[data-group="mufassal"] .cxmap-group-arc { fill: color-mix(in srgb, oklch(0.52 0.15 240) 14%, var(--panel)); }
+
+.cxmap-group-label {
+  font-family: var(--font-arabic), serif;
+  font-size: 15px; fill: var(--ink-3);
+  dominant-baseline: middle;
+}
+
+/* Every surah is drawn, so the mushaf stays whole; the ones carrying
+   Connections are simply brighter. */
+.cxmap-seg {
+  fill: var(--ink-4);
+  opacity: 0.16;
+  cursor: default;
+  transition: fill var(--dur-fast) ease, opacity var(--dur-fast) ease;
+}
+.cxmap-seg[data-linked="true"] { fill: var(--accent); cursor: pointer; }
+.cxmap-seg[data-linked="true"]:hover { fill: var(--ink); opacity: 1 !important; }
+.cxmap-seg[data-focused="true"]      { fill: var(--ink); opacity: 1 !important; }
+.cxmap-seg[data-dim="true"]          { opacity: 0.1 !important; }
 
 .cxmap-edge {
-  fill: none;
-  stroke: var(--accent);
-  stroke-opacity: 0.34;
-  stroke-linecap: round;
+  fill: none; stroke: var(--accent);
+  stroke-opacity: 0.32; stroke-linecap: round;
   cursor: pointer;
   transition: stroke-opacity var(--dur-fast) ease;
 }
 .cxmap-edge:hover, .cxmap-edge[data-hot="true"] { stroke-opacity: 0.95; }
-/* Dimmed rather than hidden: a focused Surah should be read against the whole
-   map, not against an empty ring. */
-.cxmap-edge[data-dim="true"] { stroke-opacity: 0.06; pointer-events: none; }
-
-.cxmap-node[data-dim="true"] { opacity: 0.25; }
-.cxmap-dot {
-  fill: var(--accent);
-  cursor: pointer;
-  transition: fill var(--dur-fast) ease, r var(--dur-fast) ease;
-}
-.cxmap-dot:hover { fill: var(--accent-ink, var(--accent)); }
-.cxmap-dot[data-focused="true"] { fill: var(--ink); }
-.cxmap-label {
-  font-family: var(--font-mono);
-  font-size: 9px;
-  fill: var(--ink-4);
-  cursor: pointer;
-  dominant-baseline: middle;
-}
-.cxmap-label:hover { fill: var(--ink); }
+/* Dimmed, not hidden: a focused surah is read against the whole Qur'an. */
+.cxmap-edge[data-dim="true"] { stroke-opacity: 0.05; pointer-events: none; }
 
 .cxmap-tip {
   position: absolute; z-index: 5;
-  transform: translate(12px, 12px);
+  transform: translate(14px, 14px);
   pointer-events: none;
   background: var(--bg-elev);
   border: 1px solid var(--line-strong);
-  border-radius: 8px;
+  border-radius: 9px;
   box-shadow: var(--shadow-md);
-  padding: 8px 11px; max-width: 260px;
+  padding: 9px 12px; max-width: 280px;
 }
-.cxmap-tip-pair { font-size: 11.5px; color: var(--ink-3); margin-bottom: 3px; }
-.cxmap-tip-name { font-size: 12.5px; color: var(--ink); }
-.cxmap-tip-more { font-size: 11px; color: var(--ink-4); margin-top: 2px; }
+.cxmap-tip-ar {
+  font-family: var(--font-arabic), serif;
+  font-size: calc(17px * var(--fs-arabic));
+  color: var(--ink); line-height: 1.7; margin-bottom: 1px;
+}
+.cxmap-tip-name { font-size: 13px; color: var(--ink); }
+.cxmap-tip-meta { font-size: 11.5px; color: var(--ink-4); margin-top: 2px; }
+
+.cxmap-hint { text-align: center; font-size: 11.5px; color: var(--ink-4); margin: 2px 0 0; }
 .cxmap-empty { padding: 40px 4px; text-align: center; font-size: 13px; color: var(--ink-4); }
 .cxmap-empty code {
   font-family: var(--font-mono); font-size: 11.5px;
@@ -7064,7 +7077,7 @@ input, textarea { font: inherit; color: inherit; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .cxmap-edge, .cxmap-dot { transition: none; }
+  .cxmap-edge, .cxmap-seg { transition: none; }
 }
 
 /* Connections catalogue — a full page, because it is a place you go to look

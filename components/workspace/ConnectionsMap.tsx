@@ -3,70 +3,131 @@
 /**
  * The whole Qurʾān as a map of Connections.
  *
- * Every Surah sits at a fixed point on a ring in Qurʾānic order, and each
- * Connection is drawn as a chord between the two Surahs it joins.
+ * Surahs are laid out as segments inside the four traditional groups — Ṭiwāl,
+ * Miʾūn, Mathānī, Mufaṣṣal — arranged as arcs around a ring, and each
+ * Connection is drawn as a curve between the two segments it joins.
  *
- * The fixed layout is the whole idea. A force-directed graph rearranges itself
- * every time it loads, so the same relationship never looks the same twice and
- * nothing can be found by memory. Here Al-Fātiḥah is always at the top and
- * An-Nās always beside it, so the map becomes a place you learn rather than a
- * picture you re-read. It is also inherently bounded: 114 nodes however many
- * Connections exist.
+ * The grouping is what makes the map legible. A bare ring of 114 dots gives
+ * the eye nothing to hold on to; the classical divisions are already how a
+ * reader carries the muṣḥaf in their head, so an arc gives every link a
+ * neighbourhood before it gives it a number. The layout is fixed, so the same
+ * relationship always appears in the same place and the map becomes something
+ * learned rather than re-read.
  *
- * Chords bow toward the centre, so a link between distant Surahs cuts across
- * the ring and a link between neighbours hugs the rim — the shape of the line
- * carries the distance.
+ * Curves bow toward the centre in proportion to how far apart their endpoints
+ * sit, so the shape of a link carries its reach: neighbours hug the rim,
+ * distant pairs cut across the middle.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 export interface MapNode { surah: number; count: number }
 export interface MapEdge { a: number; b: number; weight: number; ids: string[]; names: string[] }
+export interface ChapterInfo {
+  id: number; name: string; arabic?: string; verses?: number; place?: string;
+}
 
 interface Props {
   nodes: MapNode[];
   edges: MapEdge[];
   total: number;
   surahName: (n: number) => string;
-  /** Focus one Surah — dims everything not touching it. */
+  chapters: ChapterInfo[];
   focus: number | null;
   onFocus: (surah: number | null) => void;
 }
 
-const SIZE   = 720;
-const CX     = SIZE / 2;
-const CY     = SIZE / 2;
-const RADIUS = SIZE / 2 - 54;
-const TOTAL_SURAHS = 114;
+/**
+ * The classical four-part division of the muṣḥaf, after al-Fātiḥah. Boundaries
+ * differ slightly between authorities; this follows the common division where
+ * the Mufaṣṣal begins at Qāf. It is a reading aid here, not a claim.
+ */
+const GROUPS = [
+  { id: "fatiha",   label: "Al-Fātiḥah", arabic: "الفاتحة", from: 1,  to: 1   },
+  { id: "tiwal",    label: "Ṭiwāl",      arabic: "الطوال",  from: 2,  to: 9   },
+  { id: "miun",     label: "Miʾūn",      arabic: "المئين",  from: 10, to: 35  },
+  { id: "mathani",  label: "Mathānī",    arabic: "المثاني", from: 36, to: 49  },
+  { id: "mufassal", label: "Mufaṣṣal",   arabic: "المفصل",  from: 50, to: 114 },
+] as const;
 
-/** Surah n at its fixed angle. Starts at the top and runs clockwise, so the
- *  order matches how the muṣḥaf is read rather than how SVG measures angles. */
-function pointFor(surah: number): { x: number; y: number; angle: number } {
-  const t = (surah - 1) / TOTAL_SURAHS;
-  const angle = t * Math.PI * 2 - Math.PI / 2;
-  return { x: CX + Math.cos(angle) * RADIUS, y: CY + Math.sin(angle) * RADIUS, angle };
+const SIZE = 760;
+const CX = SIZE / 2, CY = SIZE / 2;
+const R_OUT = 322;          // outer edge of the group arcs
+const R_IN  = 292;          // inner edge — the band the segments live in
+const R_HUB = 268;          // where link curves attach, just inside the band
+const GROUP_GAP = 0.028;    // radians of breathing room between groups
+
+const TOTAL = 114;
+const TAU = Math.PI * 2;
+
+/** Angular span of each group, proportional to how many surahs it holds. */
+const layout = (() => {
+  const usable = TAU - GROUP_GAP * GROUPS.length;
+  let cursor = -Math.PI / 2 + GROUP_GAP / 2;   // start at the top
+  return GROUPS.map((g) => {
+    const count = g.to - g.from + 1;
+    const span = (count / TOTAL) * usable;
+    const start = cursor;
+    cursor += span + GROUP_GAP;
+    return { ...g, count, start, end: start + span };
+  });
+})();
+
+const groupOf = (surah: number) =>
+  layout.find((g) => surah >= g.from && surah <= g.to) ?? layout[layout.length - 1];
+
+/** Mid-angle of one surah's segment within its group. */
+function angleOf(surah: number): number {
+  const g = groupOf(surah);
+  const i = surah - g.from;
+  const step = (g.end - g.start) / g.count;
+  return g.start + step * (i + 0.5);
 }
 
-/** A quadratic chord pulled toward the centre in proportion to how far apart
- *  the two Surahs are around the ring. */
-function chord(a: number, b: number): string {
-  const p = pointFor(a), q = pointFor(b);
-  const sep = Math.min(Math.abs(a - b), TOTAL_SURAHS - Math.abs(a - b)) / (TOTAL_SURAHS / 2);
-  // Near neighbours barely bow; opposites pass close to the middle.
-  const pull = 0.12 + sep * 0.78;
+const polar = (a: number, r: number) => ({ x: CX + Math.cos(a) * r, y: CY + Math.sin(a) * r });
+
+/** An annular wedge — used for both group arcs and individual segments. */
+function wedge(a0: number, a1: number, rIn: number, rOut: number): string {
+  const p0 = polar(a0, rOut), p1 = polar(a1, rOut);
+  const p2 = polar(a1, rIn),  p3 = polar(a0, rIn);
+  const big = a1 - a0 > Math.PI ? 1 : 0;
+  return [
+    `M${p0.x.toFixed(1)} ${p0.y.toFixed(1)}`,
+    `A${rOut} ${rOut} 0 ${big} 1 ${p1.x.toFixed(1)} ${p1.y.toFixed(1)}`,
+    `L${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`,
+    `A${rIn} ${rIn} 0 ${big} 0 ${p3.x.toFixed(1)} ${p3.y.toFixed(1)}`,
+    "Z",
+  ].join(" ");
+}
+
+/** Link curve between two surahs, bowing toward the centre with distance. */
+function link(a: number, b: number): string {
+  const aa = angleOf(a), ab = angleOf(b);
+  const p = polar(aa, R_HUB), q = polar(ab, R_HUB);
+  let d = Math.abs(aa - ab);
+  if (d > Math.PI) d = TAU - d;
+  const sep = d / Math.PI;                 // 0 = same place, 1 = opposite
+  const pull = 0.1 + sep * 0.82;
   const mx = CX + ((p.x + q.x) / 2 - CX) * (1 - pull);
   const my = CY + ((p.y + q.y) / 2 - CY) * (1 - pull);
   return `M${p.x.toFixed(1)} ${p.y.toFixed(1)} Q${mx.toFixed(1)} ${my.toFixed(1)} ${q.x.toFixed(1)} ${q.y.toFixed(1)}`;
 }
 
 export default function ConnectionsMap({
-  nodes, edges, total, surahName, focus, onFocus,
+  nodes, edges, total, surahName, chapters, focus, onFocus,
 }: Props) {
-  const [hover, setHover] = useState<MapEdge | null>(null);
-  const [tip, setTip]     = useState<{ x: number; y: number } | null>(null);
+  const [hoverEdge, setHoverEdge] = useState<MapEdge | null>(null);
+  const [hoverSurah, setHoverSurah] = useState<number | null>(null);
+  const [tip, setTip] = useState<{ x: number; y: number } | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
 
-  const byNode = useMemo(() => {
+  const info = useMemo(() => {
+    const m = new Map<number, ChapterInfo>();
+    for (const c of chapters) m.set(c.id, c);
+    return m;
+  }, [chapters]);
+
+  const counts = useMemo(() => {
     const m = new Map<number, number>();
     for (const n of nodes) m.set(n.surah, n.count);
     return m;
@@ -76,10 +137,22 @@ export default function ConnectionsMap({
     () => nodes.reduce((m, n) => Math.max(m, n.count), 1), [nodes],
   );
 
-  const touches = useCallback(
-    (e: MapEdge) => focus == null || e.a === focus || e.b === focus,
-    [focus],
-  );
+  /** Surahs directly linked to the hovered or focused one. */
+  const related = useMemo(() => {
+    const anchor = hoverSurah ?? focus;
+    if (anchor == null) return null;
+    const s = new Set<number>([anchor]);
+    for (const e of edges) {
+      if (e.a === anchor) s.add(e.b);
+      if (e.b === anchor) s.add(e.a);
+    }
+    return s;
+  }, [hoverSurah, focus, edges]);
+
+  const edgeLive = useCallback((e: MapEdge) => {
+    const anchor = hoverSurah ?? focus;
+    return anchor == null || e.a === anchor || e.b === anchor;
+  }, [hoverSurah, focus]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -89,6 +162,11 @@ export default function ConnectionsMap({
     return () => window.removeEventListener("keydown", onKey);
   }, [focus, onFocus]);
 
+  const moveTip = useCallback((ev: React.PointerEvent) => {
+    const r = wrapRef.current?.getBoundingClientRect();
+    if (r) setTip({ x: ev.clientX - r.left, y: ev.clientY - r.top });
+  }, []);
+
   if (total === 0) {
     return (
       <div className="cxmap-empty">
@@ -97,6 +175,8 @@ export default function ConnectionsMap({
     );
   }
 
+  const hovered = hoverSurah != null ? info.get(hoverSurah) : null;
+
   return (
     <div className="cxmap" ref={wrapRef}>
       <div className="cxmap-bar">
@@ -104,89 +184,121 @@ export default function ConnectionsMap({
         <span className="cxmap-stat">{nodes.length} Surah{nodes.length === 1 ? "" : "s"}</span>
         {focus != null && (
           <button className="cxmap-clear" onClick={() => onFocus(null)}>
-            Showing {surahName(focus)} — show all
+            {surahName(focus)} — show all
           </button>
         )}
       </div>
 
-      <svg
-        viewBox={`0 0 ${SIZE} ${SIZE}`}
-        className="cxmap-svg"
-        role="img"
-        aria-label={`Connection map: ${total} Connections across ${nodes.length} Surahs`}
-      >
-        {/* The ring itself — a quiet reference line, not a feature. */}
-        <circle cx={CX} cy={CY} r={RADIUS} className="cxmap-ring" />
+      <svg viewBox={`0 0 ${SIZE} ${SIZE}`} className="cxmap-svg" role="img"
+        aria-label={`Connection map: ${total} Connections across ${nodes.length} Surahs`}>
 
-        {/* Chords under the nodes, so a node is never obscured by its own links. */}
+        {/* ── Group arcs ── */}
         <g>
-          {edges.map((e) => (
-            <path
-              key={`${e.a}-${e.b}`}
-              d={chord(e.a, e.b)}
-              className="cxmap-edge"
-              data-dim={touches(e) ? "false" : "true"}
-              data-hot={hover && hover.a === e.a && hover.b === e.b ? "true" : "false"}
-              style={{ strokeWidth: Math.min(1 + e.weight * 0.7, 4) }}
-              onPointerEnter={(ev) => {
-                setHover(e);
-                const r = wrapRef.current?.getBoundingClientRect();
-                if (r) setTip({ x: ev.clientX - r.left, y: ev.clientY - r.top });
-              }}
-              onPointerLeave={() => { setHover(null); setTip(null); }}
-            />
-          ))}
-        </g>
-
-        {/* One dot per Surah that actually has a Connection. Surahs with none
-            are left out rather than drawn faint — 114 empty dots would be
-            noise, and their absence is itself information. */}
-        <g>
-          {nodes.map((n) => {
-            const p = pointFor(n.surah);
-            const active = focus == null || focus === n.surah;
-            const r = 3 + (n.count / maxCount) * 5;
-            // Labels lean outward, flipping on the left half so none are upside down.
-            const deg = (p.angle * 180) / Math.PI;
+          {layout.map((g) => {
+            const mid = (g.start + g.end) / 2;
+            const lp = polar(mid, R_OUT + 22);
+            let deg = (mid * 180) / Math.PI;
             const flip = deg > 90 || deg < -90;
-            const lx = CX + Math.cos(p.angle) * (RADIUS + 14);
-            const ly = CY + Math.sin(p.angle) * (RADIUS + 14);
+            if (flip) deg += 180;
             return (
-              <g key={n.surah} data-dim={active ? "false" : "true"} className="cxmap-node">
-                <circle
-                  cx={p.x} cy={p.y} r={r}
-                  className="cxmap-dot"
-                  data-focused={focus === n.surah ? "true" : "false"}
-                  onClick={() => onFocus(focus === n.surah ? null : n.surah)}
-                >
-                  <title>{surahName(n.surah)} — {n.count} Connection{n.count === 1 ? "" : "s"}</title>
-                </circle>
+              <g key={g.id} className="cxmap-group" data-group={g.id}>
+                <path d={wedge(g.start, g.end, R_IN, R_OUT)} className="cxmap-group-arc" />
                 <text
-                  x={lx} y={ly}
-                  className="cxmap-label"
-                  textAnchor={flip ? "end" : "start"}
-                  transform={`rotate(${flip ? deg + 180 : deg} ${lx} ${ly})`}
-                  onClick={() => onFocus(focus === n.surah ? null : n.surah)}
+                  x={lp.x} y={lp.y}
+                  className="cxmap-group-label"
+                  textAnchor="middle"
+                  transform={`rotate(${deg} ${lp.x} ${lp.y})`}
                 >
-                  {n.surah}
+                  {g.arabic}
                 </text>
               </g>
             );
           })}
         </g>
+
+        {/* ── Per-surah segments. Every surah is drawn, so the muṣḥaf is whole;
+               the ones carrying Connections are simply brighter. ── */}
+        <g>
+          {Array.from({ length: TOTAL }, (_, i) => i + 1).map((n) => {
+            const g = groupOf(n);
+            const step = (g.end - g.start) / g.count;
+            const a0 = g.start + step * (n - g.from) + step * 0.12;
+            const a1 = a0 + step * 0.76;
+            const c = counts.get(n) ?? 0;
+            const dim = related != null && !related.has(n);
+            return (
+              <path
+                key={n}
+                d={wedge(a0, a1, R_IN + 2, R_OUT - 2)}
+                className="cxmap-seg"
+                data-linked={c > 0 ? "true" : "false"}
+                data-focused={focus === n ? "true" : "false"}
+                data-dim={dim ? "true" : "false"}
+                style={c > 0 ? { opacity: 0.45 + (c / maxCount) * 0.55 } : undefined}
+                onPointerEnter={(e) => { setHoverSurah(n); moveTip(e); }}
+                onPointerMove={moveTip}
+                onPointerLeave={() => { setHoverSurah(null); setTip(null); }}
+                onClick={() => c > 0 && onFocus(focus === n ? null : n)}
+              />
+            );
+          })}
+        </g>
+
+        {/* ── Links, inside the ring so they never cross the segments ── */}
+        <g>
+          {edges.map((e) => (
+            <path
+              key={`${e.a}-${e.b}`}
+              d={link(e.a, e.b)}
+              className="cxmap-edge"
+              data-dim={edgeLive(e) ? "false" : "true"}
+              data-hot={hoverEdge === e ? "true" : "false"}
+              style={{ strokeWidth: Math.min(1 + e.weight * 0.8, 4.5) }}
+              onPointerEnter={(ev) => { setHoverEdge(e); moveTip(ev); }}
+              onPointerMove={moveTip}
+              onPointerLeave={() => { setHoverEdge(null); setTip(null); }}
+            />
+          ))}
+        </g>
       </svg>
 
-      {hover && tip && (
+      {/* ── Hover detail ── */}
+      {tip && (hovered || hoverEdge) && (
         <div className="cxmap-tip" style={{ left: tip.x, top: tip.y }}>
-          <div className="cxmap-tip-pair">
-            {surahName(hover.a)} ↔ {surahName(hover.b)}
-          </div>
-          {hover.names.map((n, i) => <div key={i} className="cxmap-tip-name">{n}</div>)}
-          {hover.weight > hover.names.length && (
-            <div className="cxmap-tip-more">+{hover.weight - hover.names.length} more</div>
+          {hovered && (
+            <>
+              {hovered.arabic && <div className="cxmap-tip-ar" dir="rtl">{hovered.arabic}</div>}
+              <div className="cxmap-tip-name">{hovered.name}</div>
+              <div className="cxmap-tip-meta">
+                {hovered.place === "makkah" ? "Makkī" : hovered.place === "madinah" ? "Madanī" : ""}
+                {hovered.verses ? ` · ${hovered.verses} verses` : ""}
+                {counts.get(hovered.id)
+                  ? ` · ${counts.get(hovered.id)} Connection${counts.get(hovered.id) === 1 ? "" : "s"}`
+                  : " · no Connections"}
+              </div>
+            </>
+          )}
+          {hoverEdge && !hovered && (
+            <>
+              <div className="cxmap-tip-meta">
+                {surahName(hoverEdge.a)} ↔ {surahName(hoverEdge.b)}
+              </div>
+              {hoverEdge.names.map((n, i) => (
+                <div key={i} className="cxmap-tip-name">{n}</div>
+              ))}
+              {hoverEdge.weight > hoverEdge.names.length && (
+                <div className="cxmap-tip-meta">
+                  +{hoverEdge.weight - hoverEdge.names.length} more
+                </div>
+              )}
+            </>
           )}
         </div>
       )}
+
+      <p className="cxmap-hint">
+        Hover a surah to reveal what it links to · click to focus
+      </p>
     </div>
   );
 }
