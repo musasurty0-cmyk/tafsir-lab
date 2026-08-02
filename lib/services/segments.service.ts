@@ -63,22 +63,33 @@ export async function createSegment(
   await getWorkspaceWithRole(workspaceId, userId);
   assertRange(input.surahNumber, input.startAyah, input.endAyah);
 
-  const title = input.title.trim() || `${input.surahNumber}:${input.startAyah}–${input.endAyah}`;
+  /* An empty title is meaningful, not missing: a Selection is created the
+     moment its whiteboard opens and is NAMED when it is first closed. Filling
+     in a placeholder here would make every new Selection look already-named
+     and skip the naming step. */
+  const title = input.title.trim();
 
   /* Simultaneous creation of the SAME range by two people is treated as one
      segment rather than two identical ones — the second editor gets the
      existing record. Overlapping ranges remain perfectly legal; only an exact
      duplicate collapses. */
-  const existing = await db.quranSegment.findFirst({
-    where: {
-      workspaceId,
-      surahNumber: input.surahNumber,
-      startAyah:   input.startAyah,
-      endAyah:     input.endAyah,
-      title,
-    },
-  });
-  if (existing) return existing;
+  /* Collapse an exact repeat so two people creating the same Selection at
+     once get one record. Unnamed Selections are exempt: two people each
+     opening their own scratch whiteboard over the same verses are doing two
+     different things, and merging them would hand one person the other's
+     canvas. */
+  if (title) {
+    const existing = await db.quranSegment.findFirst({
+      where: {
+        workspaceId,
+        surahNumber: input.surahNumber,
+        startAyah:   input.startAyah,
+        endAyah:     input.endAyah,
+        title,
+      },
+    });
+    if (existing) return existing;
+  }
 
   const last = await db.quranSegment.findFirst({
     where: { workspaceId, surahNumber: input.surahNumber },

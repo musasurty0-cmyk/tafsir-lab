@@ -27,7 +27,9 @@ import type { NoteData } from "./NoteCard";
 import QCFMushafPage from "./QCFMushafPage";
 import AnchoredNoteCard from "./AnchoredNoteCard";
 import FreeTextBox, { TEXTBOX_DEFAULT_WIDTH } from "./FreeTextBox";
-import SegmentBar, { type Range } from "./SegmentBar";
+import { OpenSelectionPrompt, NameSelectionPrompt } from "./SelectionDialogs";
+import SelectionList from "./SelectionList";
+export type Range = { start: number; end: number };
 import DrawingCanvas, { type DrawTool, type DrawingCanvasHandle } from "./DrawingCanvas";
 import CanvasToolRail, {
   DEFAULT_PEN_COLOR,
@@ -71,6 +73,16 @@ const ZOOM_BUTTON_STEP       = 1.2;
 const ZOOM_TWEEN_MS          = 180;
 /** Study layer fade-out duration — must match --study-exit in globals.css. */
 const STUDY_EXIT_MS          = 260;
+
+/** Selection colours. Same family as the note palette, so Selections do not
+ *  introduce a second colour language into the Mushaf. */
+const SELECTION_COLORS = [
+  "oklch(0.55 0.11 155)",
+  "oklch(0.62 0.11 70)",
+  "oklch(0.52 0.14 290)",
+  "oklch(0.52 0.15 240)",
+  "oklch(0.55 0.15 15)",
+];
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -134,6 +146,12 @@ export default function ModeBPage({
   const [segments,   setSegments]   = useState<{ id: string; title: string; startAyah: number; endAyah: number; color?: string | null }[]>([]);
   const [activeSegment, setActiveSegment] = useState<string | null>(null);
   const [segBusy,    setSegBusy]    = useState(false);
+  /* The Selection currently open as a whiteboard. `unnamed` drives the naming
+     step: it is set only for a Selection created in THIS session, so an
+     existing one closes straight back to the Mushaf. */
+  const [session,  setSession]  = useState<{ id: string; range: Range; unnamed: boolean } | null>(null);
+  const [naming,   setNaming]   = useState(false);
+  const [listOpen, setListOpen] = useState(false);
 
   const surahNo = chapter.id;
 
@@ -159,9 +177,76 @@ export default function ModeBPage({
 
   const dismissRange = useCallback(() => { setRange(null); setRangeBar(null); }, []);
 
+  /** Leave a Selection's whiteboard. A brand-new one must be named first;
+   *  one that already has a name simply closes, because the work is already
+   *  identifiable and re-asking every time would be noise. */
+  const closeSelection = useCallback(() => {
+    if (session?.unnamed) { setNaming(true); return; }
+    setSession(null);
+    setNaming(false);
+    setFocusAnchor(null);
+  }, [session]);
+
+  const renameSelection = useCallback((id: string, name: string) => {
+    setSegBusy(true);
+    fetch(`/api/workspaces/${workspaceId}/segments/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: name }),
+    })
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+      .then((d) => {
+        if (d.segment) {
+          setSegments((prev) => prev.map((x) => (x.id === id ? { ...x, ...d.segment } : x)));
+        }
+        setNaming(false);
+        setSession(null);
+        setFocusAnchor(null);
+      })
+      .catch(() => {})
+      .finally(() => setSegBusy(false));
+  }, [workspaceId]);
+
+  /** Explicit discard. Only reachable behind a confirmation, and only for a
+   *  Selection that was never named — an established one is never destroyed
+   *  by a close gesture. */
+  const discardSelection = useCallback((id: string) => {
+    setSegBusy(true);
+    fetch(`/api/workspaces/${workspaceId}/segments/${id}`, { method: "DELETE" })
+      .then(() => {
+        setSegments((prev) => prev.filter((x) => x.id !== id));
+        setNaming(false);
+        setSession(null);
+        setActiveSegment(null);
+        setFocusAnchor(null);
+      })
+      .catch(() => {})
+      .finally(() => setSegBusy(false));
+  }, [workspaceId]);
+
+  /** Change a Selection's colour from inside its session — the tint on the
+   *  Mushaf updates as soon as the request lands. */
+  const recolourSelection = useCallback((id: string, color: string) => {
+    setSegments((prev) => prev.map((x) => (x.id === id ? { ...x, color } : x)));
+    fetch(`/api/workspaces/${workspaceId}/segments/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ color }),
+    }).catch(() => {});
+  }, [workspaceId]);
+
+
+
   /** Open a Segment's note layer. Segments are note targets in their own
    *  right, so this is the segment equivalent of tapping a word or ayah. */
   const openSegment = useCallback((seg: { id: string; title: string; startAyah: number; endAyah: number }) => {
+    setSession({
+      id: seg.id,
+      range: { start: seg.startAyah, end: seg.endAyah },
+      // Only a Selection with no name yet needs naming when it closes.
+      unnamed: !(seg.title || "").trim(),
+    });
+    setListOpen(false);
     setActiveSegment(seg.id);
     setStudyMode((on) => {
       if (!on) requestAnimationFrame(() => requestAnimationFrame(() => setStudyVisible(true)));
@@ -352,9 +437,14 @@ export default function ModeBPage({
   }, [strokeAnchors, notes]);
 
   // ── Annotation-layer session ───────────────────────────────────────────
-  // Anchor keys: "w:{verseKey}:{wordPos}" for words, "a:{verseKey}" for ayahs.
+  /* Anchor keys: "w:{verseKey}:{wordPos}" for words, "a:{verseKey}" for ayahs,
+     "s:{id}" for a Selection. A Selection's whiteboard is therefore the SAME
+     whiteboard system an ayah already uses — the anchor key is the canvas
+     identity, so no separate document store or engine was needed. */
   const activeAnchorKey = focusAnchor
-    ? (focusAnchor.wordPos != null
+    ? (focusAnchor.segmentId
+        ? `s:${focusAnchor.segmentId}`
+        : focusAnchor.wordPos != null
         ? `w:${focusAnchor.verseKey}:${focusAnchor.wordPos}`
         : `a:${focusAnchor.verseKey}`)
     : null;
@@ -516,6 +606,36 @@ export default function ModeBPage({
     // Mount inert, then flip to visible next frame so the CSS transition runs.
     requestAnimationFrame(() => requestAnimationFrame(() => setStudyVisible(true)));
   }, []);
+
+  /* Ctrl+X opens the Selection list — but Ctrl+X is Cut, so it is only taken
+     when the user is demonstrably NOT editing text. Anything editable keeps
+     the shortcut: inputs, textareas, contenteditable (which covers every
+     TipTap surface and canvas text container), and any live text selection
+     the user may be about to cut. */
+  useEffect(() => {
+    if (!studyMode) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== "x") return;
+
+      const el = document.activeElement as HTMLElement | null;
+      const editable =
+        !!el && (
+          el.isContentEditable ||
+          el.tagName === "INPUT" ||
+          el.tagName === "TEXTAREA" ||
+          !!el.closest?.('[contenteditable="true"], input, textarea')
+        );
+      if (editable) return;                       // Cut, untouched
+
+      const sel = window.getSelection();
+      if (sel && !sel.isCollapsed && String(sel).length > 0) return; // Cut, untouched
+
+      e.preventDefault();
+      setListOpen((v) => !v);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [studyMode]);
 
   const exitStudy = useCallback(() => {
     setStudyVisible(false);                     // fade out, still mounted
@@ -1238,26 +1358,73 @@ export default function ModeBPage({
         <div className="anchor-session-chip">
           <span className="anchor-session-label">
             {focusAnchor.segmentId
-              ? `Segment · ${focusAnchor.segmentLabel ?? ""}`
+              ? `Selection · ${focusAnchor.segmentLabel ?? ""}`
               : focusAnchor.wordPos != null
               ? `Word notes · ${focusAnchor.verseKey}`
               : `Ayah notes · ${focusAnchor.verseKey}`}
           </span>
-          <button className="anchor-session-done" onClick={closeFocus}>
-            Done
+
+          {/* Colour lives INSIDE the session: it identifies the Selection on
+              the Mushaf, so it is chosen while looking at the work it labels
+              rather than guessed before that work exists. */}
+          {session && (
+            <span className="anchor-session-colors" role="group" aria-label="Selection colour">
+              {SELECTION_COLORS.map((c) => (
+                <button
+                  key={c}
+                  className="anchor-session-color"
+                  style={{ background: c }}
+                  data-active={segments.find((x) => x.id === session.id)?.color === c ? "true" : "false"}
+                  onClick={() => recolourSelection(session.id, c)}
+                  title="Selection colour"
+                />
+              ))}
+            </span>
+          )}
+
+          <button
+            className="anchor-session-done"
+            onClick={session ? closeSelection : closeFocus}
+          >
+            {session ? "Close" : "Done"}
           </button>
         </div>
       )}
 
-      {/* ── Range actions ── */}
-      {studyMode && range && rangeBar && (
-        <SegmentBar
+      {/* ── Selection lifecycle ────────────────────────────────────────────
+          Commit a range → asked whether to open it. Opening creates an
+          UNNAMED Selection and hands over to its whiteboard; naming happens
+          when that whiteboard is first closed. */}
+      {studyMode && range && rangeBar && !session && (
+        <OpenSelectionPrompt
           range={range}
           surahName={chapter.name_simple}
-          at={rangeBar}
           busy={segBusy}
-          onCreate={createSegment}
-          onDismiss={dismissRange}
+          onCancel={dismissRange}
+          onOpen={() => createSegment({ title: "" }, (seg) => openSegment(seg))}
+        />
+      )}
+
+      {naming && session && (
+        <NameSelectionPrompt
+          range={session.range}
+          surahName={chapter.name_simple}
+          busy={segBusy}
+          onBack={() => setNaming(false)}
+          onSave={(name) => renameSelection(session.id, name)}
+          onDiscard={() => discardSelection(session.id)}
+        />
+      )}
+
+      {listOpen && (
+        <SelectionList
+          rows={segments}
+          surahName={chapter.name_simple}
+          onOpen={(id) => {
+            const sg = segments.find((x) => x.id === id);
+            if (sg) openSegment(sg);
+          }}
+          onClose={() => setListOpen(false)}
         />
       )}
 

@@ -6926,6 +6926,118 @@ input, textarea { font: inherit; color: inherit; }
   .segbar-color { transition: none; }
 }
 
+/* Selection dialogs. Focused cards over a dimmed Mushaf, deliberately small:
+   they ask one question, and covering the page the user just selected from
+   would hide the very thing being confirmed. */
+.seldlg-scrim, .sellist-scrim {
+  position: fixed; inset: 0; z-index: 70;
+  background: oklch(0.15 0.01 250 / 0.34);
+  backdrop-filter: blur(2px);
+  display: flex; align-items: center; justify-content: center;
+  padding: 5vh 16px;
+  animation: seldlg-fade 140ms var(--ease-out) both;
+}
+@keyframes seldlg-fade { from { opacity: 0; } to { opacity: 1; } }
+
+.seldlg {
+  width: 100%; max-width: 372px;
+  background: var(--bg-elev);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: 20px;
+  display: flex; flex-direction: column; gap: 12px;
+  animation: seldlg-in 180ms var(--ease-out) both;
+}
+@keyframes seldlg-in {
+  from { opacity: 0; transform: scale(0.97) translateY(4px); }
+  to   { opacity: 1; transform: none; }
+}
+.seldlg-title { font-family: var(--font-serif); font-size: 17px; font-weight: 600; color: var(--ink); margin: 0; }
+.seldlg-context {
+  background: var(--panel); border-radius: var(--radius);
+  padding: 10px 12px; display: flex; flex-direction: column; gap: 2px;
+}
+.seldlg-surah { font-size: 13.5px; font-weight: 500; color: var(--ink); }
+.seldlg-range { font-size: 12.5px; color: var(--ink-3); }
+.seldlg-note  { font-size: 12.5px; color: var(--ink-3); line-height: 1.55; margin: 0; }
+.seldlg-input {
+  width: 100%; padding: 9px 11px;
+  border: 1px solid var(--line-strong); border-radius: 8px;
+  background: var(--bg); color: var(--ink);
+  font: inherit; font-size: 14px; outline: none; text-align: start;
+}
+.seldlg-input:focus { border-color: var(--accent); }
+.seldlg-actions { display: flex; gap: 8px; margin-top: 4px; }
+.seldlg-btn {
+  flex: 1; padding: 9px 14px; border-radius: 8px;
+  border: 1px solid var(--line-strong); background: none;
+  color: var(--ink-2); font: inherit; font-size: 13.5px; cursor: pointer;
+  transition: background var(--dur-hover) var(--ease-soft), color var(--dur-hover) var(--ease-soft);
+}
+.seldlg-btn:hover:not(:disabled) { background: var(--hover); color: var(--ink); }
+.seldlg-btn:disabled { opacity: 0.5; cursor: default; }
+.seldlg-btn--primary { background: var(--ink); color: var(--bg); border-color: var(--ink); font-weight: 500; }
+.seldlg-btn--primary:hover:not(:disabled) { opacity: 0.88; background: var(--ink); color: var(--bg); }
+.seldlg-btn--danger  { background: oklch(0.55 0.19 25); border-color: oklch(0.55 0.19 25); color: #fff; font-weight: 500; }
+/* Discard is deliberately the quietest control on the card. */
+.seldlg-discard {
+  align-self: center; margin-top: 2px;
+  border: 0; background: none; cursor: pointer;
+  font-size: 11.5px; color: var(--ink-4); text-decoration: underline;
+}
+.seldlg-discard:hover { color: var(--ink-2); }
+
+/* Selection list (Ctrl+X). */
+.sellist-scrim { align-items: flex-start; padding-top: 12vh; }
+.sellist {
+  width: 100%; max-width: 400px;
+  background: var(--bg-elev);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden; display: flex; flex-direction: column;
+  animation: seldlg-in 160ms var(--ease-out) both;
+}
+.sellist-head {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.07em;
+  text-transform: uppercase; color: var(--ink-4); padding: 11px 14px 6px;
+}
+.sellist-input {
+  border: 0; border-bottom: 1px solid var(--line);
+  background: none; color: var(--ink);
+  font: inherit; font-size: 14px; padding: 8px 14px 11px; outline: none;
+}
+.sellist-rows { max-height: 320px; overflow-y: auto; overscroll-behavior: contain; padding: 5px; }
+.sellist-empty { padding: 18px; text-align: center; font-size: 12.5px; color: var(--ink-4); }
+.sellist-row {
+  width: 100%; text-align: start;
+  display: flex; align-items: center; gap: 10px;
+  border: 0; background: none; cursor: pointer;
+  padding: 8px 10px; border-radius: 8px;
+  transition: background var(--dur-fast) ease;
+}
+.sellist-row[data-active="true"] { background: var(--hover); }
+.sellist-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.sellist-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.sellist-range { font-size: 13px; font-weight: 500; color: var(--ink); }
+.sellist-name  { font-size: 12px; color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Colour swatches inside the session chip. */
+.anchor-session-colors { display: inline-flex; gap: 4px; margin: 0 4px; }
+.anchor-session-color {
+  width: 14px; height: 14px; border-radius: 50%;
+  border: 2px solid transparent; padding: 0; cursor: pointer;
+  transition: transform var(--dur-hover) var(--ease-soft);
+}
+.anchor-session-color:hover { transform: scale(1.18); }
+.anchor-session-color[data-active="true"] { border-color: var(--ink); }
+
+@media (prefers-reduced-motion: reduce) {
+  .seldlg-scrim, .sellist-scrim, .seldlg, .sellist { animation: none; }
+  .anchor-session-color { transition: none; }
+}
+
 /* Reading Mode guidance. Quiet by construction: small, muted, no border, no
    repeated motion — it is a hint, not a notice. */
 .qcf-read-hint {
