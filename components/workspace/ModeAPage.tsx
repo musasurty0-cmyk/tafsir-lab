@@ -38,6 +38,7 @@ interface PageData {
 }
 
 interface Props {
+  workspaceId:      string;
   page:              PageData;
   verses:            Verse[];
   surahNumber:       number;
@@ -102,6 +103,7 @@ function formatDate(d: Date | string) {
 // ── Component ─────────────────────────────────────────────────────────────
 
 export default function ModeAPage({
+  workspaceId,
   page,
   verses,
   surahNumber,
@@ -180,6 +182,7 @@ export default function ModeAPage({
           <PageEditor
             key={pageId}
             pageId={pageId}
+            workspaceId={workspaceId}
             initialContent={page.tiptapContent}
             currentUserId={currentUserId}
             currentUserName={currentUserName}

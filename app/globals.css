@@ -6926,6 +6926,85 @@ input, textarea { font: inherit; color: inherit; }
   .segbar-color { transition: none; }
 }
 
+/* Connection form. Reuses the Selection dialog shell but is a WIDER card,
+   because it must show both endpoints before anything is named — a form that
+   showed only one side would be asking for half a relationship. */
+.cxf { max-width: 440px; }
+.cxf-pair {
+  display: flex; flex-direction: column; gap: 1px;
+  background: var(--line); border-radius: var(--radius); overflow: hidden;
+}
+.cxf-endpoint {
+  display: flex; gap: 10px; align-items: baseline;
+  background: var(--panel); padding: 9px 12px;
+}
+.cxf-endpoint-role {
+  flex: 0 0 34px; font-size: 10.5px; font-weight: 600;
+  letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-4);
+}
+.cxf-endpoint-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.cxf-endpoint-kind {
+  font-size: 10px; font-weight: 600; letter-spacing: 0.05em;
+  text-transform: uppercase; color: var(--accent);
+}
+.cxf-endpoint-label { font-size: 13.5px; color: var(--ink); }
+.cxf-endpoint-arabic {
+  font-family: var(--font-arabic), serif;
+  font-size: calc(15px * var(--fs-arabic));
+  color: var(--ink-2); line-height: 1.9;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.cxf-label {
+  display: block; font-size: 11px; font-weight: 600;
+  letter-spacing: 0.05em; text-transform: uppercase;
+  color: var(--ink-4); margin: 10px 0 5px;
+}
+.cxf-textarea { resize: vertical; min-height: 62px; line-height: 1.55; font-family: inherit; }
+.cxf-select { cursor: pointer; }
+.cxf-row { display: flex; gap: 10px; }
+.cxf-col { flex: 1; min-width: 0; }
+.cxf-error {
+  margin: 10px 0 0; font-size: 12.5px;
+  color: oklch(0.5 0.19 25);
+}
+.cxf-dupe { display: flex; flex-direction: column; gap: 10px; }
+
+/* Connection card in the editor. Deliberately unlike an ayah quotation: that
+   block IS the verse, whereas this asserts a relationship between two things
+   that live outside the document. */
+.cxc {
+  display: block;
+  border: 1px solid var(--line-strong);
+  border-inline-start: 3px solid var(--accent);
+  border-radius: var(--radius);
+  background: var(--bg-elev);
+  padding: 10px 14px;
+  margin: 0.8em 0;
+  cursor: default;
+}
+.cxc-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.cxc-icon { font-size: 12px; opacity: 0.75; }
+.cxc-to   { font-size: 11.5px; color: var(--ink-3); }
+.cxc-cat {
+  font-size: 10px; font-weight: 600; letter-spacing: 0.04em;
+  text-transform: uppercase; color: var(--accent);
+  background: var(--accent-soft); padding: 2px 7px; border-radius: 999px;
+}
+.cxc-name { font-size: 14px; font-weight: 500; color: var(--ink); margin-top: 4px; }
+.cxc-comm {
+  font-size: 12.5px; color: var(--ink-2); line-height: 1.6; margin-top: 4px;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+}
+.cxc--loading, .cxc--missing {
+  display: flex; align-items: center; gap: 8px;
+  border-inline-start-color: var(--line-strong);
+  color: var(--ink-4);
+}
+.cxc--missing .cxc-name, .cxc--loading .cxc-name {
+  font-size: 12.5px; font-weight: 400; color: var(--ink-4); margin: 0;
+}
+
 /* Selection dialogs. Focused cards over a dimmed Mushaf, deliberately small:
    they ask one question, and covering the page the user just selected from
    would hide the very thing being confirmed. */

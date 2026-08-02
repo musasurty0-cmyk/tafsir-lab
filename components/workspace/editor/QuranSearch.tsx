@@ -44,8 +44,8 @@ interface Props {
   kinds?: TargetKind[];
   /** Surah being studied — its verses sort first, as they are the likely target. */
   currentSurah?: number;
-  /** Workspace segments, for callers that accept them (/link). */
-  segments?: SearchTarget[];
+  /** Workspace Selections, for callers that accept them (/link). */
+  selections?: SearchTarget[];
   onSelect: (t: SearchTarget) => void;
   onCancel: () => void;
   placeholder?: string;
@@ -70,7 +70,7 @@ function Marked({ text, query }: { text: string; query: string }) {
 export default function QuranSearch({
   kinds = ["ayah", "surah"],
   currentSurah,
-  segments = [],
+  selections = [],
   onSelect,
   onCancel,
   placeholder = "Search the Qurʾān…",
@@ -185,17 +185,26 @@ export default function QuranSearch({
       if (hits.length) out.push({ label: "Surahs", items: hits });
     }
 
-    if (kinds.includes("segment") && segments.length) {
+    if (kinds.includes("selection") && selections.length) {
+      /* Selections are searched by NAME or by verse — a reader remembers
+         "the bit around ayah 6" as readily as the title they chose. */
       const ql = query.toLowerCase();
-      const hits = segments.filter((s) => s.label.toLowerCase().includes(ql)).slice(0, 6);
-      if (hits.length) out.push({ label: "Segments", items: hits });
+      const num = Number(query.replace(/[^0-9]/g, ""));
+      const hits = selections.filter((s) => {
+        if (s.label.toLowerCase().includes(ql)) return true;
+        if (!Number.isFinite(num) || !query.match(/\d/)) return false;
+        const m = (s.preview ?? "").match(/(\d+)\D+(\d+)/);
+        if (!m) return false;
+        return num >= Number(m[1]) && num <= Number(m[2]);
+      }).slice(0, 6);
+      if (hits.length) out.push({ label: "Selections", items: hits });
     }
 
     if (kinds.includes("ayah") && verses.length) {
       out.push({ label: "Āyāt", items: verses });
     }
     return out;
-  }, [q, chapters, chapterById, verses, segments, kinds, nameFor]);
+  }, [q, chapters, chapterById, verses, selections, kinds, nameFor]);
 
   const flat = useMemo(() => groups.flatMap((g) => g.items), [groups]);
 

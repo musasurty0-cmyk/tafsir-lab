@@ -433,6 +433,7 @@ export default function WorkspacePageView({
     return (
       <ModeAPage
         page={page}
+        workspaceId={workspaceId}
         verses={verses}
         surahNumber={surahNumber}
         surahName={chapter.name_simple}

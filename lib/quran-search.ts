@@ -144,11 +144,11 @@ export function searchChapters(query: string, chapters: Chapter[]): ChapterHit[]
 
 // ── Result shape shared by every consumer ───────────────────────────────────
 
-export type TargetKind = "ayah" | "surah" | "segment";
+export type TargetKind = "ayah" | "surah" | "selection";
 
 export interface SearchTarget {
   kind:      TargetKind;
-  /** Stable identity — "2:255" for an ayah, "2" for a surah, uuid for a segment. */
+  /** Stable identity — "2:255" for an ayah, "2" for a surah, uuid for a selection. */
   id:        string;
   surah?:    number;
   ayah?:     number;

@@ -110,6 +110,23 @@ export function buildCommands(): SlashCommandItem[] {
 
   return [
     {
+      /* /link creates a permanent CONNECTION between two Quranic objects.
+         Unlike /ayah it embeds nothing on its own — the editor card it leaves
+         behind is a reference to a record that lives outside the document, so
+         the same Connection is visible from both objects it joins. */
+      id:          "link",
+      title:       "Link Qur'anic passage",
+      description: "Create a permanent Connection to an ayah, Selection or Surah",
+      icon:        "🔗",
+      aliases:     ["connection", "munasabat", "munasaba", "relate"],
+      execute() {
+        /* Deliberately inert. The command needs the editor's source context
+           and an async target search, so PageEditor intercepts it before
+           execution — the same way /ayah without a reference is intercepted.
+           Reaching here would mean that interception was bypassed. */
+      },
+    },
+    {
       id:          "ayah",
       title:       "Ayah block",
       description: "Embed a Qur'anic verse (e.g. /ayah 2:255)",
