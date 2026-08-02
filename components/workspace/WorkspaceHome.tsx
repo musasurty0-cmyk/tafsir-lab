@@ -239,6 +239,13 @@ export default function WorkspaceHome({
             </button>
             <button
               className="ws-new-btn ws-new-btn--ghost"
+              title="Every Connection recorded in this workspace"
+              onClick={() => pushWithSplash(router, `/workspaces/${workspaceId}/connections`)}
+            >
+              Connections
+            </button>
+            <button
+              className="ws-new-btn ws-new-btn--ghost"
               title="Blank whiteboard — verses, tafsīr & pen"
               onClick={() => pushWithSplash(router, `/workspaces/${workspaceId}/whiteboard`)}
             >
