@@ -176,7 +176,11 @@ export default function ModeAPage({
           </div>
 
           {/* ── Divider ────────────────────────────────────────────── */}
-          <div className="block-divider" style={{ margin: "28px 0 32px" }} />
+          {/* marginBlock, NOT the margin shorthand: `margin: 28px 0 32px` also sets
+              the inline margins to 0, which overrides the `margin-inline: auto`
+              that centres every other child of .doc — the rule sat flush left
+              while the cover and the editor were centred. */}
+          <div className="block-divider" style={{ marginBlock: "28px 32px" }} />
 
           {/* ── Free editor ────────────────────────────────────────── */}
           <PageEditor

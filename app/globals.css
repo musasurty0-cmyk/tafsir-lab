@@ -79,7 +79,7 @@
   --fs-reading: 1;
   --fs-arabic:  1;
   --canvas-pad-y: 80px;
-  --canvas-max:   740px;
+  --canvas-max:   900px;
   /* Open canvas to the right of the text column: somewhere to scroll into and
      put things, so the page extends sideways as well as downward. */
   --canvas-span:  2400px;
@@ -91,8 +91,8 @@
 [data-density="roomy"]   { --row-h: 34px; --canvas-pad-y: 104px; }
 
 /* Canvas width */
-[data-canvas="focused"]  { --canvas-max: 720px; }
-[data-canvas="wide"]     { --canvas-max: 920px; }
+[data-canvas="focused"]  { --canvas-max: 860px; }
+[data-canvas="wide"]     { --canvas-max: 1180px; }
 
 /* Accent variants */
 [data-accent="emerald"] { --accent: oklch(0.55 0.08 160); --accent-soft: oklch(0.55 0.08 160 / 0.1); --accent-ink: oklch(0.42 0.07 160); }
@@ -548,7 +548,12 @@ input, textarea { font: inherit; color: inherit; }
 .block-callout { display: flex; gap: 12px; padding: 14px 16px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-lg); margin: 8px 0; }
 .callout-icon { width: 22px; height: 22px; flex-shrink: 0; display: grid; place-items: center; color: var(--accent-ink); margin-top: 2px; }
 .callout-body { font-family: var(--font-serif); font-size: 15px; line-height: 1.6; color: var(--ink-2); }
-.block-divider { height: 1px; background: var(--line); margin: 24px 0; }
+/* margin-block, NOT the `margin` shorthand. This rule comes after `.doc > *`
+   at equal specificity, so `margin: 24px 0` was also setting the inline
+   margins to 0 and cancelling the `margin-inline: auto` that centres every
+   other child of the page — the rule alone sat flush against the left
+   padding edge while the cover and the editor were centred. */
+.block-divider { height: 1px; background: var(--line); margin-block: 24px; }
 .block-quote { margin: 10px 0; padding: 4px 0 4px 18px; border-left: 2px solid var(--line-strong); font-family: var(--font-serif); font-style: italic; color: var(--ink-2); line-height: 1.6; }
 .block-list { margin: 4px 0; padding-left: 22px; font-family: var(--font-serif); font-size: 16px; line-height: 1.7; }
 .block-list li { margin: 2px 0; color: var(--ink); }
