@@ -531,58 +531,22 @@ input, textarea { font: inherit; color: inherit; }
 }
 /* The masthead. Tight internally — eyebrow, title and metadata are one unit —
    with the real gap falling between it and the document body. */
-.doc-cover {
-  margin-bottom: var(--space-7);
-  display: flex; flex-direction: column;
-  gap: var(--space-2);
-}
-
-/* Context, not a label. The uppercase monospace eyebrow with wide tracking is
-   a magazine convention and read as template styling; this is the same
-   information in the application's own voice. */
-.doc-cover-tag {
-  font-family: var(--font-sans);
-  font-size: 12px;
-  letter-spacing: 0;
-  text-transform: none;
-  color: var(--ink-2);
-}
-/* The surah NAME carries; the numbers sit behind it. */
-.doc-cover-tag-dim { color: var(--ink-4); }
-
-/* 40px competed with the Qur'anic text it introduces. Still the strongest
-   thing on the page, but by weight and face rather than sheer size. */
+.doc-cover { margin-bottom: 24px; display: flex; flex-direction: column; gap: 12px; }
+.doc-cover-tag { font-family: var(--font-mono); font-size: 11px; color: var(--ink-3); letter-spacing: 0.04em; text-transform: uppercase; }
 .doc-title {
   font-family: var(--font-serif);
-  font-size: 27px; font-weight: 600;
-  letter-spacing: -0.015em; line-height: 1.22;
+  font-size: 40px; font-weight: 600;
+  letter-spacing: -0.02em; line-height: 1.1;
   color: var(--ink); margin: 0;
-  /* Long titles wrap rather than overflow the measure. */
-  overflow-wrap: break-word;
 }
-
-/* Author, date and status are provenance, not content. They stay reachable but
-   recede until wanted, so the row under the title stops looking like a blog
-   byline. */
-.doc-meta {
-  display: flex; align-items: center;
-  gap: var(--space-3);
-  font-size: 11.5px; color: var(--ink-4);
-  margin-top: var(--space-1);
-  opacity: 0.62;
-  transition: opacity var(--dur-mid) var(--ease-soft);
-}
-.doc-cover:hover .doc-meta,
-.doc-cover:focus-within .doc-meta { opacity: 1; }
-.doc-meta-item { display: flex; align-items: center; gap: var(--space-1); }
-/* The decorative dot separators were doing the work spacing should do. */
-.doc-meta-sep { display: none; }
+.doc-meta { display: flex; align-items: center; gap: 14px; font-size: 12.5px; color: var(--ink-3); margin-top: 4px; }
+.doc-meta-item { display: flex; align-items: center; gap: 5px; }
+.doc-meta-sep { color: var(--line-strong); }
 .doc-meta-avatar {
-  width: 15px; height: 15px; border-radius: 50%;
-  /* Flat, not a gradient — one small element does not need depth. */
-  background: var(--accent);
-  color: var(--bg); display: grid; place-items: center;
-  font-size: 8.5px; font-weight: 600;
+  width: 18px; height: 18px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--accent-ink));
+  color: white; display: grid; place-items: center;
+  font-size: 9.5px; font-weight: 600;
 }
 
 /* ── Blocks ── */
@@ -4690,30 +4654,21 @@ input, textarea { font: inherit; color: inherit; }
    Its edges now come from the measure and the whitespace around it. */
 .page-editor-content {
   outline: none;
-  border: 0;
-  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 0; /* square, matching the other containers */
+  /* same breathing room as the small containers — text never hugs the frame */
+  padding: 6px 14px 10px;
+  transition: border-color var(--dur-hover) var(--ease-soft);
   caret-color: var(--accent);
   font-size: calc(15.5px * var(--fs-reading));
   line-height: 1.82;
   color: var(--ink);
 }
 
-/* Focus is shown by a hairline in the margin, not a box drawn around the
-   prose — enough to say "this is live" without re-creating the card. */
-.page-editor-content::before {
-  content: "";
-  position: absolute;
-  inset-block: 0;
-  inset-inline-start: calc(var(--space-5) * -1);
-  width: 2px;
-  border-radius: 1px;
-  background: var(--accent);
-  opacity: 0;
-  transition: opacity var(--dur-mid) var(--ease-soft);
-  pointer-events: none;
+.page-editor-content:hover,
+.page-editor-content:focus-within {
+  border-color: var(--line);
 }
-.page-editor-content:focus-within::before { opacity: 0.5; }
-.page-editor-content { position: relative; }
 
 /* Paragraph — generous spacing makes prose breathe */
 /* Tight, notebook-style line advance: Enter goes to the next line, not a
@@ -7374,77 +7329,117 @@ input, textarea { font: inherit; color: inherit; }
 }
 
 /* The Connection annotation left in a note by /link.
-   NOT a card. A boxed, shadowed rectangle read as an embedded widget from
-   another app; a study document annotates in the margin instead. The rule on
-   the logical start side is the only chrome, and it uses padding rather than a
-   background so the block sits ON the page instead of on top of it. */
+   Square corners and a hairline border, matching the editor's own containers
+   rather than importing a rounded card style from somewhere else. The accent
+   edge on the logical start side is what marks it as a Connection; everything
+   else stays quiet so it reads as part of the document. */
 .cxb {
   display: block;
-  border: 0;
-  border-inline-start: 2px solid var(--accent);
+  position: relative;
+  box-sizing: border-box;
+  max-width: 100%;
+  border: 1px solid var(--line);
+  border-inline-start: 3px solid var(--accent);
   border-radius: 0;
-  background: none;
+  background: var(--bg-elev);
   box-shadow: none;
-  padding: 0 0 0 var(--space-4);
-  padding-inline-start: var(--space-4);
-  margin-block: var(--space-5);
+  padding: var(--space-3) var(--space-4);
+  margin-block: var(--space-4);
   cursor: default;
+  transition: border-color var(--dur-hover) var(--ease-soft);
 }
-/* Two Connections in a row need more air between them than any line inside one,
-   or they read as a single four-line block. */
-.cxb + .cxb { margin-block-start: var(--space-8); }
+.cxb:hover { border-color: var(--line-strong); border-inline-start-color: var(--accent); }
+/* Two in a row need more air between them than any line inside one. */
+.cxb + .cxb { margin-block-start: var(--space-5); }
 
-/* Where it points — legible, but it is not the headline. */
+/* Destination and category share a line: both are labels about the block,
+   neither is its content. */
+.cxb-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: var(--space-3); flex-wrap: wrap;
+}
+
 .cxb-target {
-  display: inline-flex; align-items: center; gap: var(--space-2);
+  display: inline-flex; align-items: center; gap: 6px;
   font-size: 11.5px; color: var(--ink-3);
   text-decoration: none; cursor: pointer;
+  min-width: 0;
   transition: color var(--dur-hover) var(--ease-soft);
 }
 .cxb-target:hover, .cxb-target:focus-visible { color: var(--accent); }
 .cxb-target svg { flex-shrink: 0; opacity: 0.7; }
+.cxb-target-text { min-width: 0; overflow-wrap: anywhere; }
 .cxb-target-sub { color: var(--ink-4); }
 
 /* The relationship itself, and the strongest text in the block. */
 .cxb-name {
-  font-family: var(--font-serif, var(--font-sans));
-  font-size: 15px; font-weight: 500; line-height: 1.4;
+  font-family: var(--font-serif);
+  font-size: 15.5px; font-weight: 600; line-height: 1.35;
   color: var(--ink);
-  margin: var(--space-2) 0 0;
+  margin: 6px 0 0;
 }
 
 /* The verse it reaches for. Right-aligned by direction, not by rule, so a
    left-to-right fallback still reads correctly. */
 .cxb-arabic {
-  font-family: var(--font-arabic, serif);
-  font-size: calc(19px * var(--fs-arabic, 1));
-  line-height: 2;
+  font-family: var(--font-arabic);
+  font-size: calc(18px * var(--fs-arabic, 1));
+  line-height: 1.95;
   color: var(--ink-2);
-  margin: var(--space-3) 0 0;
+  margin: var(--space-2) 0 0;
   padding: 0; border: 0;
 }
 
 .cxb-comm {
-  font-size: 13px; color: var(--ink-2); line-height: 1.7;
+  font-size: 13px; color: var(--ink-2); line-height: 1.65;
   margin: var(--space-2) 0 0;
 }
 
 /* Quiet text, not a coloured pill. The badge gave a filing label the loudest
    colour in the block. */
 .cxb-cat {
-  display: inline-block;
-  margin-top: var(--space-2);
-  font-size: 11px; letter-spacing: 0.01em;
+  flex-shrink: 0;
+  font-size: 11px; letter-spacing: 0;
   color: var(--ink-4);
   background: none; padding: 0; border-radius: 0;
   text-transform: none; font-weight: 400;
 }
+
+/* Resize grip. Invisible until the block is hovered — a permanent handle on
+   every Connection would be more chrome than the block itself. The hit area is
+   deliberately wider than the visible bar so it can actually be grabbed. */
+.cxb-resize {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: -5px;
+  width: 11px;
+  cursor: ew-resize;
+  touch-action: none;
+  display: flex; align-items: center; justify-content: center;
+}
+.cxb-resize::after {
+  content: "";
+  width: 3px; height: 26px;
+  border-radius: 2px;
+  background: var(--line-strong);
+  opacity: 0;
+  transition: opacity var(--dur-hover) var(--ease-soft),
+              background var(--dur-hover) var(--ease-soft);
+}
+.cxb:hover .cxb-resize::after { opacity: 1; }
+.cxb-resize:hover::after,
+.cxb[data-dragging="true"] .cxb-resize::after {
+  opacity: 1; background: var(--accent);
+}
+/* No width transition while dragging, or the edge lags behind the pointer. */
+.cxb[data-dragging="true"] { user-select: none; }
 
 /* Loading and broken states keep the block's shape so the document does not
    jump when the record arrives. */
 .cxb--quiet {
   border-inline-start-color: var(--line-strong);
   color: var(--ink-4);
+  font-size: 12.5px;
 }
 
 /* Catalogue rows still label a category, but quietly, matching the block. */

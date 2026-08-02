@@ -150,12 +150,8 @@ export default function ModeAPage({
 
           {/* ── Cover ──────────────────────────────────────────────── */}
           <div className="doc-cover">
-            {/* Name first: a reader knows Al-Fātiḥah, not "Sūrah 1". The
-                number stays as supporting context rather than the headline. */}
             <div className="doc-cover-tag">
-              {surahName} <span className="doc-cover-tag-dim">
-                · Surah {surahNumber} · Page {page.orderIndex + 1}
-              </span>
+              Sūrah {surahNumber} · {surahName} · Page {page.orderIndex + 1}
             </div>
             <h1 className="doc-title">{page.title}</h1>
 

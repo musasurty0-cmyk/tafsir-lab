@@ -3,10 +3,14 @@
 /**
  * The Connection block left in the document by /link.
  *
- * A scholarly annotation, not an embedded card. It reads as part of the study
- * document — a thin rule in the margin, the passage it points to, the name of
- * the relationship, and the commentary — rather than as a widget dropped into
- * the page.
+ * Square corners and a hairline border, matching the editor's own containers,
+ * with an accent edge on the logical start side marking it as a Connection.
+ * Shows the passage it points to BY NAME, the name of the relationship, a short
+ * Arabic excerpt and the commentary.
+ *
+ * Resizable by dragging its trailing edge. Width is stored per placement rather
+ * than on the Connection, so the same Connection cited in two notes can be
+ * sized to suit each.
  *
  * Stores ONLY the Connection id. Name and commentary live in the record, so
  * editing a Connection updates every block referencing it, and deleting a
@@ -16,8 +20,11 @@
 
 import { Node, mergeAttributes } from "@tiptap/core";
 import { ReactNodeViewRenderer, NodeViewWrapper, type NodeViewProps } from "@tiptap/react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { parseObjectKey } from "@/lib/quran-objects";
+
+/** Narrower than this and the Arabic line wraps to nonsense. */
+const MIN_WIDTH = 260;
 
 interface ConnectionData {
   id: string;
@@ -107,13 +114,70 @@ const LinkGlyph = () => (
   </svg>
 );
 
-function ConnectionCard({ node, extension }: NodeViewProps) {
+function ConnectionCard({ node, extension, updateAttributes, editor }: NodeViewProps) {
   const id = node.attrs.connectionId as string;
+  const width = node.attrs.width as number | null;
   const workspaceId = (extension.options as { workspaceId?: string }).workspaceId ?? "";
   const [data, setData]   = useState<ConnectionData | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "missing">("loading");
   const [dest, setDest]   = useState<{ primary: string; secondary?: string } | null>(null);
   const [arabic, setArabic] = useState<string | null>(null);
+  const [dragging, setDragging] = useState(false);
+
+  /**
+   * Width is dragged, not typed. Pointer capture keeps the gesture attached to
+   * the handle even when the cursor outruns it, which is what makes a fast drag
+   * feel continuous rather than snapping back the moment you leave the element.
+   */
+  const startResize = useCallback((e: React.PointerEvent<HTMLSpanElement>) => {
+    if (!editor.isEditable) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const handle = e.currentTarget;
+    /* Walked up from the handle rather than read from a ref: this does not
+       depend on the node-view wrapper forwarding one, which would fail
+       silently and leave the block simply not resizable. */
+    const el = handle.closest(".cxb") as HTMLElement | null;
+    if (!el) return;
+
+    handle.setPointerCapture(e.pointerId);
+    setDragging(true);
+
+    const startX = e.clientX;
+    const startW = el.getBoundingClientRect().width;
+    /* The block can never be wider than the column it sits in — an editor is
+       not a canvas, and a block that overflows the text measure would push the
+       whole document sideways. */
+    const maxW = el.parentElement?.getBoundingClientRect().width ?? startW;
+    const rtl = getComputedStyle(el).direction === "rtl";
+    let next = startW;
+
+    const move = (ev: PointerEvent) => {
+      const dx = (ev.clientX - startX) * (rtl ? -1 : 1);
+      next = Math.round(Math.min(maxW, Math.max(MIN_WIDTH, startW + dx)));
+      // Painted directly during the drag; committed to the document on release.
+      el.style.width = `${next}px`;
+    };
+    const end = () => {
+      handle.releasePointerCapture(e.pointerId);
+      handle.removeEventListener("pointermove", move);
+      handle.removeEventListener("pointerup", end);
+      handle.removeEventListener("pointercancel", end);
+      setDragging(false);
+      el.style.width = "";
+      /* At full width store null rather than a pixel count, so the block stays
+         fluid if the window is later resized. */
+      updateAttributes({ width: next >= maxW - 2 ? null : next });
+    };
+    handle.addEventListener("pointermove", move);
+    handle.addEventListener("pointerup", end);
+    handle.addEventListener("pointercancel", end);
+  }, [editor, updateAttributes]);
+
+  /** Double-click restores the default — a drag should never be a one-way trip. */
+  const resetWidth = useCallback(() => {
+    if (editor.isEditable) updateAttributes({ width: null });
+  }, [editor, updateAttributes]);
 
   useEffect(() => {
     let live = true;
@@ -185,15 +249,21 @@ function ConnectionCard({ node, extension }: NodeViewProps) {
       className="cxb"
       contentEditable={false}
       data-connection-id={data.id}
+      data-dragging={dragging ? "true" : "false"}
+      style={width ? { width: `${width}px` } : undefined}
     >
-      {/* Destination: identifiable but quiet — it says where, not what. */}
-      <span className="cxb-target" tabIndex={0} role="link">
-        <LinkGlyph />
-        <span>
-          Connected to {dest?.primary ?? "…"}
-          {dest?.secondary && <span className="cxb-target-sub"> · {dest.secondary}</span>}
+      <header className="cxb-head">
+        {/* Destination: identifiable but quiet — it says where, not what. */}
+        <span className="cxb-target" tabIndex={0} role="link">
+          <LinkGlyph />
+          <span className="cxb-target-text">
+            {dest?.primary ?? "…"}
+            {dest?.secondary && <span className="cxb-target-sub"> · {dest.secondary}</span>}
+          </span>
         </span>
-      </span>
+        {/* Quiet text, never a coloured badge. */}
+        {data.category && <span className="cxb-cat">{data.category}</span>}
+      </header>
 
       {/* The relationship itself — the strongest text in the block. */}
       <h3 className="cxb-name">{data.name}</h3>
@@ -204,8 +274,17 @@ function ConnectionCard({ node, extension }: NodeViewProps) {
 
       {data.commentary && <p className="cxb-comm">{data.commentary}</p>}
 
-      {/* Quiet text, never a coloured badge. */}
-      {data.category && <span className="cxb-cat">{data.category}</span>}
+      {editor.isEditable && (
+        <span
+          className="cxb-resize"
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Resize Connection — double-click to reset"
+          title="Drag to resize · double-click to reset"
+          onPointerDown={startResize}
+          onDoubleClick={resetWidth}
+        />
+      )}
     </NodeViewWrapper>
   );
 }
@@ -227,6 +306,21 @@ export const ConnectionBlockExtension = Node.create({
          freeze a copy into the document that diverges the moment the
          Connection is edited. */
       connectionId: { default: null },
+
+      /* Width is a property of THIS placement, not of the Connection — the
+         same Connection referenced in two notes can be sized differently in
+         each, so it belongs on the node rather than on the record. null means
+         fluid: fill the column. */
+      width: {
+        default: null,
+        parseHTML: (el) => {
+          const raw = el.getAttribute("data-width");
+          const n = raw ? parseInt(raw, 10) : NaN;
+          return Number.isFinite(n) && n >= MIN_WIDTH ? n : null;
+        },
+        renderHTML: (attrs) =>
+          attrs.width ? { "data-width": String(attrs.width) } : {},
+      },
     };
   },
 
