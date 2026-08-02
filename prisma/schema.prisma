@@ -32,6 +32,7 @@ model User {
   templates        PageTemplate[]
   pagePresence     PagePresence[]
   segments         QuranSegment[]         @relation("SegmentCreatedBy")
+  connections      QuranConnection[]      @relation("ConnectionCreatedBy")
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -59,6 +60,7 @@ model Workspace {
   surahs      WorkspaceSurah[]
   activityLog ActivityLog[]
   segments    QuranSegment[]
+  connections QuranConnection[]
 }
 
 model WorkspaceMember {
@@ -135,6 +137,51 @@ model QuranSegment {
 
   // The common read is "every segment for this surah in this workspace".
   @@index([workspaceId, surahNumber])
+}
+
+// ─────────────────────────────────────────────────────────────
+// CONNECTIONS — munasabat: relationships between Qur'anic objects
+// ─────────────────────────────────────────────────────────────
+
+model QuranConnection {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId String   @db.Uuid
+
+  // Stable object keys, never display labels: "ayah:67:1", "surah:67",
+  // "selection:<uuid>". A label can be renamed; these cannot drift.
+  sourceType  String   // 'ayah' | 'selection' | 'surah'
+  sourceKey   String
+  targetType  String
+  targetKey   String
+
+  // The two endpoint keys sorted and joined. A Connection is bidirectional, so
+  // A->B and B->A are the SAME relationship; sorting collapses them to one
+  // value and the unique index below makes the database — not the client —
+  // the thing that prevents a reversed duplicate, including under concurrent
+  // creation from two devices.
+  pairKey     String
+
+  name        String
+  commentary  String?
+  category    String?
+  tags        String[] @default([])
+
+  createdById String   @db.Uuid
+  createdAt   DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @db.Timestamptz(6)
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy User      @relation("ConnectionCreatedBy", fields: [createdById], references: [id])
+
+  // One Connection per pair of objects per workspace. Several observations
+  // about the same pair belong in one commentary, not several edges.
+  @@unique([workspaceId, pairKey])
+  // "Every Connection touching this object" is the query every panel makes,
+  // and it has to match either endpoint.
+  @@index([workspaceId, sourceKey])
+  @@index([workspaceId, targetKey])
+  @@index([workspaceId, category])
+  @@index([workspaceId, updatedAt])
 }
 
 // ─────────────────────────────────────────────────────────────
