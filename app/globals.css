@@ -7023,6 +7023,53 @@ input, textarea { font: inherit; color: inherit; }
 .sellist-range { font-size: 13px; font-weight: 500; color: var(--ink); }
 .sellist-name  { font-size: 12px; color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+/* Row management. Opens inline so the list never navigates away from what the
+   user is looking at, and stays hidden until the row is hovered — a list you
+   are only reading should not be covered in controls. */
+.sellist-item { border-radius: 8px; }
+.sellist-edit {
+  margin-inline-start: auto; flex-shrink: 0;
+  width: 22px; height: 22px; border-radius: 5px;
+  display: grid; place-items: center;
+  color: var(--ink-4); font-size: 15px; line-height: 1;
+  opacity: 0;
+  transition: opacity var(--dur-fast) ease, background var(--dur-fast) ease;
+}
+.sellist-row:hover .sellist-edit,
+.sellist-row[data-active="true"] .sellist-edit { opacity: 1; }
+.sellist-edit:hover { background: var(--panel); color: var(--ink); }
+
+.sellist-manage {
+  padding: 6px 10px 10px 28px;
+  display: flex; flex-direction: column; gap: 7px;
+}
+.sellist-rename {
+  width: 100%; padding: 6px 9px;
+  border: 1px solid var(--line-strong); border-radius: 7px;
+  background: var(--bg); color: var(--ink);
+  font: inherit; font-size: 12.5px; outline: none; text-align: start;
+}
+.sellist-rename:focus { border-color: var(--accent); }
+.sellist-swatches { display: flex; align-items: center; gap: 5px; }
+.sellist-swatch {
+  width: 15px; height: 15px; border-radius: 50%;
+  border: 2px solid transparent; padding: 0; cursor: pointer;
+}
+.sellist-swatch[data-active="true"] { border-color: var(--ink); }
+.sellist-mini {
+  margin-inline-start: auto;
+  border: 1px solid var(--line-strong); background: none;
+  color: var(--ink-3); font: inherit; font-size: 11.5px;
+  padding: 3px 9px; border-radius: 6px; cursor: pointer;
+}
+.sellist-mini:hover { background: var(--hover); color: var(--ink); }
+.sellist-mini--danger { color: oklch(0.55 0.19 25); border-color: oklch(0.55 0.19 25 / 0.4); }
+.sellist-mini--danger:hover { background: oklch(0.55 0.19 25 / 0.1); color: oklch(0.5 0.19 25); }
+.sellist-confirm { display: flex; flex-direction: column; gap: 7px; font-size: 12px; color: var(--ink-2); }
+.sellist-confirm-actions { display: flex; gap: 6px; }
+.sellist-confirm-actions .sellist-mini { margin-inline-start: 0; }
+.sellist-confirm-actions .sellist-mini--danger { margin-inline-start: auto; }
+
 /* Colour swatches inside the session chip. */
 .anchor-session-colors { display: inline-flex; gap: 4px; margin: 0 4px; }
 .anchor-session-color {

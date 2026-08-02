@@ -94,7 +94,9 @@ interface Props {
   segments?:         { id: string; title: string; startAyah: number; endAyah: number; color?: string | null }[];
   /** Segment whose notes are open — gets the stronger visual state. */
   activeSegmentId?:  string | null;
-  onSegmentClick?:   (id: string) => void;
+  /** Receives every Selection covering the tapped ayah, innermost last. More
+   *  than one means the tap is ambiguous and the caller should ask. */
+  onSegmentClick?:   (ids: string[]) => void;
 }
 
 /** Wash for the ayah whose annotation layer is currently open. */
@@ -516,7 +518,10 @@ function QCFMushafPage({
                         const cover = segments.filter(
                           (sg) => word.ayahNum >= sg.startAyah && word.ayahNum <= sg.endAyah);
                         if (cover.length && onSegmentClick) {
-                          onSegmentClick(cover[cover.length - 1].id);
+                          // Hand over ALL of them: with overlapping Selections
+                          // the tap does not identify one, and silently
+                          // choosing would open the wrong whiteboard.
+                          onSegmentClick(cover.map((c) => c.id));
                           return;
                         }
                         onOpenFocus(word.verseKey, null);

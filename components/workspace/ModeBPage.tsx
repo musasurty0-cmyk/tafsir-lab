@@ -152,6 +152,9 @@ export default function ModeBPage({
   const [session,  setSession]  = useState<{ id: string; range: Range; unnamed: boolean } | null>(null);
   const [naming,   setNaming]   = useState(false);
   const [listOpen, setListOpen] = useState(false);
+  /* Set when a tap lands on overlapping Selections: the tap alone does not
+     say which one is meant, so the user picks. */
+  const [chooser,  setChooser]  = useState<string[] | null>(null);
 
   const surahNo = chapter.id;
 
@@ -206,6 +209,27 @@ export default function ModeBPage({
       .catch(() => {})
       .finally(() => setSegBusy(false));
   }, [workspaceId]);
+
+  /** Rename from the browser. Unlike the naming screen this does not end a
+   *  session — the user is managing a list, not finishing a piece of work. */
+  const renameSelectionInPlace = useCallback((id: string, name: string) => {
+    setSegments((prev) => prev.map((x) => (x.id === id ? { ...x, title: name } : x)));
+    fetch(`/api/workspaces/${workspaceId}/segments/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: name }),
+    }).catch(() => {});
+  }, [workspaceId]);
+
+  /** Delete from the browser. The server detaches any notes rather than
+   *  cascading, so writing survives the grouping being removed. */
+  const deleteSelection = useCallback((id: string) => {
+    setSegments((prev) => prev.filter((x) => x.id !== id));
+    if (activeSegment === id) setActiveSegment(null);
+    if (session?.id === id) { setSession(null); setFocusAnchor(null); }
+    fetch(`/api/workspaces/${workspaceId}/segments/${id}`, { method: "DELETE" })
+      .catch(() => {});
+  }, [workspaceId, activeSegment, session]);
 
   /** Explicit discard. Only reachable behind a confirmation, and only for a
    *  Selection that was never named — an established one is never destroyed
@@ -1249,8 +1273,9 @@ export default function ModeBPage({
           onRangeChange={handleRangeChange}
           segments={segments}
           activeSegmentId={activeSegment}
-          onSegmentClick={(id) => {
-            const sg = segments.find((x) => x.id === id);
+          onSegmentClick={(ids) => {
+            if (ids.length > 1) { setChooser(ids); return; }
+            const sg = segments.find((x) => x.id === ids[0]);
             if (sg) openSegment(sg);
           }}
           /* Note-derived highlights belong to the study layer, not the page */
@@ -1416,6 +1441,20 @@ export default function ModeBPage({
         />
       )}
 
+      {chooser && (
+        <SelectionList
+          rows={segments.filter((s) => chooser.includes(s.id))}
+          surahName={chapter.name_simple}
+          title="Which Selection?"
+          onOpen={(id) => {
+            const sg = segments.find((x) => x.id === id);
+            setChooser(null);
+            if (sg) openSegment(sg);
+          }}
+          onClose={() => setChooser(null)}
+        />
+      )}
+
       {listOpen && (
         <SelectionList
           rows={segments}
@@ -1425,6 +1464,9 @@ export default function ModeBPage({
             if (sg) openSegment(sg);
           }}
           onClose={() => setListOpen(false)}
+          onRename={(id, name) => renameSelectionInPlace(id, name)}
+          onRecolour={(id, color) => recolourSelection(id, color)}
+          onDelete={(id) => deleteSelection(id)}
         />
       )}
 

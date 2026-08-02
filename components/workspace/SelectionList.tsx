@@ -24,13 +24,38 @@ export interface SelectionRow {
 interface Props {
   rows: SelectionRow[];
   surahName: string;
+  /** Heading. Overridden when this is disambiguating a tap on overlaps. */
+  title?: string;
   onOpen: (id: string) => void;
   onClose: () => void;
+  /** Management. Omitted by the overlap chooser, which is only a question. */
+  onRename?:  (id: string, name: string) => void;
+  onRecolour?: (id: string, color: string) => void;
+  onDelete?:  (id: string) => void;
 }
+
+/** Same family as the note palette and the in-session picker. */
+const COLORS = [
+  "oklch(0.55 0.11 155)",
+  "oklch(0.62 0.11 70)",
+  "oklch(0.52 0.14 290)",
+  "oklch(0.52 0.15 240)",
+  "oklch(0.55 0.15 15)",
+];
 
 const ARROW = "–";
 
-export default function SelectionList({ rows, surahName, onOpen, onClose }: Props) {
+export default function SelectionList({
+  rows, surahName, title = "Selections", onOpen, onClose,
+  onRename, onRecolour, onDelete,
+}: Props) {
+  /* Which row is being managed, and whether it is confirming deletion.
+     Editing happens INSIDE the row so the list never navigates away from
+     what the user is looking at. */
+  const [editing,  setEditing]  = useState<string | null>(null);
+  const [draft,    setDraft]    = useState("");
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const manageable = !!(onRename || onRecolour || onDelete);
   const [q, setQ]         = useState("");
   const [active, setActive] = useState(0);
   const ref      = useRef<HTMLDivElement>(null);
@@ -95,7 +120,7 @@ export default function SelectionList({ rows, surahName, onOpen, onClose }: Prop
   return (
     <div className="sellist-scrim">
       <div className="sellist" ref={ref} role="dialog" aria-modal="true" aria-label="Selections">
-        <div className="sellist-head">Selections</div>
+        <div className="sellist-head">{title}</div>
         <input
           ref={inputRef}
           className="sellist-input"
@@ -115,28 +140,101 @@ export default function SelectionList({ rows, surahName, onOpen, onClose }: Prop
             </div>
           )}
           {ordered.map((r, i) => (
-            <button
-              key={r.id}
-              type="button"
-              data-idx={i}
-              className="sellist-row"
-              data-active={i === active ? "true" : "false"}
-              onMouseEnter={() => setActive(i)}
-              onClick={() => onOpen(r.id)}
-            >
-              <span
-                className="sellist-dot"
-                style={{ background: r.color || "var(--accent)" }}
-                aria-hidden
-              />
-              <span className="sellist-text">
-                <span className="sellist-range">
-                  {surahName} {r.startAyah}
-                  {r.startAyah !== r.endAyah && <>{ARROW}{r.endAyah}</>}
+            <div key={r.id} className="sellist-item">
+              <button
+                type="button"
+                data-idx={i}
+                className="sellist-row"
+                data-active={i === active ? "true" : "false"}
+                onMouseEnter={() => setActive(i)}
+                onClick={() => onOpen(r.id)}
+              >
+                <span
+                  className="sellist-dot"
+                  style={{ background: r.color || "var(--accent)" }}
+                  aria-hidden
+                />
+                <span className="sellist-text">
+                  <span className="sellist-range">
+                    {surahName} {r.startAyah}
+                    {r.startAyah !== r.endAyah && <>{ARROW}{r.endAyah}</>}
+                  </span>
+                  <span className="sellist-name">{r.title || "Unnamed Selection"}</span>
                 </span>
-                <span className="sellist-name">{r.title || "Unnamed Selection"}</span>
-              </span>
-            </button>
+                {manageable && (
+                  <span
+                    className="sellist-edit"
+                    role="button"
+                    tabIndex={0}
+                    title="Edit this Selection"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditing((v) => (v === r.id ? null : r.id));
+                      setDraft(r.title || "");
+                      setDeleting(null);
+                    }}
+                    onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); setEditing(r.id); setDraft(r.title || ""); } }}
+                  >
+                    ⋯
+                  </span>
+                )}
+              </button>
+
+              {editing === r.id && (
+                <div className="sellist-manage">
+                  {deleting === r.id ? (
+                    <div className="sellist-confirm">
+                      <span>Delete this Selection and its whiteboard?</span>
+                      <div className="sellist-confirm-actions">
+                        <button className="sellist-mini" onClick={() => setDeleting(null)}>Keep</button>
+                        <button
+                          className="sellist-mini sellist-mini--danger"
+                          onClick={() => { onDelete?.(r.id); setDeleting(null); setEditing(null); }}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <input
+                        className="sellist-rename"
+                        value={draft}
+                        onChange={(e) => setDraft(e.target.value)}
+                        onKeyDown={(e) => {
+                          e.stopPropagation();
+                          if (e.key === "Enter" && draft.trim()) {
+                            onRename?.(r.id, draft.trim());
+                            setEditing(null);
+                          }
+                        }}
+                        placeholder="Selection name"
+                        dir="auto"
+                        aria-label="Rename Selection"
+                      />
+                      <div className="sellist-swatches">
+                        {COLORS.map((c) => (
+                          <button
+                            key={c}
+                            className="sellist-swatch"
+                            style={{ background: c }}
+                            data-active={r.color === c ? "true" : "false"}
+                            onClick={() => onRecolour?.(r.id, c)}
+                            title="Colour"
+                          />
+                        ))}
+                        <button
+                          className="sellist-mini sellist-mini--danger"
+                          onClick={() => setDeleting(r.id)}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
           ))}
         </div>
       </div>
