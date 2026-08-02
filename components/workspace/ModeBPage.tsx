@@ -706,6 +706,11 @@ export default function ModeBPage({
       surahNumber: (anchorFields as { surahNumber?: number }).surahNumber ?? null,
       ayahNumber:  (anchorFields as { ayahNumber?: number }).ayahNumber ?? null,
       wordPosition: (anchorFields as { wordPosition?: number }).wordPosition ?? null,
+      /* Carried onto the OPTIMISTIC box, not just into tempAnchorsRef for the
+         later POST. The layer filter matches on segmentId, so a temp without
+         one was filtered out the instant it was created — the box was placed
+         and then immediately hidden, which read as nothing happening. */
+      segmentId: (anchorFields as { segmentId?: string }).segmentId ?? null,
       content: { type: "doc", content: [{ type: "paragraph" }] },
       color: null,
       offsetX: Math.round(wx), offsetY: Math.round(wy),
@@ -1282,7 +1287,16 @@ export default function ModeBPage({
           notedWordColors={studyVisible ? notedWordColors : undefined}
           notedAyahColors={studyVisible ? notedEndColors  : undefined}
           selectedWordKey={focusAnchor && focusAnchor.wordPos != null ? `${focusAnchor.verseKey}:${focusAnchor.wordPos}` : null}
-          selectedEndKey={focusAnchor && focusAnchor.wordPos == null ? focusAnchor.verseKey : null}
+          /* Only for a genuine single-ayah layer. A Selection also has a
+             verseKey — its FIRST ayah, kept so the camera has somewhere to go
+             — and passing that here painted that one ayah with the blue
+             single-ayah wash while the rest of the range wore the Selection
+             colour. The range is indicated by its tint, not by one member. */
+          selectedEndKey={
+            focusAnchor && !focusAnchor.segmentId && focusAnchor.wordPos == null
+              ? focusAnchor.verseKey
+              : null
+          }
         />
 
         {/* ── Study layer ──────────────────────────────────────────────────
