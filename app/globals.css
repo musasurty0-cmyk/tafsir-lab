@@ -80,6 +80,9 @@
   --fs-arabic:  1;
   --canvas-pad-y: 80px;
   --canvas-max:   740px;
+  /* Open canvas to the right of the text column: somewhere to scroll into and
+     put things, so the page extends sideways as well as downward. */
+  --canvas-span:  2400px;
 }
 
 /* Density */
@@ -441,34 +444,79 @@ input, textarea { font: inherit; color: inherit; }
    room — tables, code, diagrams, anything marked data-wide — is allowed past
    it. Without that split, a wide table would either be clipped or would drag
    every paragraph out to unreadable line lengths. */
+/* The scroll viewport. Not a flex container: centring the page with flex
+   capped it at the viewport width, so there was never anything to the right
+   to scroll to — the editor grew downward forever and stopped dead sideways. */
 .doc-wrap {
   flex: 1; width: 100%;
-  display: flex; justify-content: center;
+  display: block;
   padding: 0 48px;
   overflow: auto;              /* both axes */
   overscroll-behavior-x: contain;
 }
+/* The PAGE — a surface, not a column.
+   width:max-content lets it grow to whatever its widest child needs, and
+   min-width keeps it at least as wide as the viewport so short documents do
+   not shrink to their text. The trailing inline padding is open canvas: room
+   to scroll into and place wide content, the horizontal counterpart of the
+   240px of writing room at the bottom. */
 .doc {
+  position: relative;
+  /* Stays viewport-width so the column below can centre against what the
+     reader is actually looking at. Making the PAGE itself span the canvas
+     centred the column in the canvas instead, which threw the document
+     against the left edge. */
   width: 100%;
-  max-width: var(--canvas-max);
-  /* Never shrink below the readable measure when a wide child stretches the
-     flex line, or the text column would collapse around it. */
-  flex: 0 0 auto;
-  min-width: min(var(--canvas-max), 100%);
-  padding: var(--canvas-pad-y) 0 240px 0;
+  min-width: 100%;
+  padding-block: var(--canvas-pad-y) 240px;
 }
 
-/* Content permitted to exceed the text column. */
-.page-editor-content table,
+/* The open canvas. An absolutely positioned marker extends the scrollable
+   region without widening the page, so there is somewhere to scroll to and
+   place things while the column stays centred where it was. */
+.doc::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  inset-inline-start: calc(100% + var(--canvas-span));
+  width: 1px; height: 1px;
+  pointer-events: none;
+}
+
+/* The readable COLUMN inside that surface. Prose keeps its measure however
+   wide the page becomes — an infinite canvas must not mean infinite line
+   length — and stays centred over the first screenful. */
+.doc > * {
+  max-width: var(--canvas-max);
+  margin-inline: auto;
+}
+
+/* Content that genuinely needs the room opts out of the column and may run as
+   wide as it likes; the surface grows to contain it. */
+.doc > [data-wide="true"],
+.doc > .doc-wide {
+  max-width: none;
+  margin-inline: 0;
+}
+
+/* Content permitted to exceed the text column and stretch the page. */
 .page-editor-content pre,
 .page-editor-content [data-wide="true"] {
   max-width: none;
   width: max-content;
   min-width: 100%;
 }
-/* A wide table scrolls inside its own box rather than forcing the page
-   sideways, so normal typing never triggers horizontal movement. */
-.page-editor-content table { display: block; overflow-x: auto; }
+
+/* A wide table CONTAINS itself instead. It stays inside the column and
+   scrolls in its own box, so adding a column to a table never drags the whole
+   page sideways — width:max-content here would have done exactly that, since
+   it defeats the overflow it is paired with. */
+.page-editor-content table {
+  display: block;
+  max-width: 100%;
+  width: 100%;
+  overflow-x: auto;
+}
 .doc-cover { margin-bottom: 24px; display: flex; flex-direction: column; gap: 12px; }
 .doc-cover-tag { font-family: var(--font-mono); font-size: 11px; color: var(--ink-3); letter-spacing: 0.04em; text-transform: uppercase; }
 .doc-title {
