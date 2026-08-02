@@ -183,6 +183,7 @@ export default function ModeAPage({
             key={pageId}
             pageId={pageId}
             workspaceId={workspaceId}
+            surahName={surahName}
             initialContent={page.tiptapContent}
             currentUserId={currentUserId}
             currentUserName={currentUserName}

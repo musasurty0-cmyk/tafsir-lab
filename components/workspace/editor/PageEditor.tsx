@@ -74,6 +74,8 @@ const SAVE_DEBOUNCE_MS = 900;
 interface Props {
   pageId:           string;
   workspaceId:      string;
+  /** Display name of the surah being studied, for Connection endpoints. */
+  surahName?:       string;
   initialContent:   unknown;
   currentUserId:    string;
   currentUserName:  string;
@@ -98,6 +100,7 @@ interface PaletteState {
 export default function PageEditor({
   pageId,
   workspaceId,
+  surahName,
   initialContent,
   currentUserId,
   currentUserName,
@@ -132,8 +135,16 @@ export default function PageEditor({
      touches ayahSearch: the two commands share a search component but not a
      single byte of state, so cancelling one cannot leave the other half-open. */
   const [linkStage, setLinkStage] = useState<
-    | { step: "target"; range: { from: number; to: number }; rect: DOMRect }
-    | { step: "form"; range: { from: number; to: number }; source: Endpoint; target: Endpoint }
+    /* "pick" fills ONE end and remembers the other, so either side can be
+       chosen or changed. Previously only the target was selectable and the
+       source was silently the current surah — which meant the user controlled
+       half of their own Connection. */
+    | {
+        step: "pick"; which: "source" | "target";
+        range: { from: number; to: number }; rect: DOMRect;
+        source?: Endpoint; target?: Endpoint;
+      }
+    | { step: "form"; range: { from: number; to: number }; rect: DOMRect; source: Endpoint; target: Endpoint }
     | null
   >(null);
   const [linkBusy,  setLinkBusy]  = useState(false);
@@ -581,7 +592,11 @@ export default function PageEditor({
          so it is intercepted here rather than executed. */
       if (item.id === "link") {
         const range = (palette.props as unknown as { range: { from: number; to: number } }).range;
-        setLinkStage({ step: "target", range, rect: palette.rect });
+        setLinkStage({
+          step: "pick", which: "target", range, rect: palette.rect,
+          // A default, not a decision — the form lets it be changed.
+          source: linkSource(),
+        });
         setPalette(null);
         return;
       }
@@ -651,8 +666,10 @@ export default function PageEditor({
   const linkSource = useCallback((): Endpoint => ({
     type: "surah",
     key: surahKey(studySurah),
-    label: `Surah ${studySurah}`,
-  }), [studySurah]);
+    // The name, not "Surah 1" — a number alone does not tell you what you are
+    // about to connect.
+    label: surahName ? `${surahName} · ${studySurah}` : `Surah ${studySurah}`,
+  }), [studySurah, surahName]);
 
   /** Close /link and put the caret back where the command was typed, with the
    *  "/link" text removed so no orphan command survives a cancel. */
@@ -668,24 +685,49 @@ export default function PageEditor({
   }, [editor, linkStage]);
 
   const chooseLinkTarget = useCallback((t: import("@/lib/quran-search").SearchTarget) => {
-    if (!linkStage || linkStage.step !== "target") return;
-    const target: Endpoint =
+    if (!linkStage || linkStage.step !== "pick") return;
+
+    const picked: Endpoint =
       t.kind === "ayah"
         ? { type: "ayah", key: ayahKey(t.surah ?? 1, t.ayah ?? 1), label: t.label, arabic: t.arabic }
         : t.kind === "selection"
         ? { type: "selection", key: selectionKey(t.id), label: t.label }
-        : { type: "surah", key: surahKey(t.surah ?? Number(t.id)), label: t.label };
+        // A Surah label carries its ayah count for search; drop that here,
+        // where it is an endpoint rather than a result.
+        : { type: "surah", key: surahKey(t.surah ?? Number(t.id)), label: t.label.split(" · ")[0] };
 
-    const source = linkSource();
-    if (source.key === target.key) {
-      // Self-link. Refused here as well as on the server so the user is told
-      // immediately rather than after a round trip.
+    const source = linkStage.which === "source" ? picked : linkStage.source;
+    const target = linkStage.which === "target" ? picked : linkStage.target;
+
+    if (source && target && source.key === target.key) {
+      /* Refused here as well as on the server, so the user is told at the
+         moment of choosing rather than after a round trip. The picker stays
+         open so they can choose again without starting over. */
       setLinkError("An object cannot be connected to itself");
       return;
     }
     setLinkError(null);
-    setLinkStage({ step: "form", range: linkStage.range, source, target });
-  }, [linkStage, linkSource]);
+
+    // Both ends known → name the relationship. Otherwise keep picking.
+    if (source && target) {
+      setLinkStage({ step: "form", range: linkStage.range, rect: linkStage.rect, source, target });
+    } else {
+      setLinkStage({ ...linkStage, source, target, which: source ? "target" : "source" });
+    }
+  }, [linkStage]);
+
+  /** Reopen the picker for one end of a Connection being composed. */
+  const repickEndpoint = useCallback((which: "source" | "target") => {
+    if (!linkStage || linkStage.step !== "form") return;
+    setLinkError(null);
+    setLinkStage({
+      step: "pick", which,
+      range: linkStage.range, rect: linkStage.rect,
+      // Keep the OTHER end, so changing one side never discards the other.
+      source: which === "source" ? undefined : linkStage.source,
+      target: which === "target" ? undefined : linkStage.target,
+    });
+  }, [linkStage]);
 
   const submitConnection = useCallback((v: {
     name: string; commentary?: string; category?: string; tags: string[];
@@ -871,7 +913,7 @@ export default function PageEditor({
       {/* /link stage 1 — pick the other end. Same search component as /ayah,
           but accepting Selections and Surahs as final answers, and with its
           own state so neither command can strand the other. */}
-      {linkStage?.step === "target" && typeof document !== "undefined" &&
+      {linkStage?.step === "pick" && typeof document !== "undefined" &&
         createPortal(
           (() => {
             const W = 380, MAX_H = 400;
@@ -887,7 +929,9 @@ export default function PageEditor({
                   kinds={["ayah", "selection", "surah"]}
                   currentSurah={studySurah}
                   selections={selectionTargets}
-                  placeholder="Link to an āyah, Selection or Surah…"
+                  placeholder={linkStage.which === "source"
+                    ? "Choose the first passage…"
+                    : "Link to an āyah, Selection or Surah…"}
                   onSelect={chooseLinkTarget}
                   onCancel={() => closeLink()}
                 />
@@ -906,6 +950,7 @@ export default function PageEditor({
           error={linkError}
           duplicateOf={linkDupe}
           onCancel={() => closeLink()}
+          onChangeEndpoint={repickEndpoint}
           onOpenExisting={(id) => {
             // The pair is already connected: drop a card for the EXISTING
             // Connection rather than creating a second one.

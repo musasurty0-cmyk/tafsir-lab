@@ -51,28 +51,43 @@ interface Props {
   duplicateOf?: { id: string; name: string } | null;
   error?: string | null;
   onCancel: () => void;
+  /** Reopen the picker for one end. Both are changeable: a Connection is a
+   *  pair, and being able to choose only one half of it is not choosing. */
+  onChangeEndpoint?: (which: "source" | "target") => void;
   onOpenExisting?: (id: string) => void;
   onSubmit: (v: {
     name: string; commentary?: string; category?: string; tags: string[];
   }) => void;
 }
 
-function EndpointRow({ role, ep }: { role: string; ep: Endpoint }) {
-  return (
-    <div className="cxf-endpoint">
+function EndpointRow({
+  role, ep, onChange,
+}: { role: string; ep: Endpoint; onChange?: () => void }) {
+  const body = (
+    <>
       <span className="cxf-endpoint-role">{role}</span>
       <span className="cxf-endpoint-body">
         <span className="cxf-endpoint-kind">{KIND_LABEL[ep.type]}</span>
         <span className="cxf-endpoint-label">{ep.label}</span>
         {ep.arabic && <span className="cxf-endpoint-arabic" dir="rtl">{ep.arabic}</span>}
       </span>
-    </div>
+      {onChange && <span className="cxf-endpoint-change">Change</span>}
+    </>
+  );
+  // Both ends are editable, so both are buttons — the affordance has to be on
+  // the row itself, or the source looks like a fixed fact about the note.
+  return onChange ? (
+    <button type="button" className="cxf-endpoint cxf-endpoint--btn" onClick={onChange}>
+      {body}
+    </button>
+  ) : (
+    <div className="cxf-endpoint">{body}</div>
   );
 }
 
 export default function ConnectionForm({
   source, target, busy = false, duplicateOf = null, error = null,
-  onCancel, onOpenExisting, onSubmit,
+  onCancel, onChangeEndpoint, onOpenExisting, onSubmit,
 }: Props) {
   const [name, setName]       = useState("");
   const [commentary, setComm] = useState("");
@@ -119,8 +134,8 @@ export default function ConnectionForm({
         <h2 className="seldlg-title">Create Connection</h2>
 
         <div className="cxf-pair">
-          <EndpointRow role="From" ep={source} />
-          <EndpointRow role="To"   ep={target} />
+          <EndpointRow role="From" ep={source} onChange={onChangeEndpoint && (() => onChangeEndpoint("source"))} />
+          <EndpointRow role="To"   ep={target} onChange={onChangeEndpoint && (() => onChangeEndpoint("target"))} />
         </div>
 
         {duplicateOf ? (
