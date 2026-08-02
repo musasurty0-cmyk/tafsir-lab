@@ -28,6 +28,18 @@
   --rail:       56px;
   --sidebar:    272px;
   --drawer:     440px;
+  /* Spacing scale. Relationships are expressed by which step is used, so
+     "these belong together" and "these are separate things" stop looking
+     identical. */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+
   --radius:     6px;
   --radius-md:  10px;
   --radius-lg:  14px;
@@ -517,22 +529,60 @@ input, textarea { font: inherit; color: inherit; }
   width: 100%;
   overflow-x: auto;
 }
-.doc-cover { margin-bottom: 24px; display: flex; flex-direction: column; gap: 12px; }
-.doc-cover-tag { font-family: var(--font-mono); font-size: 11px; color: var(--ink-3); letter-spacing: 0.04em; text-transform: uppercase; }
+/* The masthead. Tight internally — eyebrow, title and metadata are one unit —
+   with the real gap falling between it and the document body. */
+.doc-cover {
+  margin-bottom: var(--space-7);
+  display: flex; flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* Context, not a label. The uppercase monospace eyebrow with wide tracking is
+   a magazine convention and read as template styling; this is the same
+   information in the application's own voice. */
+.doc-cover-tag {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--ink-2);
+}
+/* The surah NAME carries; the numbers sit behind it. */
+.doc-cover-tag-dim { color: var(--ink-4); }
+
+/* 40px competed with the Qur'anic text it introduces. Still the strongest
+   thing on the page, but by weight and face rather than sheer size. */
 .doc-title {
   font-family: var(--font-serif);
-  font-size: 40px; font-weight: 600;
-  letter-spacing: -0.02em; line-height: 1.1;
+  font-size: 27px; font-weight: 600;
+  letter-spacing: -0.015em; line-height: 1.22;
   color: var(--ink); margin: 0;
+  /* Long titles wrap rather than overflow the measure. */
+  overflow-wrap: break-word;
 }
-.doc-meta { display: flex; align-items: center; gap: 14px; font-size: 12.5px; color: var(--ink-3); margin-top: 4px; }
-.doc-meta-item { display: flex; align-items: center; gap: 5px; }
-.doc-meta-sep { color: var(--line-strong); }
+
+/* Author, date and status are provenance, not content. They stay reachable but
+   recede until wanted, so the row under the title stops looking like a blog
+   byline. */
+.doc-meta {
+  display: flex; align-items: center;
+  gap: var(--space-3);
+  font-size: 11.5px; color: var(--ink-4);
+  margin-top: var(--space-1);
+  opacity: 0.62;
+  transition: opacity var(--dur-mid) var(--ease-soft);
+}
+.doc-cover:hover .doc-meta,
+.doc-cover:focus-within .doc-meta { opacity: 1; }
+.doc-meta-item { display: flex; align-items: center; gap: var(--space-1); }
+/* The decorative dot separators were doing the work spacing should do. */
+.doc-meta-sep { display: none; }
 .doc-meta-avatar {
-  width: 18px; height: 18px; border-radius: 50%;
-  background: linear-gradient(135deg, var(--accent), var(--accent-ink));
-  color: white; display: grid; place-items: center;
-  font-size: 9.5px; font-weight: 600;
+  width: 15px; height: 15px; border-radius: 50%;
+  /* Flat, not a gradient — one small element does not need depth. */
+  background: var(--accent);
+  color: var(--bg); display: grid; place-items: center;
+  font-size: 8.5px; font-weight: 600;
 }
 
 /* ── Blocks ── */
@@ -944,27 +994,28 @@ input, textarea { font: inherit; color: inherit; }
 .word-chip-en { font-family: var(--font-sans); font-size: 10px; color: var(--ink-3); }
 
 /* ── Canvas mode toggle ── */
+/* Segmented, not a pill on a tray. The bordered container made four modes
+   look like four separate buttons sitting in a widget; the active one now
+   carries the emphasis and the group recedes. */
 .mode-toggle {
   display: flex;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 2px;
-  gap: 1px;
+  background: none;
+  border: 0;
+  padding: 0;
+  gap: var(--space-1);
 }
 .mode-btn {
-  height: 26px; padding: 0 11px;
-  font-size: 12.5px; color: var(--ink-3);
+  height: 26px; padding: 0 var(--space-2);
+  font-size: 12.5px; color: var(--ink-4);
   display: flex; align-items: center; gap: 5px;
-  border-radius: 5px;
-  transition: background .1s, color .1s;
+  border-radius: var(--radius);
+  transition: background var(--dur-fast) ease, color var(--dur-fast) ease;
 }
 .mode-btn:hover:not([data-active="true"]) { background: var(--hover); color: var(--ink); }
 .mode-btn[data-active="true"] {
-  background: var(--bg-elev);
   color: var(--ink);
   font-weight: 500;
-  box-shadow: var(--shadow-sm);
+  background: var(--panel);
 }
 
 /* ── Utility ── */
@@ -4633,23 +4684,36 @@ input, textarea { font: inherit; color: inherit; }
 /* The ProseMirror contenteditable region — this IS the page's default
    large text container (OneNote model). A whisper of a frame appears on
    hover so it reads as a container without ever feeling boxed in. */
+/* The document sits ON the page rather than inside a box. A visible frame made
+   the editor read as a component preview embedded in another application, and
+   put a third container between the workspace and the sentence being written.
+   Its edges now come from the measure and the whitespace around it. */
 .page-editor-content {
   outline: none;
-  border: 1px solid transparent;
-  border-radius: 0; /* square, matching the other containers */
-  /* same breathing room as the small containers — text never hugs the frame */
-  padding: 6px 14px 10px;
-  transition: border-color var(--dur-hover) var(--ease-soft);
+  border: 0;
+  padding: 0;
   caret-color: var(--accent);
   font-size: calc(15.5px * var(--fs-reading));
   line-height: 1.82;
   color: var(--ink);
 }
 
-.page-editor-content:hover,
-.page-editor-content:focus-within {
-  border-color: var(--line);
+/* Focus is shown by a hairline in the margin, not a box drawn around the
+   prose — enough to say "this is live" without re-creating the card. */
+.page-editor-content::before {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: calc(var(--space-5) * -1);
+  width: 2px;
+  border-radius: 1px;
+  background: var(--accent);
+  opacity: 0;
+  transition: opacity var(--dur-mid) var(--ease-soft);
+  pointer-events: none;
 }
+.page-editor-content:focus-within::before { opacity: 0.5; }
+.page-editor-content { position: relative; }
 
 /* Paragraph — generous spacing makes prose breathe */
 /* Tight, notebook-style line advance: Enter goes to the next line, not a
@@ -6027,11 +6091,13 @@ input, textarea { font: inherit; color: inherit; }
   font-size:     10.5px;
   font-weight:   600;
   letter-spacing: 0.02em;
-  padding:       3px 9px;
-  border-radius: 999px;
-  border:        1px solid var(--line-strong);
-  color:         var(--ink-3);
-  background:    var(--bg-elev);
+  padding:       2px var(--space-2);
+  border-radius: var(--radius);
+  /* A status, not a badge. The outlined capsule gave a passive indicator the
+     same presence as the controls beside it. */
+  border:        0;
+  color:         var(--ink-4);
+  background:    none;
   flex-shrink:   0;
   margin-right:  8px;
   cursor:        default;
@@ -7307,39 +7373,85 @@ input, textarea { font: inherit; color: inherit; }
   .cxp-scrim, .cxp { animation: none; }
 }
 
-/* Connection card in the editor. Deliberately unlike an ayah quotation: that
-   block IS the verse, whereas this asserts a relationship between two things
-   that live outside the document. */
-.cxc {
+/* The Connection annotation left in a note by /link.
+   NOT a card. A boxed, shadowed rectangle read as an embedded widget from
+   another app; a study document annotates in the margin instead. The rule on
+   the logical start side is the only chrome, and it uses padding rather than a
+   background so the block sits ON the page instead of on top of it. */
+.cxb {
   display: block;
-  border: 1px solid var(--line-strong);
-  border-inline-start: 3px solid var(--accent);
-  border-radius: var(--radius);
-  background: var(--bg-elev);
-  padding: 10px 14px;
-  margin: 0.8em 0;
+  border: 0;
+  border-inline-start: 2px solid var(--accent);
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  padding: 0 0 0 var(--space-4);
+  padding-inline-start: var(--space-4);
+  margin-block: var(--space-5);
   cursor: default;
 }
-.cxc-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.cxc-icon { font-size: 12px; opacity: 0.75; }
-.cxc-to   { font-size: 11.5px; color: var(--ink-3); }
-.cxc-cat {
-  font-size: 10px; font-weight: 600; letter-spacing: 0.04em;
-  text-transform: uppercase; color: var(--accent);
-  background: var(--accent-soft); padding: 2px 7px; border-radius: 999px;
+/* Two Connections in a row need more air between them than any line inside one,
+   or they read as a single four-line block. */
+.cxb + .cxb { margin-block-start: var(--space-8); }
+
+/* Where it points — legible, but it is not the headline. */
+.cxb-target {
+  display: inline-flex; align-items: center; gap: var(--space-2);
+  font-size: 11.5px; color: var(--ink-3);
+  text-decoration: none; cursor: pointer;
+  transition: color var(--dur-hover) var(--ease-soft);
 }
-.cxc-name { font-size: 14px; font-weight: 500; color: var(--ink); margin-top: 4px; }
-.cxc-comm {
-  font-size: 12.5px; color: var(--ink-2); line-height: 1.6; margin-top: 4px;
-  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+.cxb-target:hover, .cxb-target:focus-visible { color: var(--accent); }
+.cxb-target svg { flex-shrink: 0; opacity: 0.7; }
+.cxb-target-sub { color: var(--ink-4); }
+
+/* The relationship itself, and the strongest text in the block. */
+.cxb-name {
+  font-family: var(--font-serif, var(--font-sans));
+  font-size: 15px; font-weight: 500; line-height: 1.4;
+  color: var(--ink);
+  margin: var(--space-2) 0 0;
 }
-.cxc--loading, .cxc--missing {
-  display: flex; align-items: center; gap: 8px;
+
+/* The verse it reaches for. Right-aligned by direction, not by rule, so a
+   left-to-right fallback still reads correctly. */
+.cxb-arabic {
+  font-family: var(--font-arabic, serif);
+  font-size: calc(19px * var(--fs-arabic, 1));
+  line-height: 2;
+  color: var(--ink-2);
+  margin: var(--space-3) 0 0;
+  padding: 0; border: 0;
+}
+
+.cxb-comm {
+  font-size: 13px; color: var(--ink-2); line-height: 1.7;
+  margin: var(--space-2) 0 0;
+}
+
+/* Quiet text, not a coloured pill. The badge gave a filing label the loudest
+   colour in the block. */
+.cxb-cat {
+  display: inline-block;
+  margin-top: var(--space-2);
+  font-size: 11px; letter-spacing: 0.01em;
+  color: var(--ink-4);
+  background: none; padding: 0; border-radius: 0;
+  text-transform: none; font-weight: 400;
+}
+
+/* Loading and broken states keep the block's shape so the document does not
+   jump when the record arrives. */
+.cxb--quiet {
   border-inline-start-color: var(--line-strong);
   color: var(--ink-4);
 }
-.cxc--missing .cxc-name, .cxc--loading .cxc-name {
-  font-size: 12.5px; font-weight: 400; color: var(--ink-4); margin: 0;
+
+/* Catalogue rows still label a category, but quietly, matching the block. */
+.cxc-cat {
+  font-size: 11px; color: var(--ink-4);
+  background: none; padding: 0; border-radius: 0;
+  text-transform: none; font-weight: 400; letter-spacing: 0;
 }
 
 /* Selection dialogs. Focused cards over a dimmed Mushaf, deliberately small:
@@ -8307,12 +8419,30 @@ input, textarea { font: inherit; color: inherit; }
 /* ── Collapsible top ribbon ── */
 .et-ribbon {
   position: sticky; top: 48px; z-index: 3;
-  background: color-mix(in oklch, var(--bg) 82%, transparent);
+  background: color-mix(in oklch, var(--bg) 88%, transparent);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--line);
+  /* No rule beneath it. The border drew a second horizontal line under the
+     header and boxed the document in from above. */
+  border-bottom: 0;
   user-select: none;
 }
+/* Tools sit closer together than the groups they belong to, so the strip reads
+   as sets rather than an undifferentiated row of icons. */
+.et-ribbon-strip { gap: 1px; }
+.et-sep { margin: 0 var(--space-2); }
+.et-collapse-glyph { font-size: 10px; line-height: 1; }
+
+/* Re-entry after collapsing, in the strip's own place. */
+.et-reveal {
+  align-self: flex-start;
+  margin: 0 0 0 var(--space-7);
+  border: 0; background: none; cursor: pointer;
+  font: inherit; font-size: 11.5px; color: var(--ink-4);
+  padding: var(--space-1) 0;
+  transition: color var(--dur-hover) var(--ease-soft);
+}
+.et-reveal:hover { color: var(--ink-2); }
 .et-ribbon-strip {
   display: flex; align-items: center; gap: 1px; flex-wrap: wrap;
   padding: 4px 8px 5px;

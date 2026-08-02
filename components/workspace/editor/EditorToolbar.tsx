@@ -20,9 +20,10 @@ import {
 interface Props {
   editor: Editor | null;
   open:   boolean;
+  onCollapse?: () => void;
 }
 
-export default function EditorToolbar({ editor, open }: Props) {
+export default function EditorToolbar({ editor, open, onCollapse }: Props) {
   const [hlOpen, setHlOpen] = useState(false);
   const [clOpen, setClOpen] = useState(false);
 
@@ -76,6 +77,17 @@ export default function EditorToolbar({ editor, open }: Props) {
 
         <Btn active={editor.isActive("blockquote")} title="Quote" onClick={() => editor.chain().focus().toggleBlockquote().run()}><QuoteIcon /></Btn>
         <Btn title="Divider" onClick={() => editor.chain().focus().setHorizontalRule().run()}><DividerIcon /></Btn>
+
+        {onCollapse && (
+          <>
+            <Sep />
+            {/* Sits at the end of the strip it controls, so formatting has one
+                home rather than a header button pointing at a toolbar. */}
+            <Btn title="Hide formatting" onClick={onCollapse}>
+              <span className="et-collapse-glyph" aria-hidden>▴</span>
+            </Btn>
+          </>
+        )}
       </div>
     </div>
   );

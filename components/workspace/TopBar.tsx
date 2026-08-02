@@ -50,15 +50,6 @@ const BookOpenIcon = ({ size = 14 }: { size?: number }) => (
   </svg>
 );
 
-const FormattingIcon = ({ size = 13 }: { size?: number }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
-    stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M4 7V4h16v3"/>
-    <path d="M9 20h6"/>
-    <path d="M12 4v16"/>
-  </svg>
-);
-
 // ── Types ──────────────────────────────────────────────────────────────────
 
 export type ViewMode = "editor" | "canvas" | "split" | "board";
@@ -82,8 +73,6 @@ interface Props {
   progressLoading?:   boolean;
   tafsirOpen:         boolean;
   onToggleTafsir:     () => void;
-  formattingOpen:     boolean;
-  onToggleFormatting: () => void;
   /** Live collaborators — provided by WorkspacePageView via usePresence */
   presenceOthers?:    PresenceData[];
   /** Realtime room connection state — drives the Live indicator */
@@ -103,8 +92,6 @@ export default function TopBar({
   progressLoading,
   tafsirOpen,
   onToggleTafsir,
-  formattingOpen,
-  onToggleFormatting,
   presenceOthers = [],
   liveStatus,
 }: Props) {
@@ -200,20 +187,10 @@ export default function TopBar({
           </button>
         </div>
 
-        {/* Formatting toggle — only in editor / split mode */}
-        {mode !== "canvas" && mode !== "board" && (
-          <>
-            <div className="tb-divider" />
-            <button
-              className="tb-btn"
-              data-active={formattingOpen ? "true" : "false"}
-              onClick={onToggleFormatting}
-              title={formattingOpen ? "Hide formatting" : "Show formatting"}
-            >
-              <FormattingIcon /> {t("topbar.formatting")}
-            </button>
-          </>
-        )}
+        {/* Formatting lives with the formatting strip, not here. A header
+            button pointing at a visible toolbar was two entry points for one
+            thing, and gave a secondary control the same weight as switching
+            mode. */}
 
         <div className="tb-divider" />
 
