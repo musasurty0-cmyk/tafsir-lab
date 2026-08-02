@@ -6926,60 +6926,18 @@ input, textarea { font: inherit; color: inherit; }
   .segbar-color { transition: none; }
 }
 
-/* ── Segment markers ─────────────────────────────────────────────────────
-   Margin strips, not backgrounds. Several segments may cover the same ayah,
-   and stacking full-width fills behind the text would make it unreadable and
-   make the overlaps impossible to tell apart. Each marker gets its own lane. */
-.qcf-seg-margin {
-  position: absolute;
-  inset-block: 0;
-  inset-inline-start: 10px;
-  width: 0;
-  pointer-events: none;
+/* Reading Mode guidance. Quiet by construction: small, muted, no border, no
+   repeated motion — it is a hint, not a notice. */
+.qcf-read-hint {
+  font-size: 11.5px;
+  color: var(--ink-4);
+  text-align: center;
+  margin-top: 6px;
+  letter-spacing: 0.01em;
+  animation: qcf-hint-in 400ms var(--ease-out) both;
 }
-.qcf-seg-marker {
-  position: absolute; top: 0;
-  width: 3px; height: 100%;
-  border: 0; padding: 0;
-  border-radius: 2px;
-  background: var(--seg-color, var(--accent));
-  opacity: 0.28;
-  cursor: pointer;
-  pointer-events: auto;
-  transition: opacity var(--dur-hover) var(--ease-soft),
-              width   var(--dur-hover) var(--ease-soft);
-}
-.qcf-seg-marker:hover              { opacity: 0.6; width: 4px; }
-.qcf-seg-marker[data-active="true"]{ opacity: 0.95; width: 4px; }
-
-/* The name appears on hover or when active — never permanently, so a page
-   with several segments is not covered in labels. */
-.qcf-seg-marker-label {
-  position: absolute;
-  inset-inline-start: 9px;
-  top: 0;
-  white-space: nowrap;
-  font-size: 11px;
-  color: var(--ink-2);
-  background: var(--bg-elev);
-  border: 1px solid var(--line);
-  border-radius: 5px;
-  padding: 2px 7px;
-  opacity: 0;
-  transform: translateX(-3px);
-  transition: opacity var(--dur-hover) var(--ease-soft),
-              transform var(--dur-hover) var(--ease-soft);
-  pointer-events: none;
-}
-.qcf-seg-marker:hover .qcf-seg-marker-label,
-.qcf-seg-marker[data-active="true"] .qcf-seg-marker-label {
-  opacity: 1; transform: none;
-}
-.qcf-seg-marker-range { color: var(--ink-4); }
-
-@media (prefers-reduced-motion: reduce) {
-  .qcf-seg-marker, .qcf-seg-marker-label { transition: none; }
-}
+@keyframes qcf-hint-in { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .qcf-read-hint { animation: none; } }
 
 /* ── Qurʾān target search ────────────────────────────────────────────────
    Shared by /ayah and, in time, /link, Segment ranges and Connections. */
@@ -7036,6 +6994,32 @@ input, textarea { font: inherit; color: inherit; }
   overflow: hidden;
 }
 .qs-mark { background: rgba(255, 208, 80, 0.42); color: inherit; border-radius: 2px; padding: 0 1px; }
+
+/* Stage two — an ayah list for the chosen surah. */
+.qs-stage-head {
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 10px 6px;
+  border-bottom: 1px solid var(--line);
+}
+.qs-back {
+  border: 0; background: none; cursor: pointer;
+  width: 22px; height: 22px; border-radius: 5px;
+  display: grid; place-items: center;
+  font-size: 17px; line-height: 1; color: var(--ink-3);
+  transition: background var(--dur-fast) ease, color var(--dur-fast) ease;
+}
+.qs-back:hover { background: var(--hover); color: var(--ink); }
+.qs-stage-name { font-size: 13px; font-weight: 500; color: var(--ink); }
+
+.qs-row--ayah { flex-direction: row; align-items: baseline; gap: 9px; }
+.qs-ayah-num {
+  flex: 0 0 auto; min-width: 22px;
+  font-family: var(--font-mono); font-size: 11.5px;
+  color: var(--ink-4); text-align: end;
+}
+.qs-ayah-body { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+/* Ayah rows wrap rather than truncate — the list is for reading and picking. */
+.qs-row--ayah .qs-row-arabic { white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.95; }
 
 @media (prefers-reduced-motion: reduce) { .qs-panel { animation: none; } }
 

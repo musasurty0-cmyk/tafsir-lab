@@ -159,7 +159,29 @@ export default function ModeBPage({
 
   const dismissRange = useCallback(() => { setRange(null); setRangeBar(null); }, []);
 
-  const createSegment = useCallback((input: { title: string; description?: string; color?: string }) => {
+  /** Open a Segment's note layer. Segments are note targets in their own
+   *  right, so this is the segment equivalent of tapping a word or ayah. */
+  const openSegment = useCallback((seg: { id: string; title: string; startAyah: number; endAyah: number }) => {
+    setActiveSegment(seg.id);
+    setStudyMode((on) => {
+      if (!on) requestAnimationFrame(() => requestAnimationFrame(() => setStudyVisible(true)));
+      return true;
+    });
+    setFocusAnchor({
+      // verseKey points at the segment's first ayah so the camera and any
+      // ayah-scoped lookups still have somewhere concrete to go.
+      verseKey:     `${surahNo}:${seg.startAyah}`,
+      wordPos:      null,
+      segmentId:    seg.id,
+      segmentLabel: `${seg.title} · ${seg.startAyah}–${seg.endAyah}`,
+    });
+    dismissRange();
+  }, [surahNo, dismissRange]);
+
+  const createSegment = useCallback((
+    input: { title: string; description?: string; color?: string },
+    onDone?: (seg: { id: string; title: string; startAyah: number; endAyah: number }) => void,
+  ) => {
     if (!range) return;
     setSegBusy(true);
     fetch(`/api/workspaces/${workspaceId}/segments`, {
@@ -178,6 +200,7 @@ export default function ModeBPage({
           setSegments((prev) =>
             prev.some((s) => s.id === d.segment.id) ? prev : [...prev, d.segment]);
           setActiveSegment(d.segment.id);
+          onDone?.(d.segment);
         }
         dismissRange();
       })
@@ -185,21 +208,15 @@ export default function ModeBPage({
       .finally(() => setSegBusy(false));
   }, [range, workspaceId, surahNo, dismissRange]);
 
-  /** Copy the selected range as a reference — the Arabic itself lives in the
-   *  Mushaf, and copying glyph PUA codes would paste as mojibake. */
-  const copyRange = useCallback(() => {
-    if (!range) return;
-    const ref = range.start === range.end
-      ? `${chapter.name_simple} ${surahNo}:${range.start}`
-      : `${chapter.name_simple} ${surahNo}:${range.start}-${range.end}`;
-    navigator.clipboard?.writeText(ref).catch(() => {});
-    dismissRange();
-  }, [range, chapter.name_simple, surahNo, dismissRange]);
-
   // ── Focus annotation state ────────────────────────────────────────────
+  /* The anchor a placed note attaches to. `segmentId` makes a Segment a
+     first-class note target alongside word and ayah, rather than segment
+     notes needing a parallel mechanism. */
   const [focusAnchor, setFocusAnchor] = useState<{
-    verseKey: string;
-    wordPos:  number | null;
+    verseKey:   string;
+    wordPos:    number | null;
+    segmentId?: string;
+    segmentLabel?: string;
   } | null>(null);
 
   // ── Word-tap hint chip ────────────────────────────────────────────────
@@ -529,7 +546,9 @@ export default function ModeBPage({
     const anchor = focusAnchor;
     const [surahStr, ayahStr] = (anchor?.verseKey ?? "").split(":");
     const anchorFields = anchor
-      ? anchor.wordPos != null
+      ? anchor.segmentId
+        ? { anchorType: "segment", segmentId: anchor.segmentId }
+        : anchor.wordPos != null
         ? { anchorType: "word", surahNumber: Number(surahStr), ayahNumber: Number(ayahStr), wordPosition: anchor.wordPos }
         : { anchorType: "ayah", surahNumber: Number(surahStr), ayahNumber: Number(ayahStr) }
       : { anchorType: "page" };
@@ -1112,10 +1131,7 @@ export default function ModeBPage({
           activeSegmentId={activeSegment}
           onSegmentClick={(id) => {
             const sg = segments.find((x) => x.id === id);
-            setActiveSegment(id);
-            // Selecting a marker re-selects its range, so the same contextual
-            // actions are available without redrawing the drag by hand.
-            if (sg) handleRangeChange({ start: sg.startAyah, end: sg.endAyah }, true);
+            if (sg) openSegment(sg);
           }}
           /* Note-derived highlights belong to the study layer, not the page */
           notedWordColors={studyVisible ? notedWordColors : undefined}
@@ -1167,6 +1183,10 @@ export default function ModeBPage({
         {canvasTextBoxes
           .filter((n) => {
             if (!focusAnchor) return n.anchorType === "page";
+            // A segment layer shows exactly its own notes.
+            if (focusAnchor.segmentId) {
+              return n.anchorType === "segment" && n.segmentId === focusAnchor.segmentId;
+            }
             const [s, a] = focusAnchor.verseKey.split(":").map(Number);
             if (focusAnchor.wordPos != null) {
               return n.anchorType === "word" && n.surahNumber === s &&
@@ -1217,7 +1237,9 @@ export default function ModeBPage({
       {focusAnchor && (
         <div className="anchor-session-chip">
           <span className="anchor-session-label">
-            {focusAnchor.wordPos != null
+            {focusAnchor.segmentId
+              ? `Segment · ${focusAnchor.segmentLabel ?? ""}`
+              : focusAnchor.wordPos != null
               ? `Word notes · ${focusAnchor.verseKey}`
               : `Ayah notes · ${focusAnchor.verseKey}`}
           </span>
@@ -1235,14 +1257,6 @@ export default function ModeBPage({
           at={rangeBar}
           busy={segBusy}
           onCreate={createSegment}
-          onAddNote={() => {
-            // Reuse the existing ayah note flow for the range's first ayah;
-            // segment-anchored notes ride the same note engine.
-            openFocus(`${surahNo}:${range.start}`, null);
-            dismissRange();
-          }}
-          onOpenTafsir={() => { onOpenTafsir(`${surahNo}:${range.start}`); dismissRange(); }}
-          onCopy={copyRange}
           onDismiss={dismissRange}
         />
       )}

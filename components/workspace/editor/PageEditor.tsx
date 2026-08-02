@@ -575,15 +575,39 @@ export default function PageEditor({
     if (!editor || !ayahSearch) return;
     const surahNumber = t.surah ?? 1;
     const ayahNumber  = t.ayah ?? 1;
-    editor.chain().focus().deleteRange(ayahSearch.range).insertContent([
-      {
-        type: "ayahBlock",
-        attrs: { verseKey: `${surahNumber}:${ayahNumber}`, surahNumber, ayahNumber },
-      },
-      { type: "paragraph" },
-    ]).scrollIntoView().run();
+    // Close FIRST, so the panel cannot outlive the transaction if inserting
+    // throws, and unmount before focus moves back into the document.
     setAyahSearch(null);
+    editor.chain().focus()
+      // deleteRange removes the leftover "/ayah …" text the command was typed
+      // into; without it the slash text stays behind the inserted block.
+      .deleteRange(ayahSearch.range)
+      .insertContent([
+        {
+          type: "ayahBlock",
+          attrs: { verseKey: `${surahNumber}:${ayahNumber}`, surahNumber, ayahNumber },
+        },
+        // Trailing paragraph gives the caret somewhere to land after an atom
+        // block, so focus returns to editable text rather than being trapped.
+        { type: "paragraph" },
+      ])
+      .focus()
+      .scrollIntoView()
+      .run();
   // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editor, ayahSearch]);
+
+  /* The panel is a portal, so nothing unmounts it implicitly. These close it
+     for the cases the search itself cannot see: the editor going away, the
+     page changing, or the block it was anchored to being edited out. */
+  useEffect(() => () => setAyahSearch(null), []);
+  useEffect(() => { setAyahSearch(null); }, [pageId]);
+  useEffect(() => {
+    if (!editor || !ayahSearch) return;
+    const close = () => setAyahSearch(null);
+    // A destroyed editor can never receive the insertion.
+    editor.on("destroy", close);
+    return () => { editor.off("destroy", close); };
   }, [editor, ayahSearch]);
 
   // Insert a tafsir block at the picker's saved range for the chosen verse.

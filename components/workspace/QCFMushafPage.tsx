@@ -109,6 +109,17 @@ const DRAG_PX = 6;
  *  otherwise, or the page could never be scrolled by touching the text. */
 const LONG_PRESS_MS = 380;
 
+/** Translucent tint for a saved selection. Kept low so the Qur'anic text
+ *  stays dominant; the active one is only slightly stronger, never opaque. */
+function segTint(
+  sg: { id: string; color?: string | null },
+  activeId: string | null,
+): string {
+  const base = sg.color || "oklch(0.55 0.11 155)";
+  const pct  = sg.id === activeId ? 26 : 15;
+  return `color-mix(in srgb, ${base} ${pct}%, transparent)`;
+}
+
 // ── Word entry collapsed for line grouping ──────────────────────────────────
 
 interface WordEntry {
@@ -377,43 +388,18 @@ function QCFMushafPage({
               </button>
             )}
           </div>
+          {/* Reading Mode only: the surah name is the way in, but nothing says
+              so. Sits under the heading, never over the text, and disappears
+              the moment Study Mode opens. */}
+          {!studyMode && (
+            <div className="qcf-read-hint">Press the Surah name to start studying</div>
+          )}
           {isSurahStart && chapter.bismillah_pre && (
             <div className="qcf-basmala">
               بِسۡمِ ٱللَّهِ ٱلرَّحۡمَـٰنِ ٱلرَّحِيمِ
             </div>
           )}
       </div>
-
-      {/* ── Segment markers ──────────────────────────────────────────────
-          Quiet strips in the margin, one per segment, rather than a filled
-          card behind every ayah: several overlapping segments would otherwise
-          stack competing full-width backgrounds over the text. Study Mode
-          only — Reading Mode keeps the Mushaf clean. */}
-      {studyMode && segments.length > 0 && (
-        <div className="qcf-seg-margin" aria-label="Segments on this page">
-          {segments.map((sg, i) => (
-            <button
-              key={sg.id}
-              type="button"
-              className="qcf-seg-marker"
-              data-active={sg.id === activeSegmentId ? "true" : "false"}
-              /* Overlapping segments are offset into their own lane so each
-                 stays individually visible and clickable. */
-              style={{
-                insetInlineStart: `${i * 7}px`,
-                ...(sg.color ? { ["--seg-color" as string]: sg.color } : {}),
-              }}
-              onPointerDown={(e) => e.stopPropagation()}
-              onClick={(e) => { e.stopPropagation(); onSegmentClick?.(sg.id); }}
-              title={`${sg.title} · ${sg.startAyah}–${sg.endAyah}`}
-            >
-              <span className="qcf-seg-marker-label">
-                {sg.title} <span className="qcf-seg-marker-range">{sg.startAyah}–{sg.endAyah}</span>
-              </span>
-            </button>
-          ))}
-        </div>
-      )}
 
       {/* ── Page lines ── */}
       <div className="qcf-lines">
@@ -434,22 +420,38 @@ function QCFMushafPage({
             const inRange = !!rangeSelection
               && word.ayahNum >= rangeSelection.start
               && word.ayahNum <= rangeSelection.end;
+            /* A saved segment tints the ayat it actually covers, rather than
+               being represented by a bar at the page edge that pointed at
+               nothing. Translucent and BEHIND the glyphs, so the Arabic and
+               the verse markers stay fully legible. Where segments overlap,
+               the innermost (last listed) wins the wash and the rest remain
+               reachable through the chooser. */
+            const covering = segments.filter(
+              (sg) => word.ayahNum >= sg.startAyah && word.ayahNum <= sg.endAyah);
+            const segWash = covering.length
+              ? segTint(covering[covering.length - 1], activeSegmentId)
+              : null;
             const wash = inRange
               ? RANGE_WASH
               : selectedEndKey === word.verseKey
               ? AYAH_ACTIVE_WASH
-              : (notedAyahColors?.get(word.ayahNum) ?? null);
+              : segWash
+              ?? (notedAyahColors?.get(word.ayahNum) ?? null);
             const prev = runs[runs.length - 1];
             /* Note washes break at every ayah boundary so each ayah reads as
                its own mark. A RANGE deliberately does not — it continues
                across boundaries so a multi-ayah selection is one unbroken
                band rather than a row of adjacent blocks. */
+            /* Selections and ranges continue ACROSS ayah boundaries so the
+               whole span reads as one region; note washes still break per
+               ayah so each stays its own mark. */
+            const spanning = inRange || segWash !== null;
             const continues = prev && prev.wash === wash &&
-              (wash === null || (inRange && prev.range) || prev.ayahNum === word.ayahNum);
+              (wash === null || (spanning && prev.range) || prev.ayahNum === word.ayahNum);
             if (continues) {
               prev!.entries.push(word);
             } else {
-              runs.push({ wash, ayahNum: word.ayahNum, entries: [word], range: inRange });
+              runs.push({ wash, ayahNum: word.ayahNum, entries: [word], range: spanning });
             }
           }
 
@@ -508,6 +510,15 @@ function QCFMushafPage({
                     ? (e) => {
                         e.stopPropagation();
                         if (dragEndedRef.current) { dragEndedRef.current = false; return; }
+                        // An ayah inside a saved Selection opens that Selection
+                        // rather than its own note — the highlight IS the
+                        // affordance, so clicking it must do what it looks like.
+                        const cover = segments.filter(
+                          (sg) => word.ayahNum >= sg.startAyah && word.ayahNum <= sg.endAyah);
+                        if (cover.length && onSegmentClick) {
+                          onSegmentClick(cover[cover.length - 1].id);
+                          return;
+                        }
                         onOpenFocus(word.verseKey, null);
                       }
                     : undefined

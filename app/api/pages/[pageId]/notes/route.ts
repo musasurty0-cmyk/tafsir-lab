@@ -9,7 +9,8 @@
  * POST body:
  *   {
  *     noteType:    "text" | "callout" | "linguistic" | "thematic" | "ruling" | "question"
- *     anchorType:  "ayah" | "word" | "page"
+ *     anchorType:  "ayah" | "word" | "page" | "segment"
+ *     segmentId?:  string   (required when anchorType = "segment")
  *     surahNumber?: number   (required when anchorType = "ayah" | "word")
  *     ayahNumber?:  number   (required when anchorType = "ayah" | "word")
  *     wordPosition?: number  (required when anchorType = "word")
@@ -65,6 +66,7 @@ export async function POST(
       surahNumber?: unknown;
       ayahNumber?:  unknown;
       wordPosition?: unknown;
+      segmentId?:   unknown;
       content?:     unknown;
       color?:       unknown;
       visibility?:  unknown;
@@ -88,6 +90,7 @@ export async function POST(
       surahNumber: typeof body.surahNumber === "number" ? body.surahNumber : undefined,
       ayahNumber:  typeof body.ayahNumber  === "number" ? body.ayahNumber  : undefined,
       wordPosition:typeof body.wordPosition=== "number" ? body.wordPosition: undefined,
+      segmentId:   typeof body.segmentId    === "string" ? body.segmentId   : undefined,
       content:     body.content,
       color:       typeof body.color === "string" ? body.color : undefined,
       visibility:  (body.visibility === "private" || body.visibility === "workspace" || body.visibility === "admin")

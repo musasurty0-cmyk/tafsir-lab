@@ -76,12 +76,20 @@ export default function QuranSearch({
   placeholder = "Search the Qurʾān…",
   autoFocus = true,
 }: Props) {
+  /* Stage two: a surah has been chosen and its ayat are being browsed. Kept
+     as one piece of state so backing out restores stage one cleanly and no
+     stale ayah list can survive a new search. */
+  const [stage, setStage] = useState<{ surah: number; name: string } | null>(null);
+  const [rows,  setRows]  = useState<{ ayah: number; arabic: string; translation?: string }[]>([]);
+  const [rowsLoading, setRowsLoading] = useState(false);
+
   const [q, setQ]               = useState("");
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [verses, setVerses]     = useState<SearchTarget[]>([]);
   const [loading, setLoading]   = useState(false);
   const [active, setActive]     = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const rootRef  = useRef<HTMLDivElement>(null);
   const listRef  = useRef<HTMLDivElement>(null);
 
   useEffect(() => { loadChapters().then(setChapters); }, []);
@@ -197,16 +205,87 @@ export default function QuranSearch({
     if (active >= flat.length) setActive(Math.max(0, flat.length - 1));
   }, [flat.length, active]);
 
+  // Stage two data. Cleared whenever the stage changes so a previous surah's
+  // list can never be shown under a new heading.
+  useEffect(() => {
+    if (!stage) { setRows([]); return; }
+    let cancelled = false;
+    setRowsLoading(true);
+    setRows([]);
+    fetch(`/api/quran/surah/${stage.surah}/verses`)
+      .then((r) => (r.ok ? r.json() : { verses: [] }))
+      .then((d) => { if (!cancelled) setRows(d.verses ?? []); })
+      .catch(() => { if (!cancelled) setRows([]); })
+      .finally(() => { if (!cancelled) setRowsLoading(false); });
+    return () => { cancelled = true; };
+  }, [stage]);
+
+  /** Stage two rows, filtered by the ayah-number box. A bare number matches by
+   *  PREFIX so typing 1 in a long surah offers 1, 1x, 1xx rather than only
+   *  ayah 1; anything else falls back to matching the Arabic. */
+  const filteredRows = useMemo(() => {
+    const query = q.trim();
+    if (!query) return rows;
+    const digits = query.replace(/[^0-9٠-٩]/g, "");
+    if (digits) {
+      const norm = digits.replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)));
+      return rows.filter((r) => String(r.ayah).startsWith(norm));
+    }
+    const nq = query;
+    return rows.filter((r) => (findMatchRange(r.arabic, nq) !== null)
+                           || (r.translation ? r.translation.toLowerCase().includes(nq.toLowerCase()) : false));
+  }, [rows, q]);
+
   const choose = useCallback((t: SearchTarget) => {
+    /* Choosing a SURAH is not a final answer for /ayah — it opens that surah's
+       ayah list instead. Previously this fell through to insertion, which is
+       how "I know the surah but not the number" ended up inserting the wrong
+       verse. Callers that genuinely want a surah target (/link) say so by not
+       listing "ayah" among their kinds. */
+    if (t.kind === "surah" && kinds.includes("ayah") && t.surah) {
+      setStage({ surah: t.surah, name: t.label.split(" · ")[0] });
+      setQ("");
+      setActive(0);
+      requestAnimationFrame(() => inputRef.current?.focus());
+      return;
+    }
     pushRecent(t);
     onSelect(t);
-  }, [onSelect]);
+  }, [onSelect, kinds]);
+
+  const chooseAyah = useCallback((ayah: number) => {
+    if (!stage) return;
+    const t: SearchTarget = {
+      kind: "ayah", id: verseKey(stage.surah, ayah),
+      surah: stage.surah, ayah,
+      label: `${stage.name} ${stage.surah}:${ayah}`,
+    };
+    pushRecent(t);
+    onSelect(t);
+  }, [stage, onSelect]);
+
+  const back = useCallback(() => { setStage(null); setQ(""); setActive(0);
+    requestAnimationFrame(() => inputRef.current?.focus()); }, []);
 
   const onKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "ArrowDown")      { e.preventDefault(); setActive((i) => Math.min(i + 1, flat.length - 1)); }
+    const len = stage ? filteredRows.length : flat.length;
+    if (e.key === "ArrowDown")      { e.preventDefault(); setActive((i) => Math.min(i + 1, len - 1)); }
     else if (e.key === "ArrowUp")   { e.preventDefault(); setActive((i) => Math.max(i - 1, 0)); }
-    else if (e.key === "Enter")     { e.preventDefault(); const t = flat[active]; if (t) choose(t); }
-    else if (e.key === "Escape")    { e.preventDefault(); onCancel(); }
+    else if (e.key === "Enter") {
+      e.preventDefault();
+      if (stage) { const r = filteredRows[active]; if (r) chooseAyah(r.ayah); }
+      else       { const t = flat[active];         if (t) choose(t); }
+    }
+    else if (e.key === "Escape") {
+      e.preventDefault();
+      e.stopPropagation();
+      // Escape backs out one stage before closing, so reaching the wrong surah
+      // does not throw the whole search away.
+      if (stage) back(); else onCancel();
+    }
+    else if (e.key === "Backspace" && stage && q === "") {
+      e.preventDefault(); back();
+    }
   };
 
   // Keep the active row in view during keyboard navigation.
@@ -215,9 +294,86 @@ export default function QuranSearch({
     el?.scrollIntoView({ block: "nearest" });
   }, [active]);
 
+  /* ── Dismissal ──────────────────────────────────────────────────────────
+     THE BUG THIS FIXES: Escape used to be handled only by the input's own
+     onKeyDown, and there was no outside-click handling at all. Click anywhere
+     else and the input lost focus, so Escape no longer reached the handler and
+     nothing else could close the panel — it stayed mounted until the page was
+     reloaded.
+
+     Both listeners now live on the document and run in the CAPTURE phase, so
+     they fire wherever focus happens to be. */
+  useEffect(() => {
+    const onDocKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      e.preventDefault();
+      e.stopPropagation();
+      onCancel();
+    };
+    const onDocDown = (e: PointerEvent) => {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) onCancel();
+    };
+    document.addEventListener("keydown", onDocKey, true);
+    document.addEventListener("pointerdown", onDocDown, true);
+    return () => {
+      document.removeEventListener("keydown", onDocKey, true);
+      document.removeEventListener("pointerdown", onDocDown, true);
+    };
+  }, [onCancel]);
+
   let idx = -1;
+
+  // ── Stage two: pick an ayah within the chosen surah ──────────────────────
+  if (stage) {
+    return (
+      <div className="qs-panel" ref={rootRef} onMouseDown={(e) => e.preventDefault()}>
+        <div className="qs-stage-head">
+          <button type="button" className="qs-back" onClick={back} title="Back to search">
+            ‹
+          </button>
+          <span className="qs-stage-name">{stage.name}</span>
+        </div>
+        <input
+          ref={inputRef}
+          className="qs-input"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          onKeyDown={onKeyDown}
+          placeholder="Search āyah number…"
+          inputMode="numeric"
+          dir="auto"
+          aria-label="Search āyah number"
+        />
+        <div className="qs-results" ref={listRef}>
+          {rowsLoading && <div className="qs-empty">Loading āyāt…</div>}
+          {!rowsLoading && filteredRows.length === 0 && (
+            <div className="qs-empty">No āyah matches</div>
+          )}
+          {filteredRows.map((r, i) => (
+            <button
+              key={r.ayah}
+              type="button"
+              data-idx={i}
+              className="qs-row qs-row--ayah"
+              data-active={i === active ? "true" : "false"}
+              onMouseEnter={() => setActive(i)}
+              onClick={() => chooseAyah(r.ayah)}
+            >
+              <span className="qs-ayah-num">{r.ayah}</span>
+              <span className="qs-ayah-body">
+                <span className="qs-row-arabic" dir="rtl">{r.arabic}</span>
+                {r.translation && <span className="qs-row-preview">{r.translation}</span>}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // ── Stage one: find a surah, a reference, or verse text ──────────────────
   return (
-    <div className="qs-panel" onMouseDown={(e) => e.preventDefault()}>
+    <div className="qs-panel" ref={rootRef} onMouseDown={(e) => e.preventDefault()}>
       <input
         ref={inputRef}
         className="qs-input"

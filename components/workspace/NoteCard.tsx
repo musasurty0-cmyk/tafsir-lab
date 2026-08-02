@@ -80,6 +80,8 @@ export interface NoteData {
   surahNumber: number | null;
   ayahNumber: number | null;
   wordPosition: number | null;
+  /** Set when anchorType = "segment". */
+  segmentId?: string | null;
   content: unknown;
   color: string | null;
   offsetX: number;

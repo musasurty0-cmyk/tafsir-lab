@@ -16,7 +16,10 @@ export class NoteError extends Error {
 }
 
 export type NoteType = "text" | "callout" | "linguistic" | "thematic" | "ruling" | "question";
-export type AnchorType = "ayah" | "word" | "page";
+/* "segment" joins the existing anchors rather than getting its own note
+   engine, so a segment note is an ordinary note and inherits rich text,
+   slash commands, embedded ayat, handwriting and everything else unchanged. */
+export type AnchorType = "ayah" | "word" | "page" | "segment";
 export type NoteVisibility = "private" | "workspace" | "admin";
 
 export interface CreateNoteInput {
@@ -25,6 +28,8 @@ export interface CreateNoteInput {
   surahNumber?: number;
   ayahNumber?: number;
   wordPosition?: number;
+  /** Required when anchorType = "segment". */
+  segmentId?: string;
   content: unknown; // TipTap JSON
   color?: string;
   offsetX?: number;
@@ -60,6 +65,9 @@ function validateAnchor(input: CreateNoteInput) {
   }
   if (input.anchorType === "word" && (!input.surahNumber || !input.ayahNumber || input.wordPosition == null)) {
     throw new NoteError("Word anchor requires surahNumber, ayahNumber, and wordPosition", "INVALID");
+  }
+  if (input.anchorType === "segment" && !input.segmentId) {
+    throw new NoteError("Segment anchor requires segmentId", "INVALID");
   }
 }
 
@@ -174,6 +182,7 @@ export async function createNote(
       surahNumber: input.surahNumber ?? null,
       ayahNumber: input.ayahNumber ?? null,
       wordPosition: input.wordPosition ?? null,
+      segmentId: input.segmentId ?? null,
       content: input.content as never,
       color: input.color ?? null,
       offsetX: input.offsetX ?? 40,

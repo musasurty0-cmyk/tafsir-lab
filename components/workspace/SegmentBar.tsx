@@ -30,15 +30,12 @@ interface Props {
   at: { x: number; y: number };
   busy?: boolean;
   onCreate: (input: { title: string; description?: string; color?: string }) => void;
-  onAddNote: () => void;
-  onOpenTafsir: () => void;
-  onCopy: () => void;
   onDismiss: () => void;
 }
 
 export default function SegmentBar({
   range, surahName, at, busy = false,
-  onCreate, onAddNote, onOpenTafsir, onCopy, onDismiss,
+  onCreate, onDismiss,
 }: Props) {
   const [mode, setMode]   = useState<"bar" | "form">("bar");
   const [title, setTitle] = useState("");
@@ -96,12 +93,12 @@ export default function SegmentBar({
 
       {mode === "bar" ? (
         <div className="segbar-actions">
+          {/* One action only. Add note, Tafsīr and Copy were a menu of
+              unrelated study actions attached to a gesture that means one
+              thing: "these verses belong together". */}
           <button className="segbar-btn segbar-btn--primary" onClick={() => setMode("form")}>
-            Create segment
+            Create Selection
           </button>
-          <button className="segbar-btn" onClick={onAddNote}>Add note</button>
-          <button className="segbar-btn" onClick={onOpenTafsir}>Tafsīr</button>
-          <button className="segbar-btn" onClick={onCopy}>Copy</button>
         </div>
       ) : (
         <form
@@ -113,7 +110,7 @@ export default function SegmentBar({
             className="segbar-input"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Segment name"
+            placeholder="Selection name"
             dir="auto"
             maxLength={120}
           />
@@ -121,12 +118,12 @@ export default function SegmentBar({
             className="segbar-textarea"
             value={desc}
             onChange={(e) => setDesc(e.target.value)}
-            placeholder="What links these āyāt? (optional)"
+            placeholder="Description (optional)"
             dir="auto"
             rows={2}
             maxLength={500}
           />
-          <div className="segbar-colors" role="group" aria-label="Segment colour">
+          <div className="segbar-colors" role="group" aria-label="Selection colour">
             {SEGMENT_COLORS.map((c) => (
               <button
                 key={c.value}
