@@ -29,6 +29,8 @@ import AnchoredNoteCard from "./AnchoredNoteCard";
 import FreeTextBox, { TEXTBOX_DEFAULT_WIDTH } from "./FreeTextBox";
 import { OpenSelectionPrompt, NameSelectionPrompt } from "./SelectionDialogs";
 import SelectionList from "./SelectionList";
+import ConnectionsPanel from "./ConnectionsPanel";
+import { ayahKey, surahKey, selectionKey } from "@/lib/quran-objects";
 export type Range = { start: number; end: number };
 import DrawingCanvas, { type DrawTool, type DrawingCanvasHandle } from "./DrawingCanvas";
 import CanvasToolRail, {
@@ -155,6 +157,11 @@ export default function ModeBPage({
   /* Set when a tap lands on overlapping Selections: the tap alone does not
      say which one is meant, so the user picks. */
   const [chooser,  setChooser]  = useState<string[] | null>(null);
+  /* The object whose Connections are on screen. A Connection is stored once,
+     so this panel is how the SAME record becomes visible from whichever end
+     the user happens to be studying. */
+  const [connFor,  setConnFor]  = useState<string | null>(null);
+  const [connCounts, setConnCounts] = useState<Record<string, number>>({});
 
   const surahNo = chapter.id;
 
@@ -179,6 +186,8 @@ export default function ModeBPage({
   }, []);
 
   const dismissRange = useCallback(() => { setRange(null); setRangeBar(null); }, []);
+
+
 
   /** Leave a Selection's whiteboard. A brand-new one must be named first;
    *  one that already has a name simply closes, because the work is already
@@ -667,6 +676,29 @@ export default function ModeBPage({
     setTool("hand");                            // no drawing tool armed on return
     window.setTimeout(() => setStudyMode(false), STUDY_EXIT_MS);
   }, []);
+
+  /** The object currently being studied, as a Connection endpoint key. */
+  const currentObjectKey = useCallback((): string => {
+    if (focusAnchor?.segmentId) return selectionKey(focusAnchor.segmentId);
+    if (focusAnchor) {
+      const [sv, av] = focusAnchor.verseKey.split(":").map(Number);
+      return ayahKey(sv, av);
+    }
+    return surahKey(surahNo);
+  }, [focusAnchor, surahNo]);
+
+  /* A quiet count, fetched for the open object only. Reading Mode never asks,
+     so it can never show a Connection badge. */
+  useEffect(() => {
+    if (!studyMode) return;
+    const key = currentObjectKey();
+    if (connCounts[key] !== undefined) return;
+    fetch(`/api/workspaces/${workspaceId}/connections?object=${encodeURIComponent(key)}`)
+      .then((r) => (r.ok ? r.json() : { connections: [] }))
+      .then((d) => setConnCounts((prev) => ({ ...prev, [key]: (d.connections ?? []).length })))
+      .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [studyMode, workspaceId, currentObjectKey]);
 
   // Leaving the page or switching surah always returns to a clean Mushaf.
   useEffect(() => {
@@ -1422,6 +1454,14 @@ export default function ModeBPage({
           )}
 
           <button
+            className="anchor-session-conn"
+            onClick={() => setConnFor(currentObjectKey())}
+            title="Connections involving this passage"
+          >
+            🔗 {connCounts[currentObjectKey()] ?? 0}
+          </button>
+
+          <button
             className="anchor-session-done"
             onClick={session ? closeSelection : closeFocus}
           >
@@ -1481,6 +1521,33 @@ export default function ModeBPage({
           onRename={(id, name) => renameSelectionInPlace(id, name)}
           onRecolour={(id, color) => recolourSelection(id, color)}
           onDelete={(id) => deleteSelection(id)}
+        />
+      )}
+
+      {connFor && (
+        <ConnectionsPanel
+          workspaceId={workspaceId}
+          objectKey={connFor}
+          surahName={(n) => (n === surahNo ? chapter.name_simple : `Surah ${n}`)}
+          selectionName={(id) => segments.find((x) => x.id === id)?.name}
+          onClose={() => setConnFor(null)}
+          onOpenObject={(key, type) => {
+            /* Navigate within this surah where we can. Another surah needs a
+               page change, which belongs to the caller, so those are left to
+               the catalogue rather than half-working here. */
+            if (type === "selection") {
+              const sg = segments.find((x) => selectionKey(x.id) === key);
+              if (sg) { setConnFor(null); openSegment(sg); }
+              return;
+            }
+            if (type === "ayah") {
+              const [, sv, av] = key.split(":");
+              if (Number(sv) === surahNo) {
+                setConnFor(null);
+                openFocus(`${sv}:${av}`, null);
+              }
+            }
+          }}
         />
       )}
 

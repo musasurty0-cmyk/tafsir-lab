@@ -6985,6 +6985,118 @@ input, textarea { font: inherit; color: inherit; }
 }
 .cxf-dupe { display: flex; flex-direction: column; gap: 10px; }
 
+/* Connections panel — a side sheet, not a modal. It describes the passage
+   behind it, so that passage stays visible. */
+.cxp-scrim {
+  position: fixed; inset: 0; z-index: 65;
+  background: oklch(0.15 0.01 250 / 0.22);
+  display: flex; justify-content: flex-end;
+  animation: seldlg-fade 140ms var(--ease-out) both;
+}
+.cxp {
+  width: min(400px, 100vw);
+  height: 100%;
+  background: var(--bg-elev);
+  border-inline-start: 1px solid var(--line-strong);
+  box-shadow: var(--shadow-lg);
+  display: flex; flex-direction: column;
+  animation: cxp-in 200ms var(--ease-out) both;
+}
+@keyframes cxp-in { from { transform: translateX(16px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+.cxp-head {
+  display: flex; align-items: center; gap: 8px;
+  padding: 13px 16px; border-bottom: 1px solid var(--line);
+}
+.cxp-title { font-size: 13.5px; font-weight: 600; color: var(--ink); display: flex; align-items: center; gap: 7px; }
+.cxp-count {
+  font-size: 11px; font-weight: 600; color: var(--ink-3);
+  background: var(--panel); border-radius: 999px; padding: 1px 8px;
+}
+.cxp-close {
+  margin-inline-start: auto; border: 0; background: none; cursor: pointer;
+  width: 26px; height: 26px; border-radius: 6px; color: var(--ink-3);
+}
+.cxp-close:hover { background: var(--hover); color: var(--ink); }
+
+.cxp-empty { padding: 22px 16px; font-size: 12.5px; color: var(--ink-4); line-height: 1.6; }
+.cxp-empty code {
+  font-family: var(--font-mono); font-size: 11.5px;
+  background: var(--panel); padding: 1px 5px; border-radius: 4px;
+}
+.cxp-link { border: 0; background: none; color: var(--accent); cursor: pointer; text-decoration: underline; font: inherit; }
+
+.cxp-rows { flex: 1; overflow-y: auto; padding: 6px; }
+.cxp-row {
+  width: 100%; text-align: start;
+  display: flex; flex-direction: column; gap: 3px;
+  border: 0; background: none; cursor: pointer;
+  padding: 10px 11px; border-radius: 9px;
+  transition: background var(--dur-fast) ease;
+}
+.cxp-row:hover { background: var(--hover); }
+.cxp-row-top { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+.cxp-row-kind {
+  font-size: 9.5px; font-weight: 700; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--accent);
+}
+.cxp-row-to  { font-size: 12px; color: var(--ink-2); }
+.cxp-row-cat {
+  font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.04em;
+  color: var(--ink-4); margin-inline-start: auto;
+}
+.cxp-row-name { font-size: 13.5px; font-weight: 500; color: var(--ink); }
+.cxp-row-comm {
+  font-size: 12px; color: var(--ink-3); line-height: 1.5;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+
+.cxp-detail { flex: 1; overflow-y: auto; padding: 12px 16px 20px; display: flex; flex-direction: column; gap: 10px; }
+.cxp-back {
+  align-self: flex-start; border: 0; background: none; cursor: pointer;
+  font-size: 12px; color: var(--ink-3); padding: 2px 0;
+}
+.cxp-back:hover { color: var(--ink); }
+.cxp-detail-name { font-family: var(--font-serif); font-size: 17px; font-weight: 600; color: var(--ink); margin: 0; }
+.cxp-ends {
+  display: flex; flex-direction: column; gap: 1px;
+  background: var(--line); border-radius: var(--radius); overflow: hidden;
+}
+.cxp-end {
+  display: flex; gap: 10px; align-items: baseline;
+  background: var(--panel); padding: 8px 11px; font-size: 13px; color: var(--ink);
+}
+.cxp-comm { font-size: 13px; line-height: 1.65; color: var(--ink-2); margin: 0; white-space: pre-wrap; }
+.cxp-meta { font-size: 11px; color: var(--ink-4); }
+.cxp-actions { display: flex; gap: 7px; }
+.cxp-actions .seldlg-btn { flex: 1; padding: 7px 12px; font-size: 12.5px; }
+.cxp-confirm {
+  display: flex; flex-direction: column; gap: 8px;
+  font-size: 12.5px; color: var(--ink-2);
+  background: var(--panel); border-radius: var(--radius); padding: 11px;
+}
+/* Delete is the quietest control here — a Connection removed from one side
+   disappears from both, so it should never be the easiest thing to hit. */
+.cxp-delete {
+  align-self: center; margin-top: 4px;
+  border: 0; background: none; cursor: pointer;
+  font-size: 11.5px; color: var(--ink-4); text-decoration: underline;
+}
+.cxp-delete:hover { color: oklch(0.55 0.19 25); }
+
+/* Connections control on the session chip. */
+.anchor-session-conn {
+  border: 1px solid var(--line-strong); background: none;
+  color: var(--ink-2); font: inherit; font-size: 11.5px;
+  padding: 3px 9px; border-radius: 999px; cursor: pointer; margin-inline-end: 4px;
+  transition: background var(--dur-hover) var(--ease-soft);
+}
+.anchor-session-conn:hover { background: var(--hover); color: var(--ink); }
+
+@media (prefers-reduced-motion: reduce) {
+  .cxp-scrim, .cxp { animation: none; }
+}
+
 /* Connection card in the editor. Deliberately unlike an ayah quotation: that
    block IS the verse, whereas this asserts a relationship between two things
    that live outside the document. */
