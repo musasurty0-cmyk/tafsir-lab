@@ -375,7 +375,10 @@ function QCFMushafPage({
                 the one affordance on an otherwise inert page. In Study Mode
                 it is plain text again, since the workspace is already open. */}
             {studyMode ? (
-              <span className="qcf-surah-name">{chapter.name_arabic}</span>
+              <span className="qcf-surah-name">
+                {chapter.name_arabic}
+                <span className="qcf-surah-name-en" dir="ltr">{chapter.name_simple}</span>
+              </span>
             ) : (
               <button
                 type="button"
@@ -386,6 +389,8 @@ function QCFMushafPage({
                 title="Open study notes"
               >
                 {chapter.name_arabic}
+                {/* dir="ltr" so the Latin name is not reordered by the RTL page. */}
+                <span className="qcf-surah-name-en" dir="ltr">{chapter.name_simple}</span>
                 <span className="qcf-surah-caret" aria-hidden>▾</span>
               </button>
             )}
