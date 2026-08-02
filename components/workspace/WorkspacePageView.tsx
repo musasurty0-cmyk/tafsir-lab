@@ -119,25 +119,19 @@ export default function WorkspacePageView({
     } catch { /* ignore */ }
   }, []);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  /* The formatting strip IS the formatting surface, so it is present whenever
-     it applies rather than hidden behind a header button that duplicated it.
-     It can still be collapsed — from the strip itself, which keeps one entry
-     point instead of two. */
-  const [formattingOpen, setFormattingOpen] = useState(true);
+  const [formattingOpen, setFormattingOpen] = useState(false);
   const [activeEditor, setActiveEditor]     = useState<Editor | null>(null);
 
-  /* Formatting is visible by default now, so an ABSENT stored value must mean
-     open — reading `=== "true"` would have collapsed the strip for everyone who
-     had never touched the old header toggle. Only an explicit "false" hides it. */
+  // Persist formatting toolbar open/closed state
   useEffect(() => {
-    try {
-      const v = localStorage.getItem("tl-editor-toolbar-open");
-      if (v !== null) setFormattingOpen(v === "true");
-    } catch { /* ignore */ }
+    try { setFormattingOpen(localStorage.getItem("tl-editor-toolbar-open") === "true"); } catch { /* ignore */ }
   }, []);
-  const setFormatting = useCallback((next: boolean) => {
-    setFormattingOpen(next);
-    try { localStorage.setItem("tl-editor-toolbar-open", String(next)); } catch { /* ignore */ }
+  const handleToggleFormatting = useCallback(() => {
+    setFormattingOpen((prev) => {
+      const next = !prev;
+      try { localStorage.setItem("tl-editor-toolbar-open", String(next)); } catch { /* ignore */ }
+      return next;
+    });
   }, []);
 
   // ── Tafsir drawer ─────────────────────────────────────────────────────
@@ -601,21 +595,12 @@ export default function WorkspacePageView({
             }
             setTafsirOpen((o) => !o);
           }}
+          formattingOpen={formattingOpen}
+          onToggleFormatting={handleToggleFormatting}
           presenceOthers={presenceOthers}
           liveStatus={room.status}
         />
-        <EditorToolbar
-          editor={activeEditor}
-          open={formattingOpen && mode !== "canvas" && mode !== "board"}
-          onCollapse={() => setFormatting(false)}
-        />
-        {/* Re-entry once collapsed. A single quiet affordance in the same
-            place the strip occupied, not a second control in the header. */}
-        {!formattingOpen && mode !== "canvas" && mode !== "board" && (
-          <button className="et-reveal" onClick={() => setFormatting(true)}>
-            Formatting
-          </button>
-        )}
+        <EditorToolbar editor={activeEditor} open={formattingOpen && mode !== "canvas" && mode !== "board"} />
 
         <div className={`study-layout${mode === "split" ? " study-layout--split" : ""}`}>
 
