@@ -22,6 +22,8 @@ export interface SelectionRow {
 }
 
 interface Props {
+  /** Needed to ask what a deletion would take with it. */
+  workspaceId?: string;
   rows: SelectionRow[];
   surahName: string;
   /** Heading. Overridden when this is disambiguating a tap on overlaps. */
@@ -46,9 +48,13 @@ const COLORS = [
 const ARROW = "–";
 
 export default function SelectionList({
-  rows, surahName, title = "Selections", onOpen, onClose,
+  workspaceId, rows, surahName, title = "Selections", onOpen, onClose,
   onRename, onRecolour, onDelete,
 }: Props) {
+  /* What the pending deletion would destroy. Fetched when the confirmation
+     opens so the warning can name real numbers — "and 2 Connections" is a
+     reason to stop, "this cannot be undone" is not. */
+  const [impact, setImpact] = useState<{ connections: number; notes: number } | null>(null);
   /* Which row is being managed, and whether it is confirming deletion.
      Editing happens INSIDE the row so the list never navigates away from
      what the user is looking at. */
@@ -104,6 +110,17 @@ export default function SelectionList({
     () => [...filtered].sort((a, b) => a.startAyah - b.startAyah || a.endAyah - b.endAyah),
     [filtered],
   );
+
+  useEffect(() => {
+    if (!deleting || !workspaceId) { setImpact(null); return; }
+    let live = true;
+    setImpact(null);
+    fetch(`/api/workspaces/${workspaceId}/segments/${deleting}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (live && d?.impact) setImpact(d.impact); })
+      .catch(() => {});
+    return () => { live = false; };
+  }, [deleting, workspaceId]);
 
   useEffect(() => { setActive(0); }, [q]);
   useEffect(() => {
@@ -184,7 +201,27 @@ export default function SelectionList({
                 <div className="sellist-manage">
                   {deleting === r.id ? (
                     <div className="sellist-confirm">
-                      <span>Delete this Selection and its whiteboard?</span>
+                      <span>
+                        Delete this Selection and its whiteboard?
+                        {impact && (impact.connections > 0 || impact.notes > 0) && (
+                          <>
+                            {" "}This also removes{" "}
+                            {impact.connections > 0 && (
+                              <strong>
+                                {impact.connections} Connection{impact.connections === 1 ? "" : "s"}
+                              </strong>
+                            )}
+                            {impact.connections > 0 && impact.notes > 0 && ", and detaches "}
+                            {impact.notes > 0 && (
+                              <>
+                                {impact.notes} note{impact.notes === 1 ? "" : "s"}
+                                {impact.connections === 0 && " (kept, not deleted)"}
+                              </>
+                            )}
+                            .
+                          </>
+                        )}
+                      </span>
                       <div className="sellist-confirm-actions">
                         <button className="sellist-mini" onClick={() => setDeleting(null)}>Keep</button>
                         <button

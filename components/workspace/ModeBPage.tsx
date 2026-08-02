@@ -1511,6 +1511,7 @@ export default function ModeBPage({
 
       {listOpen && (
         <SelectionList
+          workspaceId={workspaceId}
           rows={segments}
           surahName={chapter.name_simple}
           onOpen={(id) => {

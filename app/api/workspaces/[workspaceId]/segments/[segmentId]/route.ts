@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import {
-  updateSegment, deleteSegment, duplicateSegment, SegmentError,
+  updateSegment, deleteSegment, duplicateSegment, selectionImpact, SegmentError,
 } from "@/lib/services/segments.service";
 
 function errStatus(e: unknown): number {
@@ -19,6 +19,19 @@ function errStatus(e: unknown): number {
 }
 
 type Ctx = { params: Promise<{ workspaceId: string; segmentId: string }> };
+
+/** What deleting this Selection would take with it — asked BEFORE the
+ *  confirmation, so the warning can name real numbers instead of a generality. */
+export async function GET(_req: Request, { params }: Ctx) {
+  try {
+    const { workspaceId, segmentId } = await params;
+    const { userId } = await getSession();
+    const impact = await selectionImpact(workspaceId, userId, segmentId);
+    return NextResponse.json({ impact });
+  } catch (e) {
+    return NextResponse.json({ error: String(e) }, { status: errStatus(e) });
+  }
+}
 
 export async function PATCH(req: Request, { params }: Ctx) {
   try {

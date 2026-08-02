@@ -158,14 +158,40 @@ export async function deleteSegment(
   if (!current) throw new SegmentError("Segment not found", "NOT_FOUND");
   assertCanMutate(role, current.createdById, userId);
 
+  /* Connections naming this Selection go WITH it. A Connection is a
+     relationship between two objects, and one whose endpoint no longer exists
+     is not a relationship — it is a dangling key that every panel would have
+     to render as "Selection" with nothing behind it. Notes are different:
+     they are the user's own writing, so they are detached and kept. */
+  const selKey = `selection:${segmentId}`;
   await db.$transaction([
     db.structuredNote.updateMany({
       where: { segmentId },
       data:  { segmentId: null, anchorType: "page" },
     }),
+    db.quranConnection.deleteMany({
+      where: { workspaceId, OR: [{ sourceKey: selKey }, { targetKey: selKey }] },
+    }),
     db.quranSegment.delete({ where: { id: segmentId } }),
   ]);
+
   return { id: segmentId };
+}
+
+/** How many Connections deleting this Selection would take with it, so the
+ *  caller can warn before doing it rather than after. */
+export async function selectionImpact(
+  workspaceId: string, userId: string, segmentId: string,
+) {
+  await getWorkspaceWithRole(workspaceId, userId);
+  const selKey = `selection:${segmentId}`;
+  const [connections, notes] = await Promise.all([
+    db.quranConnection.count({
+      where: { workspaceId, OR: [{ sourceKey: selKey }, { targetKey: selKey }] },
+    }),
+    db.structuredNote.count({ where: { segmentId } }),
+  ]);
+  return { connections, notes };
 }
 
 export async function duplicateSegment(
