@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import {
-  IBM_Plex_Sans, IBM_Plex_Serif, IBM_Plex_Mono,
+  Inter, Source_Serif_4, JetBrains_Mono,
   Caveat, Patrick_Hand, Comic_Neue,
 } from "next/font/google";
 import NavSplashCleaner from "@/components/NavSplashCleaner";
@@ -8,19 +8,25 @@ import AppearanceBoot from "@/components/AppearanceBoot";
 import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import "./globals.css";
 
-const plex = IBM_Plex_Sans({
+/* Interface + reading faces.
+   Was the IBM Plex trio, which carries a strong association with a particular
+   AI product and made the app read as generic tooling rather than as its own
+   thing. Inter is neutral at UI sizes with a tall x-height, Source Serif 4
+   gives the document titles and prose a bookish counterpart, and JetBrains
+   Mono keeps the numeric labels monospaced without the Plex family voice. */
+const sans = Inter({
   subsets: ["latin"],
   weight: ["300", "400", "500", "600", "700"],
   variable: "--font-sans",
   display: "swap",
 });
-const plexSerif = IBM_Plex_Serif({
+const serif = Source_Serif_4({
   subsets: ["latin"],
   weight: ["400", "600"],
   variable: "--font-serif",
   display: "swap",
 });
-const plexMono = IBM_Plex_Mono({
+const mono = JetBrains_Mono({
   subsets: ["latin"],
   weight: ["400", "500"],
   variable: "--font-mono",
@@ -76,7 +82,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body
-        className={`${plex.variable} ${plexSerif.variable} ${plexMono.variable} ${caveat.variable} ${comicNeue.variable} ${patrickHand.variable}`}
+        className={`${sans.variable} ${serif.variable} ${mono.variable} ${caveat.variable} ${comicNeue.variable} ${patrickHand.variable}`}
         style={{ fontFamily: "var(--font-sans), system-ui, sans-serif" }}
       >
         <LocaleProvider>

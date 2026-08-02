@@ -383,9 +383,35 @@ export function drawArrow(
    the path is rebuilt. */
 const pathCache = new WeakMap<object, { built: BuiltPath | null; w: number; tool: string }>();
 
+/**
+ * Dark-mode ink.
+ *
+ * The sheet is black in dark mode, and the default pen is near-black, so
+ * strokes drawn on a light sheet would vanish the moment the theme flipped —
+ * including every stroke ALREADY saved. Remapping at paint time rather than at
+ * save time fixes those too, and stores nothing: the file keeps the colour the
+ * author picked, and flipping back to light restores it exactly.
+ *
+ * Only near-neutral dark inks are touched. A red or blue annotation is a
+ * deliberate choice and reads fine on black, so it is left alone.
+ */
+const DARK_PAPER_INK = "#f4f4f5";
+
+function inkFor(color: string): string {
+  if (typeof document === "undefined") return color;
+  if (document.documentElement.getAttribute("data-theme") !== "dark") return color;
+  const m = /^#([0-9a-f]{6})$/i.exec(color.trim());
+  if (!m) return color;
+  const n = parseInt(m[1], 16);
+  const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  // dark and close to neutral => it was meant to be "black ink"
+  return max <= 90 && max - min <= 24 ? DARK_PAPER_INK : color;
+}
+
 export function paintStroke(ctx: CanvasRenderingContext2D, s: InkStroke, alphaScale = 1) {
   if (s.tool === "arrow") {
-    drawArrow(ctx, normPts(s.points as unknown[]), s.color, s.width);
+    drawArrow(ctx, normPts(s.points as unknown[]), inkFor(s.color), s.width);
     return;
   }
 
@@ -399,5 +425,5 @@ export function paintStroke(ctx: CanvasRenderingContext2D, s: InkStroke, alphaSc
     };
     pathCache.set(s as unknown as object, entry);
   }
-  if (entry.built) paintBuiltPath(ctx, entry.built, s.color, s.opacity * alphaScale);
+  if (entry.built) paintBuiltPath(ctx, entry.built, inkFor(s.color), s.opacity * alphaScale);
 }

@@ -16,7 +16,7 @@ import { useT } from "@/lib/i18n/LocaleProvider";
 
 // ── Icons ──────────────────────────────────────────────────────────────────
 
-const PenIcon = ({ size = 13 }: { size?: number }) => (
+const PenIcon = ({ size = 17 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
     stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
     <path d="M12 20h9"/>
@@ -24,7 +24,7 @@ const PenIcon = ({ size = 13 }: { size?: number }) => (
   </svg>
 );
 
-const GridIcon = ({ size = 13 }: { size?: number }) => (
+const GridIcon = ({ size = 17 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
     stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
     <rect x="3"  y="3"  width="7" height="7"/>
@@ -34,7 +34,7 @@ const GridIcon = ({ size = 13 }: { size?: number }) => (
   </svg>
 );
 
-const SplitIcon = ({ size = 13 }: { size?: number }) => (
+const SplitIcon = ({ size = 17 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
     stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
     <rect x="3"  y="3" width="8" height="18" rx="1"/>
@@ -63,7 +63,7 @@ const FormattingIcon = ({ size = 13 }: { size?: number }) => (
 
 export type ViewMode = "editor" | "canvas" | "split" | "board";
 
-const BoardIcon = ({ size = 13 }: { size?: number }) => (
+const BoardIcon = ({ size = 17 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
     stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
     <rect x="3" y="4" width="18" height="14" rx="2"/>
@@ -171,32 +171,36 @@ export default function TopBar({
             data-active={mode === "editor" ? "true" : "false"}
             onClick={() => mode !== "editor" && onSetMode("editor")}
             title="Document view"
+            aria-label="Document view"
           >
-            <PenIcon /> {t("topbar.editor")}
+            <PenIcon />
           </button>
           <button
             className="mode-btn"
             data-active={mode === "canvas" ? "true" : "false"}
             onClick={() => mode !== "canvas" && onSetMode("canvas")}
             title="Spatial canvas"
+            aria-label="Spatial canvas"
           >
-            <GridIcon /> {t("topbar.canvas")}
+            <GridIcon />
           </button>
           <button
             className="mode-btn mode-btn--split"
             data-active={mode === "split" ? "true" : "false"}
             onClick={() => mode !== "split" && onSetMode("split")}
             title="Split — Editor + Canvas"
+            aria-label="Split — Editor + Canvas"
           >
-            <SplitIcon /> {t("topbar.split")}
+            <SplitIcon />
           </button>
           <button
             className="mode-btn"
             data-active={mode === "board" ? "true" : "false"}
             onClick={() => mode !== "board" && onSetMode("board")}
             title="Whiteboard — blank scratch canvas"
+            aria-label="Whiteboard — blank scratch canvas"
           >
-            <BoardIcon /> {t("topbar.board")}
+            <BoardIcon />
           </button>
         </div>
 
