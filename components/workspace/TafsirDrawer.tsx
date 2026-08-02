@@ -6,6 +6,7 @@ import { useAppStore } from "@/lib/store";
 import { TAFSIR_LANGUAGE_NAMES } from "@/lib/tafsir/spa5k-catalog";
 import { useT } from "@/lib/i18n/LocaleProvider";
 import { sanitizeTafsirHtml } from "@/lib/sanitize-html";
+import { formatPlainTafsir } from "@/lib/tafsir/format-content";
 import type { Verse } from "@/lib/types";
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -204,20 +205,25 @@ export default function TafsirDrawer({ open, verseKey, verses, onClose }: Props)
 
       {/* ── Header ── */}
       <div className="drawer-head">
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div className="drawer-head-text">
           <div className="drawer-head-title">{t("drawer.title")}</div>
+          {/* Source mode, then the reference: three quiet levels rather than a
+              modal title bar. Both truncate — source and Surah names are
+              arbitrarily long. */}
+          <div className="drawer-head-sub">{sourceName}</div>
           {activeAyah && (
-            <div className="drawer-head-ref">{activeAyah} · Al-Qurʾān</div>
+            <div className="drawer-head-ref">Al-Qurʾān {activeAyah}</div>
           )}
         </div>
-        <button className="drawer-close" onClick={onClose} title="Close">
+        <button className="drawer-close" onClick={onClose} title="Close" aria-label="Close Tafsīr">
           <X size={14} />
         </button>
       </div>
 
       {/* ── Source selector ── */}
       <div className="drawer-source-bar">
-        <span className="drawer-source-label">{t("drawer.source")}</span>
+        {/* The uppercase "SOURCE" label is dropped: the row is self-evident,
+            and the group keeps an accessible name. */}
         <div className="drawer-lang-chips" role="tablist" aria-label="Tafsir language">
           <button
             className="drawer-lang-chip"
@@ -304,14 +310,14 @@ export default function TafsirDrawer({ open, verseKey, verses, onClose }: Props)
 
           {/* Verse preview */}
           {activeVerse && (
-            <div className="drawer-verse">
-              <div className="drawer-verse-arabic">{activeVerse.text_uthmani}</div>
+            <section className="drawer-verse" aria-label="Ayah">
+              <p className="drawer-verse-arabic" dir="rtl" lang="ar">{activeVerse.text_uthmani}</p>
               {activeVerse.translations?.[0]?.text && (
-                <div className="drawer-verse-translation">
+                <p className="drawer-verse-translation">
                   {stripTags(activeVerse.translations[0].text)}
-                </div>
+                </p>
               )}
-            </div>
+            </section>
           )}
 
           {/* ── Commentary ── */}
@@ -331,16 +337,19 @@ export default function TafsirDrawer({ open, verseKey, verses, onClose }: Props)
 
               {!loading && !error && entry && (
                 <div className="commentary-section">
-                  <div className="commentary-author">
-                    <div className="commentary-avatar">
-                      {sourceName.split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
-                    </div>
-                    <div style={{ minWidth: 0 }}>
-                      <div className="commentary-name">{sourceName}</div>
-                      <div className="commentary-sub">
-                        {entry.fromCache ? "Cached" : "Live"} · {entry.source.language.toUpperCase()}
-                      </div>
-                    </div>
+                  {/* A citation, not an author row. The initials disc and the
+                      Cached/Live badge made delivery status look like content;
+                      it moves to the title attribute, where it is still
+                      discoverable but no longer a headline. */}
+                  <div
+                    className="commentary-cite"
+                    title={entry.fromCache ? "Served from cache" : "Fetched live"}
+                  >
+                    <cite className="commentary-name">{sourceName}</cite>
+                    <span className="commentary-sub">
+                      {TAFSIR_LANGUAGE_NAMES[entry.source.language]
+                        ?? entry.source.language.toUpperCase()} commentary
+                    </span>
                   </div>
                   <div
                     className="commentary-body"
@@ -348,13 +357,15 @@ export default function TafsirDrawer({ open, verseKey, verses, onClose }: Props)
                     // contentHtml is third-party; content is plain text whose
                     // tags must not survive the <p>/<br> re-wrapping either.
                     dangerouslySetInnerHTML={{
-                      __html: sanitizeTafsirHtml(
-                        entry.contentHtml
-                          ?? entry.content
-                              .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-                              .replace(/\n{2,}/g, "</p><p>")
-                              .replace(/\n/g, "<br />"),
-                      ),
+                      /* Sources that ship their own HTML keep it — their markup
+                         is authoritative and is only styled, never rewritten.
+                         Plain-text sources (Ibn Kathīr among them) were wrapped
+                         into one undifferentiated run of <p>, which is why
+                         section titles read exactly like prose and Arabic
+                         ḥadīth ran left-to-right in the Latin serif. */
+                      __html: entry.contentHtml
+                        ? sanitizeTafsirHtml(entry.contentHtml)
+                        : formatPlainTafsir(entry.content),
                     }}
                   />
                 </div>

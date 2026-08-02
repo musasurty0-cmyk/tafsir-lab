@@ -20,6 +20,7 @@
   --accent-soft: oklch(0.55 0.08 160 / 0.1);
   --accent-ink:  oklch(0.42 0.07 160);
   --highlight:   oklch(0.88 0.14 95 / 0.45);
+  --danger:      oklch(0.52 0.16 25);
 
   --shadow-sm: 0 1px 3px oklch(0.22 0.012 80 / 0.06), 0 1px 2px oklch(0.22 0.012 80 / 0.04);
   --shadow-md: 0 4px 16px oklch(0.22 0.012 80 / 0.08), 0 2px 6px oklch(0.22 0.012 80 / 0.05);
@@ -28,6 +29,7 @@
   --rail:       56px;
   --sidebar:    272px;
   --drawer:     440px;
+  --radius-sm:  4px;
   --radius:     6px;
   --radius-md:  10px;
   --radius-lg:  14px;
@@ -146,6 +148,7 @@
 
   /* Black sheet in dark mode. A white Mushaf page on a dark workspace was the
      single brightest thing on screen, which is exactly backwards at night. */
+  --danger:      oklch(0.72 0.15 25);
   --paper:      #000000;
   --paper-ink:  oklch(0.93 0 0);
   --paper-line: oklch(0.93 0 0 / 0.14);
@@ -758,116 +761,239 @@ input, textarea { font: inherit; color: inherit; }
   .drawer-overlay[data-open="true"] > * { animation: none; }
 }
 
-/* Header */
+/* ── Header — three quiet levels, no title bar ───────────────────────────── */
 .drawer-head {
-  padding: 12px 16px; border-bottom: 1px solid var(--line);
-  display: flex; align-items: center; gap: 10px; flex-shrink: 0;
+  /* No bottom border. The panel used to open with five stacked horizontal
+     rules (header, source bar, tabs, rail, verse card); spacing and type
+     carry these transitions instead. */
+  padding: var(--sp-4) var(--sp-5) var(--sp-3);
+  display: flex; align-items: flex-start; gap: var(--sp-3); flex-shrink: 0;
 }
-.drawer-head-title { font-size: 13px; font-weight: 500; color: var(--ink); }
-.drawer-head-ref   { font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-3); margin-top: 2px; }
-.drawer-close { width: 28px; height: 28px; border-radius: 6px; display: grid; place-items: center; color: var(--ink-3); flex-shrink: 0; }
+.drawer-head-text { flex: 1; min-width: 0; }
+.drawer-head-title {
+  font-family: var(--font-serif);
+  font-size: 15px; font-weight: 600; letter-spacing: -0.01em;
+  color: var(--ink); line-height: 1.2;
+}
+/* Source names run long and are user-chosen, so both sublines truncate. */
+.drawer-head-sub {
+  font-size: 12px; color: var(--ink-2); margin-top: 3px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.drawer-head-ref {
+  font-size: 11.5px; color: var(--ink-3); margin-top: 1px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.drawer-close {
+  width: 26px; height: 26px; border-radius: var(--radius-sm);
+  display: grid; place-items: center;
+  color: var(--ink-4); flex-shrink: 0;
+  transition: color var(--dur-fast) ease, background var(--dur-fast) ease;
+}
 .drawer-close:hover { background: var(--hover); color: var(--ink); }
+.drawer-close:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
-/* Source selector bar */
+/* ── Language filter — text, not a row of outlined buttons ───────────────── */
 .drawer-source-bar {
-  display: flex; align-items: center; gap: 10px;
-  padding: 8px 16px; border-bottom: 1px solid var(--line);
-  background: var(--panel); flex-shrink: 0;
-}
-.drawer-source-label {
-  font-size: 11px; font-weight: 500; text-transform: uppercase;
-  letter-spacing: 0.05em; color: var(--ink-3); flex-shrink: 0;
-}
-.drawer-source-select-wrap {
-  position: relative; flex: 1; display: flex; align-items: center;
-}
-.drawer-source-select {
-  width: 100%;
-  appearance: none; -webkit-appearance: none;
-  background: var(--bg-elev); border: 1px solid var(--line-strong);
-  border-radius: 6px; padding: 5px 26px 5px 10px;
-  font-size: 12.5px; font-weight: 500; color: var(--ink);
-  cursor: pointer; outline: none;
-  transition: border-color var(--dur-fast) ease;
-}
-.drawer-source-select:hover  { border-color: var(--accent); }
-.drawer-source-select:focus  { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
-.drawer-source-chevron {
-  position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
-  color: var(--ink-3); pointer-events: none;
+  display: flex; align-items: center; gap: var(--sp-3);
+  /* Was a tinted band with its own border. It is a control row, not a region. */
+  padding: 0 var(--sp-5) var(--sp-2);
+  background: none; border: 0; flex-shrink: 0;
+  min-height: 26px;
 }
 
-/* Tab bar */
-.drawer-tabs { padding: 0 14px; display: flex; gap: 2px; border-bottom: 1px solid var(--line); flex-shrink: 0; }
-.drawer-tab  { padding: 8px 9px; font-size: 12.5px; color: var(--ink-3); border-bottom: 2px solid transparent; margin-bottom: -1px; transition: color var(--dur-fast) ease, border-color var(--dur-fast) ease; }
-.drawer-tab:hover { color: var(--ink); }
-.drawer-tab[data-active="true"] { color: var(--ink); border-bottom-color: var(--accent); font-weight: 500; }
+/* ── Tabs — calm section navigation ──────────────────────────────────────── */
+.drawer-tabs {
+  padding: 0 var(--sp-5);
+  display: flex; gap: var(--sp-4);
+  flex-shrink: 0;
+  /* A hairline under the whole row, not a box around the group: it marks where
+     navigation ends and reading begins, which is a real structural change. */
+  border-bottom: 1px solid var(--line);
+  overflow-x: auto; scrollbar-width: none;
+}
+.drawer-tabs::-webkit-scrollbar { display: none; }
+.drawer-tab {
+  padding: var(--sp-2) 0 7px;
+  font-size: 12.5px; line-height: 1.2; white-space: nowrap;
+  color: var(--ink-3);
+  background: none; border: 0;
+  border-bottom: 2px solid transparent; margin-bottom: -1px;
+  transition: color var(--dur-fast) ease, border-color var(--dur-fast) ease;
+}
+.drawer-tab:hover { color: var(--ink-2); }
+/* ONE active treatment: the accent underline. The weight change and fill that
+   used to accompany it made four tabs shout at once. */
+.drawer-tab[data-active="true"] {
+  color: var(--ink);
+  border-bottom-color: var(--accent);
+}
+.drawer-tab:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: -2px;
+  border-radius: var(--radius-sm);
+}
 
-/* Split layout: ayah nav + scrollable content */
+/* Split layout: ayah rail + scrollable content */
 .drawer-split {
   flex: 1; display: flex; flex-direction: row;
   overflow: hidden; min-height: 0;
 }
 
-/* Ayah navigator — narrow numbered column */
+/* ── Ayah rail — a margin of numbers, not a sidebar ──────────────────────── */
 .drawer-ayah-nav {
-  width: 46px; flex-shrink: 0;
-  border-right: 1px solid var(--line);
+  width: 34px; flex-shrink: 0;
+  /* No dividing rule. At 46px with a border it read as a second panel. */
+  border: 0;
   overflow-y: auto; overflow-x: hidden;
   display: flex; flex-direction: column;
-  padding: 6px 0; gap: 2px;
+  padding: var(--sp-4) 0 var(--sp-6); gap: 0;
 }
 .drawer-ayah-btn {
-  width: 100%; padding: 5px 0;
-  font-family: var(--font-mono); font-size: 11px; font-weight: 500;
+  position: relative;
+  /* 7px keeps the target at 25px tall against a 34px rail: still quiet, but
+     above the 24px minimum. At 6px it measured 23px. */
+  width: 100%; padding: 7px 0;
+  font-family: var(--font-mono); font-size: 10.5px; font-weight: 400;
   color: var(--ink-3); text-align: center;
-  background: transparent; border: none; cursor: pointer;
-  border-radius: 0; transition: color var(--dur-fast) ease, background var(--dur-fast) ease;
+  background: none; border: 0; cursor: pointer; border-radius: 0;
   line-height: 1;
+  transition: color var(--dur-fast) ease;
 }
-.drawer-ayah-btn:hover                { color: var(--ink); background: var(--hover); }
-.drawer-ayah-btn[data-active="true"]  {
-  color: var(--accent-ink, var(--ink));
-  background: var(--accent-soft);
-  font-weight: 600;
+.drawer-ayah-btn:hover { color: var(--ink-2); background: none; }
+/* A short accent tick in the margin instead of a filled block. */
+.drawer-ayah-btn[data-active="true"] {
+  color: var(--ink); font-weight: 500; background: none;
 }
+.drawer-ayah-btn[data-active="true"]::before {
+  content: "";
+  position: absolute; inset-inline-start: 0; top: 50%;
+  transform: translateY(-50%);
+  width: 2px; height: 12px;
+  background: var(--accent);
+}
+.drawer-ayah-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 
-/* Content pane */
+/* ── Reading area ────────────────────────────────────────────────────────── */
 .drawer-body {
   flex: 1; overflow-y: auto; overflow-x: hidden;
-  padding: 16px 18px 48px; min-width: 0;
+  /* The largest continuous region in the panel, and the only one with room. */
+  padding: var(--sp-5) var(--sp-5) 96px var(--sp-2);
+  min-width: 0;
 }
 
-/* Verse preview card */
+/* ── Ayah — in the reading flow, not in a card ───────────────────────────── */
 .drawer-verse {
-  padding: 14px 16px;
-  background: var(--panel); border: 1px solid var(--line);
-  border-radius: var(--radius-lg); margin-bottom: 18px;
+  /* No background, border, radius or shadow. One hairline BELOW closes the
+     verse section off from the commentary that follows. */
+  padding: 0 0 var(--sp-5);
+  margin: 0 0 var(--sp-5);
+  border-bottom: 1px solid var(--line);
 }
 .drawer-verse-arabic {
-  font-family: var(--font-arabic); font-size: 23px;
-  direction: rtl; text-align: right; line-height: 2.0;
-  color: var(--ink); margin-bottom: 10px;
+  font-family: var(--font-arabic);
+  font-size: calc(25px * var(--fs-arabic));
+  direction: rtl; text-align: right;
+  /* Generous, so tashkil above and below the baseline is never clipped. */
+  line-height: 2.1;
+  color: var(--ink);
+  margin: 0 0 var(--sp-3);
 }
 .drawer-verse-translation {
-  font-family: var(--font-serif); font-size: 14px;
-  color: var(--ink-2); line-height: 1.65;
+  font-family: var(--font-serif);
+  font-size: calc(13.5px * var(--fs-reading));
+  color: var(--ink-2); line-height: 1.7;
+  margin: 0;
 }
 
-/* Commentary */
-.commentary-section { margin-bottom: 24px; }
-.commentary-author  { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
-.commentary-avatar  {
-  width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
-  background: var(--panel-2); border: 1px solid var(--line);
-  display: grid; place-items: center;
-  font-family: var(--font-serif); font-size: 11px; font-weight: 600; color: var(--ink-2);
+/* ── Commentary ──────────────────────────────────────────────────────────── */
+.commentary-section { margin-bottom: var(--sp-6); }
+
+/* Citation header: name tight against its qualifier, generous space beneath. */
+.commentary-cite { margin: 0 0 var(--sp-4); }
+.commentary-name {
+  display: block;
+  font-family: var(--font-serif); font-style: normal;
+  font-size: 14px; font-weight: 600; color: var(--ink);
+  line-height: 1.3;
 }
-.commentary-name { font-size: 13px; font-weight: 500; color: var(--ink); }
-.commentary-sub  { font-family: var(--font-mono); font-size: 10px; color: var(--ink-3); margin-top: 1px; letter-spacing: 0.03em; }
-.commentary-body { font-family: var(--font-serif); font-size: calc(14.5px * var(--fs-reading)); line-height: 1.85; color: var(--ink); }
-.commentary-body p { margin: 0 0 14px 0; }
+.commentary-sub {
+  display: block;
+  font-size: 11.5px; color: var(--ink-3);
+  margin-top: 2px; letter-spacing: 0;
+}
+
+.commentary-body {
+  font-family: var(--font-serif);
+  font-size: calc(15px * var(--fs-reading));
+  line-height: 1.9;
+  color: var(--ink);
+}
+.commentary-body p { margin: 0 0 var(--sp-4); font-weight: 400; }
 .commentary-body p:last-child { margin-bottom: 0; }
+
+/* Headings. Tailwind preflight resets h1-h6 to inherit, so imported headings
+   rendered identically to body text — the hierarchy is restored here rather
+   than by decorating them with colour. Space above does most of the work. */
+.commentary-body h1,
+.commentary-body h2,
+.commentary-body h3,
+.commentary-body h4,
+.commentary-body .tf-h {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.35;
+  margin: var(--sp-6) 0 var(--sp-2);
+}
+.commentary-body h1 { font-size: 14.5px; }
+.commentary-body h2 { font-size: 14px; }
+.commentary-body h3,
+.commentary-body h4,
+.commentary-body .tf-h { font-size: 13.5px; }
+.commentary-body > :first-child { margin-top: 0; }
+
+/* Arabic evidence inside the commentary. Deliberately distinct from the ayah
+   at the top: smaller, quieter, indented, and with no rule of its own. */
+.commentary-body .tf-ar,
+.commentary-body blockquote {
+  font-family: var(--font-arabic);
+  font-size: calc(19px * var(--fs-arabic));
+  direction: rtl; text-align: right;
+  line-height: 2.15;
+  color: var(--ink-2);
+  margin: var(--sp-5) 0;
+  padding: 0 0 0 var(--sp-5);
+  border: 0; background: none; font-style: normal;
+}
+.commentary-body .tf-list {
+  list-style: none;
+  margin: 0 0 var(--sp-4); padding: 0;
+}
+.commentary-body .tf-list li {
+  position: relative;
+  padding-inline-start: var(--sp-4);
+  margin-bottom: var(--sp-2);
+}
+.commentary-body .tf-list li::before {
+  content: "";
+  position: absolute; inset-inline-start: 0; top: 0.85em;
+  width: 3px; height: 3px; border-radius: 50%;
+  background: var(--ink-4);
+}
+.commentary-body .tf-list li[dir="rtl"] {
+  text-align: right;
+  font-family: var(--font-arabic);
+  font-size: calc(17px * var(--fs-arabic));
+  line-height: 2.1;
+}
+.commentary-body ul:not(.tf-list),
+.commentary-body ol { margin: 0 0 var(--sp-4); padding-inline-start: var(--sp-5); }
+.commentary-body li { margin-bottom: var(--sp-1); }
+/* Mixed Arabic/English inline runs keep their own direction. */
+.commentary-body [lang="ar"] { unicode-bidi: isolate; }
+.commentary-body a { color: var(--accent-ink); text-decoration: underline; text-underline-offset: 2px; }
+.commentary-body em { font-style: italic; }
+.commentary-body strong { font-weight: 600; }
 
 /* Loading skeleton */
 .drawer-skeleton   { display: flex; flex-direction: column; gap: 10px; padding: 4px 0; }
@@ -898,38 +1024,54 @@ input, textarea { font: inherit; color: inherit; }
 .wbw-tr { font-family: var(--font-mono); font-size: 9.5px; color: var(--ink-4); letter-spacing: 0.02em; }
 .wbw-en { font-family: var(--font-serif); font-size: 11px; color: var(--ink-2); }
 
-/* Translations & audio list */
-.lang-list { display: flex; flex-direction: column; gap: 4px; }
-.lang-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-radius: 6px; background: var(--panel); border: 1px solid var(--line); cursor: default; transition: border-color .12s; }
-.lang-item[data-active="true"] { border-color: var(--accent); background: var(--accent-soft); }
-.lang-item-name { font-size: 13.5px; font-weight: 500; }
-.lang-item-sub  { font-size: 12px; color: var(--ink-3); margin-top: 2px; font-family: var(--font-mono); }
+/* Translations & recitation lists.
+   Were bordered, tinted, rounded rows — the same stacked-card look the panel
+   is moving away from. Now plain rows separated by a hairline. */
+.lang-list { display: flex; flex-direction: column; }
+.lang-item {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-3) 0;
+  border: 0; border-radius: 0; background: none;
+  border-bottom: 1px solid var(--line);
+  cursor: default;
+}
+.lang-item:last-child { border-bottom: 0; }
+.lang-item[data-active="true"] { border-color: var(--line); background: none; }
+.lang-item-name { font-size: 13px; font-weight: 500; color: var(--ink); }
+.lang-item-sub  { font-size: 11.5px; color: var(--ink-3); margin-top: 2px; font-family: inherit; }
 .lang-item--static { cursor: default; }
+/* Quiet text, not a green pill: the accent belongs to the tab underline and
+   the active ayah tick. */
 .lang-item-active-badge {
-  font-size: 10.5px; font-weight: 600; text-transform: uppercase;
-  letter-spacing: 0.04em; color: var(--accent-ink);
-  padding: 2px 7px; border-radius: 20px;
-  background: var(--accent-soft); border: 1px solid var(--accent);
+  font-size: 11px; font-weight: 500;
+  text-transform: none; letter-spacing: 0;
+  color: var(--accent-ink);
+  padding: 0; border: 0; border-radius: 0; background: none;
+  flex-shrink: 0;
 }
 .lang-item-soon {
-  font-size: 10.5px; font-weight: 500; text-transform: uppercase;
-  letter-spacing: 0.04em; color: var(--ink-4);
-  padding: 2px 6px; border-radius: 20px;
-  background: var(--panel-2); border: 1px solid var(--line);
+  font-size: 11px; font-weight: 400;
+  text-transform: none; letter-spacing: 0;
+  color: var(--ink-3);
+  padding: 0; border: 0; border-radius: 0; background: none;
+  flex-shrink: 0;
 }
-.audio-list { display: flex; flex-direction: column; gap: 8px; }
+.audio-list { display: flex; flex-direction: column; }
 
 /* Utility text helpers */
-.drawer-error { color: oklch(55% 0.15 25); font-size: 13px; padding: 12px 0; }
+.drawer-error {
+  color: var(--danger); font-size: 13px; padding: var(--sp-3) 0; line-height: 1.6;
+}
 .drawer-empty {
-  color: var(--ink-4); font-size: 13px;
-  text-align: center; padding: 40px 0; line-height: 1.5;
+  color: var(--ink-3); font-size: 13px;
+  text-align: center; padding: var(--sp-8) var(--sp-4); line-height: 1.6;
 }
 .drawer-coming-soon {
-  font-size: 12px; color: var(--ink-4); margin: 12px 0 0;
-  padding: 10px 12px; border-radius: 6px;
-  background: var(--panel-2); border: 1px solid var(--line);
-  line-height: 1.5;
+  font-size: 12px; color: var(--ink-3);
+  margin: var(--sp-4) 0 0;
+  padding: 0; border: 0; border-radius: 0; background: none;
+  line-height: 1.6;
 }
 
 /* ── Tweaks panel ── */
@@ -8723,16 +8865,19 @@ input, textarea { font: inherit; color: inherit; }
   line-height: 1.82;
 }
 
-/* ── Tafsir drawer: language filter chips (All / EN / AR) ─────────────────── */
+/* ── Tafsir drawer: language filter (All / English / Arabic / …) ──────────
+   Was a bordered, tinted, fully rounded tray of pills — 33 outlined buttons
+   competing with the content tabs directly beneath them. Now plain text with
+   a single restrained active state, so the tabs remain the louder control. */
 .drawer-lang-chips {
   display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  padding: 2px;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  /* 33 languages — scroll horizontally instead of overflowing the bar */
+  align-items: baseline;
+  gap: var(--sp-3);
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  /* 33 languages — scroll horizontally rather than overflow the bar. */
   flex: 1 1 auto;
   min-width: 0;
   overflow-x: auto;
@@ -8740,21 +8885,56 @@ input, textarea { font: inherit; color: inherit; }
   white-space: nowrap;
 }
 .drawer-lang-chips::-webkit-scrollbar { display: none; }
-.drawer-lang-chip { flex: none; }
 .drawer-lang-chip {
-  padding: 2px 9px;
-  border-radius: 999px;
-  font-size: 10.5px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
+  flex: none;
+  padding: 2px 0;
+  border: 0; border-radius: 0; background: none;
+  font-size: 11.5px;
+  font-weight: 400;
+  letter-spacing: 0;
   color: var(--ink-3);
-  transition: background var(--dur-fast) ease, color var(--dur-fast) ease;
+  transition: color var(--dur-fast) ease;
 }
-.drawer-lang-chip:hover { color: var(--ink); }
+.drawer-lang-chip:hover { color: var(--ink-2); }
+/* Tone and weight, not a fill: the accent is reserved for the tab underline
+   and the active ayah tick. */
 .drawer-lang-chip[data-active="true"] {
-  background: var(--bg);
+  background: none;
+  box-shadow: none;
   color: var(--ink);
-  box-shadow: 0 1px 2px oklch(0% 0 0 / 0.06);
+  font-weight: 500;
+}
+.drawer-lang-chip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* Source picker — quiet text with a chevron, not a form input. */
+.drawer-source-select-wrap {
+  position: relative; display: flex; align-items: center; flex: none; max-width: 45%;
+}
+.drawer-source-select {
+  max-width: 100%;
+  appearance: none; -webkit-appearance: none;
+  background: none;
+  border: 0;
+  border-radius: var(--radius-sm);
+  padding: 2px 16px 2px 0;
+  font-family: inherit;
+  font-size: 11.5px; font-weight: 400; color: var(--ink-3);
+  text-overflow: ellipsis;
+  cursor: pointer; outline: none;
+  transition: color var(--dur-fast) ease;
+}
+.drawer-source-select:hover { border-color: transparent; color: var(--ink); }
+.drawer-source-select:focus { border-color: transparent; box-shadow: none; }
+.drawer-source-select:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px;
+}
+.drawer-source-chevron {
+  position: absolute; right: 2px; top: 50%; transform: translateY(-50%);
+  color: var(--ink-4); pointer-events: none;
 }
 
 /* ── Tafsir block: inline source picker (any provisioned source) ─────────── */
