@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import {
-  createConnection, listForObject, listCatalogue, ConnectionError,
+  createConnection, listForObject, listCatalogue, connectionMap, ConnectionError,
 } from "@/lib/services/connections.service";
 import type { ObjectType } from "@/lib/quran-objects";
 
@@ -34,6 +34,14 @@ export async function GET(
     const { workspaceId } = await params;
     const { userId } = await getSession();
     const sp = new URL(req.url).searchParams;
+
+    /* The map is a different SHAPE, not a different filter: it returns
+       Surah-level edges rather than Connection rows, so it gets its own mode
+       instead of overloading the catalogue response. */
+    if (sp.get("view") === "map") {
+      const map = await connectionMap(workspaceId, userId);
+      return NextResponse.json(map);
+    }
 
     const objectKey = sp.get("object");
     if (objectKey) {

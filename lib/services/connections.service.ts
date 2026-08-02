@@ -157,6 +157,78 @@ export async function listCatalogue(
   return { items, total, take, skip };
 }
 
+/**
+ * The whole workspace as a Surah-level map.
+ *
+ * Every endpoint collapses to the Surah it belongs to — an ayah to its Surah,
+ * a Selection to the Surah it spans. That is what keeps this readable: the
+ * Qur'an has 114 Surahs, so the graph is bounded no matter how many
+ * Connections exist, and it always lays out in the same familiar order rather
+ * than drifting like a force-directed cloud.
+ *
+ * Returns edges, not rows: several Connections between the same two Surahs
+ * become one edge carrying a weight, so a heavily linked pair reads as a
+ * thicker line instead of a dozen overlapping ones.
+ */
+export async function connectionMap(workspaceId: string, userId: string) {
+  await getWorkspaceWithRole(workspaceId, userId);
+
+  const conns = await db.quranConnection.findMany({
+    where: { workspaceId },
+    select: { id: true, name: true, sourceKey: true, targetKey: true, category: true },
+  });
+  if (conns.length === 0) return { nodes: [], edges: [], total: 0 };
+
+  /* Selections do not carry their Surah in the key, so the ones actually
+     referenced are resolved in ONE query rather than per-edge. */
+  const selIds = new Set<string>();
+  for (const c of conns) {
+    for (const k of [c.sourceKey, c.targetKey]) {
+      const r = parseObjectKey(k);
+      if (r?.type === "selection" && r.id) selIds.add(r.id);
+    }
+  }
+  const selSurah = new Map<string, number>();
+  if (selIds.size) {
+    const segs = await db.quranSegment.findMany({
+      where: { id: { in: [...selIds] }, workspaceId },
+      select: { id: true, surahNumber: true },
+    });
+    for (const sg of segs) selSurah.set(sg.id, sg.surahNumber);
+  }
+
+  const surahOf = (key: string): number | null => {
+    const r = parseObjectKey(key);
+    if (!r) return null;
+    if (r.type === "ayah" || r.type === "surah") return r.surah ?? null;
+    return selSurah.get(r.id ?? "") ?? null;
+  };
+
+  const edges = new Map<string, { a: number; b: number; weight: number; ids: string[]; names: string[] }>();
+  const degree = new Map<number, number>();
+
+  for (const c of conns) {
+    const a = surahOf(c.sourceKey), b = surahOf(c.targetKey);
+    if (a == null || b == null) continue;      // endpoint we cannot place
+    // Undirected: normalise so 2-67 and 67-2 are the same edge.
+    const [lo, hi] = a <= b ? [a, b] : [b, a];
+    const k = `${lo}-${hi}`;
+    const e = edges.get(k) ?? { a: lo, b: hi, weight: 0, ids: [], names: [] };
+    e.weight += 1;
+    e.ids.push(c.id);
+    if (e.names.length < 5) e.names.push(c.name);
+    edges.set(k, e);
+    degree.set(lo, (degree.get(lo) ?? 0) + 1);
+    if (hi !== lo) degree.set(hi, (degree.get(hi) ?? 0) + 1);
+  }
+
+  const nodes = [...degree.entries()]
+    .map(([surah, count]) => ({ surah, count }))
+    .sort((x, y) => x.surah - y.surah);
+
+  return { nodes, edges: [...edges.values()], total: conns.length };
+}
+
 export async function getConnection(workspaceId: string, userId: string, id: string) {
   await getWorkspaceWithRole(workspaceId, userId);
   const c = await db.quranConnection.findFirst({ where: { id, workspaceId }, include: author });

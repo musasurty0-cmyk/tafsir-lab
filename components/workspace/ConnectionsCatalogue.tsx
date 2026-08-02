@@ -16,6 +16,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { parseObjectKey, type ObjectType } from "@/lib/quran-objects";
+import ConnectionsMap, { type MapNode, type MapEdge } from "./ConnectionsMap";
 
 interface Row {
   id: string;
@@ -63,6 +64,14 @@ export default function ConnectionsCatalogue({
   const [type, setType]       = useState<"" | ObjectType>("");
   const [sort, setSort]       = useState<(typeof SORTS)[number]["id"]>("updated");
   const [state, setState]     = useState<"loading" | "ready" | "error">("loading");
+  /* List and map are two ways of reading the same set. The map answers "what
+     is connected to what across the Qur'an"; the list answers "what did I
+     write about it". Neither replaces the other, so both stay. */
+  const [view, setView]       = useState<"list" | "map">("list");
+  const [map, setMap]         = useState<{ nodes: MapNode[]; edges: MapEdge[]; total: number } | null>(null);
+  const [mapState, setMapState] = useState<"idle" | "loading" | "error">("idle");
+  /** Surah focused on the map; also narrows the list beneath it. */
+  const [focusSurah, setFocusSurah] = useState<number | null>(null);
   const reqRef = useRef(0);
 
   const names = useMemo(() => {
@@ -109,6 +118,32 @@ export default function ConnectionsCatalogue({
     return () => clearTimeout(t);
   }, [load]);
 
+  /* Fetched only when the map is opened — the list view must not pay for a
+     query it never renders. */
+  useEffect(() => {
+    if (view !== "map" || map) return;
+    setMapState("loading");
+    fetch(`/api/workspaces/${workspaceId}/connections?view=map`)
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+      .then((d) => { setMap(d); setMapState("idle"); })
+      .catch(() => setMapState("error"));
+  }, [view, map, workspaceId]);
+
+  const surahLabel = useCallback(
+    (n: number) => names.get(n) ?? `Surah ${n}`, [names],
+  );
+
+  /** Focusing a Surah on the map narrows the list to it, so the two views stay
+   *  in agreement instead of showing different things at once. */
+  const shown = useMemo(() => {
+    if (focusSurah == null) return rows;
+    const inSurah = (key: string) => {
+      const r = parseObjectKey(key);
+      return r?.type === "selection" ? true : r?.surah === focusSurah;
+    };
+    return rows.filter((r) => inSurah(r.sourceKey) || inSurah(r.targetKey));
+  }, [rows, focusSurah]);
+
   const categories = useMemo(() => {
     const set = new Set<string>();
     for (const r of rows) if (r.category) set.add(r.category);
@@ -126,6 +161,36 @@ export default function ConnectionsCatalogue({
         <h1 className="cxcat-title">Connections</h1>
         <span className="cxcat-total">{total}</span>
       </header>
+
+      <div className="cxcat-views" role="group" aria-label="View">
+        {(["list", "map"] as const).map((v) => (
+          <button
+            key={v}
+            className="cxcat-view-btn"
+            data-active={view === v ? "true" : "false"}
+            onClick={() => setView(v)}
+          >
+            {v === "list" ? "List" : "Map"}
+          </button>
+        ))}
+      </div>
+
+      {view === "map" && (
+        <>
+          {mapState === "loading" && <div className="cxcat-empty">Building the map…</div>}
+          {mapState === "error" && <div className="cxcat-empty">Could not load the map.</div>}
+          {map && mapState === "idle" && (
+            <ConnectionsMap
+              nodes={map.nodes}
+              edges={map.edges}
+              total={map.total}
+              surahName={surahLabel}
+              focus={focusSurah}
+              onFocus={setFocusSurah}
+            />
+          )}
+        </>
+      )}
 
       <div className="cxcat-filters">
         <input
@@ -170,7 +235,7 @@ export default function ConnectionsCatalogue({
         </div>
       )}
 
-      {state !== "error" && rows.length === 0 && state === "ready" && (
+      {state !== "error" && shown.length === 0 && state === "ready" && (
         <div className="cxcat-empty">
           {q || category || type
             ? "No Connection matches these filters."
@@ -179,7 +244,7 @@ export default function ConnectionsCatalogue({
       )}
 
       <ul className="cxcat-list">
-        {rows.map((r) => (
+        {shown.map((r) => (
           <li key={r.id} className="cxcat-item">
             <div className="cxcat-item-top">
               <span className="cxcat-name">{r.name}</span>

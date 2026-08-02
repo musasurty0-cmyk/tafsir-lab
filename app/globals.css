@@ -6985,6 +6985,88 @@ input, textarea { font: inherit; color: inherit; }
 }
 .cxf-dupe { display: flex; flex-direction: column; gap: 10px; }
 
+/* Connection map. A fixed ring of Surahs in Qur'anic order — the layout never
+   moves, so the map becomes a place you learn rather than a picture that
+   rearranges itself on every load. */
+.cxcat-views { display: inline-flex; gap: 2px; padding: 3px; background: var(--panel); border-radius: 9px; align-self: flex-start; }
+.cxcat-view-btn {
+  border: 0; background: none; cursor: pointer;
+  padding: 5px 16px; border-radius: 6px;
+  font: inherit; font-size: 12.5px; color: var(--ink-3);
+  transition: background var(--dur-hover) var(--ease-soft), color var(--dur-hover) var(--ease-soft);
+}
+.cxcat-view-btn:hover { color: var(--ink); }
+.cxcat-view-btn[data-active="true"] {
+  background: var(--bg-elev); color: var(--ink); font-weight: 500; box-shadow: var(--shadow-sm);
+}
+
+.cxmap { position: relative; }
+.cxmap-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; flex-wrap: wrap; }
+.cxmap-stat { font-size: 11.5px; color: var(--ink-4); }
+.cxmap-clear {
+  margin-inline-start: auto;
+  border: 1px solid var(--line-strong); background: none;
+  color: var(--ink-2); font: inherit; font-size: 11.5px;
+  padding: 3px 11px; border-radius: 999px; cursor: pointer;
+}
+.cxmap-clear:hover { background: var(--hover); color: var(--ink); }
+
+.cxmap-svg { width: 100%; height: auto; display: block; max-height: 74vh; }
+.cxmap-ring { fill: none; stroke: var(--line); stroke-width: 1; }
+
+.cxmap-edge {
+  fill: none;
+  stroke: var(--accent);
+  stroke-opacity: 0.34;
+  stroke-linecap: round;
+  cursor: pointer;
+  transition: stroke-opacity var(--dur-fast) ease;
+}
+.cxmap-edge:hover, .cxmap-edge[data-hot="true"] { stroke-opacity: 0.95; }
+/* Dimmed rather than hidden: a focused Surah should be read against the whole
+   map, not against an empty ring. */
+.cxmap-edge[data-dim="true"] { stroke-opacity: 0.06; pointer-events: none; }
+
+.cxmap-node[data-dim="true"] { opacity: 0.25; }
+.cxmap-dot {
+  fill: var(--accent);
+  cursor: pointer;
+  transition: fill var(--dur-fast) ease, r var(--dur-fast) ease;
+}
+.cxmap-dot:hover { fill: var(--accent-ink, var(--accent)); }
+.cxmap-dot[data-focused="true"] { fill: var(--ink); }
+.cxmap-label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  fill: var(--ink-4);
+  cursor: pointer;
+  dominant-baseline: middle;
+}
+.cxmap-label:hover { fill: var(--ink); }
+
+.cxmap-tip {
+  position: absolute; z-index: 5;
+  transform: translate(12px, 12px);
+  pointer-events: none;
+  background: var(--bg-elev);
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  box-shadow: var(--shadow-md);
+  padding: 8px 11px; max-width: 260px;
+}
+.cxmap-tip-pair { font-size: 11.5px; color: var(--ink-3); margin-bottom: 3px; }
+.cxmap-tip-name { font-size: 12.5px; color: var(--ink); }
+.cxmap-tip-more { font-size: 11px; color: var(--ink-4); margin-top: 2px; }
+.cxmap-empty { padding: 40px 4px; text-align: center; font-size: 13px; color: var(--ink-4); }
+.cxmap-empty code {
+  font-family: var(--font-mono); font-size: 11.5px;
+  background: var(--panel); padding: 1px 5px; border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cxmap-edge, .cxmap-dot { transition: none; }
+}
+
 /* Connections catalogue — a full page, because it is a place you go to look
    for something rather than a panel that describes what is already open. */
 .cxcat {
