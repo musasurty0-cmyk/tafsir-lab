@@ -62,6 +62,7 @@ import {
 import CommandList, { type CommandListHandle } from "./CommandList";
 import { getUserColor } from "./RemoteCursorsExtension";
 import SelectionToolbar from "./SelectionToolbar";
+import SlashHelp from "./SlashHelp";
 import { useEditorCtxOptional } from "./EditorContext";
 import TafsirVersePicker from "./TafsirVersePicker";
 import QuranSearch from "./QuranSearch";
@@ -823,6 +824,21 @@ export default function PageEditor({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editor, versePicker]);
 
+  /* Choosing a command in the /help sheet types its trigger back into the
+     document. Inserting the TEXT rather than executing the command keeps the
+     user in the normal flow — the slash menu opens on it, and they can still
+     add an argument like "2:255" before committing. */
+  useEffect(() => {
+    if (!editor) return;
+    const onInsert = (e: Event) => {
+      const id = (e as CustomEvent<{ id?: string }>).detail?.id;
+      if (!id) return;
+      editor.chain().focus().insertContent(`/${id}`).run();
+    };
+    window.addEventListener("tl:slash-insert", onInsert);
+    return () => window.removeEventListener("tl:slash-insert", onInsert);
+  }, [editor]);
+
   // ── Render ────────────────────────────────────────────────────────────
 
   return (
@@ -846,6 +862,7 @@ export default function PageEditor({
         <EditorContent editor={editor} />
       </div>
       <SelectionToolbar editor={editor} />
+      <SlashHelp />
 
       {/* Freeform movable text containers — every one (including a freshly
           clicked temp) is the SAME full FreeTextBox: top bar, drag, resize,

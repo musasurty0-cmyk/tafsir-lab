@@ -110,6 +110,23 @@ export function buildCommands(): SlashCommandItem[] {
 
   return [
     {
+      /* Lists every command in THIS registry, so it cannot fall out of date:
+         adding or removing a command above changes the help sheet with it.
+         Rendered by SlashHelp, which listens for the event — the command runs
+         inside ProseMirror and has no way to mount React UI itself. */
+      id:          "help",
+      title:       "All commands",
+      description: "Show every slash command available here",
+      icon:        "❓",
+      aliases:     ["commands", "?", "list"],
+      execute(editor, range) {
+        editor.chain().focus().deleteRange(range).run();
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("tl:slash-help"));
+        }
+      },
+    },
+    {
       /* /link creates a permanent CONNECTION between two Quranic objects.
          Unlike /ayah it embeds nothing on its own — the editor card it leaves
          behind is a reference to a record that lives outside the document, so
