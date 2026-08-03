@@ -3,6 +3,7 @@
  *
  * Update a workspace:
  *   { name: string }                       — rename (owner)
+ *   { icon: string | null }                 — set/clear icon (admin+)
  *   { membersCanManagePages: boolean }      — permission toggle (admin+)
  */
 
@@ -18,12 +19,23 @@ export async function PATCH(
   try {
     const { workspaceId } = await params;
     const { userId } = await getSession();
-    const body = await req.json() as { name?: unknown; membersCanManagePages?: unknown };
+    const body = await req.json() as {
+      name?: unknown; membersCanManagePages?: unknown; icon?: unknown;
+    };
 
     // Permission policy toggle (admins).
     if (typeof body.membersCanManagePages === "boolean") {
       const result = await WorkspacesService.setMembersCanManagePages(
         workspaceId, userId, body.membersCanManagePages,
+      );
+      return NextResponse.json({ workspace: result });
+    }
+
+    /* Icon (admins). `null` is meaningful — it clears the icon back to
+       initials — so this tests for the KEY, not for a truthy value. */
+    if ("icon" in body && (typeof body.icon === "string" || body.icon === null)) {
+      const result = await WorkspacesService.setWorkspaceIcon(
+        workspaceId, userId, body.icon as string | null,
       );
       return NextResponse.json({ workspace: result });
     }

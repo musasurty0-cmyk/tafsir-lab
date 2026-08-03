@@ -384,6 +384,7 @@ export default function WorkspaceHome({
         membersCanManagePages={workspace.membersCanManagePages}
         currentUserId={workspace.ownerId}
         currentUserRole={role}
+        initialIcon={(workspace as { icon?: string | null }).icon ?? null}
         onClose={() => setSettingsOpen(false)}
         onRenamed={(name) => {
           setWsName(name);

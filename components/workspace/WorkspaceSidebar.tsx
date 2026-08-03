@@ -12,6 +12,7 @@
 import { useT } from "@/lib/i18n/LocaleProvider";
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { workspaceInitials } from "@/lib/workspace-icon";
 import { ChevronRight, ChevronLeft, Search, X, Plus, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import type { Chapter } from "@/lib/types";
 import type { ProgressStatus } from "@/lib/services/progress.service";
@@ -75,6 +76,7 @@ interface PageSummary {
 interface Props {
   workspaceId:       string;
   workspaceName:     string;
+  workspaceIcon?:    string | null;
   chapter:           Chapter;
   pages:             PageSummary[];
   activePageId:      string;
@@ -223,6 +225,7 @@ function PageRow({
 export default function WorkspaceSidebar({
   workspaceId,
   workspaceName,
+  workspaceIcon,
   chapter,
   pages,
   activePageId,
@@ -331,8 +334,10 @@ export default function WorkspaceSidebar({
           onClick={() => router.push(`/workspaces/${workspaceId}`)}
           title="Back to surah grid"
         >
+          {/* Same mark as the rail: a naive slice(0,2) gave "YO" for
+              "Youth Majlis" and cut multi-byte names through a surrogate. */}
           <div className="ws-switcher-avatar">
-            {workspaceName.slice(0, 2).toUpperCase()}
+            {workspaceIcon || workspaceInitials(workspaceName)}
           </div>
           <div className="ws-switcher-name">{workspaceName}</div>
           <ChevronRight size={12} style={{ color: "var(--ink-4)", transform: "rotate(90deg)" }} />

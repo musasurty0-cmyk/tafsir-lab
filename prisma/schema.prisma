@@ -48,6 +48,10 @@ model Workspace {
   kind       String   @default("study")
   ownerId    String   @db.Uuid
   avatarUrl  String?
+  // A single glyph shown in the rail instead of the workspace's initials.
+  // Auto-assigned at creation so a new workspace is never anonymous; the
+  // owner can change it, or clear it to fall back to initials.
+  icon       String?
   inviteCode String?  @unique
   createdAt  DateTime @default(now()) @db.Timestamptz(6)
 

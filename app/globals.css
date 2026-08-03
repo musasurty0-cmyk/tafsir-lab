@@ -10072,3 +10072,46 @@ input, textarea { font: inherit; color: inherit; }
 .ayah-block-node [dir="rtl"].ayah-block-arabic {
   font-family: var(--font-uthmanic);
 }
+
+/* ── Workspace identity marks ──────────────────────────────────────────────
+   Initials by default, an assigned glyph if there is one. A tone per
+   workspace keeps several of them distinguishable in the rail even when all
+   are showing letters. */
+.rail-ws[data-glyph="true"] { font-size: 17px; letter-spacing: 0; }
+.rail-ws[data-tone="0"] { --ws-tone: oklch(0.62 0.09 160); }
+.rail-ws[data-tone="1"] { --ws-tone: oklch(0.60 0.09 245); }
+.rail-ws[data-tone="2"] { --ws-tone: oklch(0.64 0.09  70); }
+.rail-ws[data-tone="3"] { --ws-tone: oklch(0.60 0.09 320); }
+.rail-ws[data-tone="4"] { --ws-tone: oklch(0.62 0.08  25); }
+.rail-ws[data-tone="5"] { --ws-tone: oklch(0.60 0.08 200); }
+/* The tone is carried on the ACTIVE state and the hover, not as a permanent
+   fill: a rail of solid colour blocks would shout louder than the document. */
+.rail-ws[data-active="true"] {
+  box-shadow: inset 0 0 0 1.5px var(--ws-tone, var(--accent));
+  color: var(--ws-tone, var(--accent-ink));
+}
+
+/* Picker in workspace settings */
+.ws-icon-picker { display: flex; align-items: flex-start; gap: var(--sp-3); margin-bottom: var(--sp-3); }
+.ws-icon-current {
+  width: 40px; height: 40px; flex-shrink: 0;
+  display: grid; place-items: center;
+  border: 1px solid var(--line-strong); border-radius: var(--radius);
+  background: var(--panel);
+  font-size: 19px; font-weight: 600; color: var(--ink);
+}
+.ws-icon-grid { display: flex; flex-wrap: wrap; gap: 4px; }
+.ws-icon-opt {
+  width: 30px; height: 30px;
+  display: grid; place-items: center;
+  border: 1px solid transparent; border-radius: var(--radius-sm);
+  background: none; cursor: pointer; font-size: 15px;
+  transition: background var(--dur-fast) ease, border-color var(--dur-fast) ease;
+}
+.ws-icon-opt:hover:not(:disabled) { background: var(--hover); }
+.ws-icon-opt[data-active="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.ws-icon-opt:disabled { opacity: 0.5; cursor: default; }
+.ws-icon-opt:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+/* The "use initials" option shows the actual initials, so the choice is
+   between two things you can see rather than a glyph and an abstraction. */
+.ws-icon-opt--initials { font-size: 11px; font-weight: 600; letter-spacing: 0.02em; }

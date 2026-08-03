@@ -14,6 +14,7 @@
  */
 
 import { pushWithSplash } from "@/lib/nav-splash";
+import { workspaceInitials, workspaceTone } from "@/lib/workspace-icon";
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import NewWorkspaceModal from "@/components/NewWorkspaceModal";
@@ -42,6 +43,8 @@ interface WorkspaceItem {
   id:   string;
   name: string;
   type: string;
+  /** Assigned glyph. Null falls back to the workspace's initials. */
+  icon?: string | null;
 }
 
 interface Props {
@@ -68,7 +71,7 @@ export default function Rail({ activeWorkspaceId }: Props) {
       .catch(() => {});
   }, []);
 
-  const initials = (name: string) => name.slice(0, 2).toUpperCase();
+
 
   return (
     <>
@@ -101,9 +104,13 @@ export default function Rail({ activeWorkspaceId }: Props) {
             className="rail-ws"
             data-active={ws.id === activeWorkspaceId ? "true" : "false"}
             title={ws.name}
+            /* A tone per workspace so several of them stay distinguishable at
+               a glance, even when all are showing initials. */
+            data-tone={workspaceTone(ws.id, ws.name)}
+            data-glyph={ws.icon ? "true" : "false"}
             onClick={() => pushWithSplash(router, `/workspaces/${ws.id}`)}
           >
-            {initials(ws.name)}
+            {ws.icon || workspaceInitials(ws.name)}
           </button>
         ))}
 

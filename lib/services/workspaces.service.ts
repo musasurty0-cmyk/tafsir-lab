@@ -11,6 +11,7 @@
  */
 
 import { db } from "@/lib/db";
+import { autoIcon } from "@/lib/workspace-icon";
 import { log } from "./activity.service";
 import { randomBytes } from "crypto";
 
@@ -140,7 +141,14 @@ export async function createWorkspace(
 ) {
   const workspace = await db.$transaction(async (tx) => {
     const ws = await tx.workspace.create({
-      data: { name: name.trim(), type, kind, ownerId: userId },
+      /* An icon is assigned here rather than left null, so a workspace is
+         never an anonymous square in the rail. Derived from the name, so the
+         same name always gets the same mark; the owner can change it or clear
+         it back to initials. */
+      data: {
+        name: name.trim(), type, kind, ownerId: userId,
+        icon: autoIcon(name),
+      },
     });
     await tx.workspaceMember.create({
       data: { workspaceId: ws.id, userId, role: "owner" },
@@ -180,6 +188,33 @@ export async function createWorkspace(
 /**
  * Rename a workspace. Only the owner may do this.
  */
+/**
+ * Set (or clear) the workspace icon.
+ *
+ * Admins, not just the owner: the icon is a navigation aid rather than
+ * ownership. Passing null clears it, which falls the rail back to initials.
+ */
+export async function setWorkspaceIcon(
+  workspaceId: string,
+  userId: string,
+  icon: string | null,
+) {
+  const { role } = await getWorkspaceWithRole(workspaceId, userId);
+  if (!isAdmin(role)) {
+    throw new WorkspaceError("Only an admin can change the workspace icon", "FORBIDDEN");
+  }
+  /* One grapheme, so the rail can never be knocked out of shape by a pasted
+     sentence. Counted by code POINTS: an emoji is several code units. */
+  const trimmed = icon?.trim() ?? "";
+  const glyph = trimmed ? [...trimmed].slice(0, 2).join("") : null;
+
+  return db.workspace.update({
+    where: { id: workspaceId },
+    data:  { icon: glyph },
+    select: { id: true, name: true, icon: true },
+  });
+}
+
 export async function renameWorkspace(
   workspaceId: string,
   userId: string,

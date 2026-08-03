@@ -184,6 +184,7 @@ export default function BoardsHome({ workspaceId, workspace, role, boards: initi
           currentUserId={workspace.ownerId}
           currentUserRole={role}
           onClose={() => setSettingsOpen(false)}
+          initialIcon={(workspace as { icon?: string | null }).icon ?? null}
           onRenamed={(name) => { setWsName(name); setSettingsOpen(false); }}
           onDeleted={() => { setSettingsOpen(false); pushWithSplash(router, "/home"); }}
         />
