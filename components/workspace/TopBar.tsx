@@ -16,21 +16,20 @@ import { useT } from "@/lib/i18n/LocaleProvider";
 
 // ── Icons ──────────────────────────────────────────────────────────────────
 
+/* Editor = typing, so a keyboard. The pen moved to Canvas, where you draw. */
+const KeyboardIcon = ({ size = 17 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="2" y="6" width="20" height="12" rx="2"/>
+    <path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M8 14h8"/>
+  </svg>
+);
+
 const PenIcon = ({ size = 17 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
     stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
     <path d="M12 20h9"/>
     <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
-  </svg>
-);
-
-const GridIcon = ({ size = 17 }: { size?: number }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
-    stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="3"  y="3"  width="7" height="7"/>
-    <rect x="14" y="3"  width="7" height="7"/>
-    <rect x="3"  y="14" width="7" height="7"/>
-    <rect x="14" y="14" width="7" height="7"/>
   </svg>
 );
 
@@ -173,7 +172,7 @@ export default function TopBar({
             title="Document view"
             aria-label="Document view"
           >
-            <PenIcon />
+            <KeyboardIcon />
           </button>
           <button
             className="mode-btn"
@@ -182,7 +181,7 @@ export default function TopBar({
             title="Spatial canvas"
             aria-label="Spatial canvas"
           >
-            <GridIcon />
+            <PenIcon />
           </button>
           <button
             className="mode-btn mode-btn--split"

@@ -235,8 +235,21 @@ export default function ConnectionsMap({
         })()}
       </div>
 
-      <svg viewBox={`0 0 ${SIZE} ${SIZE}`} className="cxmap-svg cxmap-svg--enter" role="img"
+      <svg viewBox={`0 0 ${SIZE} ${SIZE}`} className="cxmap-svg" role="img"
         aria-label={`Connection map: ${total} Connections across ${nodes.length} Surahs`}>
+
+        {/* The build-in lives on an inner <g>, not on the <svg> itself: a CSS
+            transform on the SVG root is applied to the element BOX, so the
+            rotation had nothing to turn. A group transforms in the SVG's own
+            coordinate space, about the ring's centre.
+            Keyed on the data so the map re-plays when it actually arrives —
+            the <svg> mounts before the fetch resolves, and the animation was
+            being spent on an empty ring. */}
+        <g
+          className="cxmap-build"
+          key={`${nodes.length}:${edges.length}`}
+          style={{ transformOrigin: `${CX}px ${CY}px` }}
+        >
 
         {/* ── Group arcs ── */}
         <g>
@@ -315,6 +328,7 @@ export default function ConnectionsMap({
               onPointerLeave={() => { setHoverEdge(null); setTip(null); }}
             />
           ))}
+        </g>
         </g>
       </svg>
 

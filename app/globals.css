@@ -67,12 +67,20 @@
   --cursor-cross: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='19' height='19'><g stroke='%23111' stroke-width='1.8' fill='none'><path d='M9.5 1v17M1 9.5h17'/></g></svg>") 9 9, crosshair;
   --cursor-text:  url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='17' height='17'><g stroke='%23111' stroke-width='1.4' fill='none'><path d='M5.5 2h6M5.5 15h6M8.5 2v13'/></g></svg>") 8 8, text;
 
-  --font-sans:     "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  /* Calibri for the interface AND for Arabic typed normally — it covers both
+     scripts, so a mixed note does not switch face mid-sentence. Carlito is the
+     metric-compatible free clone, so non-Windows machines lay out identically
+     rather than reflowing. */
+  --font-sans:     "Calibri", "Carlito", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-serif:    "Source Serif 4", Georgia, serif;
   --font-mono:     "JetBrains Mono", ui-monospace, monospace;
   --font-arabic:   "Amiri Quran", "Amiri", serif;
   /* Uthmanic Hafs — used for Mushaf canvas only */
-  --font-uthmanic: "Scheherazade New", "Amiri Quran", "Amiri", serif;
+  /* Uthmani script for embedded āyāt. The King Fahd Complex face is not
+     redistributable, so this is the closest available Uthmani-style Naskh
+     already loaded; drop the KFGQPC file into public/fonts and add it to the
+     head of this stack to use the real thing. */
+  --font-uthmanic: "KFGQPC Uthmanic Script HAFS", "Scheherazade New", "Amiri Quran", "Amiri", serif;
 
   --row-h:        32px;
   /* ── Reading typography scale ─────────────────────────────────────────
@@ -3193,7 +3201,10 @@ input, textarea { font: inherit; color: inherit; }
   display: inline-flex;
   transform: scaleX(var(--qcf-fit, 1));
   transform-origin: center;
-  will-change: transform;
+  /* NO will-change. Promoting this to its own GPU layer rasterises the glyphs
+     once and then stretches the cached texture, which is exactly the blur the
+     comment on .qcf-page warns about. Without promotion the browser re-renders
+     the text at the final scale and it stays sharp. */
 }
 
 /* ── Individual glyph spans ─────────────────────────────────────────────── */
@@ -5128,7 +5139,7 @@ input, textarea { font: inherit; color: inherit; }
 .ayah-block-node {
   display: flex;
   gap: 0;
-  margin: 28px 0;
+  margin: 16px 0;
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   background: transparent;
@@ -5169,7 +5180,7 @@ input, textarea { font: inherit; color: inherit; }
 .ayah-block-inner {
   flex: 1;
   min-width: 0;
-  padding: 10px 16px 14px 16px;
+  padding: 7px 13px 9px;
 }
 
 /* Header row */
@@ -5207,21 +5218,25 @@ input, textarea { font: inherit; color: inherit; }
 .ayah-block-tool[data-active="true"] { background: var(--active); color: var(--accent-ink); }
 .ayah-block-tool--danger:hover { background: oklch(0.95 0.03 20); color: oklch(0.55 0.12 20); }
 
-/* Arabic text */
+/* Arabic text.
+   Sized down from 26px/2.2: an embedded āyah is a citation inside a note, not
+   a reading surface, and at the old size two of them filled a screen. 2.2 line
+   height was also more than the Uthmani face needs — 1.95 still clears the
+   tashkīl. */
 .ayah-block-arabic {
-  font-family: var(--font-arabic);
-  font-size: calc(26px * var(--fs-arabic)); line-height: 2.2;
+  font-family: var(--font-uthmanic);
+  font-size: calc(21px * var(--fs-arabic)); line-height: 1.95;
   text-align: right; direction: rtl;
   color: var(--ink);
-  margin-bottom: 12px;
+  margin-bottom: 7px;
 }
 
 /* Translation */
 .ayah-block-translation {
-  font-family: var(--font-serif);
-  font-size: 14.5px; line-height: 1.7;
+  font-family: var(--font-sans);
+  font-size: 13px; line-height: 1.55;
   color: var(--ink-2);
-  padding-top: 10px;
+  padding-top: 7px;
   border-top: 1px solid var(--line);
 }
 
@@ -9994,22 +10009,21 @@ input, textarea { font: inherit; color: inherit; }
   to   { stroke-dashoffset: 0; }
 }
 
-.cxmap-svg--enter {
+.cxmap-build {
   animation: cxmap-wheel-in 620ms var(--ease-flow) both;
-  transform-origin: 50% 50%;
 }
 /* Segments follow the wheel, ~4ms apart so all 114 land within half a second.
    fill-mode BACKWARDS, not both: each segment's inline opacity encodes how
    many Connections touch that surah, and `both` would hold the keyframe's
    opacity:1 afterwards and flatten that signal away. */
-.cxmap-svg--enter .cxmap-seg {
+.cxmap-build .cxmap-seg {
   animation: cxmap-seg-in 260ms var(--ease-soft) backwards;
   animation-delay: calc(220ms + var(--i, 0) * 3ms);
 }
 /* Links draw last, along their own length. The dash length is generous — a
    chord across the ring is under 700 units — and any excess simply means the
    line is already fully drawn when the animation ends. */
-.cxmap-svg--enter .cxmap-edge {
+.cxmap-build .cxmap-edge {
   --len: 760;
   stroke-dasharray: var(--len);
   animation: cxmap-draw 720ms var(--ease-flow) both;
@@ -10020,10 +10034,41 @@ input, textarea { font: inherit; color: inherit; }
 
 /* Respect the system setting: the map still assembles, but instantly. */
 @media (prefers-reduced-motion: reduce) {
-  .cxmap-svg--enter,
-  .cxmap-svg--enter .cxmap-seg,
-  .cxmap-svg--enter .cxmap-edge {
+  .cxmap-build,
+  .cxmap-build .cxmap-seg,
+  .cxmap-build .cxmap-edge {
     animation: none;
     stroke-dasharray: none;
   }
+}
+
+/* ── Editor typography ─────────────────────────────────────────────────────
+   One face for prose in the editor, Latin and Arabic alike: Calibri covers
+   both, so a mixed note does not change face mid-sentence. The Muṣḥaf is
+   untouched — its QCF glyph metrics ARE the page layout. */
+.page-editor-content,
+.free-textbox-input,
+.free-textbox .page-editor-content {
+  font-family: var(--font-sans);
+}
+/* Arabic typed into a note reads in the same face as the English beside it. */
+.page-editor-content [dir="rtl"],
+.page-editor-content [lang="ar"],
+.page-editor-content blockquote[dir="rtl"] {
+  font-family: var(--font-sans);
+}
+
+/* An embedded /tafsir block is prose, so it follows the editor face. */
+.tafsir-block-content,
+.tafsir-block-content p,
+.tafsir-block-content [dir="rtl"],
+.tafsir-block-content [lang="ar"] {
+  font-family: var(--font-sans);
+}
+
+/* An embedded /ayah block is scripture, so it gets the Uthmani face — the one
+   place in a note where the script itself matters. */
+.ayah-block-arabic,
+.ayah-block-node [dir="rtl"].ayah-block-arabic {
+  font-family: var(--font-uthmanic);
 }
