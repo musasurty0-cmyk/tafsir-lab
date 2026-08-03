@@ -11,7 +11,7 @@ import type { Verse } from "@/lib/types";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
-type Tab = "commentary" | "wbw" | "translations" | "audio";
+type Tab = "commentary" | "wbw" | "info";
 
 interface TafsirEntry {
   source:       { slug: string; name: string; language: string };
@@ -19,6 +19,14 @@ interface TafsirEntry {
   contentHtml?: string;
   fromCache:    boolean;
   error?:       string;
+}
+
+interface SurahInfo {
+  surahNumber: number;
+  surahName:   string;
+  html:        string;
+  short:       string;
+  source:      string;
 }
 
 interface SourceMeta {
@@ -41,21 +49,6 @@ interface Props {
 function stripTags(html: string): string {
   return html.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
 }
-
-// ── Static lists ───────────────────────────────────────────────────────────
-
-const TRANSLATIONS_LIST = [
-  { name: "Saheeh International", sub: "EN · literal",     active: true },
-  { name: "Abdel Haleem",         sub: "EN · contemporary"              },
-  { name: "M.A.S. Pickthall",    sub: "EN · early 20th c."             },
-  { name: "Yusuf Ali",            sub: "EN · explanatory"               },
-];
-
-const RECITERS = [
-  { name: "Mishary Rashid Alafasy",        sub: "Kuwait · Ḥafṣ ʿan ʿĀṣim" },
-  { name: "ʿAbd al-Bāsiṭ ʿAbd al-Ṣamad", sub: "Egypt · murattal"          },
-  { name: "Maher Al Muaiqly",              sub: "Makkah · tarāwīḥ"          },
-];
 
 const LS_SOURCE_KEY = "tl-tafsir-source";
 const LS_LANG_KEY   = "tl-tafsir-lang";
@@ -84,6 +77,8 @@ export default function TafsirDrawer({ open, verseKey, verses, onClose }: Props)
 
   // ── Fetch state ──────────────────────────────────────────────────────────
   const [entry,   setEntry]   = useState<TafsirEntry | null>(null);
+  const [info,      setInfo]      = useState<SurahInfo | null>(null);
+  const [infoState, setInfoState] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState<string | null>(null);
 
@@ -178,6 +173,26 @@ export default function TafsirDrawer({ open, verseKey, verses, onClose }: Props)
       .finally(() => setLoading(false));
   }, [activeAyah, sourceSlug, open]);
 
+  /* Surah information. Keyed on the SURAH, not the āyah, so moving between
+     verses of the same Surah does not refetch — and it is only fetched when
+     the section is actually opened. */
+  const surahOfAyah = activeAyah ? parseInt(activeAyah.split(":")[0], 10) : null;
+  useEffect(() => {
+    if (tab !== "info" || !open || !surahOfAyah) return;
+    if (info?.surahNumber === surahOfAyah) return;
+    let live = true;
+    setInfoState("loading");
+    fetch(`/api/surah-info/${surahOfAyah}`)
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+      .then((d: { info?: SurahInfo }) => {
+        if (!live) return;
+        if (!d.info) { setInfoState("error"); return; }
+        setInfo(d.info); setInfoState("ready");
+      })
+      .catch(() => { if (live) setInfoState("error"); });
+    return () => { live = false; };
+  }, [tab, open, surahOfAyah, info?.surahNumber]);
+
   // ── Derived ──────────────────────────────────────────────────────────────
   const activeVerse = useMemo(
     () => verses.find((v) => v.verse_key === activeAyah) ?? null,
@@ -195,8 +210,10 @@ export default function TafsirDrawer({ open, verseKey, verses, onClose }: Props)
   const TABS: { id: Tab; label: string }[] = [
     { id: "commentary",   label: t("drawer.commentary")   },
     { id: "wbw",          label: t("drawer.wordByWord") },
-    { id: "translations", label: t("drawer.translations") },
-    { id: "audio",        label: t("drawer.recitation")   },
+    /* Surah Info is NOT a tafsīr source: it describes the Surah as a whole
+       rather than commenting on this āyah, so it gets its own section instead
+       of being mixed into the commentary. */
+    { id: "info",         label: "Surah Info" },
   ];
 
   // ── Render ───────────────────────────────────────────────────────────────
@@ -399,39 +416,35 @@ export default function TafsirDrawer({ open, verseKey, verses, onClose }: Props)
             )
           )}
 
-          {/* ── Translations ── */}
-          {tab === "translations" && (
-            <div className="lang-list">
-              {TRANSLATIONS_LIST.map((t) => (
-                <div
-                  key={t.name}
-                  className="lang-item lang-item--static"
-                  data-active={t.active ? "true" : "false"}
-                >
-                  <div>
-                    <div className="lang-item-name">{t.name}</div>
-                    <div className="lang-item-sub">{t.sub}</div>
-                  </div>
-                  {t.active && <span className="lang-item-active-badge">active</span>}
+          {/* ── Surah Info ── */}
+          {tab === "info" && (
+            <div className="surah-info">
+              {infoState === "loading" && (
+                <div className="drawer-skeleton">
+                  {[70, 92, 84, 60, 88].map((w, i) => (
+                    <div key={i} className="drawer-sk-line" style={{ width: `${w}%` }} />
+                  ))}
                 </div>
-              ))}
-              <p className="drawer-coming-soon">Translation switching — coming soon.</p>
-            </div>
-          )}
-
-          {/* ── Audio ── */}
-          {tab === "audio" && (
-            <div className="audio-list">
-              {RECITERS.map((r, i) => (
-                <div key={i} className="lang-item">
-                  <div>
-                    <div className="lang-item-name">{r.name}</div>
-                    <div className="lang-item-sub">{r.sub}</div>
+              )}
+              {infoState === "error" && (
+                <div className="drawer-error">Surah information could not be loaded.</div>
+              )}
+              {infoState === "ready" && info && (
+                <>
+                  <div className="surah-info-head">
+                    <h2 className="surah-info-name">
+                      {info.surahName}
+                      <span className="surah-info-num">Surah {info.surahNumber}</span>
+                    </h2>
+                    <p className="surah-info-source">{info.source}</p>
                   </div>
-                  <span className="lang-item-sub lang-item-soon">soon</span>
-                </div>
-              ))}
-              <p className="drawer-coming-soon">Audio recitation — coming soon.</p>
+                  <div
+                    className="surah-info-body commentary-body"
+                    dir="auto"
+                    dangerouslySetInnerHTML={{ __html: info.html }}
+                  />
+                </>
+              )}
             </div>
           )}
 

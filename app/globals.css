@@ -10,8 +10,8 @@
   --panel-2:     oklch(0.945 0.005 80);
   --ink:         oklch(0.22 0.012 80);
   --ink-2:       oklch(0.38 0.012 80);
-  --ink-3:       oklch(0.56 0.01 80);
-  --ink-4:       oklch(0.72 0.008 80);
+  --ink-3:       oklch(0.545 0.01 80);
+  --ink-4:       oklch(0.643 0.008 80);
   --line:        oklch(0.22 0.012 80 / 0.09);
   --line-strong: oklch(0.22 0.012 80 / 0.16);
   --hover:       oklch(0.22 0.012 80 / 0.045);
@@ -115,16 +115,18 @@
 
 /* Dark theme */
 [data-theme="dark"] {
-  /* Neutral, not blue. Every surface was hue 250 at chroma 0.008-0.01 — small
-     numbers, but spread across full-screen backgrounds they gave the whole UI
-     a blue cast. Chroma 0 throughout: black, and progressively lighter shades
-     of black for the raised surfaces. Only the accent carries colour now. */
-  --bg:       oklch(0.15 0 0);       --bg-elev: oklch(0.185 0 0);
-  --panel:    oklch(0.212 0 0);      --panel-2: oklch(0.252 0 0);
-  --ink:      oklch(0.94 0 0);       --ink-2:   oklch(0.78 0 0);
-  --ink-3:    oklch(0.62 0 0);       --ink-4:   oklch(0.47 0 0);
-  --line:       oklch(0.94 0 0 / 0.09);
-  --line-strong:oklch(0.94 0 0 / 0.16);
+  /* Neutral, not blue, and no longer near-black. Chroma stays 0 — the blue
+     cast is gone for good — but the floor lifts off pure black: a full-screen
+     #0b0b0b reads as a hole rather than a surface, and every raised element
+     had to fight it. These are softer dark neutrals with WIDER gaps between
+     steps, so the page, the rails, the headers and the working area separate
+     by tone instead of by a border on every edge. */
+  --bg:       oklch(0.205 0 0);      --bg-elev: oklch(0.245 0 0);
+  --panel:    oklch(0.275 0 0);      --panel-2: oklch(0.315 0 0);
+  --ink:      oklch(0.95 0 0);       --ink-2:   oklch(0.80 0 0);
+  --ink-3:    oklch(0.665 0 0);      --ink-4:   oklch(0.565 0 0);
+  --line:       oklch(0.95 0 0 / 0.07);
+  --line-strong:oklch(0.95 0 0 / 0.13);
   --hover:      oklch(0.94 0 0 / 0.05);
   --active:     oklch(0.94 0 0 / 0.09);
   --shadow-sm: 0 1px 2px rgba(0,0,0,0.4);
@@ -149,10 +151,11 @@
   --cursor-cross: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='19' height='19'><g stroke='%23f4f4f5' stroke-width='1.8' fill='none'><path d='M9.5 1v17M1 9.5h17'/></g></svg>") 9 9, crosshair;
   --cursor-text:  url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='17' height='17'><g stroke='%23f4f4f5' stroke-width='1.4' fill='none'><path d='M5.5 2h6M5.5 15h6M8.5 2v13'/></g></svg>") 8 8, text;
 
-  /* Black sheet in dark mode. A white Mushaf page on a dark workspace was the
-     single brightest thing on screen, which is exactly backwards at night. */
+  /* The reading sheet stays the DARKEST surface — a white Mushaf on a dark
+     workspace is backwards at night — but it is no longer pure #000, which was
+     the last unrelated near-black tone left once the surfaces were softened. */
   --danger:      oklch(0.72 0.15 25);
-  --paper:      #000000;
+  --paper:      oklch(0.155 0 0);
   --paper-ink:  oklch(0.93 0 0);
   --paper-line: oklch(0.93 0 0 / 0.14);
   --paper-wash: oklch(0.93 0 0 / 0.04);
@@ -9587,3 +9590,29 @@ input, textarea { font: inherit; color: inherit; }
 }
 .page-editor-content .tableWrapper { overflow-x: visible; }
 .page-editor-content.resize-cursor { cursor: col-resize; }
+
+/* ── Surah Info ────────────────────────────────────────────────────────────
+   A separate section, not a tafsīr source. Styled as a reference note rather
+   than as commentary so it never reads as a mufassir's voice. */
+.surah-info-head { margin: 0 0 var(--sp-5); }
+.surah-info-name {
+  font-family: var(--font-serif);
+  font-size: 17px; font-weight: 600; color: var(--ink);
+  line-height: 1.25; margin: 0;
+  display: flex; align-items: baseline; gap: var(--sp-3); flex-wrap: wrap;
+}
+.surah-info-num {
+  font-size: 11.5px; font-weight: 400; color: var(--ink-3);
+  font-family: var(--font-sans);
+}
+.surah-info-source {
+  font-size: 11.5px; color: var(--ink-3);
+  margin: var(--sp-1) 0 0;
+}
+/* Reuses .commentary-body typography for headings, lists and paragraphs, so
+   the imported <h2>/<p>/<ol> structure gets the same hierarchy as tafsīr text
+   without duplicating a second set of rules. */
+.surah-info-body a {
+  color: var(--accent-ink);
+  text-decoration: underline; text-underline-offset: 2px;
+}
