@@ -75,7 +75,7 @@ export async function POST(
       return NextResponse.json({ error: "Invalid surahNumber" }, { status: 400 });
     }
 
-    const body = await req.json() as { title?: unknown };
+    const body = await req.json() as { title?: unknown; tiptapContent?: unknown };
     if (!body.title || typeof body.title !== "string" || !body.title.trim()) {
       return NextResponse.json({ error: "title is required" }, { status: 400 });
     }
@@ -90,7 +90,9 @@ export async function POST(
       return NextResponse.json({ error: "Surah session not started" }, { status: 404 });
     }
 
-    const page = await PagesService.createPage(workspaceSurah.id, userId, body.title);
+    const page = await PagesService.createPage(
+      workspaceSurah.id, userId, body.title, body.tiptapContent,
+    );
     return NextResponse.json({ page }, { status: 201 });
   } catch (err) {
     if (err instanceof WorkspacesService.WorkspaceError) {

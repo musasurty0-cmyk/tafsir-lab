@@ -192,6 +192,11 @@ export async function createPage(
   workspaceSurahId: string,
   userId: string,
   title: string,
+  /* Optional starting document. Used to seed demo/tutorial pages with real
+     notes; the editor already fills an empty Yjs fragment from tiptapContent,
+     so seeded content arrives through the normal path rather than a special
+     rendering case. */
+  tiptapContent?: unknown,
 ) {
   const ws = await db.workspaceSurah.findUnique({
     where:   { id: workspaceSurahId },
@@ -220,6 +225,7 @@ export async function createPage(
       orderIndex,
       status:     "draft",
       createdById: userId,
+      ...(tiptapContent ? { tiptapContent: tiptapContent as object } : {}),
     },
     select: {
       id:             true,

@@ -16,6 +16,7 @@
  */
 
 import { pushWithSplash } from "@/lib/nav-splash";
+import { fatihaNotesDoc, DEMO_CONNECTIONS } from "@/lib/demo/fatiha-notes";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { getTour, setTour, clearTour, type TourState } from "@/lib/tour";
@@ -40,7 +41,7 @@ const STEPS: readonly {
   },
   {
     title: "Write your tafsīr",
-    body:  "Your writing space. Type '/' for commands — /ayah 1:1 embeds a verse, and /help lists every command available.",
+    body:  "These are real notes on the seven names of al-Fātiḥah — scroll them. Type '/' for commands: /ayah embeds a verse, /tafsir embeds commentary, /help lists everything.",
     cta:   "Next: formatting →",
     target: ".page-editor-content",
   },
@@ -70,7 +71,7 @@ const STEPS: readonly {
   },
   {
     title: "Annotate the Muṣḥaf",
-    body:  "Tap the Surah name to enter study mode, then draw straight onto the page. Embedded āyah blocks resize from any corner.",
+    body:  "Tap the Surah name to enter study mode, then draw straight onto the page. The āyah blocks in your notes resize from any corner.",
     cta:   "Next: tafsīr →",
     target: ".qcf-page",
   },
@@ -88,21 +89,25 @@ const STEPS: readonly {
   },
   {
     title: "Connect two passages",
-    body:  "Type /link to record a munāsabah. You choose BOTH ends — the passage you are linking from and the one you are linking to.",
+    body:  "Type /link to record a munāsabah. You choose BOTH ends — the passage you are linking from and the one you are linking to. The notes above suggest one worth making.",
     cta:   "Next: the map →",
     target: ".page-editor-content",
   },
   {
-    title: "See every Connection",
-    body:  "The list shows what you wrote; the map shows what is joined to what across the muṣḥaf. New Connection builds one straight from the map.",
+    /* Anchored to the sidebar, which IS on screen. The Connections view and
+       the book shelf live elsewhere in the workspace, so they are described
+       as somewhere to go rather than as something you are looking at — the
+       previous wording pointed at them as if they were visible here. */
+    title: "Connections you can already see",
+    body:  "Two are seeded in this workspace: one joins al-Fātiḥah to al-Ḥijr 15:87, one stays inside al-Fātiḥah. Open Connections from the workspace to see them as a list and as a map.",
     cta:   "Next: your pages →",
-    target: ".cxcat-views",
+    target: ".tree",
   },
   {
-    title: "Pages and books",
-    body:  "Add pages in the sidebar — they open the moment you create them. Book study opens a classical matn from the shelf to annotate.",
+    title: "Pages, boards and books",
+    body:  "Add pages in the sidebar — they open the moment you create them. The workspace home also has blank boards, and book study for annotating a classical matn.",
     cta:   "Done →",
-    target: ".tree",
+    target: ".sidebar",
   },
 ];
 
@@ -224,17 +229,34 @@ export default function TourBubble() {
           body:    JSON.stringify({ surahNumber: 1 }),
         });
 
-        // 3. Create a page
+        /* 3. Create the page WITH real notes in it. The tour used to open an
+              empty page and describe features in the abstract; walking actual
+              study notes shows what the features are for. */
         const pgRes = await fetch(`/api/workspaces/${workspace.id}/surahs/1/pages`, {
           method:  "POST",
           headers: { "Content-Type": "application/json" },
-          body:    JSON.stringify({ title: "My First Notes" }),
+          body:    JSON.stringify({
+            title: "The Names of al-Fātiḥah",
+            tiptapContent: fatihaNotesDoc(),
+          }),
         });
         if (!pgRes.ok) throw new Error("Could not create page");
         const pgBody = await pgRes.json();
         const page = pgBody.page ?? pgBody; // API returns { page: {...} }
 
-        // 4. Store IDs, advance step, navigate
+        /* 4. Seed a couple of Connections so the list and the map are not
+              empty when the tour reaches them. One crosses Surahs and one
+              stays inside al-Fātiḥah, because the map draws those differently
+              and both cases are worth seeing. Failures are swallowed: a
+              missing demo Connection is not worth blocking the tour over. */
+        await Promise.allSettled(DEMO_CONNECTIONS.map((c) =>
+          fetch(`/api/workspaces/${workspace.id}/connections`, {
+            method:  "POST",
+            headers: { "Content-Type": "application/json" },
+            body:    JSON.stringify({ ...c, tags: [...c.tags] }),
+          })));
+
+        // 5. Store IDs, advance step, navigate
         setTour({ ...t, step: 1, workspaceId: workspace.id, pageId: page.id });
         pushWithSplash(router, `/workspaces/${workspace.id}/surahs/1/pages/${page.id}`);
       } catch (err) {
