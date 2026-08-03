@@ -376,20 +376,22 @@ export default function ConnectionsCatalogue({
 
       <ul className="cxcat-list">
         {shown.map((r) => (
+          /* A register entry, not a card. What a Connection IS is the pair of
+             passages, so the pair leads; the name is the claim made about
+             them; commentary and provenance trail behind it. Rows are divided
+             by a hairline rather than each being boxed. */
           <li key={r.id} className="cxcat-item">
-            <div className="cxcat-item-top">
-              <span className="cxcat-name">{r.name}</span>
-              {r.category && <span className="cxc-cat">{r.category}</span>}
-            </div>
             <div className="cxcat-pair">
               <span className="cxcat-end">{describe(r.sourceKey)}</span>
               <span className="cxcat-arrow" aria-hidden>↔</span>
               <span className="cxcat-end">{describe(r.targetKey)}</span>
             </div>
+            <div className="cxcat-name">{r.name}</div>
             {r.commentary && <p className="cxcat-comm">{r.commentary}</p>}
             <div className="cxcat-meta">
-              {r.createdBy?.name && <>{r.createdBy.name} · </>}
-              {new Date(r.updatedAt).toLocaleDateString()}
+              {r.category && <span className="cxcat-cat">{r.category}</span>}
+              {r.createdBy?.name && <span>{r.createdBy.name}</span>}
+              <span>{new Date(r.updatedAt).toLocaleDateString()}</span>
             </div>
           </li>
         ))}
