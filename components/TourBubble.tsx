@@ -26,6 +26,10 @@ const onHome  = (p: string) => p.startsWith("/home");
 const onSurah = (p: string) => /^\/workspaces\/[^/]+\/surahs/.test(p);
 
 // ── Step content ──────────────────────────────────────────────────────────────
+/* Every target below is a selector that actually exists in the shipped UI —
+   a tour that points at nothing is worse than no tour. Steps without a target
+   are narrated over the page rather than anchored. Kept short: this is an
+   orientation, not documentation. */
 const STEPS: readonly {
   title: string; body: string; cta: string; target?: string;
 }[] = [
@@ -35,32 +39,92 @@ const STEPS: readonly {
     cta:   "Set up my tutorial →",
   },
   {
-    title: "Write your tafsir",
-    body:  "This is your writing space. Type your notes, press '/' for commands — try /ayah 1:1 to embed a verse with Arabic text and translation.",
-    cta:   "Next: annotate the Mushaf →",
+    title: "Write your tafsīr",
+    body:  "Your writing space. Type '/' for commands — /ayah 1:1 embeds a verse, and /help lists every command available.",
+    cta:   "Next: formatting →",
     target: ".page-editor-content",
   },
   {
-    title: "Annotate the Mushaf",
-    body:  "You're now in Mushaf view. Tap the surah name to open study mode, then draw straight onto the page.",
-    cta:   "Next: try split mode →",
-    target: ".qcf-page",
+    title: "Format as you write",
+    body:  "Bold, colour, headings, lists and quotes. Undo and redo sit at the left, and the format painter copies styling from one passage to another.",
+    cta:   "Next: size and tables →",
+    target: ".et-ribbon-strip",
   },
   {
-    title: "Study side by side",
-    body:  "Split mode shows the editor and the Mushaf at the same time. Write your notes while keeping the Quran open beside you.",
-    cta:   "Next: view the tafsir →",
+    title: "Font size and tables",
+    body:  "Set any size before or after typing — Arabic often wants more than the English beside it. The table button inserts a grid you can extend row by row.",
+    cta:   "Next: the workspace →",
+    target: ".et-size",
+  },
+  {
+    title: "The page grows with you",
+    body:  "Notes start at the left and the sheet extends as you fill it — down as you write, sideways when a table or a moved box needs the room. Click any empty spot to start a new block of text there.",
+    cta:   "Next: switch views →",
+    target: ".page-editor",
+  },
+  {
+    title: "Editor, Canvas, Split, Board",
+    body:  "Annotate the Muṣḥaf, write beside it, or open a blank board. Scroll to zoom — far enough out to see a whole study page at once.",
+    cta:   "Next: the Muṣḥaf →",
     target: ".mode-toggle",
   },
   {
-    title: "Ibn Kathīr tafsir",
-    body:  "The tafsir panel loads classical commentary. In the editor type /tafsir 1:1 to embed it directly into your notes.",
+    title: "Annotate the Muṣḥaf",
+    body:  "Tap the Surah name to enter study mode, then draw straight onto the page. Embedded āyah blocks resize from any corner.",
+    cta:   "Next: tafsīr →",
+    target: ".qcf-page",
+  },
+  {
+    title: "Tafsīr and Surah Info",
+    body:  "Classical commentary from dozens of sources. Surah Info is a separate section — background on the Surah as a whole, kept out of the commentary.",
+    cta:   "Next: embedding →",
+    target: ".drawer-tabs",
+  },
+  {
+    title: "Embed all of it, or just a line",
+    body:  "Highlight a passage in the commentary and embed only that, or take the whole entry. Either way the source and āyah travel with it.",
+    cta:   "Next: Connections →",
+    target: ".tafsir-embed",
+  },
+  {
+    title: "Connect two passages",
+    body:  "Type /link to record a munāsabah. You choose BOTH ends — the passage you are linking from and the one you are linking to.",
+    cta:   "Next: the map →",
+    target: ".page-editor-content",
+  },
+  {
+    title: "See every Connection",
+    body:  "The list shows what you wrote; the map shows what is joined to what across the muṣḥaf. New Connection builds one straight from the map.",
+    cta:   "Next: your pages →",
+    target: ".cxcat-views",
+  },
+  {
+    title: "Pages and books",
+    body:  "Add pages in the sidebar — they open the moment you create them. Book study opens a classical matn from the shelf to annotate.",
     cta:   "Done →",
-    target: ".drawer-overlay[data-open='true']",
+    target: ".tree",
   },
 ];
 
-const TOTAL_STEPS = STEPS.length; // 5 bubble steps; step 5 is the finale
+const TOTAL_STEPS = STEPS.length;
+
+/** The view mode each step needs. Absent means "leave the view alone". */
+const STEP_MODE: Record<number, "editor" | "canvas" | "split"> = {
+  1: "editor",   // write your tafsīr
+  2: "editor",   // formatting
+  3: "editor",   // size + tables
+  4: "editor",   // the growing sheet
+  5: "split",    // the mode switcher itself
+  6: "canvas",   // annotate the Muṣḥaf
+  7: "editor",   // tafsīr drawer sits over the editor
+  8: "editor",   // embedding
+  9: "editor",   // /link
+  10: "editor",  // Connections
+  11: "editor",  // pages and books
+};
+
+/** Steps whose target only exists once the drawer is open. */
+const STEP_OPENS_TAFSIR = new Set([7, 8]);
 
 // ── Component ─────────────────────────────────────────────────────────────────
 export default function TourBubble() {
@@ -180,27 +244,20 @@ export default function TourBubble() {
         busy.current = false;
       }
 
-    } else if (t.step === 1) {
-      // Switch to Mushaf canvas
-      emitMode("canvas");
-      setTour({ ...t, step: 2 });
+    } else if (t.step < TOTAL_STEPS) {
+      /* The view each step needs to be looking at. Derived from the step
+         index rather than a chain of hard-coded branches, so adding a step
+         does not require rewiring the ones after it — the previous version
+         hard-coded step 5 as the finale in four separate places, and any new
+         step silently ended the tour early. */
+      const mode = STEP_MODE[t.step + 1];
+      if (mode) emitMode(mode);
+      if (STEP_OPENS_TAFSIR.has(t.step + 1)) {
+        setTimeout(() => emitAction("open-tafsir"), 120);
+      }
+      setTour({ ...t, step: t.step + 1 });
 
-    } else if (t.step === 2) {
-      // Switch to split mode
-      emitMode("split");
-      setTour({ ...t, step: 3 });
-
-    } else if (t.step === 3) {
-      // Open tafsir drawer, switch back to editor view
-      emitMode("editor");
-      setTimeout(() => emitAction("open-tafsir"), 120);
-      setTour({ ...t, step: 4 });
-
-    } else if (t.step === 4) {
-      // Advance to Bismillah finale
-      setTour({ ...t, step: 5 });
-
-    } else if (t.step === 5) {
+    } else {
       dismiss();
     }
   }, [router, dismiss]);
@@ -212,11 +269,11 @@ export default function TourBubble() {
   // ── Visibility guard ──────────────────────────────────────────────────────
   const wrongPage =
     (step === 0 && !onHome(pathname)) ||
-    (step >= 1 && step <= 4 && !onSurah(pathname));
-  if (wrongPage && step < 5) return null;
+    (step >= 1 && step < TOTAL_STEPS && !onSurah(pathname));
+  if (wrongPage && step < TOTAL_STEPS) return null;
 
-  // ── Step 5: Bismillah finale ──────────────────────────────────────────────
-  if (step === 5) {
+  // ── Finale, after the last bubble ─────────────────────────────────────────
+  if (step >= TOTAL_STEPS) {
     return (
       <div className={`tr-finale${leaving ? " tr-out" : " tr-in"}`}>
         <div className="tr-finale-card">
