@@ -565,6 +565,14 @@ export default function WorkspacePageView({
         onPageDeleted={(id) =>
           setPageList((prev) => prev.filter((p) => p.id !== id))
         }
+        onPageCreated={(page) =>
+          /* Guarded against duplicates: the optimistic insert and the
+             server-confirmed insert both come through here. */
+          setPageList((prev) => prev.some((p) => p.id === page.id) ? prev : [...prev, page])
+        }
+        onPageCreateFailed={(tempId) =>
+          setPageList((prev) => prev.filter((p) => p.id !== tempId))
+        }
         collapsed={sidebarCollapsed}
         onToggleCollapse={toggleSidebar}
       />

@@ -9,7 +9,6 @@
  *   • No disabled buttons remain.
  */
 
-import { pushWithSplash } from "@/lib/nav-splash";
 import { useT } from "@/lib/i18n/LocaleProvider";
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -84,6 +83,10 @@ interface Props {
   onPageSelect:      (pageId: string) => void;
   onPageRenamed:     (id: string, title: string) => void;
   onPageDeleted:     (id: string) => void;
+  /** Optimistic insert, so a new page appears in the tree on the same tick
+   *  the user submits rather than after the round-trip. */
+  onPageCreated:     (page: PageSummary) => void;
+  onPageCreateFailed:(tempId: string) => void;
   collapsed?:        boolean;
   onToggleCollapse?: () => void;
 }
@@ -144,7 +147,7 @@ function PageRow({
     try {
       await fetch(`/api/pages/${page.id}`, { method: "DELETE" });
       onDeleted(page.id);
-      if (isActive) pushWithSplash(router, `/workspaces/${workspaceId}`);
+      if (isActive) router.push(`/workspaces/${workspaceId}`);
     } finally { setDeleting(false); setConfirmDelete(false); }
   }
 
@@ -215,6 +218,8 @@ export default function WorkspaceSidebar({
   onPageSelect: _onPageSelect,
   onPageRenamed,
   onPageDeleted,
+  onPageCreated,
+  onPageCreateFailed,
   collapsed = false,
   onToggleCollapse,
 }: Props) {
@@ -244,8 +249,19 @@ export default function WorkspaceSidebar({
     const title = newTitle.trim();
     if (!title) { setCreateError("Title is required"); return; }
 
+    /* Guard against a double submit creating two pages: Enter and the Save
+       button can both fire before the first response lands. */
+    if (saving) return;
     setSaving(true);
     setCreateError(null);
+
+    /* Optimistic: the row appears and the form closes on this tick. The temp
+       id is local only — it is swapped for the real one when the server
+       answers, and removed entirely if it does not. */
+    const tempId = `temp-${Date.now()}`;
+    onPageCreated({ id: tempId, title } as PageSummary);
+    setCreatingPage(false);
+    setNewTitle("");
 
     try {
       const res = await fetch(
@@ -259,16 +275,26 @@ export default function WorkspaceSidebar({
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({})) as { error?: string };
+        onPageCreateFailed(tempId);
+        // Put the typed title back so the work is not lost.
+        setCreatingPage(true);
+        setNewTitle(title);
         setCreateError(data.error ?? "Failed to create page");
         setSaving(false);
         return;
       }
 
       const { page } = await res.json() as { page: { id: string } };
-      setCreatingPage(false);
-      setNewTitle("");
-      pushWithSplash(router, `/workspaces/${workspaceId}/surahs/${chapter.id}/pages/${page.id}`);
+      onPageCreateFailed(tempId);               // drop the temp
+      onPageCreated({ id: page.id, title } as PageSummary);
+      setSaving(false);
+      /* No splash. A full-screen loading screen for a page that already
+         exists in the tree is the opposite of instant. */
+      router.push(`/workspaces/${workspaceId}/surahs/${chapter.id}/pages/${page.id}`);
     } catch {
+      onPageCreateFailed(tempId);
+      setCreatingPage(true);
+      setNewTitle(title);
       setCreateError("Network error");
       setSaving(false);
     }
@@ -287,7 +313,7 @@ export default function WorkspaceSidebar({
       <div className="sidebar-head">
         <button
           className="ws-switcher"
-          onClick={() => pushWithSplash(router, `/workspaces/${workspaceId}`)}
+          onClick={() => router.push(`/workspaces/${workspaceId}`)}
           title="Back to surah grid"
         >
           <div className="ws-switcher-avatar">
