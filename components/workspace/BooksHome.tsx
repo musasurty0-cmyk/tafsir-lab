@@ -35,6 +35,18 @@ function fmt(d: Date | string) {
   return new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" }).format(new Date(d));
 }
 
+/* Tone per subject, assigned by the category's position in the catalogue
+   rather than by hashing its name: a hash collided on two of the ten subjects
+   present, so ʿAqīdah and Ḥadīth came out the same colour. Position spreads
+   them evenly and stays stable as long as the catalogue order does, and a new
+   category still gets a tone with no lookup table to maintain. */
+const SUBJECT_ORDER = [...new Set(LIBRARY_BOOKS.map((b) => b.category))];
+
+function subjectTone(category: string): string {
+  const i = SUBJECT_ORDER.indexOf(category);
+  return String((i < 0 ? 0 : i) % 5);
+}
+
 export default function BooksHome({ workspaceId, workspace, role, books: initialBooks }: Props) {
   const router = useRouter();
 
@@ -179,15 +191,31 @@ export default function BooksHome({ workspaceId, workspace, role, books: initial
           <div className="modal-card book-library-card" onClick={(e) => e.stopPropagation()}>
             <h2 className="modal-title">Choose a text</h2>
             <p className="modal-label" style={{ marginTop: -4 }}>Classical mutūn — tap one to add it and start annotating.</p>
-            <div className="book-library-list">
+            {/* A shelf, not a list of rectangles. Each mutn is a book object:
+                a spine, its Arabic name set as the cover title, then the
+                English title, subject and author. The tone varies by SUBJECT
+                rather than at random, so ʿAqīdah texts sit together visually —
+                there is no invented cover art, only the text's own name. */}
+            <div className="book-shelf">
               {LIBRARY_BOOKS.map((lb) => (
-                <button key={lb.slug} className="book-library-item" onClick={() => addLibraryBook(lb)} disabled={busy}>
-                  <span className="book-library-title">
-                    {lb.title}
-                    {lb.titleArabic && <span className="book-library-ar"> · {lb.titleArabic}</span>}
-                  </span>
-                  <span className="book-library-meta">
-                    {lb.category}{lb.author ? ` · ${lb.author}` : ""}
+                <button
+                  key={lb.slug}
+                  className="book-obj"
+                  data-subject={subjectTone(lb.category)}
+                  onClick={() => addLibraryBook(lb)}
+                  disabled={busy}
+                  title={`${lb.title}${lb.author ? " — " + lb.author : ""}`}
+                >
+                  <span className="book-obj-spine" aria-hidden />
+                  <span className="book-obj-face">
+                    {lb.titleArabic && (
+                      <span className="book-obj-ar" dir="rtl" lang="ar">{lb.titleArabic}</span>
+                    )}
+                    <span className="book-obj-en">{lb.title}</span>
+                    <span className="book-obj-meta">
+                      <span className="book-obj-subject">{lb.category}</span>
+                      {lb.author && <span className="book-obj-author">{lb.author}</span>}
+                    </span>
                   </span>
                 </button>
               ))}

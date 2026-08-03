@@ -609,10 +609,15 @@ export default function PageEditor({
          so it is intercepted here rather than executed. */
       if (item.id === "link") {
         const range = (palette.props as unknown as { range: { from: number; to: number } }).range;
+        /* Ask for the SOURCE first. This used to seed the whole current Surah
+           and jump straight to the target, so a Connection silently recorded
+           "Surah N" as its origin unless the author noticed and repicked it —
+           a Connection whose source nobody chose is not a munāsaba anyone
+           asserted. The picker searches āyāt, Selections and Surahs, and
+           carries the current Surah, so typing a bare number resolves inside
+           it; picking the whole Surah is still one keystroke away. */
         setLinkStage({
-          step: "pick", which: "target", range, rect: palette.rect,
-          // A default, not a decision — the form lets it be changed.
-          source: linkSource(),
+          step: "pick", which: "source", range, rect: palette.rect,
         });
         setPalette(null);
         return;
@@ -677,16 +682,6 @@ export default function PageEditor({
       ))
       .catch(() => setSelectionTargets([]));
   }, [linkStage, workspaceId]);
-
-  /** The source of a Connection made from THIS editor is the Surah being
-   *  studied — Surah-level notes are Surah-level context. */
-  const linkSource = useCallback((): Endpoint => ({
-    type: "surah",
-    key: surahKey(studySurah),
-    // The name, not "Surah 1" — a number alone does not tell you what you are
-    // about to connect.
-    label: surahName ? `${surahName} · ${studySurah}` : `Surah ${studySurah}`,
-  }), [studySurah, surahName]);
 
   /** Close /link and put the caret back where the command was typed, with the
    *  "/link" text removed so no orphan command survives a cancel. */
@@ -963,8 +958,8 @@ export default function PageEditor({
                   currentSurah={studySurah}
                   selections={selectionTargets}
                   placeholder={linkStage.which === "source"
-                    ? "Choose the first passage…"
-                    : "Link to an āyah, Selection or Surah…"}
+                    ? "Linking FROM — choose an āyah, Selection or Surah…"
+                    : "Linking TO — choose an āyah, Selection or Surah…"}
                   onSelect={chooseLinkTarget}
                   onCancel={() => closeLink()}
                 />

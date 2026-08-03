@@ -9396,25 +9396,9 @@ input, textarea { font: inherit; color: inherit; }
 /* ── Book study ──────────────────────────────────────────────────────────── */
 
 /* Library picker (list of classical texts) */
-.book-library-card { max-width: 520px; width: 92vw; }
-.book-library-list {
-  display: flex; flex-direction: column; gap: 6px;
-  max-height: min(56vh, 460px); overflow-y: auto;
-  margin: 10px 0 4px; padding-right: 2px;
-}
-.book-library-item {
-  display: flex; flex-direction: column; gap: 2px;
-  text-align: left; padding: 10px 12px;
-  border: 1px solid var(--line); border-radius: 10px;
-  background: var(--panel); cursor: pointer;
-  transition: background .12s, border-color .12s, transform .06s;
-}
-.book-library-item:hover { background: var(--hover); border-color: var(--line-strong); }
-.book-library-item:active { transform: scale(0.995); }
-.book-library-item:disabled { opacity: 0.5; cursor: default; }
-.book-library-title { font-size: 14.5px; font-weight: 600; color: var(--ink); }
-.book-library-ar { font-weight: 500; color: var(--ink-3); }
-.book-library-meta { font-size: 12px; color: var(--ink-4); }
+/* Wider than a list modal: the shelf lays books out in a grid, and at
+   520px they were squeezed to one narrow column. */
+.book-library-card { max-width: 720px; width: 92vw; }
 
 .book-card-tile .board-card-icon { filter: none; }
 
@@ -9678,4 +9662,91 @@ input, textarea { font: inherit; color: inherit; }
   padding: var(--sp-2) var(--sp-4);
   border-top: 1px solid var(--line);
   font-size: 11px; color: var(--ink-4);
+}
+
+/* ── Mutūn shelf ───────────────────────────────────────────────────────────
+   Each text is a book object rather than a row in a list: a spine, its Arabic
+   name as the cover title, then the English title, subject and author. No
+   invented artwork — the only imagery is the text's own name. */
+.book-shelf {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--sp-4);
+  max-height: 56vh;
+  overflow-y: auto;
+  padding: var(--sp-1) var(--sp-1) var(--sp-3);
+  margin-top: var(--sp-3);
+}
+.book-obj {
+  position: relative;
+  display: flex;
+  min-height: 178px;
+  padding: 0;
+  cursor: pointer;
+  text-align: start;
+  background: var(--panel);
+  border: 1px solid var(--line-strong);
+  /* Only the outer edge is rounded — the spine edge stays square, which is
+     what makes it read as a bound object rather than a card. */
+  border-radius: 2px var(--radius) var(--radius) 2px;
+  overflow: hidden;
+  transition: transform var(--dur-hover) var(--ease-flow),
+              border-color var(--dur-hover) var(--ease-soft),
+              box-shadow var(--dur-hover) var(--ease-soft);
+}
+.book-obj:hover:not(:disabled) {
+  /* Lifts off the shelf slightly, the way a book tips out when pulled. */
+  transform: translateY(-3px);
+  border-color: var(--accent);
+  box-shadow: var(--shadow-md);
+}
+.book-obj:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.book-obj:disabled { opacity: 0.5; cursor: default; }
+
+.book-obj-spine {
+  flex: none;
+  width: 10px;
+  background: var(--book-tone, var(--accent));
+  /* The board edge: a hairline of lighter tone where the spine meets the face. */
+  box-shadow: inset -1px 0 0 oklch(1 0 0 / 0.14);
+}
+.book-obj-face {
+  flex: 1; min-width: 0;
+  display: flex; flex-direction: column;
+  gap: var(--sp-2);
+  padding: var(--sp-4) var(--sp-3);
+}
+.book-obj-ar {
+  font-family: var(--font-arabic);
+  font-size: 19px; line-height: 1.7;
+  color: var(--ink);
+  /* Arabic titles are long; wrap rather than clip so the name stays whole. */
+  overflow-wrap: anywhere;
+}
+.book-obj-en {
+  font-family: var(--font-serif);
+  font-size: 12.5px; font-weight: 600; line-height: 1.35;
+  color: var(--ink-2);
+}
+.book-obj-meta {
+  margin-top: auto;
+  display: flex; flex-direction: column; gap: 1px;
+  font-size: 10.5px; line-height: 1.35;
+}
+.book-obj-subject { color: var(--book-tone, var(--accent-ink)); font-weight: 500; }
+.book-obj-author  { color: var(--ink-4); }
+
+/* Restrained subject tones — muted, in the same family as the app accent
+   rather than a decorative rainbow. */
+.book-obj[data-subject="0"] { --book-tone: oklch(0.62 0.09 160); }
+.book-obj[data-subject="1"] { --book-tone: oklch(0.60 0.09 245); }
+.book-obj[data-subject="2"] { --book-tone: oklch(0.64 0.09  70); }
+.book-obj[data-subject="3"] { --book-tone: oklch(0.60 0.09 320); }
+.book-obj[data-subject="4"] { --book-tone: oklch(0.62 0.08  25); }
+
+/* Narrow widths: two per row, shorter, Arabic a touch smaller. */
+@media (max-width: 560px) {
+  .book-shelf { grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); gap: var(--sp-3); }
+  .book-obj { min-height: 150px; }
+  .book-obj-ar { font-size: 16.5px; }
 }
