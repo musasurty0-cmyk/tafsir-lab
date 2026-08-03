@@ -7,7 +7,7 @@
  * When open, renders the formatting strip; when closed, renders nothing.
  */
 
-import { useState } from "react";
+import { useEffect, useReducer, useState } from "react";
 import type { Editor } from "@tiptap/core";
 import {
   BoldIcon, ItalicIcon, UnderlineIcon, StrikeIcon,
@@ -26,6 +26,23 @@ interface Props {
 }
 
 export default function EditorToolbar({ editor, open }: Props) {
+  /* The toolbar is handed the editor as a PROP, so it never re-rendered on a
+     transaction: TipTap only re-renders the component that owns useEditor.
+     Every isActive() read and the font-size display were therefore frozen at
+     first paint — which is why the +/- steppers appeared to do nothing (they
+     applied a size, then recomputed the next step from the same stale value).
+     Subscribing here re-reads the real state on every change. */
+  const [, bump] = useReducer((n: number) => n + 1, 0);
+  useEffect(() => {
+    if (!editor) return;
+    editor.on("transaction", bump);
+    editor.on("selectionUpdate", bump);
+    return () => {
+      editor.off("transaction", bump);
+      editor.off("selectionUpdate", bump);
+    };
+  }, [editor]);
+
   const [hlOpen, setHlOpen] = useState(false);
 
   if (!open || !editor) return null;

@@ -63,6 +63,7 @@ export default function AyahBlockView({
   selected,
   editor,
 }: NodeViewProps) {
+  const [hovered, setHovered] = useState(false);
   const {
     verseKey,
     surahNumber,
@@ -204,13 +205,18 @@ export default function AyahBlockView({
         className="ayah-block-node"
         data-selected={selected ? "true" : "false"}
         contentEditable={false}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
         style={{
           ...(node.attrs.width  ? { width:  `${node.attrs.width}px`  } : {}),
           ...(node.attrs.height ? { height: `${node.attrs.height}px` } : {}),
         }}
       >
-        {/* Corner handles, only while the block is selected. */}
-        {selected && editor.isEditable && (["nw", "ne", "sw", "se"] as const).map((c) => (
+        {/* Corner handles. Shown when the node is selected OR hovered: the
+            block is contentEditable={false}, so clicking inside it never
+            produces a NodeSelection and `selected` alone stayed false — the
+            grips existed but were unreachable. */}
+        {(selected || hovered) && editor.isEditable && (["nw", "ne", "sw", "se"] as const).map((c) => (
           <span
             key={c}
             className="ayah-block-grip"

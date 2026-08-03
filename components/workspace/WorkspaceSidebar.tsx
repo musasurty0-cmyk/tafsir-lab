@@ -57,6 +57,10 @@ function GroupProgressDot({
 // ── Types ──────────────────────────────────────────────────────────────────
 
 interface PageSummary {
+  /** True while the server has not yet confirmed this page. A pending row is
+   *  deliberately NOT a link: its id is local, so prefetching or clicking it
+   *  asks the server for a page that does not exist and blows up the render. */
+  pending?:        boolean;
   id:              string;
   title:           string;
   orderIndex:      number;
@@ -170,6 +174,17 @@ function PageRow({
     );
   }
 
+  /* Pending: shown immediately so creation feels instant, but inert until the
+     server answers — no link, no prefetch, no rename or delete actions. */
+  if (page.pending) {
+    return (
+      <div className="tree-row tree-row--pending" aria-busy="true">
+        <span className="tree-label">{page.title}</span>
+        <span className="tree-row-pending-dot" aria-label="Creating…" />
+      </div>
+    );
+  }
+
   return (
     <div className="tree-row tree-row--with-actions" data-active={isActive ? "true" : "false"}>
       <Link href={href} prefetch className="tree-row-link">
@@ -259,7 +274,7 @@ export default function WorkspaceSidebar({
        id is local only — it is swapped for the real one when the server
        answers, and removed entirely if it does not. */
     const tempId = `temp-${Date.now()}`;
-    onPageCreated({ id: tempId, title } as PageSummary);
+    onPageCreated({ id: tempId, title, pending: true } as PageSummary);
     setCreatingPage(false);
     setNewTitle("");
 

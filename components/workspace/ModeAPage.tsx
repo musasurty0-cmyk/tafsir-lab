@@ -14,7 +14,7 @@
  *   3. Renders <PageEditor> — the TipTap editor shell.
  */
 
-import { useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Verse } from "@/lib/types";
 import type { ProgressStatus } from "@/lib/services/progress.service";
 import type { MemberRole } from "@/lib/services/workspaces.service";
@@ -143,10 +143,57 @@ export default function ModeAPage({
     onNoteCreated, onNoteUpdated, onNoteDeleted, onProgressChange, onOpenTafsir,
   ]);
 
+  /* Editor zoom.
+     Uses the CSS `zoom` property rather than a transform: zoom participates in
+     layout, so the caret, hit-testing and ProseMirror's coordinate maths all
+     stay correct inside a contentEditable. A transform would scale the paint
+     only and put the caret in the wrong place.
+     Ctrl/Cmd + wheel to zoom, matching every other document surface; a bare
+     wheel must keep scrolling. */
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const [docZoom, setDocZoom] = useState(1);
+  useEffect(() => {
+    try {
+      const v = parseFloat(localStorage.getItem("tl-editor-zoom") ?? "");
+      if (Number.isFinite(v) && v >= 0.2 && v <= 3) setDocZoom(v);
+    } catch { /* ignore */ }
+  }, []);
+  const applyZoom = useCallback((z: number) => {
+    const next = Math.min(3, Math.max(0.2, z));
+    setDocZoom(next);
+    try { localStorage.setItem("tl-editor-zoom", String(next)); } catch { /* ignore */ }
+  }, []);
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey && !e.metaKey) return;   // plain wheel still scrolls
+      e.preventDefault();
+      const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 100 : 1;
+      const step = Math.max(-0.18, Math.min(0.18, e.deltaY * unit * 0.0015));
+      setDocZoom((prev) => {
+        const next = Math.min(3, Math.max(0.2, prev * Math.exp(-step)));
+        try { localStorage.setItem("tl-editor-zoom", String(next)); } catch { /* ignore */ }
+        return next;
+      });
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, []);
+
   return (
     <EditorContextProvider value={editorContextValue}>
-      <div className="doc-wrap">
-        <div className="doc">
+      <div className="doc-wrap" ref={wrapRef}>
+        {/* Zoom HUD — mirrors the canvas control so the gesture and the
+            readout are the same wherever you are. */}
+        <div className="doc-zoom" role="group" aria-label="Zoom">
+          <button onClick={() => applyZoom(docZoom / 1.15)} title="Zoom out" aria-label="Zoom out">−</button>
+          <button onClick={() => applyZoom(1)} title="Reset zoom" aria-label="Reset zoom">
+            {Math.round(docZoom * 100)}%
+          </button>
+          <button onClick={() => applyZoom(docZoom * 1.15)} title="Zoom in" aria-label="Zoom in">+</button>
+        </div>
+        <div className="doc" style={{ zoom: docZoom }}>
 
           {/* ── Cover ──────────────────────────────────────────────── */}
           <div className="doc-cover">

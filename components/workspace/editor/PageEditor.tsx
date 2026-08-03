@@ -159,6 +159,13 @@ export default function PageEditor({
    *  needs them, so /ayah never pays for the request. */
   const [selectionTargets, setSelectionTargets] = useState<import("@/lib/quran-search").SearchTarget[]>([]);
 
+  const [tafsirChoice, setTafsirChoice] = useState<{
+    verseKey: string;
+    range: { from: number; to: number };
+    rect: DOMRect;
+    slug: string;
+    sourceName: string;
+  } | null>(null);
   const [versePicker, setVersePicker] = useState<{
     slug: string; sourceName: string; range: { from: number; to: number }; rect: DOMRect;
   } | null>(null);
@@ -807,17 +814,37 @@ export default function PageEditor({
     return () => { editor.off("destroy", close); };
   }, [editor, ayahSearch]);
 
-  // Insert a tafsir block at the picker's saved range for the chosen verse.
+  /* After the verse is chosen, ask HOW much to embed rather than assuming the
+     whole entry. A full tafsīr on a long āyah can be several screens, which
+     swamps the note it was meant to support — but sometimes the whole thing is
+     exactly what is wanted, so neither option is the default. */
   const insertTafsirVerse = useCallback((verseKey: string) => {
     if (!editor || !versePicker) return;
-    const { range, slug, sourceName } = versePicker;
+    setTafsirChoice({ verseKey, ...versePicker });
+    setVersePicker(null);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editor, versePicker]);
+
+  /** Embed the whole entry — the block fetches it from the empty contentHtml. */
+  const embedWholeTafsir = useCallback(() => {
+    if (!editor || !tafsirChoice) return;
+    const { range, slug, sourceName, verseKey } = tafsirChoice;
     editor.chain().focus().deleteRange(range).insertContent([
       { type: "tafsirBlock", attrs: { verseKey, contentHtml: "", sourceName, sourceSlug: slug } },
       { type: "paragraph" },
     ]).scrollIntoView().run();
-    setVersePicker(null);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editor, versePicker]);
+    setTafsirChoice(null);
+  }, [editor, tafsirChoice]);
+
+  /* Open the drawer at that verse so the reader can highlight a passage and
+     use the Embed selection control there — one embedding path, reachable from
+     both the drawer and the slash command, rather than two implementations. */
+  const chooseTafsirPassage = useCallback(() => {
+    if (!editor || !tafsirChoice) return;
+    editor.chain().focus().deleteRange(tafsirChoice.range).run();
+    ectx?.onOpenTafsir(tafsirChoice.verseKey);
+    setTafsirChoice(null);
+  }, [editor, tafsirChoice, ectx]);
 
   /* Embedding from the Tafsīr drawer. The drawer decides WHAT to embed (a
      highlighted passage or the whole entry); the editor owns insertion, so
@@ -1021,6 +1048,28 @@ export default function PageEditor({
       )}
 
       {/* Tafsir verse picker — surah fixed to what's being studied, pick the āyah */}
+      {tafsirChoice && typeof document !== "undefined" &&
+        createPortal(
+          <div
+            className="tafsir-choice"
+            style={{ position: "fixed", top: tafsirChoice.rect.bottom + 6,
+                     left: Math.max(8, Math.min(tafsirChoice.rect.left, window.innerWidth - 300)),
+                     zIndex: 9999 }}
+          >
+            <p className="tafsir-choice-q">Embed {tafsirChoice.sourceName} on {tafsirChoice.verseKey}</p>
+            <button className="tafsir-choice-btn" onClick={embedWholeTafsir}>
+              Whole commentary
+            </button>
+            <button className="tafsir-choice-btn" onClick={chooseTafsirPassage}>
+              Choose a passage…
+            </button>
+            <button className="tafsir-choice-cancel" onClick={() => setTafsirChoice(null)}>
+              Cancel
+            </button>
+          </div>,
+          document.body,
+        )}
+
       {versePicker && (
         <TafsirVersePicker
           surah={studySurah}
