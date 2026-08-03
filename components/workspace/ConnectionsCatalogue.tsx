@@ -15,7 +15,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
-import { parseObjectKey, type ObjectType } from "@/lib/quran-objects";
+import {
+  parseObjectKey, ayahKey, surahKey, selectionKey, isSelfLink, type ObjectType,
+} from "@/lib/quran-objects";
+import QuranSearch from "./editor/QuranSearch";
+import ConnectionForm, { type Endpoint } from "./editor/ConnectionForm";
+import type { SearchTarget } from "@/lib/quran-search";
 import ConnectionsMap, { type MapNode, type MapEdge } from "./ConnectionsMap";
 
 interface Row {
@@ -73,6 +78,45 @@ export default function ConnectionsCatalogue({
   /** Surah focused on the map; also narrows the list beneath it. */
   const [focusSurah, setFocusSurah] = useState<number | null>(null);
   const reqRef = useRef(0);
+
+  /* Creating a Connection from the map. Same two-endpoint flow and same form
+     as /link — the map is another way IN to the existing system, not a second
+     Connection system. */
+  const [make, setMake] = useState<
+    | null
+    | { step: "pick"; which: "source" | "target"; source?: Endpoint; target?: Endpoint }
+    | { step: "form"; source: Endpoint; target: Endpoint }
+  >(null);
+  const [makeBusy, setMakeBusy] = useState(false);
+  const [makeErr,  setMakeErr]  = useState<string | null>(null);
+  const [makeDupe, setMakeDupe] = useState<{ id: string; name: string } | null>(null);
+
+  const toEndpoint = useCallback((t: SearchTarget): Endpoint =>
+    t.kind === "ayah"
+      ? { type: "ayah", key: ayahKey(t.surah ?? 1, t.ayah ?? 1), label: t.label, arabic: t.arabic }
+      : t.kind === "selection"
+      ? { type: "selection", key: selectionKey(t.id), label: t.label }
+      : { type: "surah", key: surahKey(t.surah ?? Number(t.id)), label: t.label.split(" · ")[0] },
+  []);
+
+  const pickEndpoint = useCallback((t: SearchTarget) => {
+    setMakeErr(null);
+    setMake((cur) => {
+      if (!cur || cur.step !== "pick") return cur;
+      const picked = toEndpoint(t);
+      const source = cur.which === "source" ? picked : cur.source;
+      const target = cur.which === "target" ? picked : cur.target;
+      /* Self-links are refused here as well as on the server, so the user
+         finds out while choosing rather than after filling in the form. */
+      if (source && target && isSelfLink(source.key, target.key)) {
+        setMakeErr("A passage cannot be connected to itself.");
+        return { step: "pick", which: "target", source };
+      }
+      if (source && target) return { step: "form", source, target };
+      return { step: "pick", which: source ? "target" : "source", source, target };
+    });
+  }, [toEndpoint]);
+
 
   const names = useMemo(() => {
     const m = new Map<number, string>();
@@ -150,6 +194,42 @@ export default function ConnectionsCatalogue({
     return [...set].sort();
   }, [rows]);
 
+  const submitFromMap = useCallback((v: {
+    name: string; commentary?: string; category?: string; tags: string[];
+  }) => {
+    if (!make || make.step !== "form") return;
+    setMakeBusy(true); setMakeErr(null);
+    fetch(`/api/workspaces/${workspaceId}/connections`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sourceType: make.source.type, sourceKey: make.source.key,
+        targetType: make.target.type, targetKey: make.target.key,
+        ...v,
+      }),
+    })
+      .then(async (r) => {
+        const d = await r.json().catch(() => ({}));
+        if (r.status === 409 && d.existing) {
+          setMakeDupe({ id: d.existing.id, name: d.existing.name });
+          return null;
+        }
+        if (!r.ok) throw new Error(d.error ?? String(r.status));
+        return d.connection;
+      })
+      .then((conn) => {
+        if (!conn) return;
+        setMake(null); setMakeDupe(null);
+        /* Both views refresh from the server rather than being patched by
+           hand: the map aggregates edges by Surah and weights them, so a
+           local insert would have to duplicate that reduction. */
+        setMap(null);
+        load(0, false);
+      })
+      .catch((e) => setMakeErr(String(e instanceof Error ? e.message : e)))
+      .finally(() => setMakeBusy(false));
+  }, [make, workspaceId, load]);
+
   const hasMore = rows.length < total;
 
   return (
@@ -160,7 +240,57 @@ export default function ConnectionsCatalogue({
         </Link>
         <h1 className="cxcat-title">Connections</h1>
         <span className="cxcat-total">{total}</span>
+        {/* Entry point into the SAME flow /link uses: pick both ends, then
+            the existing form. */}
+        <button
+          className="cxcat-new"
+          onClick={() => { setMakeErr(null); setMakeDupe(null); setMake({ step: "pick", which: "source" }); }}
+        >
+          New Connection
+        </button>
       </header>
+
+      {/* Endpoint picker — reuses QuranSearch, so āyāt, Selections and Surahs
+          are all reachable and the keyboard behaviour matches /link. */}
+      {make?.step === "pick" && (
+        <div className="cxcat-make">
+          <div className="cxcat-make-head">
+            <span className="cxcat-make-step">
+              {make.which === "source" ? "Linking FROM" : "Linking TO"}
+            </span>
+            {make.source && (
+              <span className="cxcat-make-chosen">{make.source.label}</span>
+            )}
+          </div>
+          <QuranSearch
+            kinds={["ayah", "selection", "surah"]}
+            selections={[]}
+            placeholder={make.which === "source"
+              ? "Choose the first passage…"
+              : "Choose the second passage…"}
+            onSelect={pickEndpoint}
+            onCancel={() => setMake(null)}
+          />
+          {makeErr && <p className="cxcat-make-err">{makeErr}</p>}
+        </div>
+      )}
+
+      {make?.step === "form" && (
+        <ConnectionForm
+          source={make.source}
+          target={make.target}
+          busy={makeBusy}
+          error={makeErr}
+          duplicateOf={makeDupe}
+          onCancel={() => { setMake(null); setMakeDupe(null); setMakeErr(null); }}
+          onChangeEndpoint={(which) => setMake({
+            step: "pick", which,
+            source: which === "source" ? undefined : make.source,
+            target: which === "target" ? undefined : make.target,
+          })}
+          onSubmit={submitFromMap}
+        />
+      )}
 
       <div className="cxcat-views" role="group" aria-label="View">
         {(["list", "map"] as const).map((v) => (
