@@ -100,8 +100,34 @@ function wedge(a0: number, a1: number, rIn: number, rOut: number): string {
   ].join(" ");
 }
 
-/** Link curve between two surahs, bowing toward the centre with distance. */
+/**
+ * Link curve between two surahs, bowing toward the centre with distance.
+ *
+ * A munāsabah can join two passages of the SAME surah, and those arrive here
+ * as a === b. The general form then degenerates — a quadratic from a point to
+ * itself — so the connection existed in the data and drew nothing. An in-surah
+ * link gets its own small loop hanging inside the band at that surah's angle,
+ * which reads as "this one turns back on itself".
+ */
+function selfLoop(a: number): string {
+  const ang = angleOf(a);
+  const base = polar(ang, R_HUB);
+  // Two feet a little either side of the segment, and a control point pulled
+  // inward, so the loop sits under the arc rather than crossing it.
+  const spread = 0.016;
+  const p = polar(ang - spread, R_HUB);
+  const q = polar(ang + spread, R_HUB);
+  const depth = 34;
+  const cx = CX + (base.x - CX) * (1 - depth / R_HUB);
+  const cy = CY + (base.y - CY) * (1 - depth / R_HUB);
+  return [
+    `M${p.x.toFixed(1)} ${p.y.toFixed(1)}`,
+    `C${cx.toFixed(1)} ${cy.toFixed(1)} ${cx.toFixed(1)} ${cy.toFixed(1)} ${q.x.toFixed(1)} ${q.y.toFixed(1)}`,
+  ].join(" ");
+}
+
 function link(a: number, b: number): string {
+  if (a === b) return selfLoop(a);
   const aa = angleOf(a), ab = angleOf(b);
   const p = polar(aa, R_HUB), q = polar(ab, R_HUB);
   let d = Math.abs(aa - ab);
@@ -182,11 +208,31 @@ export default function ConnectionsMap({
       <div className="cxmap-bar">
         <span className="cxmap-stat">{total} Connection{total === 1 ? "" : "s"}</span>
         <span className="cxmap-stat">{nodes.length} Surah{nodes.length === 1 ? "" : "s"}</span>
-        {focus != null && (
-          <button className="cxmap-clear" onClick={() => onFocus(null)}>
-            {surahName(focus)} — show all
-          </button>
-        )}
+        {focus != null && (() => {
+          /* Split what the focused Surah is joined to: links that leave it,
+             and links that stay INSIDE it. In-surah munāsabāt were invisible
+             before — they drew nothing and were never counted separately —
+             so a Surah whose only Connections were internal looked empty. */
+          const within  = edges.find((e) => e.a === focus && e.b === focus);
+          const outward = edges.filter((e) => (e.a === focus || e.b === focus) && e.a !== e.b);
+          const outCount = outward.reduce((n, e) => n + e.weight, 0);
+          return (
+            <>
+              <span className="cxmap-focus">
+                {surahName(focus)}
+                <span className="cxmap-focus-detail">
+                  {outCount > 0 && `${outCount} to other Surahs`}
+                  {outCount > 0 && within && " · "}
+                  {within && `${within.weight} within`}
+                  {outCount === 0 && !within && "no Connections"}
+                </span>
+              </span>
+              <button className="cxmap-clear" onClick={() => onFocus(null)}>
+                Show all
+              </button>
+            </>
+          );
+        })()}
       </div>
 
       <svg viewBox={`0 0 ${SIZE} ${SIZE}`} className="cxmap-svg" role="img"
@@ -251,6 +297,7 @@ export default function ConnectionsMap({
               key={`${e.a}-${e.b}`}
               d={link(e.a, e.b)}
               className="cxmap-edge"
+              data-self={e.a === e.b ? "true" : "false"}
               data-dim={edgeLive(e) ? "false" : "true"}
               data-hot={hoverEdge === e ? "true" : "false"}
               style={{ strokeWidth: Math.min(1 + e.weight * 0.8, 4.5) }}
@@ -297,7 +344,7 @@ export default function ConnectionsMap({
       )}
 
       <p className="cxmap-hint">
-        Hover a surah to reveal what it links to · click to focus
+        Hover a surah to reveal what it links to · click to focus · a loop means the Connection stays inside that Surah
       </p>
     </div>
   );
