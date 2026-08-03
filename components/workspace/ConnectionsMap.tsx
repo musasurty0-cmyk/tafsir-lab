@@ -235,7 +235,7 @@ export default function ConnectionsMap({
         })()}
       </div>
 
-      <svg viewBox={`0 0 ${SIZE} ${SIZE}`} className="cxmap-svg" role="img"
+      <svg viewBox={`0 0 ${SIZE} ${SIZE}`} className="cxmap-svg cxmap-svg--enter" role="img"
         aria-label={`Connection map: ${total} Connections across ${nodes.length} Surahs`}>
 
         {/* ── Group arcs ── */}
@@ -280,7 +280,13 @@ export default function ConnectionsMap({
                 data-linked={c > 0 ? "true" : "false"}
                 data-focused={focus === n ? "true" : "false"}
                 data-dim={dim ? "true" : "false"}
-                style={c > 0 ? { opacity: 0.45 + (c / maxCount) * 0.55 } : undefined}
+                /* --i staggers the arrival in muṣḥaf order; opacity encodes how
+                   many Connections touch this surah and must survive the
+                   animation, which is why the keyframe fills backwards only. */
+                style={{
+                  ["--i" as string]: n,
+                  ...(c > 0 ? { opacity: 0.45 + (c / maxCount) * 0.55 } : {}),
+                }}
                 onPointerEnter={(e) => { setHoverSurah(n); moveTip(e); }}
                 onPointerMove={moveTip}
                 onPointerLeave={() => { setHoverSurah(null); setTip(null); }}
@@ -292,15 +298,18 @@ export default function ConnectionsMap({
 
         {/* ── Links, inside the ring so they never cross the segments ── */}
         <g>
-          {edges.map((e) => (
+          {edges.map((e, ei) => (
             <path
               key={`${e.a}-${e.b}`}
               d={link(e.a, e.b)}
+              /* Each link draws itself in, one after another, so the reader
+                 sees the web being built rather than arriving whole. */
+              style={{ ["--i" as string]: ei }}
               className="cxmap-edge"
               data-self={e.a === e.b ? "true" : "false"}
               data-dim={edgeLive(e) ? "false" : "true"}
               data-hot={hoverEdge === e ? "true" : "false"}
-              style={{ strokeWidth: Math.min(1 + e.weight * 0.8, 4.5) }}
+              strokeWidth={Math.min(1 + e.weight * 0.8, 4.5)}
               onPointerEnter={(ev) => { setHoverEdge(e); moveTip(ev); }}
               onPointerMove={moveTip}
               onPointerLeave={() => { setHoverEdge(null); setTip(null); }}

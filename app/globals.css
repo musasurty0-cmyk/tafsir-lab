@@ -9975,3 +9975,55 @@ input, textarea { font: inherit; color: inherit; }
 /* An in-surah link is a loop rather than a chord; it reads as quieter because
    it spans no distance. */
 .cxmap-edge[data-self="true"] { opacity: 0.8; }
+
+/* ── Map build-in ──────────────────────────────────────────────────────────
+   The map assembles rather than appearing: the ring turns into place, the
+   surah segments populate around it in muṣḥaf order, and each Connection then
+   draws itself along its own path. It reads as the web being built, and it
+   also gives the eye time to find the ring before links start crossing it. */
+@keyframes cxmap-wheel-in {
+  from { opacity: 0; transform: rotate(-14deg) scale(0.94); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes cxmap-seg-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes cxmap-draw {
+  from { stroke-dashoffset: var(--len); }
+  to   { stroke-dashoffset: 0; }
+}
+
+.cxmap-svg--enter {
+  animation: cxmap-wheel-in 620ms var(--ease-flow) both;
+  transform-origin: 50% 50%;
+}
+/* Segments follow the wheel, ~4ms apart so all 114 land within half a second.
+   fill-mode BACKWARDS, not both: each segment's inline opacity encodes how
+   many Connections touch that surah, and `both` would hold the keyframe's
+   opacity:1 afterwards and flatten that signal away. */
+.cxmap-svg--enter .cxmap-seg {
+  animation: cxmap-seg-in 260ms var(--ease-soft) backwards;
+  animation-delay: calc(220ms + var(--i, 0) * 3ms);
+}
+/* Links draw last, along their own length. The dash length is generous — a
+   chord across the ring is under 700 units — and any excess simply means the
+   line is already fully drawn when the animation ends. */
+.cxmap-svg--enter .cxmap-edge {
+  --len: 760;
+  stroke-dasharray: var(--len);
+  animation: cxmap-draw 720ms var(--ease-flow) both;
+  /* Starts after the LAST segment has landed (220 + 113x3 + 260 = 819ms), so
+     no link is ever drawn across a half-built ring. */
+  animation-delay: calc(900ms + var(--i, 0) * 70ms);
+}
+
+/* Respect the system setting: the map still assembles, but instantly. */
+@media (prefers-reduced-motion: reduce) {
+  .cxmap-svg--enter,
+  .cxmap-svg--enter .cxmap-seg,
+  .cxmap-svg--enter .cxmap-edge {
+    animation: none;
+    stroke-dasharray: none;
+  }
+}
