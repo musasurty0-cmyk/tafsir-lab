@@ -84,6 +84,10 @@ export default function FreeTextBox({ note, startEditing = false, ayahInline = f
   const [pos, setPos]         = useState({ x: note.offsetX, y: note.offsetY });
   const [hovered, setHovered] = useState(false);
   const [focused, setFocused] = useState(false);
+  /* An empty container shows NO chrome, even while focused: clicking a blank
+     spot should give you a caret, not a placed component. The border and drag
+     bar appear the moment there is something to frame. */
+  const [empty, setEmpty] = useState(true);
 
   const boxRef  = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{ startMx: number; startMy: number; startX: number; startY: number; zoom: number } | null>(null);
@@ -172,6 +176,7 @@ export default function FreeTextBox({ note, startEditing = false, ayahInline = f
       ref={boxRef}
       className="free-textbox"
       data-focused={focused ? "true" : "false"}
+      data-empty={empty ? "true" : "false"}
       style={{ left: pos.x, top: pos.y, width: note.width || TEXTBOX_DEFAULT_WIDTH }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
@@ -181,7 +186,7 @@ export default function FreeTextBox({ note, startEditing = false, ayahInline = f
           absolute -16px positioning was clipped by the resize overflow). */}
       <div
         className="free-textbox-chrome"
-        data-visible={hovered || focused ? "true" : "false"}
+        data-visible={!empty && (hovered || focused) ? "true" : "false"}
         title="Drag to move"
         onPointerDown={onGripDown}
         onPointerMove={onGripMove}
@@ -204,7 +209,8 @@ export default function FreeTextBox({ note, startEditing = false, ayahInline = f
         startEditing={startEditing}
         ayahInline={ayahInline}
         posRef={posRef}
-        onFocusChange={setFocused}
+  onFocusChange={setFocused}
+        onEmptyChange={setEmpty}
         onUpdated={onUpdated}
         onDelete={handleDelete}
         onPersistTemp={onPersistTemp}
@@ -243,6 +249,8 @@ interface RichBodyProps {
   ayahInline:    boolean;
   posRef:        React.MutableRefObject<{ x: number; y: number }>;
   onFocusChange: (focused: boolean) => void;
+  /** Drives the invisible-until-typed chrome on the wrapper. */
+  onEmptyChange: (empty: boolean) => void;
   onUpdated?:    (note: NoteData) => void;
   onDelete:      () => void;
   onPersistTemp?: (tempId: string, content: object, at: { x: number; y: number }) => void;
@@ -250,7 +258,7 @@ interface RichBodyProps {
 
 function RichBody({
   note, startEditing, ayahInline, posRef,
-  onFocusChange, onUpdated, onDelete, onPersistTemp,
+  onFocusChange, onEmptyChange, onUpdated, onDelete, onPersistTemp,
 }: RichBodyProps) {
   const [palette, setPalette] = useState<PaletteState | null>(null);
   const commandListRef = useRef<CommandListHandle>(null);
@@ -277,8 +285,8 @@ function RichBody({
   // Fresh values inside editor callbacks (created once, closures go stale)
   const noteRef = useRef(note);
   noteRef.current = note;
-  const cbRef = useRef({ onFocusChange, onUpdated, onDelete, onPersistTemp });
-  cbRef.current = { onFocusChange, onUpdated, onDelete, onPersistTemp };
+  const cbRef = useRef({ onFocusChange, onEmptyChange, onUpdated, onDelete, onPersistTemp });
+  cbRef.current = { onFocusChange, onEmptyChange, onUpdated, onDelete, onPersistTemp };
 
   const commit = useCallback((ed: Editor) => {
     const cur  = noteRef.current;
@@ -378,7 +386,13 @@ function RichBody({
     autofocus:         startEditing ? "end" : false,
     immediatelyRender: false,
 
+    onCreate({ editor }) { cbRef.current.onEmptyChange(editor.isEmpty); },
+
     onUpdate({ editor }) {
+      /* Drives the invisible-until-typed behaviour. Read from the editor
+         rather than tracked by hand, so deleting the last character hides the
+         chrome again exactly as typing the first character showed it. */
+      cbRef.current.onEmptyChange(editor.isEmpty);
       // Debounced autosave while typing (server containers only —
       // temps persist once on blur via onPersistTemp)
       if (noteRef.current.id.startsWith("temp-")) return;

@@ -9750,3 +9750,20 @@ input, textarea { font: inherit; color: inherit; }
   .book-obj { min-height: 150px; }
   .book-obj-ar { font-size: 16.5px; }
 }
+
+/* An EMPTY container shows no chrome at all, even while focused. Clicking a
+   blank part of the sheet should give you a caret where you clicked, not a
+   placed component with a frame around nothing — the border and the drag bar
+   appear on the first character and disappear again on the last deletion. */
+.free-textbox[data-empty="true"],
+.free-textbox[data-empty="true"]:hover,
+.free-textbox[data-empty="true"]:focus-within,
+.free-textbox[data-empty="true"][data-focused="true"] {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+/* The placeholder is the only hint, and it stays faint. */
+.free-textbox[data-empty="true"] .is-editor-empty:first-child::before {
+  color: var(--ink-4);
+}
