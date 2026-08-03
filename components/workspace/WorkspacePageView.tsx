@@ -142,6 +142,27 @@ export default function WorkspacePageView({
   const [notes, setNotes] = useState<NoteData[]>(page?.notes ?? []);
   const [pageList, setPageList] = useState(() => pages);
 
+  /* Re-sync when the server sends a different list.
+     The initialiser above runs ONCE per component instance, and navigating
+     between pages of the same surah reuses that instance — so the sidebar kept
+     whatever list it was first mounted with. A page created in one view could
+     then vanish when you came back to it, and renames made elsewhere never
+     appeared. Compared by id+title so an identical list does not churn state
+     on every render. */
+  const pagesKey = pages.map((p) => `${p.id}:${p.title}`).join("|");
+  useEffect(() => {
+    setPageList((prev) => {
+      const prevKey = prev.map((p) => `${p.id}:${p.title}`).join("|");
+      if (prevKey === pagesKey) return prev;
+      /* Keep rows the server has not caught up on yet — a page created a
+         moment ago is real to the user even if this payload predates it. */
+      const serverIds = new Set(pages.map((p) => p.id));
+      const pending = prev.filter((p) => !serverIds.has(p.id) && "pending" in p);
+      return [...pages, ...pending];
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pagesKey]);
+
   // Remove navigation splash screen injected by HomeClient on mount.
   useEffect(() => {
     document.getElementById("tl-nav-splash")?.remove();

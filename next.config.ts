@@ -56,6 +56,20 @@ const nextConfig: NextConfig = {
       fallback: [],
     };
   },
+
+  /* Client router cache.
+     Dynamic segments default to a 0s stale time, so every visit to a page
+     re-fetched its RSC payload even though <Link prefetch> had already pulled
+     it — which is what made switching between pages feel like loading rather
+     than switching. 60s keeps a page you were just on instantly available on
+     the way back, while still being short enough that a page edited elsewhere
+     refreshes on the next visit. */
+  experimental: {
+    staleTimes: {
+      dynamic: 60,
+      static:  180,
+    },
+  },
 };
 
 export default nextConfig;
