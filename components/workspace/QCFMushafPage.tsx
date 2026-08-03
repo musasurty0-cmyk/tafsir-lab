@@ -287,7 +287,7 @@ function QCFMushafPage({
   // object per word — several hundred per page — and it used to run on EVERY
   // render, including every frame of a zoom gesture, where none of its inputs
   // had changed.
-  const { sortedLines, isSurahStart } = useMemo(() => {
+  const { sortedLines, isSurahStart, shortLines } = useMemo(() => {
     const lineMap = new Map<number, WordEntry[]>();
     let lineCounter = 0;
 
@@ -315,8 +315,25 @@ function QCFMushafPage({
       }
     }
 
+    const ordered = [...lineMap.entries()].sort(([a], [b]) => a - b);
+
+    /* Which lines are genuinely SHORT.
+       On a QCF page every line is designed to fill the measure exactly — that
+       is what makes a Muṣḥaf page a rectangle of text. The one exception is
+       the line a Surah ends on, which stops wherever the last āyah stops. So
+       every line is justified to the common measure except that one, which
+       stays centred. Without this, lines rendered at their natural glyph width
+       and a full line came out visibly wider than a short one. */
+    const lastAyah = chapter.verses_count;
+    const shortLines = new Set<number>();
+    for (let i = ordered.length - 1; i >= 0; i--) {
+      const [key, words] = ordered[i];
+      if (words.some((w) => w.ayahNum === lastAyah)) { shortLines.add(key); break; }
+    }
+
     return {
-      sortedLines: [...lineMap.entries()].sort(([a], [b]) => a - b),
+      shortLines,
+      sortedLines: ordered,
       /* True only on the surah's OPENING page. The name label shows on every
          page; the basmala belongs to the surah's start, not to each sheet. */
       isSurahStart: verses.some((v) => {
@@ -324,7 +341,7 @@ function QCFMushafPage({
         return sId === chapter.id && vNum === 1;
       }),
     };
-  }, [verses, pageNumber, chapter.id]);
+  }, [verses, pageNumber, chapter.id, chapter.verses_count]);
 
   // ── Gate 1: data still loading ────────────────────────────────────────────
   if (loading) {
@@ -550,7 +567,11 @@ function QCFMushafPage({
           };
 
           return (
-            <div key={lineKey} className="qcf-line">
+            <div
+              key={lineKey}
+              className="qcf-line"
+              data-short={shortLines.has(lineKey) ? "true" : "false"}
+            >
               {runs.map((run, ri) =>
                 run.wash ? (
                   <span

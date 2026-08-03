@@ -2771,12 +2771,6 @@ input, textarea { font: inherit; color: inherit; }
     0 10px 36px oklch(0 0 0 / 0.11),
     0 28px 72px oklch(0 0 0 / 0.06);
   padding: 56px 68px 72px;
-  /* Grows with the widest line instead of being pinned to the nominal 720px:
-     the paper must contain the text, not crop it. Note-position maths already
-     reads the card's real offsetWidth. */
-  width: max-content;
-  min-width: 720px;
-  max-width: none;
   user-select: none;
   -webkit-user-select: none;
   /* Own GPU layer — keeps text crisp under CSS scale() zoom */
@@ -3130,15 +3124,11 @@ input, textarea { font: inherit; color: inherit; }
  *                     advance widths the font designer encoded.
  */
 .qcf-lines {
-  /* Sizes to the WIDEST line rather than to a fixed measure. QCF advance
-     widths are exact and glyphs never shrink, so a naturally wider line — Al-
-     Anfāl has several — used to run past the paper edge. min-width keeps short
-     pages at the nominal measure so the page does not shrink to its text, and
-     every line still centres on one shared axis, which is what holds the
-     Mushaf composition together. */
-  width:          max-content;
-  min-width:      100%;
-  margin-inline:  auto;
+  /* One common measure for every line. Sizing to the widest line was the
+     wrong fix: it let each line keep its natural width and merely grew the
+     paper around them, which exaggerated the difference rather than removing
+     it. Lines now justify INTO this width. */
+  width:          100%;
   flex:           1;
   display:        flex;
   flex-direction: column;
@@ -3177,13 +3167,25 @@ input, textarea { font: inherit; color: inherit; }
  * that the QCF page font maps to a word image; the font shaper operates
  * per-character and does not care whether the span is inline or a flex item.
  */
+/* A Muṣḥaf page is a rectangle of text: every line is designed to fill the
+   measure exactly, so lines are JUSTIFIED, not centred at their natural width.
+   Centring made a full line and a shorter one visibly different widths, which
+   is what made the page look ragged.
+   space-between distributes the slack between word glyphs, which is how the
+   printed page sets it. */
 .qcf-line {
   display:         flex;
   direction:       rtl;
-  justify-content: center;
+  justify-content: space-between;
   align-items:     center;
-  gap:             0;          /* no extra space between glyph spans */
+  gap:             0;          /* slack comes from justification, not gap */
 }
+/* The line a Surah ENDS on is genuinely short — it stops where the last āyah
+   stops — so it centres instead of being stretched across the measure. */
+.qcf-line[data-short="true"] { justify-content: center; }
+/* A line that resolved to a single wrapper span has no gaps to distribute;
+   centring it avoids it hugging one edge. */
+.qcf-line > :only-child { margin-inline: auto; }
 
 /* ── Individual glyph spans ─────────────────────────────────────────────── */
 /*
