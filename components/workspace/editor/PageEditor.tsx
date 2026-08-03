@@ -819,6 +819,29 @@ export default function PageEditor({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editor, versePicker]);
 
+  /* Embedding from the Tafsīr drawer. The drawer decides WHAT to embed (a
+     highlighted passage or the whole entry); the editor owns insertion, so
+     neither has to know about the other's internals. */
+  useEffect(() => {
+    if (!editor) return;
+    const onEmbed = (e: Event) => {
+      const d = (e as CustomEvent<{
+        verseKey: string; sourceName: string; sourceSlug: string;
+        contentHtml: string; partial: boolean;
+      }>).detail;
+      if (!d?.verseKey) return;
+      editor.chain().focus().insertContent([
+        { type: "tafsirBlock", attrs: {
+          verseKey: d.verseKey, contentHtml: d.contentHtml,
+          sourceName: d.sourceName, sourceSlug: d.sourceSlug, partial: d.partial,
+        } },
+        { type: "paragraph" },
+      ]).scrollIntoView().run();
+    };
+    window.addEventListener("tl:embed-tafsir", onEmbed);
+    return () => window.removeEventListener("tl:embed-tafsir", onEmbed);
+  }, [editor]);
+
   /* Choosing a command in the /help sheet types its trigger back into the
      document. Inserting the TEXT rather than executing the command keeps the
      user in the normal flow — the slash menu opens on it, and they can still

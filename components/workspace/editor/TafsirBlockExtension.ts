@@ -19,6 +19,10 @@ export const TafsirBlockExtension = Node.create({
       // TafsirSource slug — any provisioned source (quran.com built-ins or
       // the spa5k catalog). Old blocks without this attr keep Ibn Kathīr.
       sourceSlug:  { default: "ibn-kathir-en" },
+      /* True when contentHtml holds a passage the reader selected rather than
+         the whole commentary. Attribution has to say so — quoting a fragment
+         as if it were the full entry misrepresents the source. */
+      partial:     { default: false },
     };
   },
 

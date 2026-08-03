@@ -2771,6 +2771,12 @@ input, textarea { font: inherit; color: inherit; }
     0 10px 36px oklch(0 0 0 / 0.11),
     0 28px 72px oklch(0 0 0 / 0.06);
   padding: 56px 68px 72px;
+  /* Grows with the widest line instead of being pinned to the nominal 720px:
+     the paper must contain the text, not crop it. Note-position maths already
+     reads the card's real offsetWidth. */
+  width: max-content;
+  min-width: 720px;
+  max-width: none;
   user-select: none;
   -webkit-user-select: none;
   /* Own GPU layer — keeps text crisp under CSS scale() zoom */
@@ -3124,6 +3130,15 @@ input, textarea { font: inherit; color: inherit; }
  *                     advance widths the font designer encoded.
  */
 .qcf-lines {
+  /* Sizes to the WIDEST line rather than to a fixed measure. QCF advance
+     widths are exact and glyphs never shrink, so a naturally wider line — Al-
+     Anfāl has several — used to run past the paper edge. min-width keeps short
+     pages at the nominal measure so the page does not shrink to its text, and
+     every line still centres on one shared axis, which is what holds the
+     Mushaf composition together. */
+  width:          max-content;
+  min-width:      100%;
+  margin-inline:  auto;
   flex:           1;
   display:        flex;
   flex-direction: column;
@@ -9828,3 +9843,22 @@ input, textarea { font: inherit; color: inherit; }
 .cxb-target svg, .cxp-link-icon { color: var(--icon-link); }
 
 /* Slash palette icons are emoji already — left alone rather than tinted. */
+
+/* Embed controls under the commentary. Quiet text buttons, not a toolbar. */
+.tafsir-embed {
+  display: flex; align-items: center; gap: var(--sp-3);
+  flex-wrap: wrap;
+  margin: 0 0 var(--sp-4);
+}
+.tafsir-embed-btn {
+  appearance: none; border: 0; background: none; cursor: pointer;
+  padding: 3px 0; font-size: 11.5px; color: var(--accent-ink);
+  border-bottom: 1px solid transparent;
+  transition: border-color var(--dur-fast) ease, color var(--dur-fast) ease;
+}
+.tafsir-embed-btn:hover:not(:disabled) { border-bottom-color: var(--accent); }
+.tafsir-embed-btn:disabled { color: var(--ink-4); cursor: default; }
+.tafsir-embed-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.tafsir-embed-hint { font-size: 11px; color: var(--ink-4); }
+/* An embedded excerpt says so next to its source. */
+.tafsir-block-partial { color: var(--ink-4); font-weight: 400; }

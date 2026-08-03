@@ -42,9 +42,10 @@ export default function TafsirBlockView({
   deleteNode,
   selected,
 }: NodeViewProps) {
-  const { verseKey, contentHtml, sourceName, sourceSlug } = node.attrs as {
+  const { verseKey, contentHtml, sourceName, sourceSlug, partial } = node.attrs as {
     verseKey:    string;
     contentHtml: string;
+    partial:     boolean;
     sourceName:  string;
     sourceSlug?: string;
   };
@@ -142,7 +143,11 @@ export default function TafsirBlockView({
                   ))}
                 </select>
               ) : (
-                <span className="tafsir-block-source">{sourceName}</span>
+                <span className="tafsir-block-source">
+                  {sourceName}
+                  {/* An excerpt must say it is one. */}
+                  {partial && <span className="tafsir-block-partial"> · excerpt</span>}
+                </span>
               )}
             </div>
             <button

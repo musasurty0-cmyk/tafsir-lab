@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useMemo } from "react";
+import { useCallback, useEffect, useRef, useState, useMemo } from "react";
 import { X } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { TAFSIR_LANGUAGE_NAMES } from "@/lib/tafsir/spa5k-catalog";
@@ -77,6 +77,11 @@ export default function TafsirDrawer({ open, verseKey, verses, onClose }: Props)
 
   // ── Fetch state ──────────────────────────────────────────────────────────
   const [entry,   setEntry]   = useState<TafsirEntry | null>(null);
+  /* Text the reader has highlighted inside the commentary. Watched so the
+     embed control can offer the passage rather than silently inserting the
+     whole entry — a long tafsīr embedded whole swamps the note it was meant
+     to support. */
+  const [picked, setPicked] = useState<string>("");
   const [info,      setInfo]      = useState<SurahInfo | null>(null);
   const [infoState, setInfoState] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const [loading, setLoading] = useState(false);
@@ -193,6 +198,23 @@ export default function TafsirDrawer({ open, verseKey, verses, onClose }: Props)
     return () => { live = false; };
   }, [tab, open, surahOfAyah, info?.surahNumber]);
 
+  /* Selection is read on selectionchange rather than on mouseup: a keyboard
+     selection (Shift+arrows) never produces a mouseup, and dragging past the
+     panel edge ends outside it. Only selections INSIDE the commentary count. */
+  useEffect(() => {
+    if (!open) return;
+    const onSel = () => {
+      const sel = window.getSelection();
+      if (!sel || sel.isCollapsed) { setPicked(""); return; }
+      const host = document.querySelector(".commentary-body");
+      const node = sel.anchorNode;
+      if (!host || !node || !host.contains(node)) return;   // keep the last pick
+      setPicked(sel.toString().trim());
+    };
+    document.addEventListener("selectionchange", onSel);
+    return () => document.removeEventListener("selectionchange", onSel);
+  }, [open]);
+
   // ── Derived ──────────────────────────────────────────────────────────────
   const activeVerse = useMemo(
     () => verses.find((v) => v.verse_key === activeAyah) ?? null,
@@ -206,6 +228,25 @@ export default function TafsirDrawer({ open, verseKey, verses, onClose }: Props)
 
   const sourceName = sources.find((s) => s.slug === sourceSlug)?.name
     ?? (sourceSlug === "maarif-en" ? "Maʿārif al-Qurʾān (English)" : "Ibn Kathīr (English)");
+
+  /** Hand the chosen text to the editor, which owns insertion. */
+  const embed = useCallback((mode: "selection" | "full") => {
+    if (!entry || !activeAyah) return;
+    const html = mode === "selection"
+      ? `<p>${picked.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>`
+      : (entry.contentHtml ?? "");
+    window.dispatchEvent(new CustomEvent("tl:embed-tafsir", {
+      detail: {
+        verseKey:   activeAyah,
+        sourceName,
+        sourceSlug,
+        // Empty contentHtml makes the block fetch the full entry itself.
+        contentHtml: mode === "selection" ? html : (html || ""),
+        partial:     mode === "selection",
+      },
+    }));
+  }, [entry, activeAyah, picked, sourceName, sourceSlug]);
+
 
   const TABS: { id: Tab; label: string }[] = [
     { id: "commentary",   label: t("drawer.commentary")   },
@@ -367,6 +408,28 @@ export default function TafsirDrawer({ open, verseKey, verses, onClose }: Props)
                       {TAFSIR_LANGUAGE_NAMES[entry.source.language]
                         ?? entry.source.language.toUpperCase()} commentary
                     </span>
+                  </div>
+                  <div className="tafsir-embed">
+                    <button
+                      className="tafsir-embed-btn"
+                      onClick={() => embed("selection")}
+                      disabled={!picked}
+                      title={picked
+                        ? "Insert only the highlighted passage"
+                        : "Highlight a passage in the commentary first"}
+                    >
+                      Embed selection
+                    </button>
+                    <button
+                      className="tafsir-embed-btn"
+                      onClick={() => embed("full")}
+                      title="Insert the whole commentary for this āyah"
+                    >
+                      Embed full tafsīr
+                    </button>
+                    {!picked && (
+                      <span className="tafsir-embed-hint">No passage selected</span>
+                    )}
                   </div>
                   <div
                     className="commentary-body"
