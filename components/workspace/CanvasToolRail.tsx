@@ -357,6 +357,9 @@ export default function CanvasToolRail({
         <button
           key={id}
           className="ctr-btn"
+          /* Lets the stylesheet tint the ACTIVE tool by purpose (ink, marker,
+             eraser) without the rail knowing anything about colour. */
+          data-tool={id}
           data-active={activeTool === id ? "true" : "false"}
           title={title}
           onClick={onTap(() => selectTool(id))}

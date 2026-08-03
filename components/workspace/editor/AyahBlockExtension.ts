@@ -36,6 +36,28 @@ export const AyahBlockExtension = Node.create({
       arabicText:      { default: "" },
       translationText: { default: "" },
       showTranslation: { default: true },
+
+      /* Size is a property of THIS placement. Both axes are stored, and both
+         are null by default — null means "fit the column / fit the content",
+         so an untouched block stays fluid and reflows when the sheet or the
+         reading size changes. Only a block the author actually dragged
+         carries a number. */
+      width:  {
+        default: null,
+        parseHTML: (el) => {
+          const n = parseInt(el.getAttribute("data-w") ?? "", 10);
+          return Number.isFinite(n) && n > 0 ? n : null;
+        },
+        renderHTML: (a) => (a.width ? { "data-w": String(a.width) } : {}),
+      },
+      height: {
+        default: null,
+        parseHTML: (el) => {
+          const n = parseInt(el.getAttribute("data-h") ?? "", 10);
+          return Number.isFinite(n) && n > 0 ? n : null;
+        },
+        renderHTML: (a) => (a.height ? { "data-h": String(a.height) } : {}),
+      },
     };
   },
 

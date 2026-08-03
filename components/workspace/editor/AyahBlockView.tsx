@@ -12,7 +12,7 @@
  *   - Delete the block.
  */
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { NodeViewWrapper, type NodeViewProps } from "@tiptap/react";
 import { useEditorCtx } from "./EditorContext";
 import NoteCard from "../NoteCard";
@@ -51,11 +51,17 @@ const TrashIcon = () => (
 
 // ── Component ─────────────────────────────────────────────────────────────
 
+/** Smaller than this and the Arabic wraps to shreds; the floor is the point
+ *  at which a verse is still readable rather than merely present. */
+const MIN_W = 260;
+const MIN_H = 120;
+
 export default function AyahBlockView({
   node,
   updateAttributes,
   deleteNode,
   selected,
+  editor,
 }: NodeViewProps) {
   const {
     verseKey,
@@ -137,6 +143,60 @@ export default function AyahBlockView({
   const personalStatus = ctx.personalProgress[progressKey] ?? null;
   const groupEntry     = ctx.groupProgress[progressKey]    ?? null;
 
+  /* Corner resize. Both axes move together from whichever corner is grabbed,
+     so the block resizes the way the pointer does rather than only widening.
+     Divided by the live zoom: on a scaled canvas a 100px pointer move is not
+     a 100px change to the block, and without this the block ran away from the
+     cursor at anything other than 100%. */
+  const startResize = useCallback((corner: string) => (e: React.PointerEvent<HTMLSpanElement>) => {
+    if (!editor.isEditable) return;
+    e.preventDefault(); e.stopPropagation();
+    const handle = e.currentTarget;
+    const el = handle.closest(".ayah-block-node") as HTMLElement | null;
+    if (!el) return;
+
+    handle.setPointerCapture(e.pointerId);
+    const r0 = el.getBoundingClientRect();
+    const startX = e.clientX, startY = e.clientY;
+    /* Read the rendered scale from the element itself rather than threading
+       zoom state in: the canvas applies it as a CSS transform on an ancestor,
+       so the ratio of the painted box to its layout box IS the zoom. */
+    const scale = r0.width / (el.offsetWidth || r0.width) || 1;
+    const west = corner.includes("w"), north = corner.includes("n");
+    const maxW = (el.parentElement?.getBoundingClientRect().width ?? r0.width) / scale;
+    let w = Math.round(r0.width / scale), h = Math.round(r0.height / scale);
+
+    const move = (ev: PointerEvent) => {
+      const dx = (ev.clientX - startX) / scale * (west ? -1 : 1);
+      const dy = (ev.clientY - startY) / scale * (north ? -1 : 1);
+      w = Math.round(Math.min(maxW, Math.max(MIN_W, r0.width  / scale + dx)));
+      h = Math.round(Math.max(MIN_H,                 r0.height / scale + dy));
+      el.style.width = `${w}px`;
+      el.style.height = `${h}px`;
+    };
+    const end = () => {
+      handle.releasePointerCapture(e.pointerId);
+      handle.removeEventListener("pointermove", move);
+      handle.removeEventListener("pointerup", end);
+      handle.removeEventListener("pointercancel", end);
+      el.style.width = ""; el.style.height = "";
+      /* Full width stores null so the block stays fluid if the sheet changes;
+         a height at the floor likewise falls back to content height. */
+      updateAttributes({
+        width:  w >= maxW - 2 ? null : w,
+        height: h <= MIN_H     ? null : h,
+      });
+    };
+    handle.addEventListener("pointermove", move);
+    handle.addEventListener("pointerup", end);
+    handle.addEventListener("pointercancel", end);
+  }, [editor, updateAttributes]);
+
+  /** Double-click any handle restores the default — a drag is never one-way. */
+  const resetSize = useCallback(() => {
+    if (editor.isEditable) updateAttributes({ width: null, height: null });
+  }, [editor, updateAttributes]);
+
   // ── Render ────────────────────────────────────────────────────────────
   return (
     <NodeViewWrapper>
@@ -144,7 +204,24 @@ export default function AyahBlockView({
         className="ayah-block-node"
         data-selected={selected ? "true" : "false"}
         contentEditable={false}
+        style={{
+          ...(node.attrs.width  ? { width:  `${node.attrs.width}px`  } : {}),
+          ...(node.attrs.height ? { height: `${node.attrs.height}px` } : {}),
+        }}
       >
+        {/* Corner handles, only while the block is selected. */}
+        {selected && editor.isEditable && (["nw", "ne", "sw", "se"] as const).map((c) => (
+          <span
+            key={c}
+            className="ayah-block-grip"
+            data-corner={c}
+            role="separator"
+            aria-label={`Resize āyah block (${c})`}
+            title="Drag to resize · double-click to reset"
+            onPointerDown={startResize(c)}
+            onDoubleClick={resetSize}
+          />
+        ))}
         {/* ── Drag handle ── */}
         <div className="ayah-block-drag" data-drag-handle title="Drag to reorder">
           ⠿

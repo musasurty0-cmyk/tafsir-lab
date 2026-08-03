@@ -9767,3 +9767,64 @@ input, textarea { font: inherit; color: inherit; }
 .free-textbox[data-empty="true"] .is-editor-empty:first-child::before {
   color: var(--ink-4);
 }
+
+/* ── Āyah block corner grips ───────────────────────────────────────────────
+   Only while the block is selected. Small and neutral until hovered — four
+   permanent handles on every embedded verse would be more chrome than the
+   verse. The block also needs a scroll container once a height is set, so a
+   long translation is never clipped. */
+.ayah-block-node[style*="height"] { overflow: auto; }
+.ayah-block-grip {
+  position: absolute;
+  width: 14px; height: 14px;
+  z-index: 4;
+  touch-action: none;
+  /* The visible dot is smaller than the hit area, which stays grabbable. */
+  background:
+    radial-gradient(circle at center, var(--accent) 0 3px, transparent 3.5px);
+  opacity: 0.55;
+  transition: opacity var(--dur-fast) ease, transform var(--dur-fast) ease;
+}
+.ayah-block-grip:hover { opacity: 1; transform: scale(1.18); }
+.ayah-block-grip[data-corner="nw"] { top: -7px;    left: -7px;  cursor: nwse-resize; }
+.ayah-block-grip[data-corner="ne"] { top: -7px;    right: -7px; cursor: nesw-resize; }
+.ayah-block-grip[data-corner="sw"] { bottom: -7px; left: -7px;  cursor: nesw-resize; }
+.ayah-block-grip[data-corner="se"] { bottom: -7px; right: -7px; cursor: nwse-resize; }
+
+/* ── Icon colour ───────────────────────────────────────────────────────────
+   Colour is applied where it distinguishes a tool's PURPOSE or marks a live
+   state — not decoratively, and not on every icon. Navigation, structure and
+   text-formatting icons stay neutral so the coloured ones mean something.
+   All tones derive from the same muted family as the accent. */
+:root {
+  --icon-ink:    var(--ink-2);          /* the default: no colour at all */
+  --icon-pen:    oklch(0.55 0.13 245);  /* marks: things that leave ink   */
+  --icon-mark:   oklch(0.62 0.13  75);
+  --icon-erase:  oklch(0.55 0.12  25);  /* destructive / removes marks    */
+  --icon-study:  oklch(0.50 0.10 160);  /* reference: Qurʾān and tafsīr   */
+  --icon-link:   oklch(0.52 0.12 290);  /* relationships between passages */
+}
+[data-theme="dark"] {
+  --icon-pen:    oklch(0.70 0.12 245);
+  --icon-mark:   oklch(0.76 0.12  75);
+  --icon-erase:  oklch(0.68 0.13  25);
+  --icon-study:  oklch(0.68 0.10 160);
+  --icon-link:   oklch(0.70 0.12 290);
+}
+
+/* Canvas tools: the pen family is the one place where knowing which tool is
+   armed at a glance genuinely matters. Colour appears only when ACTIVE, so an
+   idle rail stays quiet. */
+.ctr-btn[data-active="true"][data-tool="pen"]       { color: var(--icon-pen); }
+.ctr-btn[data-active="true"][data-tool="highlight"] { color: var(--icon-mark); }
+.ctr-btn[data-active="true"][data-tool="eraser"]    { color: var(--icon-erase); }
+
+/* Reference surfaces: the Tafsīr drawer toggle and āyah blocks read as
+   "scripture and commentary" rather than as generic panels. */
+.tb-btn[data-active="true"] { color: var(--icon-study); }
+
+/* Relationship affordances. The Connection block already used the accent;
+   this only separates the LINK glyph from ordinary body colour. */
+.cxb-target svg, .cxp-link-icon { color: var(--icon-link); }
+
+/* Slash palette icons are emoji already — left alone rather than tinted. */
