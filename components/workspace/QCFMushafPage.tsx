@@ -22,7 +22,7 @@
  *   Never render code_v2 before the matching font file is confirmed loaded.
  */
 
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState, useLayoutEffect} from "react";
 import type { QCFVerse, Chapter } from "@/lib/types";
 
 // ── Font loading ────────────────────────────────────────────────────────────
@@ -174,6 +174,7 @@ function QCFMushafPage({
 }: Props) {
 
   const [fontReady, setFontReady] = useState(false);
+  const linesRef = useRef<HTMLDivElement>(null);
   const [fontError, setFontError] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
 
@@ -281,6 +282,50 @@ function QCFMushafPage({
     }
     return endDrag();
   }, [onRangeChange, rangeSelection, endDrag]);
+
+  /* Equalise line length.
+     QCF advance widths are exact, but line to line they do not sum to the same
+     total, so a page of naturally-sized lines reads as ragged. Each line's
+     glyph run is scaled horizontally to the widest line on the page.
+
+     Measured rather than justified: spreading flex items pushes the WORDS
+     apart, because every glyph is its own box. Scaling the run keeps the
+     spacing the font designed and only adjusts the overall width.
+
+     Runs on layout after the font is ready — the glyphs have no width until
+     then — and again on resize, since the measure follows the card. */
+  useLayoutEffect(() => {
+    if (!fontReady) return;
+    const host = linesRef.current;
+    if (!host) return;
+
+    let raf = 0;
+    const fit = () => {
+      const fits = [...host.querySelectorAll<HTMLElement>(".qcf-line-fit")];
+      if (fits.length === 0) return;
+      // Clear first, or each pass would measure the previous pass's scale.
+      for (const el of fits) el.style.setProperty("--qcf-fit", "1");
+      const widths = fits.map((el) => el.getBoundingClientRect().width);
+      const target = Math.max(...widths);
+      if (!Number.isFinite(target) || target <= 0) return;
+
+      for (let i = 0; i < fits.length; i++) {
+        const w = widths[i];
+        const ratio = w > 0 ? target / w : 1;
+        /* A line that is far short of the measure is short because the āyāt
+           ended there, not because of rounding. Stretching it would be a lie
+           about the page, so anything needing more than a 12% pull is left
+           alone and stays centred. */
+        fits[i].style.setProperty("--qcf-fit", ratio > 1.12 ? "1" : String(ratio.toFixed(4)));
+      }
+    };
+
+    const schedule = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(fit); };
+    schedule();
+    const ro = new ResizeObserver(schedule);
+    ro.observe(host);
+    return () => { cancelAnimationFrame(raf); ro.disconnect(); };
+  }, [fontReady, verses, pageNumber]);
 
   // ── Build line map ────────────────────────────────────────────────────────
   // Memoised on the data it derives from. This allocates a Map plus one
@@ -426,7 +471,7 @@ function QCFMushafPage({
       </div>
 
       {/* ── Page lines ── */}
-      <div className="qcf-lines">
+      <div className="qcf-lines" ref={linesRef}>
         {sortedLines.map(([lineKey, words]) => {
           // All words on a Mushaf line share the same v2_page font.
           // We only reach here after fontReady=true, so the font IS loaded.
@@ -572,6 +617,9 @@ function QCFMushafPage({
               className="qcf-line"
               data-short={shortLines.has(lineKey) ? "true" : "false"}
             >
+              {/* The glyph run lives in its own inline box so it can be scaled
+                  to the page measure without scaling the line box itself. */}
+              <span className="qcf-line-fit">
               {runs.map((run, ri) =>
                 run.wash ? (
                   <span
@@ -593,6 +641,7 @@ function QCFMushafPage({
                   run.entries.map(renderGlyph)
                 ),
               )}
+              </span>
             </div>
           );
         })}

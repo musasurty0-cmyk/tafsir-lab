@@ -3167,25 +3167,34 @@ input, textarea { font: inherit; color: inherit; }
  * that the QCF page font maps to a word image; the font shaper operates
  * per-character and does not care whether the span is inline or a flex item.
  */
-/* A Muṣḥaf page is a rectangle of text: every line is designed to fill the
-   measure exactly, so lines are JUSTIFIED, not centred at their natural width.
-   Centring made a full line and a shorter one visibly different widths, which
-   is what made the page look ragged.
-   space-between distributes the slack between word glyphs, which is how the
-   printed page sets it. */
+/* Centred, always.
+   space-between was a bad idea: every glyph on the line is its own span, so
+   distributing slack between flex items scattered the WORDS across the full
+   measure instead of justifying the line. Arabic justification happens inside
+   the glyph run, not between boxes.
+   Lines are equalised instead by scaling each one to the shared measure — see
+   --qcf-fit below, set per line after the font loads. */
 .qcf-line {
   display:         flex;
   direction:       rtl;
-  justify-content: space-between;
+  justify-content: center;
   align-items:     center;
-  gap:             0;          /* slack comes from justification, not gap */
+  gap:             0;          /* no extra space between glyph spans */
 }
-/* The line a Surah ENDS on is genuinely short — it stops where the last āyah
-   stops — so it centres instead of being stretched across the measure. */
-.qcf-line[data-short="true"] { justify-content: center; }
-/* A line that resolved to a single wrapper span has no gaps to distribute;
-   centring it avoids it hugging one edge. */
-.qcf-line > :only-child { margin-inline: auto; }
+
+/* Every line ends up the same length.
+   QCF advance widths are exact but not identical line to line, so a page of
+   naturally-sized lines reads as ragged. Each line is scaled horizontally to
+   the page measure by a factor measured after layout. The factor is applied
+   about the line's centre so the page keeps one vertical axis, and it is
+   capped in JS so a genuinely short line — the one a Surah ends on — is never
+   stretched across the page. */
+.qcf-line-fit {
+  display: inline-flex;
+  transform: scaleX(var(--qcf-fit, 1));
+  transform-origin: center;
+  will-change: transform;
+}
 
 /* ── Individual glyph spans ─────────────────────────────────────────────── */
 /*
