@@ -334,9 +334,13 @@ export default function FocusAnnotation({
     if (!el) return;
     function onWheel(e: WheelEvent) {
       e.preventDefault();
-      const delta   = -e.deltaY * 0.001 * (e.deltaMode === 1 ? 16 : 1);
+      /* Exponential, matching the canvas and the board. The old linear form
+         `zoom + zoom * delta * 10` multiplied by zero at deltaY=100 — one mouse
+         notch snapped straight to the minimum instead of stepping. */
+      const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 100 : 1;
+      const step = clamp(e.deltaY * unit * 0.0015, -0.18, 0.18);
       const prev    = viewportRef.current;
-      const newZoom = clamp(prev.zoom + prev.zoom * delta * 10, ZOOM_MIN, ZOOM_MAX);
+      const newZoom = clamp(prev.zoom * Math.exp(-step), ZOOM_MIN, ZOOM_MAX);
       const rect    = el!.getBoundingClientRect();
       const mx = e.clientX - rect.left, my = e.clientY - rect.top;
       const scale   = newZoom / prev.zoom;

@@ -28,7 +28,11 @@ import Placeholder from "@tiptap/extension-placeholder";
 import Underline from "@tiptap/extension-underline";
 import Highlight from "@tiptap/extension-highlight";
 import Color from "@tiptap/extension-color";
-import { TextStyle, FontFamily } from "@tiptap/extension-text-style";
+import { TextStyle, FontFamily, FontSize } from "@tiptap/extension-text-style";
+import Table from "@tiptap/extension-table";
+import TableRow from "@tiptap/extension-table-row";
+import TableCell from "@tiptap/extension-table-cell";
+import TableHeader from "@tiptap/extension-table-header";
 import Link from "@tiptap/extension-link";
 import TaskList from "@tiptap/extension-task-list";
 import TaskItem from "@tiptap/extension-task-item";
@@ -394,6 +398,10 @@ export default function PageEditor({
       Highlight.configure({ multicolor: true }),
       TextStyle,
       FontFamily,
+      /* Font size rides the same textStyle mark as colour and family, so a run
+         can carry all three and they round-trip through the stored HTML
+         together. */
+      FontSize,
       Color,
       Subscript,
       Superscript,
@@ -405,6 +413,14 @@ export default function PageEditor({
       }),
       TaskList,
       TaskItem.configure({ nested: true }),
+
+      /* Note-taking tables: resizable columns, and cells that accept every
+         mark the rest of the document does (colour, size, direction), so an
+         Arabic cell can sit beside an English one. */
+      Table.configure({ resizable: true, lastColumnResizable: true, allowTableNodeSelection: true }),
+      TableRow,
+      TableHeader,
+      TableCell,
 
       AyahBlockExtension,
       TafsirBlockExtension,

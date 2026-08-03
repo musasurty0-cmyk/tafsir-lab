@@ -87,7 +87,10 @@
   --canvas-max:   900px;
   /* Open canvas to the right of the text column: somewhere to scroll into and
      put things, so the page extends sideways as well as downward. */
-  --canvas-span:  2400px;
+  /* Writing room below the last block. Deep enough that you never feel you
+     are typing against the floor, shallow enough that scrolling reaches a real
+     end — the sheet grows as content does rather than being endless. */
+  --canvas-runway: 320px;
   /* The Mushaf sheet. Its own surface, not --bg: in light mode the page is
      plain white paper, deliberately brighter than the warm app background. */
   --paper:      #ffffff;
@@ -505,35 +508,27 @@ input, textarea { font: inherit; color: inherit; }
    not shrink to their text. The trailing inline padding is open canvas: room
    to scroll into and place wide content, the horizontal counterpart of the
    240px of writing room at the bottom. */
+/* The sheet. width:max-content is what makes the workspace FINITE but
+   expandable: it is exactly as wide as its widest child and no wider, so a
+   horizontal scrollbar appears only once something actually needs the room —
+   a wide table, a dragged text box. min-width keeps it at least a screenful so
+   a short note does not shrink to its text. The previous version pinned the
+   page to 100% and bolted a marker 2400px off the edge, which meant the canvas
+   was permanently infinite whether or not anything was out there. */
 .doc {
   position: relative;
-  /* Stays viewport-width so the column below can centre against what the
-     reader is actually looking at. Making the PAGE itself span the canvas
-     centred the column in the canvas instead, which threw the document
-     against the left edge. */
-  width: 100%;
+  width: max-content;
   min-width: 100%;
-  padding-block: var(--canvas-pad-y) 240px;
+  padding-block: var(--canvas-pad-y) var(--canvas-runway);
 }
 
-/* The open canvas. An absolutely positioned marker extends the scrollable
-   region without widening the page, so there is somewhere to scroll to and
-   place things while the column stays centred where it was. */
-.doc::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  inset-inline-start: calc(100% + var(--canvas-span));
-  width: 1px; height: 1px;
-  pointer-events: none;
-}
-
-/* The readable COLUMN inside that surface. Prose keeps its measure however
-   wide the page becomes — an infinite canvas must not mean infinite line
-   length — and stays centred over the first screenful. */
+/* The readable COLUMN. Left-aligned, not centred: a note starts at the left
+   margin and grows rightward, so the writing position is where the eye already
+   is rather than a small page floating mid-screen. Prose still keeps its
+   measure — an expandable sheet must not mean unbounded line length. */
 .doc > * {
   max-width: var(--canvas-max);
-  margin-inline: auto;
+  margin-inline: 0;
 }
 
 /* Content that genuinely needs the room opts out of the column and may run as
@@ -552,16 +547,12 @@ input, textarea { font: inherit; color: inherit; }
   min-width: 100%;
 }
 
-/* A wide table CONTAINS itself instead. It stays inside the column and
-   scrolls in its own box, so adding a column to a table never drags the whole
-   page sideways — width:max-content here would have done exactly that, since
-   it defeats the overflow it is paired with. */
-.page-editor-content table {
-  display: block;
-  max-width: 100%;
-  width: 100%;
-  overflow-x: auto;
-}
+/* A table sizes to its columns and lets the SHEET grow to contain it — that
+   is the horizontal expansion in §4, and it is why this no longer scrolls in
+   its own box. `display: block` here was also wrong outright: it takes the
+   element out of table layout, so column widths and border-collapse stopped
+   applying. Real table display, and the page widens when a table needs it. */
+.page-editor-content table { max-width: none; }
 .doc-cover { margin-bottom: 24px; display: flex; flex-direction: column; gap: 12px; }
 .doc-cover-tag { font-family: var(--font-mono); font-size: 11px; color: var(--ink-3); letter-spacing: 0.04em; text-transform: uppercase; }
 .doc-title {
@@ -4674,12 +4665,13 @@ input, textarea { font: inherit; color: inherit; }
 
 /* ── Editor shell ── */
 .page-editor {
-  /* Infinite-feeling canvas: always at least a viewport of writable space,
-     and a deep clickable runway below the last block. Clicking the runway
-     focuses the end of the document (handled in PageEditor). */
+  /* Always at least a screenful of writable space, plus a clickable runway
+     below the last block; clicking it focuses the end of the document (handled
+     in PageEditor). Bounded rather than 50vh, so the document has an end that
+     scrolling can actually reach — it extends as content is added. */
   position: relative; /* anchor for the ink overlay */
   min-height: calc(100vh - 260px);
-  padding-bottom: 50vh;
+  padding-bottom: var(--canvas-runway);
   cursor: text;
 }
 
@@ -9479,3 +9471,119 @@ input, textarea { font: inherit; color: inherit; }
 }
 .book-missing-title { font-size: 18px; font-weight: 700; color: var(--ink); }
 .book-missing-body { font-size: 14px; color: var(--ink-3); max-width: 440px; line-height: 1.6; margin-bottom: 6px; }
+
+/* ── Font size control ─────────────────────────────────────────────────── */
+.et-size { display: inline-flex; align-items: center; gap: 1px; }
+.et-size-step { font-size: 13px; line-height: 1; }
+.et-size-value {
+  min-width: 26px; height: 26px; padding: 0 4px;
+  border: 0; background: none; border-radius: var(--radius-sm);
+  font-family: var(--font-mono); font-size: 11.5px; color: var(--ink-2);
+  cursor: pointer;
+  transition: background var(--dur-fast) ease, color var(--dur-fast) ease;
+}
+.et-size-value:hover { background: var(--hover); color: var(--ink); }
+.et-size-value:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.et-size-list {
+  display: flex; flex-direction: column; gap: 1px;
+  max-height: 260px; overflow-y: auto; min-width: 68px;
+}
+.et-size-item {
+  appearance: none; border: 0; background: none; cursor: pointer;
+  text-align: left; padding: 5px 10px; border-radius: var(--radius-sm);
+  font-size: 12.5px; color: var(--ink);
+  transition: background var(--dur-fast) ease;
+}
+.et-size-item:hover { background: var(--hover); }
+.et-size-item[data-active="true"] { color: var(--accent-ink); font-weight: 500; }
+.et-size-item--reset { color: var(--ink-3); border-top: 1px solid var(--line); border-radius: 0; margin-top: 2px; }
+
+/* ── Text colour ───────────────────────────────────────────────────────── */
+.et-color-glyph { font-size: 12px; font-weight: 600; line-height: 1; }
+.et-color-panel { display: flex; flex-direction: column; gap: 8px; min-width: 148px; }
+.et-color-custom {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12px; color: var(--ink-2); cursor: pointer;
+  padding: 2px 0;
+}
+.et-color-custom input[type="color"] {
+  width: 24px; height: 22px; padding: 0;
+  border: 1px solid var(--line-strong); border-radius: var(--radius-sm);
+  background: none; cursor: pointer;
+}
+.et-color-reset {
+  appearance: none; border: 0; background: none; cursor: pointer;
+  text-align: left; padding: 5px 0 0;
+  border-top: 1px solid var(--line);
+  font-size: 12px; color: var(--ink-3);
+  transition: color var(--dur-fast) ease;
+}
+.et-color-reset:hover { color: var(--ink); }
+
+/* ── Table size picker ─────────────────────────────────────────────────── */
+.et-table-panel { display: flex; flex-direction: column; gap: 6px; }
+.et-table-grid { display: flex; flex-direction: column; gap: 2px; }
+.et-table-grid-row { display: flex; gap: 2px; }
+.et-table-cellpick {
+  width: 15px; height: 13px; padding: 0; cursor: pointer;
+  border: 1px solid var(--line-strong);
+  border-radius: 1px;
+  background: none;
+  transition: background var(--dur-fast) ease, border-color var(--dur-fast) ease;
+}
+.et-table-cellpick[data-on="true"] { background: var(--accent-soft); border-color: var(--accent); }
+.et-table-hint { font-size: 11px; color: var(--ink-3); text-align: center; }
+.et-table-actions { display: flex; flex-direction: column; gap: 1px; min-width: 152px; }
+.et-table-actions button {
+  appearance: none; border: 0; background: none; cursor: pointer;
+  text-align: left; padding: 6px 8px; border-radius: var(--radius-sm);
+  font-size: 12.5px; color: var(--ink);
+  transition: background var(--dur-fast) ease;
+}
+.et-table-actions button:hover { background: var(--hover); }
+.et-table-danger { color: var(--danger); }
+
+/* ── Tables in the document ────────────────────────────────────────────────
+   Note-taking tables, not dashboard cards: hairline rules, square corners, no
+   fill and no shadow. The grid IS the structure, so the lines are the only
+   chrome it gets. */
+.page-editor-content table,
+.free-textbox .page-editor-content table {
+  border-collapse: collapse;
+  table-layout: fixed;
+  margin: var(--sp-4) 0;
+  /* width:max-content would defeat the wrapper's own overflow; the table sizes
+     from its colgroup and the sheet grows to contain it. */
+  overflow: visible;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+.page-editor-content th,
+.page-editor-content td {
+  border: 1px solid var(--line-strong);
+  padding: 6px 9px;
+  vertical-align: top;
+  min-width: 3em;
+  position: relative;
+  /* Each cell resolves its own direction, so an Arabic cell sits correctly
+     beside an English one without splitting the table. */
+  unicode-bidi: plaintext;
+}
+.page-editor-content th {
+  background: var(--panel);
+  font-weight: 600;
+  text-align: start;
+}
+.page-editor-content .selectedCell::after {
+  content: ""; position: absolute; inset: 0;
+  background: var(--accent-soft); pointer-events: none;
+}
+/* Column resize grip */
+.page-editor-content .column-resize-handle {
+  position: absolute; right: -2px; top: 0; bottom: 0;
+  width: 4px; background: var(--accent);
+  pointer-events: none;
+}
+.page-editor-content .tableWrapper { overflow-x: visible; }
+.page-editor-content.resize-cursor { cursor: col-resize; }

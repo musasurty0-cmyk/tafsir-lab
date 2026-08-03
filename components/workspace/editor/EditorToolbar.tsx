@@ -12,10 +12,13 @@ import type { Editor } from "@tiptap/core";
 import {
   BoldIcon, ItalicIcon, UnderlineIcon, StrikeIcon,
   BulletIcon, NumberedIcon, QuoteIcon, DividerIcon,
-  HighlightIcon, ColorIcon,
+  HighlightIcon,
   Btn, Sep, Popover,
-  HighlightSwatches, ColorSwatches,
+  HighlightSwatches,
 } from "./editorShared";
+import {
+  FontSizeControl, ColorControl, FormatPainter, TableControl, UndoRedo,
+} from "./toolbarControls";
 
 interface Props {
   editor: Editor | null;
@@ -24,13 +27,21 @@ interface Props {
 
 export default function EditorToolbar({ editor, open }: Props) {
   const [hlOpen, setHlOpen] = useState(false);
-  const [clOpen, setClOpen] = useState(false);
 
   if (!open || !editor) return null;
 
   return (
     <div className="et-ribbon" data-open="true">
       <div className="et-ribbon-strip" onMouseDown={(e) => e.preventDefault()}>
+        <UndoRedo editor={editor} />
+        <FormatPainter editor={editor} />
+
+        <Sep />
+
+        <FontSizeControl editor={editor} />
+
+        <Sep />
+
         <Btn active={editor.isActive("bold")}      title="Bold (Ctrl+B)"    onClick={() => editor.chain().focus().toggleBold().run()}><BoldIcon /></Btn>
         <Btn active={editor.isActive("italic")}    title="Italic (Ctrl+I)"  onClick={() => editor.chain().focus().toggleItalic().run()}><ItalicIcon /></Btn>
         <Btn active={editor.isActive("underline")} title="Underline (Ctrl+U)" onClick={() => editor.chain().focus().toggleUnderline().run()}><UnderlineIcon /></Btn>
@@ -47,16 +58,7 @@ export default function EditorToolbar({ editor, open }: Props) {
           <HighlightSwatches editor={editor} onClose={() => setHlOpen(false)} />
         </Popover>
 
-        <Popover open={clOpen} onClose={() => setClOpen(false)} trigger={
-          <Btn active={!!(editor.isActive("textStyle") && editor.getAttributes("textStyle").color)} title="Text color" onClick={() => setClOpen((o) => !o)}>
-            <ColorIcon />
-            {editor.getAttributes("textStyle").color && (
-              <span className="et-btn-indicator" style={{ background: editor.getAttributes("textStyle").color }} />
-            )}
-          </Btn>
-        }>
-          <ColorSwatches editor={editor} onClose={() => setClOpen(false)} />
-        </Popover>
+        <ColorControl editor={editor} />
 
         <Sep />
 
@@ -76,6 +78,10 @@ export default function EditorToolbar({ editor, open }: Props) {
 
         <Btn active={editor.isActive("blockquote")} title="Quote" onClick={() => editor.chain().focus().toggleBlockquote().run()}><QuoteIcon /></Btn>
         <Btn title="Divider" onClick={() => editor.chain().focus().setHorizontalRule().run()}><DividerIcon /></Btn>
+
+        <Sep />
+
+        <TableControl editor={editor} />
       </div>
     </div>
   );

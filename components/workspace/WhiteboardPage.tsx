@@ -27,8 +27,17 @@ import CanvasToolRail, {
 
 // Drawings on the whiteboard live on this sentinel page (real Mushaf ≥ 1).
 const WB_PAGE   = 0;
-const ZOOM_MIN  = 0.3;
-const ZOOM_MAX  = 2.5;
+/* Matches the canvas. 0.3 could not survey a board; 0.08 shows ~12x the area. */
+const ZOOM_MIN  = 0.08;
+const ZOOM_MAX  = 4;
+/* Exponential wheel zoom, identical to the canvas: each event multiplies by
+   e^step, so a notch is a constant RATIO at any zoom and in/out are exact
+   inverses. The cap matters because a mouse reports deltaY~100 per notch where
+   a trackpad reports ~1-4 — uncapped, one mouse notch crossed the whole range.
+   The previous `zoom + zoom * delta * 10` was linear AND unclamped: at
+   deltaY=100 the multiplier hit zero, so a single notch collapsed to ZOOM_MIN. */
+const ZOOM_WHEEL_SENSITIVITY = 0.0015;
+const ZOOM_WHEEL_MAX_STEP    = 0.18;
 const VP_KEY    = (pageId: string) => `tl-wb-viewport:${pageId}`;
 
 interface Viewport { x: number; y: number; zoom: number; }
@@ -178,20 +187,39 @@ export default function WhiteboardPage({
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
+    /* Coalesced into one commit per frame. A wheel burst fires far faster than
+       React can render, and committing each event made the gesture stutter. */
+    let pending: Viewport | null = null;
+    let raf = 0;
+    const flush = () => {
+      raf = 0;
+      if (!pending) return;
+      setViewport(pending); patchViewport(pending); pending = null;
+    };
     function onWheel(e: WheelEvent) {
       if (tool !== "hand") return;
       e.preventDefault();
-      const delta   = -e.deltaY * 0.001 * (e.deltaMode === 1 ? 16 : 1);
-      const prev    = viewportRef.current;
-      const newZoom = clamp(prev.zoom + prev.zoom * delta * 10, ZOOM_MIN, ZOOM_MAX);
+      const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 100 : 1;
+      const step = clamp(
+        e.deltaY * unit * ZOOM_WHEEL_SENSITIVITY,
+        -ZOOM_WHEEL_MAX_STEP,
+        ZOOM_WHEEL_MAX_STEP,
+      );
+      // Zoom from the pending value, not committed state, or every event in a
+      // burst computes off the same stale zoom and the gesture stalls.
+      const prev    = pending ?? viewportRef.current;
+      const newZoom = clamp(prev.zoom * Math.exp(-step), ZOOM_MIN, ZOOM_MAX);
       const rect    = el!.getBoundingClientRect();
       const mx = e.clientX - rect.left, my = e.clientY - rect.top;
       const scale = newZoom / prev.zoom;
-      const next: Viewport = { zoom: newZoom, x: mx - (mx - prev.x) * scale, y: my - (my - prev.y) * scale };
-      setViewport(next); patchViewport(next);
+      pending = { zoom: newZoom, x: mx - (mx - prev.x) * scale, y: my - (my - prev.y) * scale };
+      if (!raf) raf = requestAnimationFrame(flush);
     }
     el.addEventListener("wheel", onWheel, { passive: false });
-    return () => el.removeEventListener("wheel", onWheel);
+    return () => {
+      el.removeEventListener("wheel", onWheel);
+      if (raf) cancelAnimationFrame(raf);
+    };
   }, [patchViewport, tool]);
 
   // ── Touch pan / pinch-zoom ───────────────────────────────────────────────

@@ -56,8 +56,11 @@ export interface PageUserPrefsData {
 
 // ── Constants ─────────────────────────────────────────────────────────────
 
-const ZOOM_MIN             = 0.3;
-const ZOOM_MAX             = 2.5;
+/* 0.3 was far too shallow to survey a page: a full study sheet never fitted on
+   screen, which is the whole point of zooming out. 0.08 shows roughly a
+   12x-wider area, enough for a large sheet to read as a thumbnail overview. */
+const ZOOM_MIN             = 0.08;
+const ZOOM_MAX             = 4;
 const MUSHAF_CARD_WIDTH    = 720;
 const VIEWPORT_DEBOUNCE_MS = 800;
 const NOTE_GAP             = 40;
