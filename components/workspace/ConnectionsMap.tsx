@@ -297,7 +297,7 @@ export default function ConnectionsMap({
                    many Connections touch this surah and must survive the
                    animation, which is why the keyframe fills backwards only. */
                 style={{
-                  ["--i" as string]: n,
+                  ["--i" as string]: String(n),
                   ...(c > 0 ? { opacity: 0.45 + (c / maxCount) * 0.55 } : {}),
                 }}
                 onPointerEnter={(e) => { setHoverSurah(n); moveTip(e); }}
@@ -317,7 +317,7 @@ export default function ConnectionsMap({
               d={link(e.a, e.b)}
               /* Each link draws itself in, one after another, so the reader
                  sees the web being built rather than arriving whole. */
-              style={{ ["--i" as string]: ei }}
+              style={{ ["--i" as string]: String(ei) }}
               className="cxmap-edge"
               data-self={e.a === e.b ? "true" : "false"}
               data-dim={edgeLive(e) ? "false" : "true"}

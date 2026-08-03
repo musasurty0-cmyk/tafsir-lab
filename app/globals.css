@@ -760,7 +760,13 @@ input, textarea { font: inherit; color: inherit; }
    end of this file, so the `*` transition-duration override is countered in
    one place rather than fought from two. */
 @media (prefers-reduced-motion: reduce) {
-  .drawer-overlay[data-open="true"] > * { animation: none; }
+  /* Fade, not nothing. The band-in travels 6px, which is the part worth
+     suppressing; removing the animation entirely made the drawer contents
+     snap into place and read as a rendering glitch. */
+  .drawer-overlay[data-open="true"] > * {
+    animation: drawer-band-fade 180ms var(--ease-soft) both;
+  }
+  @keyframes drawer-band-fade { from { opacity: 0; } to { opacity: 1; } }
 }
 
 /* ── Header — three quiet levels, no title bar ───────────────────────────── */
@@ -10032,13 +10038,27 @@ input, textarea { font: inherit; color: inherit; }
   animation-delay: calc(900ms + var(--i, 0) * 70ms);
 }
 
-/* Respect the system setting: the map still assembles, but instantly. */
+/* Reduced motion suppresses TRAVEL, not the build-in itself.
+   Killing the animation outright was wrong here: a system-wide "reduce
+   motion" preference is about vestibular triggers — spinning, sliding,
+   parallax — not about a fade or a line drawing itself. Blanking it also
+   meant anyone with the OS setting on simply never saw the map assemble and
+   reasonably concluded it was broken.
+   So: no rotation, no scale, and quicker — but the ring still fades up and
+   the links still draw. */
 @media (prefers-reduced-motion: reduce) {
-  .cxmap-build,
-  .cxmap-build .cxmap-seg,
+  @keyframes cxmap-wheel-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  .cxmap-build { animation-duration: 280ms; }
+  .cxmap-build .cxmap-seg {
+    animation-duration: 160ms;
+    animation-delay: calc(120ms + var(--i, 0) * 2ms);
+  }
   .cxmap-build .cxmap-edge {
-    animation: none;
-    stroke-dasharray: none;
+    animation-duration: 420ms;
+    animation-delay: calc(460ms + var(--i, 0) * 40ms);
   }
 }
 
