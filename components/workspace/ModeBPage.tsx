@@ -18,6 +18,7 @@ import {
   useRef, useState,
 } from "react";
 import { createPortal } from "react-dom";
+import { isTypingTarget } from "@/lib/is-typing";
 
 const HINT_KEY        = "tl-word-tap-hint-dismissed";
 const MUSHAF_PAGE_KEY = (pageId: string) => `tl-mushaf-page:${pageId}`;
@@ -804,9 +805,12 @@ export default function ModeBPage({
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-      // Escape = Done (exit the word/ayah annotation layer)
+      /* Escape still works while typing — it exits the annotation layer — but
+         nothing else may. The old check tested only INPUT and TEXTAREA, and
+         every text container on this canvas is contenteditable, so typing a
+         word containing h/p/l/a/e/t switched tools mid-sentence. */
       if (e.key === "Escape" && focusAnchor) { closeFocus(); return; }
+      if (isTypingTarget(e)) return;
       // Tool shortcuts (no modifier)
       if (!e.metaKey && !e.ctrlKey) {
         const t = TOOL_HOTKEYS[e.key.toLowerCase()];

@@ -16,6 +16,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { isTypingTarget } from "@/lib/is-typing";
 import type { NoteData } from "./NoteCard";
 import FreeTextBox, { TEXTBOX_DEFAULT_WIDTH } from "./FreeTextBox";
 import DrawingCanvas, { type DrawTool, type DrawingCanvasHandle } from "./DrawingCanvas";
@@ -168,8 +169,9 @@ export default function WhiteboardPage({
   // ── Keyboard: tool hotkeys + undo/redo ───────────────────────────────────
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-      if ((e.target as HTMLElement)?.isContentEditable) return;
+      /* Also covers the active element and IME composition, which the
+         target-only test missed. */
+      if (isTypingTarget(e)) return;
       if (!e.metaKey && !e.ctrlKey) {
         const t = TOOL_HOTKEYS[e.key.toLowerCase()];
         if (t) { setTool(t); return; }

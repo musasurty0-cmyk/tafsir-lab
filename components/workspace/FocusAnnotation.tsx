@@ -53,6 +53,7 @@ import {
   useCallback, useEffect, useLayoutEffect, useRef, useState,
 } from "react";
 import { createPortal } from "react-dom";
+import { isTypingTarget } from "@/lib/is-typing";
 import type { Verse } from "@/lib/types";
 import type { DrawTool } from "./DrawingCanvas";
 import CanvasToolRail, {
@@ -469,7 +470,9 @@ export default function FocusAnnotation({
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") { onClose(); return; }
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      /* Same defect as the canvas: contenteditable containers were not
+         covered, so typing switched tools. */
+      if (isTypingTarget(e)) return;
       if (e.key === "h") setTool("hand");
       if (e.key === "p") setTool("pen");
       if (e.key === "l") setTool("highlight");
