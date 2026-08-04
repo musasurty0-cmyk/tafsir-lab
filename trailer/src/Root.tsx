@@ -5,6 +5,7 @@ import { LinkReel, REEL_FRAMES } from "./reel/LinkReel";
 import { TestReel, TEST_FRAMES } from "./reel/TestReel";
 import { LinkTrailer, TRAILER_FRAMES } from "./reel/LinkTrailer";
 import { SurahStudy, STUDY_FRAMES } from "./reel/SurahStudy";
+import { ToolsReel, TOOLS_FRAMES } from "./reel/ToolsReel";
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -24,6 +25,17 @@ export const RemotionRoot: React.FC = () => {
         id="LinkReel"
         component={LinkReel}
         durationInFrames={REEL_FRAMES}
+        fps={60}
+        width={1080}
+        height={1920}
+        defaultProps={{}}
+      />
+
+      {/* Every tool, glimpsed — icon, open, minimise, next. */}
+      <Composition
+        id="ToolsReel"
+        component={ToolsReel}
+        durationInFrames={TOOLS_FRAMES}
         fps={60}
         width={1080}
         height={1920}
