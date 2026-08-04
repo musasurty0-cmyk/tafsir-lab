@@ -1,62 +1,45 @@
 "use client";
 
-import { useEffect, useState } from "react";
+/**
+ * LoadingVerse — the screen a route shows while it loads.
+ *
+ * It may be the SECOND loading screen of a single navigation: nav-splash puts
+ * an identical one up on click, and this replaces it once Next commits the
+ * route. So it does not choose a verse of its own — it adopts whichever one is
+ * already on screen and removes that overlay without a fade, which turns two
+ * screens into one. Picking independently is what made the verse change
+ * mid-load and read as a second splash starting.
+ */
 
-const VERSES = [
-  {
-    arabic:      "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ",
-    translation: "In the name of Allah, the Most Gracious, the Most Merciful",
-    ref:         "Al-Fatiha · 1:1",
-  },
-  {
-    arabic:      "اقْرَأْ بِاسْمِ رَبِّكَ الَّذِي خَلَقَ",
-    translation: "Read in the name of your Lord who created",
-    ref:         "Al-ʿAlaq · 96:1",
-  },
-  {
-    arabic:      "وَرَتِّلِ الْقُرْآنَ تَرْتِيلًا",
-    translation: "And recite the Quran with measured recitation",
-    ref:         "Al-Muzzammil · 73:4",
-  },
-  {
-    arabic:      "وَلَقَدْ يَسَّرْنَا الْقُرْآنَ لِلذِّكْرِ فَهَلْ مِن مُّدَّكِرٍ",
-    translation: "And We have certainly made the Quran easy to remember — so is there anyone who will be reminded?",
-    ref:         "Al-Qamar · 54:17",
-  },
-  {
-    arabic:      "إِنَّ هَٰذَا الْقُرْآنَ يَهْدِي لِلَّتِي هِيَ أَقْوَمُ",
-    translation: "Indeed, this Quran guides to that which is most suitable",
-    ref:         "Al-Isrāʾ · 17:9",
-  },
-  {
-    arabic:      "كِتَابٌ أَنزَلْنَاهُ إِلَيْكَ مُبَارَكٌ لِّيَدَّبَّرُوا آيَاتِهِ",
-    translation: "A blessed Book We have revealed to you, so that they may ponder its verses",
-    ref:         "Ṣād · 38:29",
-  },
-  {
-    arabic:      "أَفَلَا يَتَدَبَّرُونَ الْقُرْآنَ",
-    translation: "Do they not reflect upon the Quran?",
-    ref:         "Al-Nisāʾ · 4:82",
-  },
-];
+import { useEffect, useState } from "react";
+import { LOADING_VERSES } from "@/lib/loading-verses";
+import { adoptNavSplash } from "@/lib/nav-splash";
 
 export default function LoadingVerse() {
-  const [idx,     setIdx]     = useState(() => Math.floor(Math.random() * VERSES.length));
-  const [visible, setVisible] = useState(true);
+  /* Deterministic on the server. Randomising in the initial state would differ
+     between the server render and hydration, and this component IS server
+     rendered as a route's loading.tsx. */
+  const [idx,     setIdx]     = useState(0);
+  const [visible, setVisible] = useState(false);
 
+  useEffect(() => {
+    const adopted = adoptNavSplash();
+    setIdx(adopted ?? Math.floor(Math.random() * LOADING_VERSES.length));
+    setVisible(true);
+  }, []);
 
   useEffect(() => {
     const timer = setInterval(() => {
       setVisible(false);
       setTimeout(() => {
-        setIdx((i) => (i + 1) % VERSES.length);
+        setIdx((i) => (i + 1) % LOADING_VERSES.length);
         setVisible(true);
       }, 350);
     }, 3500);
     return () => clearInterval(timer);
   }, []);
 
-  const verse = VERSES[idx];
+  const verse = LOADING_VERSES[idx];
 
   return (
     <div className="lv-screen">

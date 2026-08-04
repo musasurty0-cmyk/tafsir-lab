@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
+import { hideNavSplash } from "@/lib/nav-splash";
 
 export default function WorkspaceError({
   error,
@@ -10,10 +11,11 @@ export default function WorkspaceError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  useEffect(() => {
-    document.getElementById("tl-nav-splash")?.remove();
-    document.getElementById("tl-nav-splash-style")?.remove();
-  }, []);
+  /* Clear the navigation splash — including one that is armed but not yet
+     painted, which would otherwise land on top of this error page and sit
+     there until the failsafe. Removing the elements by hand cannot cancel a
+     pending one; hideNavSplash can. */
+  useEffect(() => { hideNavSplash(); }, []);
 
   return (
     <div

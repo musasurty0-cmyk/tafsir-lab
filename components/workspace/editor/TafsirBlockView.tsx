@@ -81,7 +81,14 @@ export default function TafsirBlockView({
               .replace(/\n{2,}/g, "</p><p>")
               .replace(/\n/g, "<br />");
         setHtml(resolved);
-        updateAttributes({ contentHtml: resolved, sourceName: entry.source?.name ?? sourceName });
+        /* Write back the slug the entry actually came from, not just its name.
+           Storing one without the other lets the two drift apart — the header
+           then names one source while the picker is set to another. */
+        updateAttributes({
+          contentHtml: resolved,
+          sourceName:  entry.source?.name ?? sourceName,
+          sourceSlug:  entry.source?.slug ?? slug,
+        });
       })
       .catch((e) => setFetchError(String(e)))
       .finally(() => setFetching(false));
@@ -134,6 +141,18 @@ export default function TafsirBlockView({
                   onChange={(e) => switchSource(e.target.value)}
                   title="Change tafsir source"
                 >
+                  {/* A <select> whose value matches none of its options does not
+                      render empty — the browser silently displays the FIRST
+                      option. So a block holding al-Saʿdī sat there calling
+                      itself Ibn Kathīr whenever its source was missing from the
+                      catalog: still loading, deactivated since, or embedded
+                      from the drawer with content supplied up front (which
+                      skips the fetch that would have corrected the name).
+                      Always carry an option for what this block actually holds,
+                      so the control cannot misreport it. */}
+                  {!sources.some((s) => s.slug === slug) && (
+                    <option value={slug}>{sourceName}</option>
+                  )}
                   {langGroups.map(([lang, group]) => (
                     <optgroup key={lang} label={TAFSIR_LANGUAGE_NAMES[lang] ?? lang.toUpperCase()}>
                       {group.map((s) => (
@@ -143,12 +162,12 @@ export default function TafsirBlockView({
                   ))}
                 </select>
               ) : (
-                <span className="tafsir-block-source">
-                  {sourceName}
-                  {/* An excerpt must say it is one. */}
-                  {partial && <span className="tafsir-block-partial"> · excerpt</span>}
-                </span>
+                <span className="tafsir-block-source">{sourceName}</span>
               )}
+              {/* An excerpt must say it is one — including once the catalog has
+                  loaded and the name moved into the picker, which is exactly
+                  when the marker used to disappear. */}
+              {partial && <span className="tafsir-block-partial"> · excerpt</span>}
             </div>
             <button
               className="tafsir-block-tool tafsir-block-tool--danger"

@@ -1,35 +1,45 @@
 /**
- * nav-splash — instant visual feedback for route navigations.
+ * nav-splash — feedback for route navigations that are actually slow.
  *
- * Next's server-rendered routes (force-dynamic) can take a beat before the
- * next screen (or its loading.tsx) appears; until then a click looks like it
- * did nothing. showNavSplash() injects the overlay SYNCHRONOUSLY in the click
- * handler, so feedback is immediate.
+ * Next's server-rendered routes (force-dynamic) can take a beat before the next
+ * screen (or its loading.tsx) appears; until then a click looks like it did
+ * nothing. This covers that gap — but only that gap.
  *
- * Look: identical to LoadingVerse (the ayah loading screen) — brand, a random
- * verse card, three pulsing dots — by reusing its lv-* classes from
- * globals.css. That way the nav splash and any route loading.tsx blend into
- * ONE seamless screen instead of two conflicting splashes.
+ * Two things it deliberately does NOT do any more:
+ *
+ *   · It no longer paints instantly. Injecting synchronously in the click
+ *     handler meant a prefetched navigation that resolved in 40ms still got
+ *     ~340ms of overlay (fade in, then fade out) laid over the top of it —
+ *     friction manufactured for a wait that never happened. Showing is now
+ *     deferred by GRACE_MS and cancelled if the destination arrives first, so
+ *     fast navigations show nothing at all.
+ *
+ *   · It no longer picks its own verse. The route's loading.tsx renders
+ *     LoadingVerse, which used to choose independently from an identical list;
+ *     the verse therefore CHANGED partway through one navigation, which reads
+ *     as a second splash starting rather than the first one continuing. The
+ *     chosen index is published here and LoadingVerse adopts it — see
+ *     adoptNavSplash().
+ *
+ * Look: identical to LoadingVerse by reusing its lv-* classes from globals.css.
  *
  * Removal is layered:
+ *   • LoadingVerse adopts it the moment a route's loading UI mounts.
  *   • NavSplashCleaner (root layout) removes it whenever the pathname changes.
- *   • Several destination screens + error pages also remove it (legacy, harmless).
  *   • A 12s failsafe fades it out in case navigation never completes.
  */
+
+import { LOADING_VERSES } from "./loading-verses";
 
 const SPLASH_ID = "tl-nav-splash";
 const STYLE_ID  = "tl-nav-splash-style";
 
-// Same rotation as components/LoadingVerse.tsx — one is picked at random.
-const VERSES = [
-  ["بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ", "In the name of Allah, the Most Gracious, the Most Merciful", "Al-Fatiha · 1:1"],
-  ["اقْرَأْ بِاسْمِ رَبِّكَ الَّذِي خَلَقَ", "Read in the name of your Lord who created", "Al-ʿAlaq · 96:1"],
-  ["وَرَتِّلِ الْقُرْآنَ تَرْتِيلًا", "And recite the Quran with measured recitation", "Al-Muzzammil · 73:4"],
-  ["وَلَقَدْ يَسَّرْنَا الْقُرْآنَ لِلذِّكْرِ فَهَلْ مِن مُّدَّكِرٍ", "And We have certainly made the Quran easy to remember — so is there anyone who will be reminded?", "Al-Qamar · 54:17"],
-  ["إِنَّ هَٰذَا الْقُرْآنَ يَهْدِي لِلَّتِي هِيَ أَقْوَمُ", "Indeed, this Quran guides to that which is most suitable", "Al-Isrāʾ · 17:9"],
-  ["كِتَابٌ أَنزَلْنَاهُ إِلَيْكَ مُبَارَكٌ لِّيَدَّبَّرُوا آيَاتِهِ", "A blessed Book We have revealed to you, so that they may ponder its verses", "Ṣād · 38:29"],
-  ["أَفَلَا يَتَدَبَّرُونَ الْقُرْآنَ", "Do they not reflect upon the Quran?", "Al-Nisāʾ · 4:82"],
-] as const;
+/**
+ * How long a navigation may take before it is worth telling the user about.
+ * Below this, a spinner is noise: the screen has already changed by the time
+ * the eye reaches it.
+ */
+const GRACE_MS = 130;
 
 // Only the bits lv-* doesn't provide: sit above everything + fade transitions.
 const CSS = `
@@ -40,11 +50,14 @@ const CSS = `
 `;
 
 let failsafe: ReturnType<typeof setTimeout> | null = null;
+let pending:  ReturnType<typeof setTimeout> | null = null;
 
-/** Inject the overlay immediately (idempotent). Call inside the click handler. */
-export function showNavSplash(): void {
-  if (typeof document === "undefined") return;
-  if (document.getElementById(SPLASH_ID)) return; // already showing
+/** Index of the verse this navigation is showing, so the route's loading UI
+ *  can continue with the same one instead of starting a different screen. */
+let verseIdx: number | null = null;
+
+function paint(): void {
+  if (document.getElementById(SPLASH_ID)) return;
 
   if (!document.getElementById(STYLE_ID)) {
     const style = document.createElement("style");
@@ -53,7 +66,7 @@ export function showNavSplash(): void {
     document.head.appendChild(style);
   }
 
-  const [ar, tr, ref] = VERSES[Math.floor(Math.random() * VERSES.length)];
+  const v = LOADING_VERSES[verseIdx ?? 0];
   const el = document.createElement("div");
   el.id = SPLASH_ID;
   el.className = "lv-screen";
@@ -66,9 +79,9 @@ export function showNavSplash(): void {
     </div>
     <div class="lv-dots" aria-hidden="true"><span></span><span></span><span></span></div>
   `;
-  (el.querySelector(".lv-arabic") as HTMLElement).textContent      = ar;
-  (el.querySelector(".lv-translation") as HTMLElement).textContent = tr;
-  (el.querySelector(".lv-ref") as HTMLElement).textContent         = ref;
+  (el.querySelector(".lv-arabic") as HTMLElement).textContent      = v.arabic;
+  (el.querySelector(".lv-translation") as HTMLElement).textContent = v.translation;
+  (el.querySelector(".lv-ref") as HTMLElement).textContent         = v.ref;
   document.body.appendChild(el);
 
   // Failsafe: never trap the user behind a stuck overlay.
@@ -76,9 +89,24 @@ export function showNavSplash(): void {
   failsafe = setTimeout(hideNavSplash, 12000);
 }
 
-/** Fade out and remove the overlay (idempotent). */
+/**
+ * Arm the splash. Nothing is painted unless the navigation is still running
+ * GRACE_MS later, so an instant navigation is never dressed up as a slow one.
+ */
+export function showNavSplash(): void {
+  if (typeof document === "undefined") return;
+  if (pending || document.getElementById(SPLASH_ID)) return; // already armed
+
+  verseIdx = Math.floor(Math.random() * LOADING_VERSES.length);
+  pending = setTimeout(() => { pending = null; paint(); }, GRACE_MS);
+}
+
+/** Cancel a pending splash, and fade out one that is already up. */
 export function hideNavSplash(): void {
   if (typeof document === "undefined") return;
+  if (pending) { clearTimeout(pending); pending = null; }
+  verseIdx = null;
+
   const el = document.getElementById(SPLASH_ID);
   if (!el) return;
   el.dataset.out = "1";
@@ -89,7 +117,30 @@ export function hideNavSplash(): void {
   if (failsafe) { clearTimeout(failsafe); failsafe = null; }
 }
 
-/** router.push with instant splash — drop-in replacement for router.push(href). */
+/**
+ * Hand this navigation's verse over to the route's own loading UI.
+ *
+ * Called by LoadingVerse as it mounts. The overlay is removed WITHOUT its fade,
+ * because the screen replacing it is identical and showing the same verse —
+ * cross-fading two copies of one screen is what made the handover visible.
+ *
+ * Returns the verse index to continue with, or null if no navigation splash
+ * was in play (a cold load, say).
+ */
+export function adoptNavSplash(): number | null {
+  if (typeof document === "undefined") return null;
+  const idx = verseIdx;
+
+  if (pending) { clearTimeout(pending); pending = null; }
+  document.getElementById(SPLASH_ID)?.remove();
+  document.getElementById(STYLE_ID)?.remove();
+  if (failsafe) { clearTimeout(failsafe); failsafe = null; }
+  verseIdx = null;
+
+  return idx;
+}
+
+/** router.push with the splash armed — drop-in replacement for router.push. */
 export function pushWithSplash(router: { push: (href: string) => void }, href: string): void {
   showNavSplash();
   router.push(href);

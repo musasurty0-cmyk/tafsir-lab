@@ -3,10 +3,13 @@
 /**
  * NavSplashCleaner — mounted once in the root layout.
  *
- * 1. Shows the nav splash instantly for ANY internal <a>/<Link> click
- *    (capture-phase listener, so no per-link wiring needed).
- * 2. Hides it whenever the pathname changes — i.e. the destination route has
- *    actually rendered. Also clears any leftover splash on first mount.
+ * 1. ARMS the nav splash for ANY internal <a>/<Link> click (capture-phase
+ *    listener, so no per-link wiring needed). Arming is not painting: nothing
+ *    appears unless the navigation is still running a moment later, so a
+ *    prefetched route that resolves immediately is never covered by a loading
+ *    screen it did not need.
+ * 2. Cancels or hides it whenever the pathname changes — i.e. the destination
+ *    route has actually rendered.
  *
  * router.push() call sites (buttons) call showNavSplash() themselves.
  */
