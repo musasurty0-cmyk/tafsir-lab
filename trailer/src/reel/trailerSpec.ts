@@ -37,7 +37,7 @@ export const STACK_H = STACK.pad * 2 + STACK.rowH * 4 + STACK.gap * 3;   // 648
 export const TOG = { pad: 34, swW: 96, swH: 50, knob: 40 };
 
 /** The paired-verse card: two passages and the connector drawn between them. */
-export const PAIR = { pad: 36, rowH: 150, linkH: 68 };
+export const PAIR = { pad: 36, rowH: 162, linkH: 68 };
 
 /* ── States ───────────────────────────────────────────────────────────────
    The subject stays CENTRED. Every state parks in the middle of the frame;
@@ -70,9 +70,9 @@ const raw: Omit<MState, "morph">[] = [
      puts both in one card with a line drawn between them. The idea of a
      Connection is SHOWN before the product that makes one, using the very
      same pair the rest of the trailer goes on to create. */
-  { key: "verseA",    at: 156, w: 700, h: 240, r: 18, ease: "back",  dir: "right" },
-  { key: "verseB",    at: 320, w: 700, h: 240, r: 18, ease: "snap",  dir: "left" },
-  { key: "verseBoth", at: 500, w: 780, h: 440, r: 24, ease: "glide", dir: "up" },
+  { key: "verseA",    at: 156, w: 760, h: 270, r: 18, ease: "back",  dir: "right" },
+  { key: "verseB",    at: 320, w: 760, h: 270, r: 18, ease: "snap",  dir: "left" },
+  { key: "verseBoth", at: 500, w: 820, h: 500, r: 24, ease: "glide", dir: "up" },
 
   { key: "note",   at: 680,  w: 900, h: NOTE_H.plain, r: 24, ease: "smooth", dir: "up" },
 

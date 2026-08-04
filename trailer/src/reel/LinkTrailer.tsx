@@ -95,18 +95,18 @@ const VerseRow: React.FC<{ f: number; s: number; i: number; base?: number }> =
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       <Rise f={f} start={s} i={base}>
         <span style={{
-          fontFamily: R.fontSans, fontSize: 19, color: th.accentInk,
-          background: th.accentSoft, padding: "8px 16px", borderRadius: 999,
+          fontFamily: R.fontSans, fontSize: 21, color: th.accentInk,
+          background: th.accentSoft, padding: "9px 18px", borderRadius: 999,
         }}>{v.ref}</span>
       </Rise>
       <Rise f={f} start={s} i={base + 1}>
         <div dir="rtl" style={{
-          fontFamily: R.fontArabic, fontSize: 30, lineHeight: 1.7,
+          fontFamily: R.fontArabic, fontSize: 36, lineHeight: 1.7,
           color: th.ink, textAlign: "right",
         }}>{v.ar}</div>
       </Rise>
       <Rise f={f} start={s} i={base + 2} style={{
-        fontFamily: R.fontSans, fontSize: 20, color: th.ink3, lineHeight: 1.45,
+        fontFamily: R.fontSans, fontSize: 23, color: th.ink3, lineHeight: 1.45,
       }}>{v.en}</Rise>
     </div>
   );
@@ -114,7 +114,7 @@ const VerseRow: React.FC<{ f: number; s: number; i: number; base?: number }> =
 
 const VerseChip: React.FC<{ f: number; s: number; i: number }> = ({ f, s, i }) => (
   <div style={{
-    height: "100%", padding: "0 36px", boxSizing: "border-box",
+    height: "100%", padding: "0 40px", boxSizing: "border-box",
     display: "flex", flexDirection: "column", justifyContent: "center",
   }}>
     <VerseRow f={f} s={s} i={i} />
@@ -710,10 +710,14 @@ export const LinkTrailer: React.FC = () => {
           <Body />
         </Stage>
 
+        {/* Bed from 33s in. Played at 0.18 rather than the old 0.28 because
+            this track is 3.8 dB hotter and peaks at -0.7 dB; matched by
+            measurement so it sits exactly where the SFX were balanced. */}
         <Audio
-          src={staticFile("bg.mp3")}
+          src={staticFile("bg2.mp3")}
+          startFrom={33 * 60}
           volume={(fr) =>
-            0.28 * interpolate(fr, [0, 120, TRAILER_FRAMES - 120, TRAILER_FRAMES], [0, 1, 1, 0],
+            0.18 * interpolate(fr, [0, 120, TRAILER_FRAMES - 120, TRAILER_FRAMES], [0, 1, 1, 0],
               { extrapolateLeft: "clamp", extrapolateRight: "clamp" })}
         />
 
