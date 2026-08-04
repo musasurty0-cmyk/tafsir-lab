@@ -4,6 +4,7 @@ import { TafsirTrailer } from "./TafsirTrailer";
 import { LinkReel, REEL_FRAMES } from "./reel/LinkReel";
 import { TestReel, TEST_FRAMES } from "./reel/TestReel";
 import { LinkTrailer, TRAILER_FRAMES } from "./reel/LinkTrailer";
+import { SurahStudy, STUDY_FRAMES } from "./reel/SurahStudy";
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -23,6 +24,17 @@ export const RemotionRoot: React.FC = () => {
         id="LinkReel"
         component={LinkReel}
         durationInFrames={REEL_FRAMES}
+        fps={60}
+        width={1080}
+        height={1920}
+        defaultProps={{}}
+      />
+
+      {/* Studying a sūrah end to end, from the dock to the annotated muṣḥaf. */}
+      <Composition
+        id="SurahStudy"
+        component={SurahStudy}
+        durationInFrames={STUDY_FRAMES}
         fps={60}
         width={1080}
         height={1920}
