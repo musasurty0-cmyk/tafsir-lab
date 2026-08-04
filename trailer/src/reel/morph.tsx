@@ -108,10 +108,21 @@ export interface MState {
    *  40 large. Distance, not feel — see `tierOf`. */
   morph: number;
   w: number; h: number; r: number;
-  /** Where the container's centre sits. Defaults to the frame centre.
-   *  Moving it horizontally AND vertically is what stops a run of states
-   *  reading as one composition repeated over and over. */
+  /** Where the container's centre sits. Defaults to the frame centre, and
+   *  should almost always stay there: the SUBJECT does not wander. Horizontal
+   *  and vertical movement belongs in the transitions between states — see
+   *  `dir` — not in where a settled state parks. */
   cx?: number; cy?: number;
+  /**
+   * Which way content travels through this transition. The outgoing content
+   * leaves toward `dir`; the incoming content enters from the opposite edge
+   * and travels the same way, so the whole swap reads as one directional
+   * movement rather than a crossfade in place.
+   *
+   * Varying this across the piece is what uses the frame's width and height
+   * without ever moving the subject off centre.
+   */
+  dir?: "left" | "right" | "up" | "down";
   /** Curve for the morph INTO this state. */
   ease?: EaseName;
   /** How the OUTGOING content leaves. `fall` drops it out of the bottom of
@@ -170,7 +181,7 @@ export interface MorphFrame {
   /** Blur applied to the container. Peaks mid-morph. */
   blur: number;
   old?: { key: string; opacity: number; x: number; y: number; rot: number; blur: number };
-  now: { key: string; opacity: number };
+  now: { key: string; opacity: number; x: number; y: number };
   /** Frame the current content began landing — feed to <Words start>. */
   contentStart: number;
 }
@@ -211,7 +222,7 @@ export function morphAt(f: number, S: MState[]): MorphFrame {
   if (!inMorph) {
     return {
       w: a.w, h: a.h, r: a.r, cx: cx(a), cy: cy(a), blur: 0,
-      now: { key: a.key, opacity: 1 },
+      now: { key: a.key, opacity: 1, x: 0, y: 0 },
       contentStart: startOf(i),
     };
   }
@@ -227,7 +238,7 @@ export function morphAt(f: number, S: MState[]): MorphFrame {
       w: lerp(a.w, b.w, e), h: lerp(a.h, b.h, e), r: lerp(a.r, b.r, e),
       cx: lerp(cx(a), cx(b), e), cy: lerp(cy(a), cy(b), e),
       blur: 0,
-      now: { key: b.key, opacity: 1 },
+      now: { key: b.key, opacity: 1, x: 0, y: 0 },
       contentStart: startOf(i + 1),
     };
   }
@@ -239,6 +250,14 @@ export function morphAt(f: number, S: MState[]): MorphFrame {
   const fall = b.exit === "fall";
   const gone = fall ? 0.34 : 0.13;
   const k = clamp01(p / gone);
+
+  /* Direction of travel. Content leaves toward `dir` and the replacement
+     arrives from the opposite edge heading the same way. */
+  const VEC = { left: [-1, 0], right: [1, 0], up: [0, -1], down: [0, 1] } as const;
+  const [dx, dy] = VEC[b.dir ?? "right"];
+  const nk = interpolate(p, [fall ? 0.62 : 0.46, fall ? 0.80 : 0.68], [0, 1],
+    { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const ease = 1 - Math.pow(1 - nk, 3);
 
   return {
     w: lerp(a.w, b.w, e), h: lerp(a.h, b.h, e), r: lerp(a.r, b.r, e),
@@ -254,9 +273,10 @@ export function morphAt(f: number, S: MState[]): MorphFrame {
          slowly and is gone quickly — the opposite of a fade. */
       opacity: fall ? 1 - k * k : interpolate(p, [0, gone], [1, 0],
         { extrapolateLeft: "clamp", extrapolateRight: "clamp" }),
-      x: fall ? 0 : interpolate(p, [0, gone], [0, 44],
+      x: fall ? 0 : dx * interpolate(p, [0, gone], [0, 68],
         { extrapolateLeft: "clamp", extrapolateRight: "clamp" }),
-      y: fall ? k * k * 460 : 0,
+      y: fall ? k * k * 460 : dy * interpolate(p, [0, gone], [0, 68],
+        { extrapolateLeft: "clamp", extrapolateRight: "clamp" }),
       rot: fall ? k * 5 : 0,
       blur: interpolate(p, [0, gone], [0, fall ? 6 : 16],
         { extrapolateLeft: "clamp", extrapolateRight: "clamp" }),
@@ -265,6 +285,10 @@ export function morphAt(f: number, S: MState[]): MorphFrame {
       key: b.key,
       opacity: interpolate(p, [fall ? 0.62 : 0.46, fall ? 0.74 : 0.6], [0, 1],
         { extrapolateLeft: "clamp", extrapolateRight: "clamp" }),
+      /* Enters from the far side and travels the same way the old content
+         went, so the transition has a direction instead of a dissolve. */
+      x: fall ? 0 : -dx * (1 - ease) * 52,
+      y: fall ? -(1 - ease) * 34 : -dy * (1 - ease) * 52,
     },
     contentStart: from + b.morph * (fall ? 0.66 : 0.5),
   };

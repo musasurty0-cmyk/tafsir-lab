@@ -4,6 +4,7 @@
 import {
   STATES as S, THEME_KEYS, LEGS, CLICK_TARGET, MAGNETIC, FALLS, T, T_END,
   SAYS, STARTS, IX, NOTE, NOTE_H, MOD, MOD_H, STACK, STACK_H, TOG, PAIR, VERSES,
+  LINKS,
   DRAW_FOR, TRAILER_FRAMES, FPS,
 } from "./src/reel/trailerSpec.ts";
 import { distOf, tierOf, EASES } from "./src/reel/morph.tsx";
@@ -48,6 +49,8 @@ function morphAt(f) {
   const fall = b.exit === "fall";
   const gone = fall ? 0.34 : 0.13;
   const k = clamp01(p / gone);
+  const VEC = { left: [-1, 0], right: [1, 0], up: [0, -1], down: [0, 1] };
+  const [dx, dy] = VEC[b.dir ?? "right"];
   return {
     w: lerp(a.w, b.w, e), h: lerp(a.h, b.h, e), r: lerp(a.r, b.r, e),
     cx: lerp(CX(a), CX(b), e), cy: lerp(CY(a), CY(b), e),
@@ -124,40 +127,54 @@ H("- peak blur only ever happens with an empty container");
   ok("no violating frames, smear and fall alike", bad.length === 0, `${bad.length} frames`);
 }
 
-H("- variation: the piece is not one shot repeated");
+H("- the subject stays centred; the movement is in the transitions");
 {
-  const centres = new Set(S.map((s) => `${CX(s)},${CY(s)}`));
-  const xs = new Set(S.map((s) => CX(s)));
-  const offX = Math.max(...S.map((s) => Math.abs(CX(s) - FRAME_W / 2)));
-  ok("at least 5 distinct container positions", centres.size >= 5, `${centres.size}`);
-  ok("at least 3 distinct horizontal positions", xs.size >= 3, `${xs.size}`);
-  ok("the frame is used sideways, not just up and down", offX >= 100,
-     `furthest ${offX}px off centre`);
+  const off = S.filter((x) => (x.cx ?? FRAME_W / 2) !== FRAME_W / 2 ||
+                              (x.cy ?? FRAME_H / 2) !== FRAME_H / 2);
+  ok("no state parks off centre", off.length === 0,
+     off.map((x) => x.key).join(", "));
 
-  const areas = S.map((s) => s.w * s.h);
+  /* Movement lives in how content travels between states, not in where a
+     settled state sits. */
+  const dirs = new Set(S.slice(1).filter((x) => x.via !== "reflow" && x.exit !== "fall")
+                         .map((x) => x.dir ?? "right"));
+  ok("transitions travel in at least 3 directions", dirs.size >= 3, [...dirs].join(", "));
+  ok("both axes are used", (dirs.has("left") || dirs.has("right")) &&
+     (dirs.has("up") || dirs.has("down")), [...dirs].join(", "));
+
+  /* And the text alternates sides, so the words are not always in one band. */
+  const above = SAYS.filter((x) => x.top < FRAME_H / 2).length;
+  ok("explanation text uses both halves of the frame",
+     above > 0 && above < SAYS.length, `${above} above, ${SAYS.length - above} below`);
+  console.log("        directions [" + [...dirs].join(" ") + "], " +
+              `text ${above} above / ${SAYS.length - above} below`);
+}
+
+H("- variation: the piece is not one shape repeated");
+{
+  const areas = S.map((x) => x.w * x.h);
   const areaSpan = Math.max(...areas) / Math.min(...areas);
   ok("largest state is >= 10x the area of the smallest", areaSpan >= 10,
      `${areaSpan.toFixed(1)}x`);
 
-  const asp = S.map((s) => s.w / s.h);
+  const asp = S.map((x) => x.w / x.h);
   const aspSpan = Math.max(...asp) / Math.min(...asp);
   ok("aspect ratios span >= 3x", aspSpan >= 3, `${aspSpan.toFixed(2)}x`);
 
-  /* Shape families, so text is not always sitting in the same oblong. */
-  const family = (s) => {
-    if (s.r / Math.min(s.w, s.h) < 0.2) return "rect";
-    return Math.abs(s.w / s.h - 1) < 0.05 ? "circle" : "pill";
+  const family = (x) => {
+    if (x.r / Math.min(x.w, x.h) < 0.2) return "rect";
+    return Math.abs(x.w / x.h - 1) < 0.05 ? "circle" : "pill";
   };
   const fams = new Set(S.map(family));
   ok("at least 3 distinct container shapes", fams.size >= 3, [...fams].join(", "));
-  ok("exactly one true circle", S.filter((s) => family(s) === "circle").length === 1);
+  ok("exactly one true circle", S.filter((x) => family(x) === "circle").length === 1);
 
-  const eases = new Set(S.slice(1).map((s) => s.ease ?? "back"));
+  const eases = new Set(S.slice(1).filter((x) => x.via !== "reflow")
+                          .map((x) => x.ease ?? "back"));
   ok("at least 3 different easing curves", eases.size >= 3, [...eases].join(", "));
   ok("both exit styles are used",
-     new Set(S.slice(1).map((s) => s.exit ?? "smear")).size === 2);
+     new Set(S.slice(1).map((x) => x.exit ?? "slide")).size === 2);
 
-  console.log(`        ${centres.size} positions (${xs.size} horizontal, max ${offX}px off centre)`);
   console.log(`        area ${areaSpan.toFixed(1)}x, aspect ${aspSpan.toFixed(2)}x, ` +
               `shapes [${[...fams].join(" ")}], eases [${[...eases].join(" ")}]`);
 }
@@ -203,6 +220,13 @@ H("- a transition only fires when the surface actually changes");
   ok("the note is never blurred away and rebuilt", blurred === 0, `${blurred} frames`);
   const reflows = S.filter((x) => x.via === "reflow").length;
   ok("reflows are used, and sparingly", reflows >= 2 && reflows <= 4, `${reflows}`);
+  ok("the word becoming a symbol is a reflow, not a cut",
+     S[IX.countInf].via === "reflow" && S[IX.countInf].w < S[IX.count].w,
+     "the pill should narrow around the change");
+  ok("the swap happens inside the countInf reflow",
+     T.infAt >= S[IX.countInf].at - S[IX.countInf].morph &&
+     T.infAt + T.infOver <= S[IX.countInf].at + 30,
+     `swap f${T.infAt}-${T.infAt + T.infOver}, reflow f${S[IX.countInf].at - S[IX.countInf].morph}-${S[IX.countInf].at}`);
 }
 
 H("- the opening leaves a stranger grounded, not guessing");
@@ -315,8 +339,8 @@ H("- clicks land on a settled, unblurred target");
        m.nowKey === want && m.blur === 0 && m.oldKey === null,
        `got ${m.nowKey}, blur ${m.blur.toFixed(1)}`);
   }
-  const inside = (label, x, y, w, h, cx = FRAME_W / 2, cy = FRAME_H / 2) => {
-    const L = cx - w / 2, TT = cy - h / 2;
+  const inside = (label, x, y, w, h) => {
+    const L = FRAME_W / 2 - w / 2, TT = FRAME_H / 2 - h / 2;
     ok(`${label} is inside its container`,
        x > L + 8 && x < L + w - 8 && y > TT + 8 && y < TT + h - 8,
        `(${x.toFixed(0)},${y.toFixed(0)}) box ${L},${TT} ${w}x${h}`);
@@ -327,13 +351,13 @@ H("- clicks land on a settled, unblurred target");
          FRAME_H / 2 - NOTE_H.menu / 2 + NOTE.slashY + NOTE.lineH + NOTE.menuGap + 52,
          900, NOTE_H.menu);
   inside("name field", FRAME_W / 2 - 440 + MOD.pad + 110,
-         1080 - MOD_H / 2 + MOD.nameFld + MOD.nameH / 2, 880, MOD_H, FRAME_W / 2, 1080);
+         FRAME_H / 2 - MOD_H / 2 + MOD.nameFld + MOD.nameH / 2, 880, MOD_H);
   inside("category", FRAME_W / 2 - 440 + MOD.pad + 150,
-         1080 - MOD_H / 2 + MOD.catRow + MOD.catH / 2, 880, MOD_H, FRAME_W / 2, 1080);
+         FRAME_H / 2 - MOD_H / 2 + MOD.catRow + MOD.catH / 2, 880, MOD_H);
   inside("Create", FRAME_W / 2 + 440 - MOD.pad - MOD.btnW / 2,
-         1080 - MOD_H / 2 + MOD.btnY + MOD.btnH / 2, 880, MOD_H, FRAME_W / 2, 1080);
-  inside("appearance switch", FRAME_W / 2 - 280 + 560 - TOG.pad - TOG.swW / 2, 700,
-         560, 170, FRAME_W / 2, 700);
+         FRAME_H / 2 - MOD_H / 2 + MOD.btnY + MOD.btnH / 2, 880, MOD_H);
+  inside("appearance switch", FRAME_W / 2 - 280 + 560 - TOG.pad - TOG.swW / 2,
+         FRAME_H / 2, 560, 170);
 }
 
 H("- the falls are real, and heard");

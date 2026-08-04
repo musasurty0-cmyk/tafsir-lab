@@ -495,9 +495,22 @@ const Map: React.FC<{ f: number; s: number; dark: number }> = ({ f, s, dark }) =
   </div>
 );
 
-/** Everything the map just drew, said once, small. */
+/**
+ * What the map amounts to, said once and small — and then said shorter.
+ *
+ * "Infinite" is written first, then handed over to the symbol for it while the
+ * pill narrows around the change. The word and the glyph occupy the SAME slot,
+ * one leaving as the other arrives, so the container reads as revising itself
+ * rather than cutting to a different card.
+ */
 const Count: React.FC<{ f: number; s: number }> = ({ f, s }) => {
   const th = useTheme();
+  const sw = interpolate(f, [T.infAt, T.infAt + T.infOver], [0, 1],
+    { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const slot: React.CSSProperties = {
+    gridArea: "1 / 1", fontFamily: R.fontSans, fontWeight: 600, color: th.ink,
+    whiteSpace: "nowrap",
+  };
   return (
     <div style={{
       height: "100%", display: "flex", alignItems: "center",
@@ -506,10 +519,30 @@ const Count: React.FC<{ f: number; s: number }> = ({ f, s }) => {
       <Rise f={f} start={s} i={0}>
         <span style={{ fontSize: 26, color: th.iconLink }}>🔗</span>
       </Rise>
+
+      <div style={{
+        display: "grid", placeItems: "center",
+        width: interpolate(sw, [0, 1], [116, 44]),
+        height: 46, overflow: "hidden",
+      }}>
+        <span style={{
+          ...slot, fontSize: 26,
+          opacity: 1 - sw,
+          transform: `scale(${1 - sw * 0.3})`,
+          filter: sw > 0.02 ? `blur(${sw * 8}px)` : undefined,
+        }}>Infinite</span>
+        <span style={{
+          ...slot, fontSize: 42, lineHeight: 1, color: th.accent,
+          opacity: sw,
+          transform: `scale(${0.55 + sw * 0.45})`,
+          filter: sw < 0.98 ? `blur(${(1 - sw) * 8}px)` : undefined,
+        }}>∞</span>
+      </div>
+
       <div style={{
         fontFamily: R.fontSans, fontSize: 26, fontWeight: 600, color: th.ink,
       }}>
-        <Words f={f} start={s + 3} text={`${LINKS.length} Connections`} step={6} />
+        <Words f={f} start={s + 3} text="Connections" step={6} />
       </div>
     </div>
   );
@@ -569,10 +602,14 @@ const Body: React.FC = () => {
   const stack = S[IX.stack], wheel = S[IX.wheel], after = S[IX.count];
   const tog = S[IX.toggle];
   const tilt =
-    /* A held lean on the stack, so four cards read as four physical objects. */
-    interpolate(f,
-      [stack.at, stack.at + 80, tog.at - tog.morph - 28, tog.at - tog.morph],
-      [0, 0.5, 0.5, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }) +
+    /* A slow ROCK on the stack, not a held lean. A sustained tilt parks the
+       card visibly off-axis, which reads as bad centring rather than as depth;
+       an oscillation starting and ending square-on gives the same sense of
+       physical cards without ever leaving the card looking crooked. */
+    Math.sin((f - stack.at) / 68) *
+      interpolate(f,
+        [stack.at, stack.at + 60, tog.at - tog.morph - 30, tog.at - tog.morph],
+        [0, 0.28, 0.28, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }) +
     /* …and a slow sway on the map, so the ring is an object being looked at
        rather than a diagram pasted onto the frame. */
     Math.sin((f - wheel.at) / 130) *
@@ -609,7 +646,8 @@ const Body: React.FC = () => {
       case "stack": return <Stack f={f} s={start} />;
       case "toggle": return <Toggle f={f} s={start} />;
       case "wheel": return <Map f={f} s={start} dark={dark} />;
-      case "count": return <Count f={f} s={start} />;
+      case "count":
+      case "countInf": return <Count f={f} s={start} />;
       case "cta":   return <Cta f={f} s={start} />;
       default: return null;
     }
@@ -634,7 +672,10 @@ const Body: React.FC = () => {
             {render(m.old.key, -9999)}
           </div>
         )}
-        <div style={{ position: "absolute", inset: 0, opacity: m.now.opacity }}>
+        <div style={{
+          position: "absolute", inset: 0, opacity: m.now.opacity,
+          transform: `translate(${m.now.x}px, ${m.now.y}px)`,
+        }}>
           {render(m.now.key, m.contentStart)}
         </div>
       </Card>

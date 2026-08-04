@@ -9,7 +9,7 @@
 import { typeEnd } from "./parts";
 import { distOf, tierOf, FRAME_W, FRAME_H, type MState, type Leg } from "./morph";
 
-export const TRAILER_FRAMES = 2670;   // 44.5s @ 60fps
+export const TRAILER_FRAMES = 2740;   // 45.7s @ 60fps
 export const FPS = 60;
 
 /* ── Layout ───────────────────────────────────────────────────────────────*/
@@ -40,39 +40,41 @@ export const TOG = { pad: 34, swW: 96, swH: 50, knob: 40 };
 export const PAIR = { pad: 36, rowH: 150, linkH: 68 };
 
 /* ── States ───────────────────────────────────────────────────────────────
-   Three things vary deliberately across this list, because holding any of them
-   constant is what made earlier cuts feel repetitive:
+   The subject stays CENTRED. Every state parks in the middle of the frame;
+   nothing drifts off to one side and sits there. What varies instead:
 
-     SHAPE     rect, wide slab, stadium, pill, and one true circle — the
-               container is not always the same oblong
-     POSITION  cx moves as well as cy, so the frame is used left-to-right and
-               not just top-to-bottom
-     CURVE     four different eases, chosen per transition
+     SHAPE      rect, wide slab, stadium, pill, and one true circle — the
+                container is not always the same oblong
+     DIRECTION  each transition carries content left, right, up or down, so
+                the width and height of the frame are used by the MOVEMENT
+                rather than by parking the subject somewhere off-centre
+     CURVE      four different eases, chosen per transition
+     TONE       one real mode drop, thrown on camera
 
-   Morph lengths stay derived from distance, so a state that moves further is
+   Morph lengths stay derived from distance, so a state that changes more is
    never given a transition too short to carry it.                          */
 
 /** Named indices, so nothing downstream depends on positional guesswork. */
 export const IX = {
   title0: 0, verseA: 1, verseB: 2, verseBoth: 3, note: 4, slash: 5, menu: 6,
-  modal: 7, saved: 8, stack: 9, toggle: 10, wheel: 11, count: 12,
-  cta: 13, title1: 14,
+  modal: 7, saved: 8, stack: 9, toggle: 10, wheel: 11, count: 12, countInf: 13,
+  cta: 14, title1: 15,
 } as const;
 
 const raw: Omit<MState, "morph">[] = [
   { key: "title",  at: 0,    w: 640, h: 360, r: 26 },
 
   /* The opening has to leave a stranger GROUNDED, not curious. Two passages in
-     Arabic side by side explain nothing to someone who cannot read them — so
-     each carries its reference and its meaning, and a third state then puts
-     both in one card with a line drawn between them. The idea of a Connection
-     is SHOWN before the product that makes one, using the very same pair the
-     rest of the trailer goes on to create. */
-  { key: "verseA",    at: 156, w: 700, h: 240, r: 18, cx: 430, cy: 660, ease: "back" },
-  { key: "verseB",    at: 320, w: 700, h: 240, r: 18, cx: 650, cy: 660, ease: "snap" },
-  { key: "verseBoth", at: 500, w: 780, h: 440, r: 24,          cy: 900, ease: "glide" },
+     Arabic one after the other explain nothing to someone who cannot read
+     them, so each carries its reference and its meaning, and a third state
+     puts both in one card with a line drawn between them. The idea of a
+     Connection is SHOWN before the product that makes one, using the very
+     same pair the rest of the trailer goes on to create. */
+  { key: "verseA",    at: 156, w: 700, h: 240, r: 18, ease: "back",  dir: "right" },
+  { key: "verseB",    at: 320, w: 700, h: 240, r: 18, ease: "snap",  dir: "left" },
+  { key: "verseBoth", at: 500, w: 780, h: 440, r: 24, ease: "glide", dir: "up" },
 
-  { key: "note",   at: 680,  w: 900, h: NOTE_H.plain, r: 24, ease: "smooth" },
+  { key: "note",   at: 680,  w: 900, h: NOTE_H.plain, r: 24, ease: "smooth", dir: "up" },
 
   /* These two are REFLOWS, not morphs. The note is not replaced when a command
      line appears under it, and it is not replaced again when the suggestion
@@ -82,37 +84,41 @@ const raw: Omit<MState, "morph">[] = [
   { key: "slash",  at: 830,  w: 900, h: NOTE_H.slash, r: 24, via: "reflow" },
   { key: "menu",   at: 960,  w: 900, h: NOTE_H.menu,  r: 24, via: "reflow" },
 
-  { key: "modal",  at: 1100, w: 880, h: MOD_H, r: 24, cy: 1080, ease: "glide" },
+  { key: "modal",  at: 1100, w: 880, h: MOD_H, r: 24, ease: "glide", dir: "left" },
 
-  /* Create is clicked and the form drops out of the bottom of the card, the one
-     exit in the piece that is not a sideways smear. What is left is a stadium —
-     a different silhouette, high and to the right. */
-  { key: "saved",  at: 1420, w: 800, h: 190, r: 95, cx: 590, cy: 640,
-    ease: "smooth", exit: "fall" },
-  { key: "stack",  at: 1580, w: 820, h: STACK_H, r: 22, cx: 490, cy: 1090, ease: "glide" },
+  /* Create is clicked and the form drops out of the bottom of the card — the
+     one exit in the piece that is not a sideways slide. What is left is a
+     stadium, a different silhouette entirely. */
+  { key: "saved",  at: 1420, w: 800, h: 190, r: 95, ease: "smooth", exit: "fall" },
+  { key: "stack",  at: 1580, w: 820, h: STACK_H, r: 22, ease: "glide", dir: "up" },
 
   /* The appearance switch. Dark mode is not simply presented — the cursor
-     travels the height of the frame and throws it. */
-  { key: "toggle", at: 1800, w: 560, h: 170, r: 85, cy: 700, ease: "snap" },
+     crosses the frame and throws it. */
+  { key: "toggle", at: 1800, w: 560, h: 170, r: 85, ease: "snap", dir: "right" },
 
   /* A circle. The ring finally gets a container shaped like itself. */
-  { key: "wheel",  at: 2000, w: 860, h: 860, r: 430, cy: 1080, ease: "smooth" },
+  { key: "wheel",  at: 2000, w: 860, h: 860, r: 430, ease: "smooth", dir: "up" },
 
-  { key: "count",  at: 2380, w: 340, h: 110, r: 55, ease: "glide", exit: "fall" },
-  { key: "cta",    at: 2500, w: 660, h: 420, r: 26, ease: "back" },
-  { key: "title",  at: 2610, w: 640, h: 360, r: 26, ease: "snap" },
+  /* The map collapses into one pill. The word is then replaced by the symbol
+     for it, in place, as a reflow — same surface, one word becoming a glyph,
+     and the pill narrows to fit. */
+  { key: "count",    at: 2380, w: 460, h: 120, r: 60, ease: "glide", exit: "fall" },
+  { key: "countInf", at: 2470, w: 380, h: 120, r: 60, via: "reflow" },
+
+  { key: "cta",    at: 2570, w: 660, h: 420, r: 26, ease: "back", dir: "left" },
+  { key: "title",  at: 2680, w: 640, h: 360, r: 26, ease: "snap", dir: "right" },
 ];
 
 export const STATES: MState[] = raw.map((s, i) => ({
   ...s,
   /* The first state has nothing before it; its morph value only backdates the
      content arrival so frame 0 is already settled, which the loop needs.
-     A fall needs longer on screen than a smear, so those get extra frames. */
+     A fall needs longer on screen than a slide, so those get extra frames. */
   morph: i === 0 ? 220
     : tierOf(distOf(raw[i - 1] as MState, s as MState)) + (s.exit === "fall" ? 16 : 0),
 }));
 
-/* ── Typing and the switch ────────────────────────────────────────────────*/
+/* ── Typing, the switch, and the symbol ───────────────────────────────────*/
 
 export const CMD = "/link";
 export const NAME = "The seven oft-repeated verses";
@@ -129,6 +135,9 @@ export const T = {
   /** The frame the appearance switch is thrown. */
   themeAt:   1860,
   themeOver:   32,
+  /** The frame the word gives way to the symbol, inside the same pill. */
+  infAt:     2446,
+  infOver:     24,
 } as const;
 
 export const T_END = {
@@ -147,35 +156,35 @@ export const THEME_KEYS = [
 ];
 
 /* ── The explanation ──────────────────────────────────────────────────────
-   Text lives on the STAGE, in the space the container vacates — never over the
-   UI. It also moves: above the low states, below the high ones, and on both
-   sides of the map, so the words are not always in the same band either.
+   Text lives on the STAGE, above or below the centred container — never over
+   it. Alternating which side it takes gives the words somewhere different to
+   be without the subject having to move.
 
    Every beat that could leave a first-time viewer asking "what am I looking
    at?" gets a line: the pair at the top, the note, and the ring. */
 
 export const SAYS = [
-  { from: 180,  to: 284,  text: "The Qurʾān explains itself.",     top: 1000 },
-  { from: 334,  to: 452,  text: "One passage names another.",      top: 1000 },
-  { from: 516,  to: 632,  text: "That link is worth keeping.",     top: 1320 },
-  { from: 700,  to: 790,  text: "Your own study notes.",           top: 1400 },
+  { from: 180,  to: 284,  text: "The Qurʾān explains itself.",     top: 1240 },
+  { from: 334,  to: 452,  text: "One passage names another.",      top: 1240 },
+  { from: 516,  to: 632,  text: "That link is worth keeping.",     top: 420 },
+  { from: 700,  to: 790,  text: "Your own study notes.",           top: 1360 },
   { from: 1120, to: 1330, text: "Name it. Explain it. Keep it.",   top: 300 },
-  { from: 1430, to: 1530, text: "It lives inside your note.",      top: 880 },
-  { from: 1600, to: 1750, text: "And they accumulate.",            top: 380 },
-  { from: 2012, to: 2140, text: "Every sūrah, around one ring.",   top: 300 },
-  { from: 2160, to: 2310, text: "Each Connection draws a chord.",  top: 1580 },
+  { from: 1430, to: 1530, text: "It lives inside your note.",      top: 1180 },
+  { from: 1600, to: 1740, text: "And they accumulate.",            top: 300 },
+  { from: 2012, to: 2140, text: "Every sūrah, around one ring.",   top: 250 },
+  { from: 2160, to: 2310, text: "Each Connection draws a chord.",  top: 1470 },
 ];
 
 /* ── Cursor ───────────────────────────────────────────────────────────────
    Click targets are DERIVED from the layout constants above, so a click can
    never drift off the control it is supposed to hit. */
 
-const left = (w: number, cx = FRAME_W / 2) => cx - w / 2;
-const top = (h: number, cy = FRAME_H / 2) => cy - h / 2;
+const left = (w: number) => FRAME_W / 2 - w / 2;
+const top = (h: number) => FRAME_H / 2 - h / 2;
 
 export const LEGS: Leg[] = [
-  { at: 0,    to: { x: 900, y: 1500 } },
-  { at: 700,  to: { x: 860, y: 1380 } },
+  { at: 0,    to: { x: 900, y: 1560 } },
+  { at: 700,  to: { x: 860, y: 1440 } },
   /* Clicks at the end of the written note. The command line appears because of
      this, not alongside it. */
   { at: T.caretAt, to: { x: left(900) + NOTE.pad + 26,
@@ -185,16 +194,17 @@ export const LEGS: Leg[] = [
   { at: 1030, to: { x: left(900) + NOTE.pad + 200,
                     y: top(NOTE_H.menu) + NOTE.slashY + NOTE.lineH + NOTE.menuGap + 52 }, click: true },
   { at: 1130, to: { x: left(880) + MOD.pad + 110,
-                    y: top(MOD_H, 1080) + MOD.nameFld + MOD.nameH / 2 }, click: true },
+                    y: top(MOD_H) + MOD.nameFld + MOD.nameH / 2 }, click: true },
   { at: 1290, to: { x: left(880) + MOD.pad + 150,
-                    y: top(MOD_H, 1080) + MOD.catRow + MOD.catH / 2 }, click: true },
+                    y: top(MOD_H) + MOD.catRow + MOD.catH / 2 }, click: true },
   { at: 1350, to: { x: left(880) + 880 - MOD.pad - MOD.btnW / 2,
-                    y: top(MOD_H, 1080) + MOD.btnY + MOD.btnH / 2 }, click: true },
-  { at: 1480, to: { x: 880, y: 1560 } },
-  /* The longest travel in the piece: bottom-right of the frame to the switch
-     near the top. Vertical distance is the point of it. */
-  { at: T.themeAt, to: { x: left(560) + 560 - TOG.pad - TOG.swW / 2, y: 700 }, click: true },
-  { at: 1940, to: { x: 930, y: 1640 } },
+                    y: top(MOD_H) + MOD.btnY + MOD.btnH / 2 }, click: true },
+  { at: 1480, to: { x: 900, y: 1620 } },
+  /* A long diagonal travel to the switch. The CURSOR uses the width and height
+     of the frame; the subject it is operating never leaves centre. */
+  { at: T.themeAt, to: { x: left(560) + 560 - TOG.pad - TOG.swW / 2,
+                         y: FRAME_H / 2 }, click: true },
+  { at: 1940, to: { x: 930, y: 1660 } },
 ];
 
 /** Clicks that COMMIT something get the heavier magnetic snap; the light taps
