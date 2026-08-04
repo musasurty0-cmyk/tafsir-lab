@@ -6,6 +6,7 @@ import { TestReel, TEST_FRAMES } from "./reel/TestReel";
 import { LinkTrailer, TRAILER_FRAMES } from "./reel/LinkTrailer";
 import { SurahStudy, STUDY_FRAMES } from "./reel/SurahStudy";
 import { ToolsReel, TOOLS_FRAMES } from "./reel/ToolsReel";
+import { StrokeReel, STROKE_FRAMES } from "./reel/StrokeReel";
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -25,6 +26,17 @@ export const RemotionRoot: React.FC = () => {
         id="LinkReel"
         component={LinkReel}
         durationInFrames={REEL_FRAMES}
+        fps={60}
+        width={1080}
+        height={1920}
+        defaultProps={{}}
+      />
+
+      {/* Eight strokes rearranged — no cuts, no fades, one continuous morph. */}
+      <Composition
+        id="StrokeReel"
+        component={StrokeReel}
+        durationInFrames={STROKE_FRAMES}
         fps={60}
         width={1080}
         height={1920}
