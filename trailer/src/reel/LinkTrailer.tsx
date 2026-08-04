@@ -13,7 +13,7 @@ import {
 import {
   TRAILER_FRAMES, STATES as S, THEME_KEYS as THEME, SAYS, LEGS, LINKS, STARTS,
   DRAW_FOR, WHEEL_IN, CONNS, VERSES, IX, CMD, NAME, T, T_END, NOTE, MOD, STACK, TOG,
-  MAGNETIC, FALLS,
+  MAGNETIC, FALLS, PAIR,
   type Conn,
 } from "./trailerSpec";
 
@@ -80,30 +80,93 @@ const TitleCard: React.FC<{ f: number; s: number }> = ({ f, s }) => {
 };
 
 /**
- * A single passage, on its own. Shown twice at the top of the trailer — the
- * same chip, content swapped in place — so "one passage answers another" is
- * demonstrated before it is claimed.
+ * One passage: what it is, what it says, and what it means.
+ *
+ * The English line is not decoration. A viewer who cannot read Arabic learns
+ * nothing from the script alone, and the opening only works if they can see
+ * for themselves why these two passages belong together — one is seven verses,
+ * the other names seven verses.
  */
-const VerseChip: React.FC<{ f: number; s: number; i: number }> = ({ f, s, i }) => {
+const VerseRow: React.FC<{ f: number; s: number; i: number; base?: number }> =
+({ f, s, i, base = 0 }) => {
   const th = useTheme();
   const v = VERSES[i];
   return (
-    <div style={{
-      height: "100%", padding: "0 34px", boxSizing: "border-box",
-      display: "flex", flexDirection: "column", justifyContent: "center", gap: 16,
-    }}>
-      <Rise f={f} start={s} i={0}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <Rise f={f} start={s} i={base}>
         <span style={{
           fontFamily: R.fontSans, fontSize: 19, color: th.accentInk,
           background: th.accentSoft, padding: "8px 16px", borderRadius: 999,
         }}>{v.ref}</span>
       </Rise>
-      <Rise f={f} start={s} i={1}>
+      <Rise f={f} start={s} i={base + 1}>
         <div dir="rtl" style={{
-          fontFamily: R.fontArabic, fontSize: 30, lineHeight: 1.75,
+          fontFamily: R.fontArabic, fontSize: 30, lineHeight: 1.7,
           color: th.ink, textAlign: "right",
         }}>{v.ar}</div>
       </Rise>
+      <Rise f={f} start={s} i={base + 2} style={{
+        fontFamily: R.fontSans, fontSize: 20, color: th.ink3, lineHeight: 1.45,
+      }}>{v.en}</Rise>
+    </div>
+  );
+};
+
+const VerseChip: React.FC<{ f: number; s: number; i: number }> = ({ f, s, i }) => (
+  <div style={{
+    height: "100%", padding: "0 36px", boxSizing: "border-box",
+    display: "flex", flexDirection: "column", justifyContent: "center",
+  }}>
+    <VerseRow f={f} s={s} i={i} />
+  </div>
+);
+
+/**
+ * Both passages in one card, with the connector drawn between them.
+ *
+ * This is the beat that stops the opening being two unexplained Arabic lines.
+ * The line draws itself from the first reference down to the second, and the
+ * link node lands on it — the same relationship the rest of the trailer goes
+ * on to create with /link.
+ */
+const VersePair: React.FC<{ f: number; s: number }> = ({ f, s }) => {
+  const th = useTheme();
+  const draw = interpolate(f, [s + 30, s + 74], [0, 1],
+    { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const node = interpolate(f, [s + 62, s + 84], [0, 1],
+    { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const LEN = PAIR.linkH + 8;
+  return (
+    <div style={{
+      height: "100%", padding: PAIR.pad, boxSizing: "border-box",
+      display: "flex", flexDirection: "column", justifyContent: "space-between",
+    }}>
+      <VerseRow f={f} s={s} i={0} />
+
+      {/* The connector. It draws downward, so the eye is carried from the
+          first passage to the second rather than being asked to compare two
+          things that simply appeared. */}
+      <div style={{
+        height: PAIR.linkH, position: "relative",
+        display: "flex", alignItems: "center", gap: 14,
+      }}>
+        <svg width="26" height={PAIR.linkH} style={{ overflow: "visible", flexShrink: 0 }}>
+          <path d={`M13 0 L13 ${PAIR.linkH}`}
+            stroke={th.accent} strokeWidth={2.5} strokeLinecap="round" fill="none"
+            strokeDasharray={LEN} strokeDashoffset={LEN * (1 - draw)} />
+        </svg>
+        <div style={{
+          display: "flex", alignItems: "center", gap: 10,
+          opacity: node, transform: `translateX(${(1 - node) * -14}px)`,
+        }}>
+          <span style={{ fontSize: 21, color: th.iconLink }}>🔗</span>
+          <span style={{
+            fontFamily: R.fontSans, fontSize: 19, color: th.ink3,
+          }}>the seven oft-repeated verses</span>
+        </div>
+      </div>
+
+      <VerseRow f={f} s={s} i={1} base={3} />
     </div>
   );
 };
@@ -111,7 +174,8 @@ const VerseChip: React.FC<{ f: number; s: number; i: number }> = ({ f, s, i }) =
 /** The note, at a size that fills the frame — the reference's "fill" beat. */
 const Note: React.FC<{
   f: number; s: number; slash?: string; caret?: boolean; menu?: number;
-}> = ({ f, s, slash, caret, menu }) => {
+  lineIn?: number;
+}> = ({ f, s, slash, caret, menu, lineIn = 1 }) => {
   const th = useTheme();
   return (
     <div style={{ padding: NOTE.pad, position: "relative", height: "100%" }}>
@@ -160,7 +224,13 @@ const Note: React.FC<{
       </Rise>
 
       {slash !== undefined && (
-        <div style={{ position: "absolute", left: NOTE.pad, top: NOTE.slashY, right: NOTE.pad }}>
+        /* The command line arrives WITH the reflow that makes room for it, so
+           the card growing and the line appearing are one event rather than
+           two. `lineIn` is driven by the reflow window, not by a guess. */
+        <div style={{
+          position: "absolute", left: NOTE.pad, top: NOTE.slashY, right: NOTE.pad,
+          opacity: lineIn, transform: `translateY(${(1 - lineIn) * -8}px)`,
+        }}>
           <div style={{
             fontFamily: R.fontSans, fontSize: 30, color: th.accentInk,
             height: NOTE.lineH, display: "flex", alignItems: "center",
@@ -510,21 +580,27 @@ const Body: React.FC = () => {
         [wheel.at, wheel.at + 70, after.at - after.morph - 60, after.at - after.morph],
         [0, 1, 1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
 
+  /* The command line fades up across the reflow that makes room for it. */
+  const slashIn = S[IX.slash].at - S[IX.slash].morph;
+  const lineIn = interpolate(f, [slashIn + 4, slashIn + 24], [0, 1],
+    { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+
   const render = (key: string, start: number) => {
     switch (key) {
       case "title": return <TitleCard f={f} s={start} />;
       case "verseA": return <VerseChip f={f} s={start} i={0} />;
       case "verseB": return <VerseChip f={f} s={start} i={1} />;
+      case "verseBoth": return <VersePair f={f} s={start} />;
       case "note":  return <Note f={f} s={start} />;
       /* The caret only exists after the cursor has clicked the line. A caret
          already blinking when the cursor arrives puts the events in the wrong
          order and gives away that nothing was really clicked. */
       case "slash": return (
-        <Note f={f} s={start} caret={f >= T.caretAt}
+        <Note f={f} s={start} caret={f >= T.caretAt} lineIn={lineIn}
           slash={typed(CMD, f, T.slashStart, T.slashCps)} />
       );
       case "menu":  return (
-        <Note f={f} s={start} caret slash={CMD}
+        <Note f={f} s={start} caret slash={CMD} lineIn={1}
           menu={interpolate(f, [S[IX.menu].at - 10, S[IX.menu].at + 12], [0, 1],
             { extrapolateLeft: "clamp", extrapolateRight: "clamp" })} />
       );

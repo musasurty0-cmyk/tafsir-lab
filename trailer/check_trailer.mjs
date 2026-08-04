@@ -3,7 +3,7 @@
    here are the numbers that render. */
 import {
   STATES as S, THEME_KEYS, LEGS, CLICK_TARGET, MAGNETIC, FALLS, T, T_END,
-  SAYS, STARTS, IX, NOTE, NOTE_H, MOD, MOD_H, STACK, STACK_H, TOG,
+  SAYS, STARTS, IX, NOTE, NOTE_H, MOD, MOD_H, STACK, STACK_H, TOG, PAIR, VERSES,
   DRAW_FOR, TRAILER_FRAMES, FPS,
 } from "./src/reel/trailerSpec.ts";
 import { distOf, tierOf, EASES } from "./src/reel/morph.tsx";
@@ -28,12 +28,23 @@ function morphAt(f) {
   let i = 0;
   for (let k = 0; k < S.length; k++) if (S[k].at <= f) i = k;
   const a = S[i], b = S[i + 1];
-  if (!(b !== undefined && f > b.at - b.morph))
+  if (!(b !== undefined && f > b.at - b.morph)) {
+    let j = i; while (j > 0 && S[j].via === "reflow") j--;
     return { w: a.w, h: a.h, r: a.r, cx: CX(a), cy: CY(a), blur: 0,
-             oldKey: null, nowKey: a.key, nowOp: 1, contentStart: a.at - a.morph * 0.5 };
+             oldKey: null, nowKey: a.key, nowOp: 1,
+             contentStart: S[j].at - S[j].morph * 0.5 };
+  }
   const from = b.at - b.morph;
   const p = clamp01((f - from) / b.morph);
   const e = EASES[b.ease ?? "back"](clamp01((p - 0.15) / 0.4));
+  const rootOf = (k) => { let j = k; while (j > 0 && S[j].via === "reflow") j--; return j; };
+  const startOf = (k) => { const r = rootOf(k); return S[r].at - S[r].morph * 0.5; };
+  if (b.via === "reflow")
+    return {
+      w: lerp(a.w, b.w, e), h: lerp(a.h, b.h, e), r: lerp(a.r, b.r, e),
+      cx: lerp(CX(a), CX(b), e), cy: lerp(CY(a), CY(b), e),
+      blur: 0, oldKey: null, nowKey: b.key, nowOp: 1, contentStart: startOf(i + 1),
+    };
   const fall = b.exit === "fall";
   const gone = fall ? 0.34 : 0.13;
   const k = clamp01(p / gone);
@@ -169,6 +180,48 @@ H("- both themes separate the card from the stage by the same amount");
      `light ${light.toFixed(3)} vs dark ${dark.toFixed(3)}`);
 }
 
+H("- a transition only fires when the surface actually changes");
+{
+  /* The failure this guards against: blurring a document away and rebuilding
+     it identical, only taller, because a line appeared inside it. */
+  for (let i = 1; i < S.length; i++) {
+    const a = S[i - 1], b = S[i];
+    const sameSurface = ["note", "slash", "menu"].includes(a.key) &&
+                        ["note", "slash", "menu"].includes(b.key);
+    if (!sameSurface) continue;
+    ok(`${a.key} -> ${b.key} reflows instead of morphing`, b.via === "reflow",
+       `via=${b.via ?? "morph"}`);
+  }
+  /* Arriving at the note FROM the verse pair is a real surface change and may
+     blur. What must never blur is one note state into another. */
+  const doc = (k) => ["note", "slash", "menu"].includes(k);
+  let blurred = 0;
+  for (let f = 0; f < TOTAL; f++) {
+    const m = morphAt(f);
+    if (m.blur > 0.01 && m.oldKey && doc(m.oldKey) && doc(m.nowKey)) blurred++;
+  }
+  ok("the note is never blurred away and rebuilt", blurred === 0, `${blurred} frames`);
+  const reflows = S.filter((x) => x.via === "reflow").length;
+  ok("reflows are used, and sparingly", reflows >= 2 && reflows <= 4, `${reflows}`);
+}
+
+H("- the opening leaves a stranger grounded, not guessing");
+{
+  const pair = S[IX.verseBoth];
+  ok("both passages are shown together in one card before the product appears",
+     pair.key === "verseBoth" && pair.at < S[IX.note].at);
+  ok("the pair state is tall enough for two passages and a connector",
+     pair.h >= PAIR.pad * 2 + PAIR.rowH * 2 + PAIR.linkH,
+     `${pair.h} vs ${PAIR.pad * 2 + PAIR.rowH * 2 + PAIR.linkH}`);
+  ok("every passage carries a reference, the Arabic, and an English meaning",
+     VERSES.every((v) => v.ref && v.ar && v.en));
+  const opening = SAYS.filter((x) => x.to <= S[IX.note].at);
+  ok("three lines carry the opening idea", opening.length === 3, `${opening.length}`);
+  ok("the note beat is named too",
+     SAYS.some((x) => x.from >= S[IX.note].at && x.from < S[IX.slash].at),
+     "nothing explains the note");
+}
+
 H("- pacing: the frame never goes long without something changing");
 {
   const ev = new Set();
@@ -268,8 +321,8 @@ H("- clicks land on a settled, unblurred target");
        x > L + 8 && x < L + w - 8 && y > TT + 8 && y < TT + h - 8,
        `(${x.toFixed(0)},${y.toFixed(0)}) box ${L},${TT} ${w}x${h}`);
   };
-  inside("slash line", FRAME_W / 2 - 450 + NOTE.pad + 26,
-         FRAME_H / 2 - NOTE_H.slash / 2 + NOTE.slashY + NOTE.lineH / 2, 900, NOTE_H.slash);
+  inside("end of note", FRAME_W / 2 - 450 + NOTE.pad + 26,
+         FRAME_H / 2 - NOTE_H.plain / 2 + 470, 900, NOTE_H.plain);
   inside("menu item", FRAME_W / 2 - 450 + NOTE.pad + 200,
          FRAME_H / 2 - NOTE_H.menu / 2 + NOTE.slashY + NOTE.lineH + NOTE.menuGap + 52,
          900, NOTE_H.menu);
@@ -295,8 +348,8 @@ H("- the falls are real, and heard");
     ok(`fall into "${st.key}" gets the extra 16 frames`,
        st.morph === tierOf(distOf(S[S.indexOf(st) - 1], st)) + 16);
   }
-  ok("the Create click precedes the form falling", 1150 < FALLS[0],
-     `click f1150, fall f${FALLS[0]}`);
+  ok("the Create click precedes the form falling", 1350 < FALLS[0],
+     `click f1350, fall f${FALLS[0]}`);
 }
 
 H("- typing fits inside its own state's hold");
@@ -309,7 +362,7 @@ H("- typing fits inside its own state's hold");
   ok("the name types inside the modal hold",
      T.nameStart >= nameHold[0] && T_END.name < nameHold[1],
      `f${T.nameStart}-${T_END.name} in ${nameHold}`);
-  ok("the name is finished before Create is clicked", T_END.name < 1150);
+  ok("the name is finished before Create is clicked", T_END.name < 1350);
   ok("the rack focus follows typing, and the button follows the category",
      T.catRack > T_END.name && T.btnRack > T.catRack);
 }

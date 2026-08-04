@@ -117,6 +117,20 @@ export interface MState {
   /** How the OUTGOING content leaves. `fall` drops it out of the bottom of
    *  the container under gravity instead of smearing it sideways. */
   exit?: "smear" | "fall";
+  /**
+   * `morph`  — the default. The container empties, resizes, and comes back
+   *            with different content. Correct when the state is a genuinely
+   *            different surface.
+   * `reflow` — the container resizes and the SAME content stays on screen
+   *            throughout, with only the new element animating in. Correct
+   *            when the state is the same surface growing: a document making
+   *            room for a line, a menu opening into it.
+   *
+   * Blurring a document away and bringing it back identical, just 44px taller,
+   * is a transition with no cause — the eye reads it as the whole pane being
+   * torn down and rebuilt for nothing.
+   */
+  via?: "morph" | "reflow";
   key: string;
 }
 
@@ -172,6 +186,14 @@ export interface MorphFrame {
  * The old content is fully gone before the new arrives. Never crossfade two
  * legible states — that is what makes a dissolve look like a dissolve.
  */
+/** Walk back to the first state of a reflow chain — its content is the content
+ *  still on screen, so its arrival frame is the one the text should key off. */
+const rootOf = (S: MState[], i: number) => {
+  let j = i;
+  while (j > 0 && S[j].via === "reflow") j--;
+  return j;
+};
+
 export function morphAt(f: number, S: MState[]): MorphFrame {
   let i = 0;
   for (let k = 0; k < S.length; k++) if (S[k].at <= f) i = k;
@@ -181,18 +203,34 @@ export function morphAt(f: number, S: MState[]): MorphFrame {
   const cx = (s: MState) => s.cx ?? FRAME_W / 2;
   const cy = (s: MState) => s.cy ?? FRAME_H / 2;
   const inMorph = b !== undefined && f > b.at - b.morph;
+  const startOf = (k: number) => {
+    const r = rootOf(S, k);
+    return S[r].at - S[r].morph * 0.5;
+  };
 
   if (!inMorph) {
     return {
       w: a.w, h: a.h, r: a.r, cx: cx(a), cy: cy(a), blur: 0,
       now: { key: a.key, opacity: 1 },
-      contentStart: a.at - a.morph * 0.5,
+      contentStart: startOf(i),
     };
   }
 
   const from = b.at - b.morph;
   const p = clamp01((f - from) / b.morph);
   const e = EASES[b.ease ?? "back"](clamp01((p - 0.15) / 0.4));
+
+  /* A reflow is not a transition at all — the container simply changes size
+     while its contents stay put. No blur, no swap, no re-entry. */
+  if (b.via === "reflow") {
+    return {
+      w: lerp(a.w, b.w, e), h: lerp(a.h, b.h, e), r: lerp(a.r, b.r, e),
+      cx: lerp(cx(a), cx(b), e), cy: lerp(cy(a), cy(b), e),
+      blur: 0,
+      now: { key: b.key, opacity: 1 },
+      contentStart: startOf(i + 1),
+    };
+  }
 
   /* A fall needs longer on screen than a sideways smear, so its windows are
      stretched and the blur peak is pushed back to match. The invariant is the
