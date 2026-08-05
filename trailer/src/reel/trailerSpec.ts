@@ -37,7 +37,11 @@ export const STACK_H = STACK.pad * 2 + STACK.rowH * 4 + STACK.gap * 3;   // 648
 export const TOG = { pad: 34, swW: 96, swH: 50, knob: 40 };
 
 /** The paired-verse card: two passages and the connector drawn between them. */
-export const PAIR = { pad: 36, rowH: 162, linkH: 68 };
+/** The paired-verse card. linkH is the connector's run between the two
+ *  passages — lengthened with the card, so the taller silhouette is filled by
+ *  the LINE being drawn rather than by a gap opening between two rows. The
+ *  connector is the point of that beat; it should be the thing that grew. */
+export const PAIR = { pad: 36, rowH: 162, linkH: 150 };
 
 /* ── States ───────────────────────────────────────────────────────────────
    The subject stays CENTRED. Every state parks in the middle of the frame;
@@ -70,11 +74,25 @@ const raw: Omit<MState, "morph">[] = [
      puts both in one card with a line drawn between them. The idea of a
      Connection is SHOWN before the product that makes one, using the very
      same pair the rest of the trailer goes on to create. */
-  { key: "verseA",    at: 156, w: 760, h: 270, r: 18, ease: "back",  dir: "right" },
-  { key: "verseB",    at: 320, w: 760, h: 270, r: 18, ease: "snap",  dir: "left" },
-  { key: "verseBoth", at: 500, w: 820, h: 500, r: 24, ease: "glide", dir: "up" },
+  /* These four used to be one shape inflating: 760x270, 760x270, 820x500,
+     900x528 — every one a rounded rect between 760 and 900 wide, each slightly
+     bigger than the last, all centred. verseA and verseB were geometrically
+     IDENTICAL, so the container did not change at all between them; only the
+     content swapped, which is a cut wearing a slide. Ten seconds of that reads
+     as one thing happening four times.
 
-  { key: "note",   at: 680,  w: 900, h: NOTE_H.plain, r: 24, ease: "smooth", dir: "up" },
+     The shapes now carry the variation the spec's own header promises. Aspect
+     runs 3.1 -> 1.7 -> 1.1 -> 1.7: a wide slab, a tall card, a portrait sheet,
+     then back to wide. The tall pair in the middle is the contrast the run was
+     missing, and it earns itself — two passages stacked with a long connector
+     drawn down between them wants height, not width. */
+  { key: "verseA",    at: 156, w: 800, h: 256, r: 16, ease: "back",  dir: "right" },
+  { key: "verseB",    at: 320, w: 620, h: 360, r: 30, ease: "snap",  dir: "left" },
+  { key: "verseBoth", at: 500, w: 700, h: 640, r: 22, ease: "glide", dir: "up" },
+
+  /* …and the note comes back DOWN out of it. Three consecutive "up" moves is
+     the direction going as flat as the shapes were. */
+  { key: "note",   at: 680,  w: 900, h: NOTE_H.plain, r: 24, ease: "smooth", dir: "down" },
 
   /* These two are REFLOWS, not morphs. The note is not replaced when a command
      line appears under it, and it is not replaced again when the suggestion
@@ -164,9 +182,15 @@ export const THEME_KEYS = [
    at?" gets a line: the pair at the top, the note, and the ring. */
 
 export const SAYS = [
-  { from: 180,  to: 284,  text: "The Qurʾān explains itself.",     top: 1240 },
-  { from: 334,  to: 452,  text: "One passage names another.",      top: 1240 },
-  { from: 516,  to: 632,  text: "That link is worth keeping.",     top: 420 },
+  /* The opening four ALTERNATE above and below the container. They used to sit
+     at 1240, 1240, 420, 1360 — the first two in the identical position, under
+     two cards that were then the identical shape, so three beats running put
+     the same words in the same place under the same rectangle. Each now clears
+     its own card by the same 136px the note's line does, which keeps the gap
+     even while the composition changes every beat. */
+  { from: 180,  to: 284,  text: "The Qurʾān explains itself.",     top: 634 },
+  { from: 334,  to: 452,  text: "One passage names another.",      top: 1276 },
+  { from: 516,  to: 632,  text: "That link is worth keeping.",     top: 440 },
   { from: 700,  to: 790,  text: "Your own study notes.",           top: 1360 },
   { from: 1120, to: 1330, text: "Name it. Explain it. Keep it.",   top: 300 },
   { from: 1430, to: 1530, text: "It lives inside your note.",      top: 1180 },

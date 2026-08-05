@@ -107,12 +107,19 @@ const VerseRow: React.FC<{ f: number; s: number; i: number; base?: number }> =
           background: th.accentSoft, padding: "9px 18px", borderRadius: 999,
         }}>{v.ref}</span>
       </Rise>
-      <Rise f={f} start={s} i={base + 1}>
-        <div dir="rtl" style={{
-          fontFamily: R.fontArabic, fontSize: 36, lineHeight: 1.7,
-          color: th.ink, textAlign: "right",
-        }}>{v.ar}</div>
-      </Rise>
+      {/* The Arabic READS in, word by word, rather than rising as one block.
+          A block arrival is over in a third of a second and then the card sits
+          still for two more; running the passage in the way it is actually
+          read fills that with the one motion the beat is about, and it makes
+          each verse card arrive on a different rhythm from the note and the
+          form later on. Same start as the Rise it replaces — nothing moves. */}
+      <div dir="rtl" style={{
+        fontFamily: R.fontArabic, fontSize: 36, lineHeight: 1.7,
+        color: th.ink, textAlign: "right",
+      }}>
+        <Words f={f} start={s + (base + 1) * 7} text={v.ar}
+          step={9} travel={22} dx={-34} />
+      </div>
       <Rise f={f} start={s} i={base + 2} style={{
         fontFamily: R.fontSans, fontSize: 23, color: th.ink3, lineHeight: 1.45,
       }}>{v.en}</Rise>
@@ -609,6 +616,22 @@ const Body: React.FC = () => {
      object being looked at rather than a diagram pasted on. */
   const stack = S[IX.stack], wheel = S[IX.wheel], after = S[IX.count];
   const tog = S[IX.toggle];
+
+  /* A camera float across the four passage beats — the stillest stretch in the
+     piece by measurement. Each of them settles in half a second and then holds
+     for over two, and the cursor does not exist yet to carry the frame, so
+     nothing at all moves for most of ten seconds.
+     The two axes run at different rates, so the path is a figure-of-eight
+     rather than a line it can retrace; and it fades out as the cursor arrives
+     instead of running underneath it — something is always moving, but only
+     ever one thing. */
+  const swayT = (f - S[IX.verseA].at) / 190;
+  const swayHold = interpolate(f,
+    [S[IX.verseA].at, S[IX.verseA].at + 70, 620, 700],
+    [0, 1, 1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const driftX = Math.sin(swayT) * 18 * swayHold;
+  const driftY = Math.sin(swayT * 1.7) * 16 * swayHold;
+
   const tilt =
     /* A slow ROCK on the stack, not a held lean. A sustained tilt parks the
        card visibly off-axis, which reads as bad centring rather than as depth;
@@ -623,7 +646,9 @@ const Body: React.FC = () => {
     Math.sin((f - wheel.at) / 130) *
       interpolate(f,
         [wheel.at, wheel.at + 70, after.at - after.morph - 60, after.at - after.morph],
-        [0, 1, 1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+        [0, 1, 1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }) +
+    /* …and a lean across the passage cards, paired with the float below. */
+    Math.sin(swayT) * 0.28 * swayHold;
 
   /* The command line fades up across the reflow that makes room for it. */
   const slashIn = S[IX.slash].at - S[IX.slash].morph;
@@ -669,7 +694,7 @@ const Body: React.FC = () => {
 
   return (
     <>
-      <Card m={m} tilt={tilt}>
+      <Card m={m} tilt={tilt} dx={driftX} dy={driftY}>
         {m.old && m.old.opacity > 0.01 && (
           <div style={{
             position: "absolute", inset: 0,

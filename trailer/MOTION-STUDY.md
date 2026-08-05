@@ -359,6 +359,80 @@ and carried strokes half again too pale.
 **Do instead:** before optimising further against a number, check whether the gap is
 explained by something outside that metric's scope.
 
+### 11.7 A mean hides its own outliers — bin it before you believe it
+
+"10–20s feels repetitive, 20s to the end is perfect." Motion energy agreed
+emphatically: **0.282 against 1.218, a 0.23× ratio.** That number was close to
+worthless. The good section's mean was carried almost entirely by two events — the
+dark-mode flip and the closing morph, at 3.57 and 8.52 — and with those excluded it
+sat at ~0.35 against ~0.28. Acting on 0.23× would have meant tearing up a section
+that was only mildly quieter than the one the viewer liked.
+
+The bins did have something to say, but it was narrower and more useful than the
+mean: one 2-second bin at **0.13**, the lowest in the piece, which located the defect
+exactly.
+
+**Do instead:** never compare two sections by their means when one contains a
+whole-frame event. Print the bins, find the outliers, and read the *distribution*.
+The mean tells you a section is different; only the bins tell you which two seconds
+are actually wrong.
+
+### 11.8 Repetition is rhythm, not shape
+
+Four consecutive beats read as repetitive. Three separate causes, and only the first
+is the one you would guess:
+
+1. **Identical containers.** Two states were both 760×270 r18 — the rectangle never
+   changed between them, so only the text swapped, which reads as a slideshow rather
+   than a transformation. The whole run was also one shape family monotonically
+   inflating: 205k → 410k → 475k → 515k px². Fixed by making aspect ratio swing
+   (3.13 → 1.72 → 1.09 → 1.70) instead of area climb.
+2. **Identical composition.** The first two captions sat at the *same* y. Same words
+   in the same place under the same rectangle, twice running. Alternating above and
+   below the card — at a constant gap, so the spacing stays deliberate — changes the
+   frame every beat for free.
+3. **Identical rhythm.** Every beat did exactly the same thing in the same order:
+   morph, content rises in 0.4s, one caption, then **2.1–2.3s of nothing**. Four
+   times. This is the one that actually dominates, and no amount of shape variation
+   touches it.
+
+**Do instead:** when something reads as repetitive, check all three before changing
+timing. Shape, composition, and rhythm are independent, and fixing the wrong one
+costs a re-cut of a section that was fine.
+
+### 11.9 Rotation does nothing to a flat card — displacement is what reads
+
+To fill those dead holds I reached for the tilt already in the file, at the same
+amplitude the stack uses. Then I did the arithmetic instead of the render:
+
+```
+peak tilt 0.221 → rotateY -1.33°
+near edge z-shift 9.8px, at perspective 2600
+→ 1.3px of on-screen movement, total, across nine seconds
+```
+
+Nine seconds of animation worth 1.3px. It survives a code review, it survives a
+still, and it is invisible. The stack gets away with the same amplitude only because
+it rocks at period 68 — the *rate* was doing the work there, not the angle.
+
+Swapping it for a translate on the same envelope gave **72.8px** of path along a
+figure-of-eight (two axes at different rates, so it never retraces itself).
+
+**Do instead:** cost a subtle move in on-screen pixels-per-second before building it.
+For anything near-planar, translate; reserve rotation for objects with real depth or
+a fast enough rate to read as a rock.
+
+### 11.10 Hand the motion over — never run two slow moves at once
+
+The float is windowed to end exactly as the cursor arrives, rather than continuing
+underneath it. The rule the source keeps: something is always moving, but only ever
+one thing. A drifting frame *and* a travelling cursor read as neither being
+deliberate.
+
+A useful side-effect of windowing it to zero: outside the window the transform is
+`undefined`, not `translate(0,0)`, so the untouched section renders identically and
+"I did not break the part they liked" is a fact rather than a hope.
+
 ## 12. Sound — what survives measurement and what does not
 
 The source's hits sit under a **128 BPM** bed, so nothing about them can be read

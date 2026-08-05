@@ -307,9 +307,16 @@ export const Stage: React.FC<{ theme: Theme; children: React.ReactNode }> =
 );
 
 export const Card: React.FC<{
-  m: MorphFrame; tilt?: number; children: React.ReactNode;
-}> = ({ m, tilt = 0, children }) => {
+  m: MorphFrame; tilt?: number;
+  /** A camera float, in frame pixels. Rotation alone does almost nothing to a
+   *  flat card: at this perspective a 1.3deg lean moves the near edge 1.3px on
+   *  screen, which over nine seconds is not motion. Displacement is what the
+   *  eye actually reads, so a hold gets drifted rather than tilted. */
+  dx?: number; dy?: number;
+  children: React.ReactNode;
+}> = ({ m, tilt = 0, dx = 0, dy = 0, children }) => {
   const th = useTheme();
+  const moved = tilt !== 0 || dx !== 0 || dy !== 0;
   return (
     <div style={{
       position: "absolute",
@@ -326,9 +333,9 @@ export const Card: React.FC<{
          its contents; blurring the whole card at 20px dissolves its
          silhouette into the stage and the object stops being an object. */
       filter: m.blur > 0.05 ? `blur(${m.blur * 0.3}px)` : undefined,
-      transform: tilt === 0 ? undefined
-        : `rotateX(${tilt * 3.5}deg) rotateY(${tilt * -6}deg)`,
-      transformStyle: tilt === 0 ? undefined : "preserve-3d",
+      transform: !moved ? undefined
+        : `translate(${dx}px, ${dy}px) rotateX(${tilt * 3.5}deg) rotateY(${tilt * -6}deg)`,
+      transformStyle: !moved ? undefined : "preserve-3d",
       overflow: "hidden",
     }}>
       {children}
@@ -343,8 +350,13 @@ export const Card: React.FC<{
 
 export const Words: React.FC<{
   f: number; start: number; text: string;
-  step?: number; travel?: number; style?: React.CSSProperties;
-}> = ({ f, start, text, step = 8, travel = 22, style }) => (
+  step?: number; travel?: number;
+  /** Where a word comes FROM. Negative for right-to-left script: the catch-up
+   *  has to trail the reading flow, and in Arabic the flow runs the other way,
+   *  so the default +38 would send every word sliding over the one before it. */
+  dx?: number;
+  style?: React.CSSProperties;
+}> = ({ f, start, text, step = 8, travel = 22, dx = 38, style }) => (
   <span style={style}>
     {text.split(" ").map((word, i) => {
       const t = clamp01((f - (start + i * step)) / travel);
@@ -353,8 +365,11 @@ export const Words: React.FC<{
         <span key={`${word}-${i}`} style={{
           display: "inline-block",
           opacity: e,
-          transform: `translate(${(1 - e) * 38}px, ${(1 - e) * 9}px)`,
-          marginRight: "0.28em",
+          transform: `translate(${(1 - e) * dx}px, ${(1 - e) * 9}px)`,
+          /* Logical, not marginRight: in RTL the physical right edge is the
+             START of the line, so a right margin puts the gap outside the
+             first word and shifts the whole line off its alignment. */
+          marginInlineEnd: "0.28em",
         }}>{word}</span>
       );
     })}
