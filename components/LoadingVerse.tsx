@@ -19,13 +19,22 @@ export default function LoadingVerse() {
   /* Deterministic on the server. Randomising in the initial state would differ
      between the server render and hydration, and this component IS server
      rendered as a route's loading.tsx. */
-  const [idx,     setIdx]     = useState(0);
-  const [visible, setVisible] = useState(false);
+  const [idx, setIdx] = useState(0);
+
+  /* MUST start visible. This renders as a route's loading.tsx, and Next streams
+     that fallback as plain HTML which it then REPLACES with the real route — it
+     is never hydrated in the ordinary way, so an effect that reveals the card
+     may never run. Starting hidden and revealing in useEffect left the card at
+     opacity 0 for the whole load: the verse was in the DOM, correct, and
+     invisible, so the splash showed only the wordmark and the dots. */
+  const [visible, setVisible] = useState(true);
 
   useEffect(() => {
+    /* If a nav splash is in play, continue ITS verse rather than starting a
+       different one — that swap is what read as a second splash. Only choose
+       randomly when there is nothing to adopt. */
     const adopted = adoptNavSplash();
     setIdx(adopted ?? Math.floor(Math.random() * LOADING_VERSES.length));
-    setVisible(true);
   }, []);
 
   useEffect(() => {
