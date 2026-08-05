@@ -37,12 +37,22 @@ const springy = (t: number, k = 1.25) => {
   const x = Math.max(0, Math.min(1, t));
   return 1 + (k + 1) * Math.pow(x - 1, 3) + k * Math.pow(x - 1, 2);
 };
-/** A hand does not type at a constant rate: it runs, then hesitates. Same
- *  total duration, uneven cadence, so the reveal has a pulse to it. */
-const rhythm = (t: number) => {
-  const x = Math.max(0, Math.min(1, t));
-  return Math.max(0, Math.min(1, x + 0.055 * Math.sin(x * 15.5) + 0.03 * Math.sin(x * 6.1)));
-};
+/**
+ * How the address arrives, measured off the source's text width per frame.
+ *
+ * I had this as a linear ramp with sine wobble on it, on the theory that a
+ * hand types unevenly. The source does not type. Tracking the ink width
+ * across its reveal gives a clean S — 7, 8, 12, 15, 20, 27, 40, 46, 41, 36,
+ * 24, 9px a frame — accelerating into a peak and tapering out, with over half
+ * the string landing in a third of the time. The whole 26 characters go down
+ * in 18 frames, 0.6s, which is far too fast to read as typing.
+ *
+ * That is what makes it look painted rather than typed, which is the note I
+ * was given and could not previously act on: it is not a texture applied to
+ * typing, it is a different curve.
+ */
+const PS = [0, 0.11, 0.21, 0.32, 0.42, 0.53, 0.63, 0.74, 0.84, 1];
+const PV = [0, 0.042, 0.102, 0.208, 0.410, 0.672, 0.852, 0.931, 0.952, 1];
 
 /**
  * Keyframes with continuous velocity — monotone cubic Hermite, Fritsch–Carlson.
@@ -101,7 +111,9 @@ const T = {
    *  happens at once, which is why the source's last fall frame is its busiest
    *  of the entire arc. Spreading it out was making the landing limp. */
   markFor2: 8,
-  paint: 182, paintFor: 44,
+  /** The source holds for 19 frames after the landing — the caret just
+   *  sits — then lays the whole string down in 18. Both doubled. */
+  paint: 194, paintFor: 36,
   /** Icons in, field to panel — half a second. */
   collapse: 266, collapseFor: 30,
 
@@ -138,7 +150,7 @@ const LANDED = T.markFrom + T.markFor;
 const geom = (f: number) => {
   /* The field only opens out once the mark is in it. */
   const grow = springy((f - LANDED) / 30);
-  const paint = rhythm(interpolate(f, [T.paint, T.paint + T.paintFor], [0, 1], clamp));
+  const paint = track(interpolate(f, [T.paint, T.paint + T.paintFor], [0, 1], clamp), PS, PV);
   /* The source's back-arrow to refresh distance is 350 / 406 / 489 of its
      1280 across unfocused, focused-empty and full. That gap is not the field
      though — it also spans two buttons and two gutters, so the field itself
@@ -250,9 +262,9 @@ const Mark: React.FC<{ f: number }> = ({ f }) => {
     /* Landed. The field focuses: the placeholder goes, the text origin moves
        left, and the mark rides across with it, thinning into the caret. */
     const s = easeIO((f - (T.markFrom + T.markFor)) / (T.markFor2));
-    x = interpolate(s, [0, 1], [W / 2, geom(f).textLeft + 1.5]);
+    x = interpolate(s, [0, 1], [W / 2, geom(f).textLeft + 2]);
     w = interpolate(s, [0, 1], [w, 3]);
-    h = interpolate(s, [0, 1], [h, 46]);
+    h = interpolate(s, [0, 1], [h, 57]);
     y = BAR_CY;
   }
 
@@ -263,7 +275,7 @@ const Mark: React.FC<{ f: number }> = ({ f }) => {
       width: w, height: hs, borderRadius: Math.min(w, hs) / 2,
       background: "#111114", zIndex: 40,
       opacity: 1 - Math.min(smear / 78, 1) * 0.22,
-      filter: smear > 2 ? `blur(${smear * 0.075}px)` : undefined,
+      filter: smear > 2 ? `blur(${smear * 0.12}px)` : undefined,
     }} />
   );
 };
@@ -281,7 +293,10 @@ const glass: React.CSSProperties = {
     "inset 0 1.5px 0 rgba(255,255,255,1), inset 0 -1px 0 rgba(255,255,255,0.6)",
 };
 
-const ic = { fill: "none", stroke: "#3c3c43", strokeWidth: 2.45,
+/* Measured against the source's back arrow: its glyph ink averages 83,
+   mine averaged 124 — half again as pale, which is most of why the bar
+   read as washed out beside it. */
+const ic = { fill: "none", stroke: "#26262b", strokeWidth: 2.95,
              strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
 
 const Round: React.FC<{ children: React.ReactNode; style?: React.CSSProperties }> =
@@ -338,7 +353,9 @@ const Bar: React.FC<{ f: number }> = ({ f }) => {
         width: pw, height: ph, borderRadius: pr, ...glass,
         background: `rgba(255,255,255,${0.66 + 0.3 * foc})`,
         boxSizing: "border-box", overflow: "hidden", position: "relative",
-        fontFamily: R.fontSans, fontSize: 37,
+        /* The source sets its address at 0.600 of the field's height; at 37 I
+   was at 0.479, which made the field look empty around it. */
+        fontFamily: R.fontSans, fontSize: 46,
       }}>
         {/* Placeholder and magnifier are absolute, so when they go nothing
             reflows around them — the field just clears. */}
@@ -367,7 +384,8 @@ const Bar: React.FC<{ f: number }> = ({ f }) => {
         }}>
           {URL.slice(0, full)}
           {full < URL.length && (
-            <span style={{ opacity: frac, filter: `blur(${(1 - frac) * 6}px)` }}>
+            <span style={{ opacity: Math.min(1, frac * 1.9),
+                           filter: `blur(${(1 - frac) * 5}px)` }}>
               {URL[full]}
             </span>
           )}
@@ -375,7 +393,7 @@ const Bar: React.FC<{ f: number }> = ({ f }) => {
               swap on CARET_AT moves nothing. No blink — at this length a blink
               only ever reads as a glitch. */}
           {f >= CARET_AT && (
-            <span style={{ display: "inline-block", width: 3, height: 46,
+            <span style={{ display: "inline-block", width: 4, height: 57,
                            background: "#111114", flexShrink: 0 }} />
           )}
         </span>
