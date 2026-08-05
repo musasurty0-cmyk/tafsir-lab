@@ -17,6 +17,7 @@ import {
   type Conn,
 } from "./trailerSpec";
 import { SearchIntro, Outro, INTRO, INTRO_FRAMES, OUTRO_FRAMES } from "./SearchIntro";
+import { smoothstep } from "./searchCurves";
 
 export { TRAILER_FRAMES };
 
@@ -465,8 +466,11 @@ const Stack: React.FC<{ f: number; s: number }> = ({ f, s }) => (
  */
 const Toggle: React.FC<{ f: number; s: number }> = ({ f, s }) => {
   const th = useTheme();
-  const k = interpolate(f, [T.themeAt, T.themeAt + 16], [0, 1],
-    { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  /* Eased, and given the room to be seen. The knob used to cross its track at
+     a constant speed in 16 frames and stop dead against the end — a physical
+     switch does neither. */
+  const k = smoothstep(interpolate(f, [T.themeAt, T.themeAt + 26], [0, 1],
+    { extrapolateLeft: "clamp", extrapolateRight: "clamp" }));
   const travel = TOG.swW - TOG.knob - 10;
   return (
     <div style={{
@@ -477,17 +481,32 @@ const Toggle: React.FC<{ f: number; s: number }> = ({ f, s }) => {
         <Rise f={f} start={s} i={0} style={{
           fontFamily: R.fontSans, fontSize: 26, fontWeight: 600, color: th.ink,
         }}>Appearance</Rise>
+        {/* The word CROSSFADES. It used to swap on k > 0.5, so in the middle
+            of a smooth travel one element of the frame jumped between two
+            states — the single hardest edge in the whole moment, and the kind
+            of snap the rest of this file exists to avoid. */}
         <Rise f={f} start={s} i={1} style={{
           fontFamily: R.fontSans, fontSize: 19, color: th.ink3, marginTop: 4,
-        }}>{k > 0.5 ? "Dark" : "Light"}</Rise>
+          position: "relative", height: 26,
+        }}>
+          <span style={{ position: "absolute", inset: 0, opacity: 1 - k }}>Light</span>
+          <span style={{ position: "absolute", inset: 0, opacity: k }}>Dark</span>
+        </Rise>
       </div>
       <Rise f={f} start={s} i={2}>
         <div style={{
           width: TOG.swW, height: TOG.swH, borderRadius: TOG.swH / 2,
-          background: k > 0.5 ? th.panel2 : th.accent,
+          /* The track crossfades too — same reason as the label. Two stacked
+             fills rather than a ternary, so the colour travels with the knob
+             instead of flipping under it halfway across. */
+          background: th.accent,
           border: `1px solid ${th.lineStrong}`,
           position: "relative", boxSizing: "border-box",
         }}>
+          <div style={{
+            position: "absolute", inset: -1, borderRadius: TOG.swH / 2,
+            background: th.panel2, opacity: k,
+          }} />
           <div style={{
             position: "absolute", top: (TOG.swH - TOG.knob) / 2 - 1,
             left: 5 + (1 - k) * travel,
@@ -594,14 +613,26 @@ const Cta: React.FC<{ f: number; s: number }> = ({ f, s }) => {
 
 /* ── Composition ──────────────────────────────────────────────────────────*/
 
-/** Tone at a frame, 0 light → 1 dark. Kept separate from the Theme object so
- *  the Wheel can mix its own group tints by the same amount. */
+/**
+ * Tone at a frame, 0 light → 1 dark. Kept separate from the Theme object so
+ * the Wheel can mix its own group tints by the same amount.
+ *
+ * EASED, not linear. A linear ramp changes every colour in the frame at a
+ * constant rate and then stops dead — the same velocity step that made the
+ * mark read as stop motion (§11), except here it is applied to the entire
+ * picture at once, so it lands as a wipe passing over the composition rather
+ * than as the room changing. Easing both ends means the tone leaves light and
+ * arrives at dark with zero velocity.
+ */
 const darkAt = (f: number) => {
   let t = THEME[0].t;
   for (let i = 1; i < THEME.length; i++) {
     const a = THEME[i - 1], b = THEME[i];
     if (f >= b.at) { t = b.t; continue; }
-    if (f > a.at) { t = a.t + (b.t - a.t) * ((f - a.at) / Math.max(1, b.at - a.at)); break; }
+    if (f > a.at) {
+      t = a.t + (b.t - a.t) * smoothstep((f - a.at) / Math.max(1, b.at - a.at));
+      break;
+    }
   }
   return Math.max(0, Math.min(1, t));
 };
@@ -764,14 +795,20 @@ const TrailerCues: React.FC = () => (
       <Audio src={staticFile("sfx/typing.mp3")} volume={0.38} />
     </Sequence>
 
-    {/* Two weights of click: a soft tap for placing a caret or focusing a
-        field, the magnetic snap for the three actions that commit — choosing
-        the menu item, creating the Connection, throwing the appearance
-        switch. */}
+    {/* Three weights of click: a soft tap for placing a caret or focusing a
+        field, the magnetic snap for the two actions that commit, and a
+        granular select for the appearance switch — the one action that changes
+        the whole frame rather than one control, so it wants a sound with a
+        body to it rather than a snap that is over before the picture moves.
+        Levelled by MEAN rather than peak: the granular is sustained where the
+        magnetic is a transient, so peak-matching them would have put it 3 dB
+        hot. */}
     {LEGS.filter((l) => l.click).map((l) => (
-      MAGNETIC.has(l.at)
-        ? <Sfx key={l.at} at={l.at} file="sfx/magnetic.mp3" v={0.65} len={14} />
-        : <Sfx key={l.at} at={l.at} file="sfx/click.mp3" v={0.40} len={18} />
+      l.at === T.themeAt
+        ? <Sfx key={l.at} at={l.at} file="sfx/granular-select.mp3" v={0.48} len={18} />
+        : MAGNETIC.has(l.at)
+          ? <Sfx key={l.at} at={l.at} file="sfx/magnetic.mp3" v={0.65} len={14} />
+          : <Sfx key={l.at} at={l.at} file="sfx/click.mp3" v={0.40} len={18} />
     ))}
 
     {/* Things dropping out of the container. The source was peaking at -1 dB,
@@ -806,14 +843,23 @@ const TrailerCues: React.FC = () => (
  */
 const IntroCues: React.FC = () => (
   <>
-    <Sfx at={INTRO.markFrom + 4}  file="sfx/whoosh.mp3" v={0.20} len={26} lead={10} />
-    <Sfx at={INTRO.markFrom + 36} file="sfx/whoosh.mp3" v={0.34} len={30} lead={10} />
+    {/* The wind is 6 dB down on where it was. whoosh.mp3 is the hottest file in
+        the pack by some way — peak -2.1 dB against the next loudest at -4.5 —
+        and four of them inside five seconds was the intro arriving on wind
+        rather than on the object moving. Cut here per cue rather than baked
+        into the file, because the trailer's own swooshes sit correctly and
+        share it. The transients (land, the Enter key) are untouched, so they
+        now carry the intro instead of being buried under it. */}
+    <Sfx at={INTRO.markFrom + 4}  file="sfx/whoosh.mp3" v={0.10} len={26} lead={10} />
+    <Sfx at={INTRO.markFrom + 36} file="sfx/whoosh.mp3" v={0.17} len={30} lead={10} />
     {/*  … the hang. Nothing here, on purpose. */}
-    <Sfx at={INTRO.landed - 2}    file="sfx/whoosh.mp3" v={0.22} len={28} lead={10} />
+    <Sfx at={INTRO.landed - 2}    file="sfx/whoosh.mp3" v={0.11} len={28} lead={10} />
     <Sfx at={INTRO.landed}        file="sfx/land.mp3"   v={0.26} len={14} lead={3} />
     {/*  … the question paints in silence. */}
     <Sfx at={INTRO.collapse - 4}  file="sfx/click.mp3"  v={0.17} len={18} lead={3} />
-    <Sfx at={INTRO.collapse + 22} file="sfx/whoosh.mp3" v={0.46} len={34} lead={10} />
+    {/* Still the loudest moment of the intro, just no longer the loudest by a
+        factor of two. */}
+    <Sfx at={INTRO.collapse + 22} file="sfx/whoosh.mp3" v={0.24} len={34} lead={10} />
   </>
 );
 

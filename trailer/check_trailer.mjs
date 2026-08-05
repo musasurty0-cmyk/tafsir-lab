@@ -8,6 +8,7 @@ import {
   DRAW_FOR, TRAILER_FRAMES, FPS,
 } from "./src/reel/trailerSpec.ts";
 import { distOf, tierOf, EASES } from "./src/reel/morph.tsx";
+import { smoothstep } from "./src/reel/searchCurves.ts";
 
 const FRAME_W = 1080, FRAME_H = 1920, TOTAL = TRAILER_FRAMES;
 const CLICKS = LEGS.filter((l) => l.click).map((l) => l.at);
@@ -64,12 +65,18 @@ function morphAt(f) {
     contentStart: from + b.morph * (fall ? 0.66 : 0.5),
   };
 }
+/* Mirrors LinkTrailer's darkAt, easing included — it imports the SAME
+   smoothstep the render uses, so this cannot quietly go on checking a linear
+   ramp after the render stopped being one. */
 const darkAt = (f) => {
   let t = THEME_KEYS[0].t;
   for (let i = 1; i < THEME_KEYS.length; i++) {
     const a = THEME_KEYS[i - 1], b = THEME_KEYS[i];
     if (f >= b.at) { t = b.t; continue; }
-    if (f > a.at) { t = a.t + (b.t - a.t) * ((f - a.at) / Math.max(1, b.at - a.at)); break; }
+    if (f > a.at) {
+      t = a.t + (b.t - a.t) * smoothstep((f - a.at) / Math.max(1, b.at - a.at));
+      break;
+    }
   }
   return clamp01(t);
 };
@@ -302,7 +309,19 @@ H("- the mode drop is CAUSED by the click, not laid over a transition");
      T.themeAt + T.themeOver < S[IX.wheel].at - S[IX.wheel].morph,
      `ends f${T.themeAt + T.themeOver}, morph f${S[IX.wheel].at - S[IX.wheel].morph}`);
   ok("the map is fully dark by the time it arrives", darkAt(S[IX.wheel].at) === 1);
-  ok("the switch click uses the magnetic snap", MAGNETIC.has(T.themeAt));
+  ok("the switch takes the granular select, not the magnetic snap",
+     !MAGNETIC.has(T.themeAt));
+  /* The whole point of easing it: a linear ramp changes the entire frame at a
+     constant rate and then stops dead. Check the ends actually rest. */
+  {
+    const v = (x) => darkAt(T.themeAt + x);
+    const startRate = v(1) - v(0);
+    const endRate   = v(T.themeOver) - v(T.themeOver - 1);
+    const midRate   = v(T.themeOver / 2 + 1) - v(T.themeOver / 2);
+    ok("the tone change leaves and arrives with near-zero velocity",
+       startRate < midRate / 6 && endRate < midRate / 6,
+       `start ${startRate.toFixed(4)}, mid ${midRate.toFixed(4)}, end ${endRate.toFixed(4)}`);
+  }
 }
 
 H("- the ring is explained before it fills");

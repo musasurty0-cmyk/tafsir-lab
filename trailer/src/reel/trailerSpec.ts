@@ -152,7 +152,12 @@ export const T = {
   btnRack:   1330,
   /** The frame the appearance switch is thrown. */
   themeAt:   1860,
-  themeOver:   32,
+  /* The tone change is the largest single event in the piece — measured, it is
+     a whole-frame jump twenty times the size of any ordinary beat. Half a
+     second of it is a wipe. There are 100 frames of headroom between the click
+     and the map's morph, so it gets 0.8s and still holds settled dark for most
+     of a second before anything else happens. */
+  themeOver:   48,
   /** The frame the word gives way to the symbol, inside the same pill. */
   infAt:     2446,
   infOver:     24,
@@ -233,7 +238,11 @@ export const LEGS: Leg[] = [
 
 /** Clicks that COMMIT something get the heavier magnetic snap; the light taps
  *  (placing a caret, focusing a field) keep the soft click. */
-export const MAGNETIC = new Set<number>([1030, 1350, T.themeAt]);
+/** Clicks that commit something, and so get the magnetic snap rather than the
+ *  soft tap. The appearance switch is deliberately NOT here — it takes the
+ *  granular select instead, because it is the one action that changes the
+ *  whole frame rather than one control. */
+export const MAGNETIC = new Set<number>([1030, 1350]);
 
 /** Frames where the outgoing content drops out of the container. */
 export const FALLS = STATES

@@ -24,6 +24,26 @@ export const easeIO = (t: number) => {
   return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
 };
 
+/**
+ * Smoothstep — eased ends WITHOUT a faster middle.
+ *
+ * easeIO above is cubic in/out, which peaks at three times the average rate.
+ * That is right for an object moving through space, where a fast middle reads
+ * as momentum. It is wrong for anything that changes the WHOLE frame at once:
+ * measured over the appearance switch, swapping the linear ramp for easeIO and
+ * stretching it 32 → 48 frames still left the midpoint moving at 0.0599 per
+ * frame against the linear version's 0.0312 — nearly twice as fast, so the
+ * "smoother" transition would have jolted harder in the middle than the one it
+ * replaced.
+ *
+ * This peaks at 1.5x average instead of 3x. Over 48 frames that is 0.0312 —
+ * exactly the old rate, now with both ends resting.
+ */
+export const smoothstep = (t: number) => {
+  const x = Math.max(0, Math.min(1, t));
+  return x * x * (3 - 2 * x);
+};
+
 /** Overshoots and settles — the elastic accel/decel a layout change needs so
  *  it reads as physics rather than as a value being set. */
 export const springy = (t: number, k = 1.25) => {

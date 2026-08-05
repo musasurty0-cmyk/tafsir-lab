@@ -433,6 +433,44 @@ A useful side-effect of windowing it to zero: outside the window the transform i
 `undefined`, not `translate(0,0)`, so the untouched section renders identically and
 "I did not break the part they liked" is a fact rather than a hope.
 
+### 11.11 "Add an ease" is not the same as "make it smoother"
+
+Asked to smooth the appearance switch, the obvious move is to ease the ramp and give
+it more time. I did both — the shared `easeIO`, and 32 frames → 48 — and then checked
+the per-frame rate rather than trusting the intent:
+
+```
+curve                  frames   peak rate/frame   start   end
+linear (before)            32            0.0312  0.0312  0.0312
+easeInOutCubic             48            0.0599  0.0000  0.0000   <- 2x FASTER mid
+smoothstep                 48            0.0312  0.0013  0.0013
+```
+
+Cubic in/out peaks at **three times** its average rate. Even stretched 50% longer it
+moved through the midpoint twice as fast as the linear ramp it replaced. It fixes the
+ends and breaks the middle, and for a change that repaints the entire frame the
+middle is the part that jolts.
+
+Smoothstep peaks at 1.5× average, so over 48 frames it matches the old rate exactly
+while both ends come to rest. Strictly better on every measure, and the difference
+between the two is invisible in code review — they are both "an ease".
+
+**Do instead:** for object motion, a fast middle is momentum and cubic is right. For
+anything global — tone, exposure, a full-frame crossfade — cap the peak rate at what
+the linear version had, and pick the curve that achieves it.
+
+### 11.12 A hard edge hides inside a smooth transition
+
+The switch had three separate roughnesses, and easing the tone only addressed one:
+the knob also travelled linearly, and the label and track colour **snapped** on
+`k > 0.5`. A boolean threshold sitting in the middle of an otherwise smooth 26-frame
+travel is the hardest edge in the moment — one element of the frame teleporting while
+everything around it eases.
+
+**Do instead:** when smoothing a transition, grep it for `> 0.5`, ternaries on
+progress, and anything else that reads a continuous value as a boolean. Crossfade
+them. They are cheap to fix and they are usually what you were actually seeing.
+
 ## 12. Sound — what survives measurement and what does not
 
 The source's hits sit under a **128 BPM** bed, so nothing about them can be read
@@ -502,6 +540,29 @@ everything above ~16kHz, which made my own baked files read 0.13–0.19 —
 "tonal" — when band-limited to 120Hz–15.5kHz they were 0.47–0.96. Always
 restrict to where the format actually has content, or you will fail good files
 and chase a fault that is in the ruler.
+
+### 12.5 Level-match by MEAN for sustained sounds, by peak for transients
+
+Swapping the appearance switch's magnetic snap for a granular select: peak-matched
+they would have been level, and the granular would have sat ~3 dB hot. A snap puts
+nearly all its energy in one transient (magnetic: peak −4.5, mean −31.7 — a 27 dB
+gap); a granular texture sustains (peak −1.0, mean −19.8 — 19 dB). Peak says they
+are within 3.5 dB of each other; mean says the granular is 12 dB louder, and mean is
+what you hear.
+
+**Do instead:** match transients on peak, anything with a body on mean. Bake the
+difference into the file so playback gains stay in one range across the pack.
+
+### 12.6 One family of sound should not carry a whole section
+
+The intro measured **−26.4 LUFS against the body's −26.9** — five seconds holding
+more level than the following forty-five, off four swooshes and two taps. `whoosh.mp3`
+is the hottest file in the pack (peak −2.1 dB, next loudest −4.5), so four of them
+inside five seconds is not a design, it is one file's headroom leaking into the mix.
+
+Cut per-cue, not in the file, when the same sample is used correctly elsewhere. And
+note what the cut *promotes*: leaving the transients untouched while the wind drops
+6 dB means the intro now arrives on the object landing rather than on air moving.
 
 ## 13. Two things that are just true about this work
 
