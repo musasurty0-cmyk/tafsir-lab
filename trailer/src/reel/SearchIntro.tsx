@@ -38,9 +38,8 @@ const BAR_CY = 900;
 const PILL_H = 116;
 const PAD    = 40;
 
-/** The question. Lowercase and unpunctuated because that is how a person
- *  actually types into a search field when they do not know the answer. */
-export const QUERY = "i want to connect verses in the quran but idk how";
+/** The question the trailer answers. */
+export const QUERY = "How do I connect verses in the Qurʾān?";
 
 export interface IntroTiming {
   /** Frame the rule first appears. */
@@ -135,30 +134,39 @@ const Round: React.FC<{ children: React.ReactNode; style?: React.CSSProperties }
   }}>{children}</div>
 );
 
-const Bar: React.FC<{ f: number }> = ({ f }) => {
-  const c = easeIO((f - INTRO.collapse) / INTRO.collapseFor);
-  if (c >= 1) return null;
+/**
+ * The bar, at any point along its morph into the card.
+ *
+ * `c` is the collapse: 0 is the search bar, 1 is the trailer's opening card.
+ * ONE morph, driven both ways — the intro runs it 0 to 1 and the outro runs it
+ * 1 back to 0, which is what closes the loop. Writing the outro as its own
+ * reverse animation would be a second copy of a morph, and the two would drift
+ * the first time either was touched.
+ *
+ * `typed` is how much of the question is on screen (0 during the outro: the
+ * loop returns to an empty field, ready to be asked again).
+ */
+const Bar: React.FC<{
+  c: number; fieldW: number; typed: number; focus: number; caret: boolean;
+}> = ({ c, fieldW, typed, focus, caret }) => {
+  const full = Math.floor(typed);
+  const frac = typed - full;
+  /* Content clears well before the shape finishes, so the card is empty by the
+     time it is a card — and on the way back, the field is empty until it is a
+     field again. */
+  const gone = Math.max(0, 1 - c * 2.2);
 
-  const g   = geom(f);
-  const foc = interpolate(f, [INTRO.landed - 2, INTRO.landed + 6], [0, 1], clamp);
-  const full = Math.floor(g.chars);
-  const frac = g.chars - full;
-  const gone = 1 - c * 2.2;
-
-  /* The collapse target IS the trailer's opening card, so what the trailer
-     starts on is this object continued rather than a new one cut to. */
-  const pw = interpolate(c, [0, 1], [g.w, INTRO.card.w]);
-  const ph = interpolate(c, [0, 1], [PILL_H, INTRO.card.h]);
-  const pr = interpolate(c, [0, 1], [PILL_H / 2, INTRO.card.r]);
-  const cy = interpolate(c, [0, 1], [BAR_CY, INTRO.card.cy]);
+  const pw   = interpolate(c, [0, 1], [fieldW, INTRO.card.w]);
+  const ph   = interpolate(c, [0, 1], [PILL_H, INTRO.card.h]);
+  const pr   = interpolate(c, [0, 1], [PILL_H / 2, INTRO.card.r]);
+  const cy   = interpolate(c, [0, 1], [BAR_CY, INTRO.card.cy]);
   const side = interpolate(c, [0, 1], [0, 170]);
 
   return (
     <div style={{
       position: "absolute", left: 0, right: 0, top: cy,
       display: "flex", alignItems: "center", justifyContent: "center", gap: 24,
-      transform: `translateY(-50%) scale(${interpolate(f, [0, 26], [0.9, 1], clamp)})`,
-      filter: f < 26 ? `blur(${interpolate(f, [0, 26], [12, 0], clamp)}px)` : undefined,
+      transform: "translateY(-50%)",
       zIndex: 30,
     }}>
       <Round style={{ transform: `translateX(${side}px) scale(${1 - c})`, opacity: 1 - c * 1.4 }}>
@@ -167,21 +175,21 @@ const Bar: React.FC<{ f: number }> = ({ f }) => {
 
       <div style={{
         width: pw, height: ph, borderRadius: pr,
-        background: `rgba(255,255,255,${0.7 + 0.3 * foc})`,
+        background: `rgba(255,255,255,${0.7 + 0.3 * focus})`,
         border: `1px solid ${R.line}`,
         boxShadow: "0 18px 44px rgba(28,36,64,0.10), 0 3px 10px rgba(28,36,64,0.06)",
         boxSizing: "border-box", overflow: "hidden", position: "relative",
-        fontFamily: R.fontSans, fontSize: 27,
+        fontFamily: R.fontSans, fontSize: 32,
       }}>
-        {/* Placeholder and magnifier are absolute, so nothing reflows when
-            they go — the field just clears. */}
+        {/* Placeholder and magnifier are absolute, so nothing reflows when they
+            go — the field just clears. */}
         <span style={{
           position: "absolute", inset: 0, display: "grid", placeItems: "center",
-          color: R.ink4, opacity: (1 - foc) * gone, whiteSpace: "nowrap",
+          color: R.ink4, opacity: (1 - focus) * gone, whiteSpace: "nowrap",
         }}>search…</span>
         <svg width="30" height="30" viewBox="0 0 24 24" {...ic}
           style={{ position: "absolute", right: 34, top: "50%", marginTop: -15,
-                   opacity: (1 - foc) * gone }}>
+                   opacity: (1 - focus) * gone }}>
           <circle cx="11" cy="11" r="7" /><path d="M20 20l-4.3-4.3" />
         </svg>
 
@@ -191,17 +199,17 @@ const Bar: React.FC<{ f: number }> = ({ f }) => {
           whiteSpace: "nowrap", color: R.ink, opacity: gone,
         }}>
           {QUERY.slice(0, full)}
-          {full < QUERY.length && (
+          {full < QUERY.length && frac > 0 && (
             <span style={{ opacity: Math.min(1, frac * 1.9),
                            filter: `blur(${(1 - frac) * 5}px)` }}>
               {QUERY[full]}
             </span>
           )}
-          {/* The mark, continued: it ends at 3 x 44 on this exact line, so the
+          {/* The mark, continued: it ends at 3 x 42 on this exact line, so the
               swap at `landed` moves nothing. No blink — at this length a blink
               only ever reads as a glitch. */}
-          {f >= INTRO.landed && (
-            <span style={{ display: "inline-block", width: 3, height: 36,
+          {caret && (
+            <span style={{ display: "inline-block", width: 3, height: 42,
                            background: R.ink, flexShrink: 0 }} />
           )}
         </span>
@@ -218,12 +226,40 @@ const Bar: React.FC<{ f: number }> = ({ f }) => {
 
 /* ── The scene ────────────────────────────────────────────────────────────*/
 
+/** The opening question. Frame 0 already has the bar fully formed — there is
+ *  no fade-in, because the piece LOOPS: what precedes frame 0 is the outro
+ *  handing this exact bar over. */
 export const SearchIntro: React.FC<{ f: number }> = ({ f }) => {
   if (f >= INTRO_FRAMES) return null;
+  const g = geom(f);
   return (
     <>
-      <Bar f={f} />
+      <Bar
+        c={easeIO((f - INTRO.collapse) / INTRO.collapseFor)}
+        fieldW={g.w}
+        typed={g.chars}
+        focus={interpolate(f, [INTRO.landed - 2, INTRO.landed + 6], [0, 1], clamp)}
+        caret={f >= INTRO.landed}
+      />
       <Mark f={f} />
     </>
   );
+};
+
+/**
+ * The close: the trailer's last card becoming the search bar again.
+ *
+ * Runs the SAME morph backwards, so the final frame is the bar exactly as
+ * frame 0 has it — empty field, placeholder showing, no caret. The piece is a
+ * real loop rather than one that merely ends near where it began: the question
+ * gets asked, answered, and is there to be asked again.
+ */
+export const OUTRO_FRAMES = 46;
+
+export const Outro: React.FC<{ f: number }> = ({ f }) => {
+  if (f < 0 || f > OUTRO_FRAMES) return null;
+  /* 1 -> 0. The card holds for a beat before it gives, so the closing title is
+     read before it goes. */
+  const c = 1 - easeIO(interpolate(f, [10, OUTRO_FRAMES], [0, 1], clamp));
+  return <Bar c={c} fieldW={420} typed={0} focus={0} caret={false} />;
 };

@@ -16,12 +16,16 @@ import {
   MAGNETIC, FALLS, PAIR,
   type Conn,
 } from "./trailerSpec";
-import { SearchIntro, INTRO, INTRO_FRAMES } from "./SearchIntro";
+import { SearchIntro, Outro, INTRO, INTRO_FRAMES, OUTRO_FRAMES } from "./SearchIntro";
 
 export { TRAILER_FRAMES };
 
-/** The whole piece: the opening question, then the trailer it answers. */
-export const TOTAL_FRAMES = INTRO_FRAMES + TRAILER_FRAMES;
+/** The whole piece: the question, the trailer that answers it, and the close
+ *  that hands the question back — the last frame is the first frame, so it
+ *  loops properly rather than merely ending near where it began. */
+export const TOTAL_FRAMES = INTRO_FRAMES + TRAILER_FRAMES + OUTRO_FRAMES;
+/** The frame the closing card starts giving way to the bar. */
+const OUTRO_AT = INTRO_FRAMES + TRAILER_FRAMES;
 
 /* ── The Connections trailer ───────────────────────────────────────────────
    One container for 38 seconds. It becomes the title card, the brand mark, a
@@ -805,9 +809,15 @@ export const LinkTrailer: React.FC = () => {
               this same object continued rather than on a card cut to. */}
           <SearchIntro f={f} />
 
-          <Sequence from={INTRO_FRAMES}>
+          <Sequence from={INTRO_FRAMES} durationInFrames={TRAILER_FRAMES}>
             <Body />
           </Sequence>
+
+          {/* …and the closing card hands the question back. Body is bounded
+              above so its card is gone by the time this one takes over —
+              they share the same geometry at the seam, so the swap moves
+              nothing. */}
+          <Outro f={f - OUTRO_AT} />
         </Stage>
 
         {/* Bed across the whole piece, intro included. Played at 0.18 rather
