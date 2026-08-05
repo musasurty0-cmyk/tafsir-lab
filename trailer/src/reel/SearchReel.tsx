@@ -776,12 +776,33 @@ const Stack: React.FC<{ f: number }> = ({ f }) => {
 
 /* ── Composition ──────────────────────────────────────────────────────────*/
 
-const Sfx: React.FC<{ at: number; file: string; v: number; len?: number }> =
-({ at, file, v, len = 20 }) => (
-  <Sequence from={at} durationInFrames={len}>
-    <Audio src={staticFile(file)} volume={v} />
-  </Sequence>
-);
+/**
+ * One shot, placed by its TRANSIENT rather than by its first sample.
+ *
+ * `at` is the frame the hit should be *heard* on. `lead` is how far into the
+ * file its peak actually sits — measured when the file was baked — so the
+ * sequence starts that much earlier. Whooshes are the reason: `card.mp3`
+ * swells for 19 frames before it peaks, so placed by its first sample it
+ * lands a third of a second late, which reads as sound that does not belong
+ * to the picture.
+ *
+ * The tail is faded, not cut. Sequence stops the audio dead at
+ * durationInFrames, and chopping a decaying tail mid-sample is an audible
+ * click — every cue in the previous set ended on one.
+ */
+const Sfx: React.FC<{ at: number; file: string; v: number; len?: number; lead?: number }> =
+({ at, file, v, len = 20, lead = 0 }) => {
+  const n    = Math.max(8, len);
+  const fade = Math.max(2, Math.min(10, Math.round(n * 0.3)));
+  return (
+    <Sequence from={Math.max(0, at - lead)} durationInFrames={n}>
+      <Audio
+        src={staticFile(file)}
+        volume={(f) => v * interpolate(f, [0, 1, n - fade, n], [0, 1, 1, 0], clamp)}
+      />
+    </Sequence>
+  );
+};
 
 /**
  * The camera, which in the source never stops.
@@ -840,23 +861,51 @@ export const SearchReel: React.FC = () => {
           0.18 * interpolate(fr, [0, 50, SEARCH_FRAMES - 60, SEARCH_FRAMES], [0, 1, 1, 0], clamp)}
       />
 
-      {/* The mark snapping into the field. */}
-      <Sfx at={T.markFrom + Math.round(T.markFor * 0.90)} file="sfx/uiclick.mp3" v={0.72} len={26} />
-      {/* The address resolving. */}
-      <Sfx at={T.paint} file="sfx/uitype.mp3" v={0.5} len={70} />
-      {/* The field growing into the first panel. */}
-      <Sfx at={T.collapse} file="sfx/uiwhoosh.mp3" v={0.9} len={80} />
-      <Sfx at={T.collapse + 22} file="sfx/uipop.mp3" v={0.5} len={40} />
-      {/* Each later panel: the travel, then the landing. */}
+      {/*
+        The cue sheet, taken off the source's own audio.
+        ────────────────────────────────────────────────
+        Its hits sit under a 128 BPM bed, so each event was measured by
+        subtracting the median spectrum of a neighbouring music-only window.
+        What that leaves is an energy profile with the SAME shape as the
+        picture — loud through the rule and launch, then:
+
+          rule +28.2   launch +26.7   rise +9.7   HANG +5.9
+          fall +20.2   landing +21.3  typing +19.9
+          collapse +34.3   card 2 +30.6   card 3 +32.3   (dB over the bed)
+
+        Two things follow. The collapse and the card arrivals are the loudest
+        moments in the whole reel, not the launch — so `v` follows that order
+        rather than being flat as it was. And the HANG is nearly silent: the
+        launch's tail is faded out by frame 113 and nothing else starts until
+        137, so the float has the mix to itself exactly as it has the frame.
+
+        Files were chosen by measuring the source's envelope per event and
+        matching within a plausible family. Ranking on the envelope ALONE —
+        duration, centroid, attack, flatness — returned a pistol shot for the
+        rule and a cash register for the launch. Both matched numerically.
+        Those features describe an envelope, not an identity.
+      */}
+
+      {/* The rule drawing out. */}
+      <Sfx at={58}  file="sfx/card.mp3"     v={0.90} len={30} lead={19} />
+      {/* Gather and launch — one move, and the source's second-loudest hit. */}
+      <Sfx at={90}  file="sfx/launch.mp3"   v={0.66} len={34} lead={11} />
+      {/*  … the hang. Nothing here, on purpose. */}
+      {/* The fall, crescendoing into the landing. */}
+      <Sfx at={154} file="sfx/fall.mp3"     v={0.70} len={24} lead={15} />
+      <Sfx at={LANDED} file="sfx/land.mp3"  v={0.60} len={16} />
+      {/* The address resolving — a text/scan texture under the reveal. */}
+      <Sfx at={212} file="sfx/type.mp3"     v={0.42} len={46} lead={25} />
+      {/* The field becoming the first panel: the loudest moment in the reel. */}
+      <Sfx at={288} file="sfx/card.mp3"     v={0.70} len={32} lead={19} />
+      <Sfx at={293} file="sfx/collapse.mp3" v={1.00} len={34} />
+      {/* Each later panel, peaking ON arrival rather than after it. */}
       {PANELS.slice(1).map((p) => (
-        <React.Fragment key={p.label}>
-          <Sfx at={p.at - 8} file="sfx/uiswish.mp3" v={0.66} len={32} />
-          <Sfx at={p.at + 16} file="sfx/uipop.mp3" v={0.44} len={40} />
-        </React.Fragment>
+        <Sfx key={p.label} at={p.at} file="sfx/card.mp3" v={0.85} len={38} lead={19} />
       ))}
       {/* Three becoming one. */}
-      <Sfx at={T.converge} file="sfx/uiwhoosh.mp3" v={1.0} len={80} />
-      <Sfx at={T.converge + T.convergeFor - 6} file="sfx/uiclick.mp3" v={0.6} len={26} />
+      <Sfx at={T.converge + 38} file="sfx/converge.mp3" v={1.00} len={40} lead={22} />
+      <Sfx at={T.converge + T.convergeFor} file="sfx/collapse.mp3" v={0.80} len={36} />
     </AbsoluteFill>
   );
 };
