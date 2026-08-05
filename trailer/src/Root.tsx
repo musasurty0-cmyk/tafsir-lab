@@ -7,6 +7,7 @@ import { LinkTrailer, TRAILER_FRAMES } from "./reel/LinkTrailer";
 import { SurahStudy, STUDY_FRAMES } from "./reel/SurahStudy";
 import { ToolsReel, TOOLS_FRAMES } from "./reel/ToolsReel";
 import { StrokeReel, STROKE_FRAMES } from "./reel/StrokeReel";
+import { SearchReel, SEARCH_FRAMES } from "./reel/SearchReel";
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -26,6 +27,17 @@ export const RemotionRoot: React.FC = () => {
         id="LinkReel"
         component={LinkReel}
         durationInFrames={REEL_FRAMES}
+        fps={60}
+        width={1080}
+        height={1920}
+        defaultProps={{}}
+      />
+
+      {/* Search, then the panels — browser bar, then a strip of them. */}
+      <Composition
+        id="SearchReel"
+        component={SearchReel}
+        durationInFrames={SEARCH_FRAMES}
         fps={60}
         width={1080}
         height={1920}
