@@ -44,13 +44,60 @@ const rhythm = (t: number) => {
   return Math.max(0, Math.min(1, x + 0.055 * Math.sin(x * 15.5) + 0.03 * Math.sin(x * 6.1)));
 };
 
+/**
+ * Keyframes with continuous velocity — monotone cubic Hermite, Fritsch–Carlson.
+ *
+ * Interpolating straight through a set of stops is piecewise LINEAR, so speed
+ * is constant inside each segment and STEPS at every stop. Measured on the old
+ * mark that step reached 11.7px/frame — it reversed direction between two
+ * frames with no deceleration at all. The eye reads a velocity step as a
+ * dropped frame, which is the whole of why this looked like stop motion.
+ *
+ * This is C1: velocity carries through every stop, and at a direction reversal
+ * the tangent goes to zero, so an apex decelerates into itself and accelerates
+ * out like a thrown object. The limiter also stops the spline bulging past a
+ * flat run, which means an overshoot has to be an explicit keyframe rather
+ * than an accident of the curve.
+ */
+const track = (p: number, S: number[], V: number[]) => {
+  const n = S.length;
+  if (p <= S[0]) return V[0];
+  if (p >= S[n - 1]) return V[n - 1];
+
+  const h: number[] = [], d: number[] = [];
+  for (let i = 0; i < n - 1; i++) {
+    h[i] = S[i + 1] - S[i];
+    d[i] = (V[i + 1] - V[i]) / h[i];
+  }
+  const m: number[] = [d[0]];
+  for (let i = 1; i < n - 1; i++) {
+    /* A reversal is an apex: stop there, then accelerate the other way. */
+    m[i] = d[i - 1] * d[i] <= 0 ? 0
+      : (d[i - 1] * h[i] + d[i] * h[i - 1]) / (h[i - 1] + h[i]);
+  }
+  m[n - 1] = d[n - 2];
+  for (let i = 0; i < n - 1; i++) {
+    if (d[i] === 0) { m[i] = 0; m[i + 1] = 0; continue; }
+    const a = m[i] / d[i], b = m[i + 1] / d[i], s = a * a + b * b;
+    if (s > 9) {
+      const k = 3 / Math.sqrt(s);
+      m[i] = k * a * d[i]; m[i + 1] = k * b * d[i];
+    }
+  }
+  let i = 0;
+  while (i < n - 2 && p > S[i + 1]) i++;
+  const t = (p - S[i]) / h[i], t2 = t * t, t3 = t2 * t;
+  return (2 * t3 - 3 * t2 + 1) * V[i] + (t3 - 2 * t2 + t) * h[i] * m[i]
+       + (-2 * t3 + 3 * t2) * V[i + 1] + (t3 - t2) * h[i] * m[i + 1];
+};
+
 const URL = "tafsir-lab.com";
 
 const T = {
   sharp: 26,
   /** The mark's whole life, as one span. */
-  markFrom: 54, markFor: 132,
-  paint: 190, paintFor: 32,
+  markFrom: 54, markFor: 112,
+  paint: 190, paintFor: 44,
   /** Icons in, field to panel — half a second. */
   collapse: 266, collapseFor: 30,
 
@@ -65,31 +112,57 @@ const STEP = CARD * 0.62;
 const CARD_CY = 552;
 /** Where the field is, and therefore where the first panel opens. */
 const BAR_CY = H / 2;
-const PILL_W = 640, PILL_H = 96;
+const PILL_H = 96;
+
+/** Text inset from the field's left edge. */
+const PAD = 40;
+/** The frame the mark finishes and the field's own caret takes over. Both
+ *  sides read this one constant, so they can never both be on screen. */
+const CARET_AT = T.markFrom + T.markFor;
+
+/**
+ * One source of truth for the field.
+ *
+ * The mark has to land exactly on the text line, and the text line moves,
+ * because the field grows as it fills. Deriving both from here means they
+ * cannot drift apart — the mark's left edge IS the field's text origin.
+ */
+const geom = (f: number) => {
+  const grow = springy((f - (T.markFrom + 12)) / 46);
+  const paint = rhythm(interpolate(f, [T.paint, T.paint + T.paintFor], [0, 1], clamp));
+  const w = interpolate(grow, [0, 1], [430, 520], clamp) + paint * 190;
+  return { w, chars: paint * URL.length, textLeft: W / 2 - w / 2 + PAD };
+};
 
 /* ── The one moving object ────────────────────────────────────────────────
-   Rule → dot → caret. Every property is interpolated across the SAME set of
-   stops, which is what makes it continuous: there is no second element to
-   hand over to, and no gap for a frame to fall into. */
+   Rule → dot → caret, all of it on the text line inside the field. The old
+   version sent it on a loop up over the bar and back down, which crossed the
+   placeholder twice and left a dot hanging in empty space for the best part
+   of a second. The move is now 22px of travel and nothing but the shape
+   changes: an underline retracts into a dot, the dot stands up into a caret.
+
+   Only the width, height, radius and baseline are keyed. x is not — the left
+   edge is pinned to the field's text origin, so the mark rides the field's
+   growth for free and ends precisely where the caret belongs. */
+
+const MS = [0, 0.30, 0.52, 0.66, 0.86, 0.94, 1];
+const MW = [0, 230, 16, 16, 3, 3, 3];
+const MH = [7, 7, 16, 16, 40, 50, 46];   // 50 is a deliberate overshoot
+const MR = [3.5, 3.5, 8, 8, 1.5, 1.5, 1.5];
+const MY = [22, 22, 22, 20, 2, 0, 0];    // relative to the text line
 
 const Mark: React.FC<{ f: number }> = ({ f }) => {
+  if (f < T.markFrom || f >= CARET_AT) return null;
   const p = (f - T.markFrom) / T.markFor;
-  if (p < 0 || p > 1.04) return null;
-
-  const S = [0, 0.30, 0.50, 0.74, 1];
-  const w = interpolate(p, S, [0, 132, 20, 20, 4], clamp);
-  const h = interpolate(p, S, [8, 8, 20, 20, 46], clamp);
-  const r = interpolate(p, S, [4, 4, 10, 10, 2], clamp);
-  /* Under the field, then up, then down into it, then home to the left. */
-  const y = interpolate(p, S,
-    [BAR_CY + PILL_H / 2 + 26, BAR_CY + PILL_H / 2 + 26, BAR_CY - 128, BAR_CY, BAR_CY], clamp);
-  const x = interpolate(p, S, [W / 2, W / 2, W / 2, W / 2, W / 2 - PILL_W / 2 + 42], clamp);
+  const h = track(p, MS, MH);
 
   return (
     <div style={{
-      position: "absolute", left: x - w / 2, top: y - h / 2,
-      width: w, height: h, borderRadius: r, background: "#111114",
-      zIndex: 40,
+      position: "absolute",
+      left: geom(f).textLeft,
+      top: BAR_CY + track(p, MS, MY) - h / 2,
+      width: track(p, MS, MW), height: h, borderRadius: track(p, MS, MR),
+      background: "#111114", zIndex: 40,
     }} />
   );
 };
@@ -126,16 +199,19 @@ const Bar: React.FC<{ f: number }> = ({ f }) => {
   const c = easeIO((f - T.collapse) / T.collapseFor);
   if (c >= 1) return null;
 
-  const focused = f >= T.markFrom + T.markFor * 0.82;
-  const paint = rhythm(interpolate(f, [T.paint, T.paint + T.paintFor], [0, 1], clamp));
-  const paintBlur = interpolate(f, [T.paint, T.paint + T.paintFor * 0.7], [9, 0], clamp);
-  /* Fluid morph: the field is not a fixed box that text lands in — it grows
-     to hold what is in it, on a spring, and the buttons ride outward with it. */
-  const focusGrow = springy((f - (T.markFrom + T.markFor * 0.74)) / 26);
-  const wField = interpolate(focusGrow, [0, 1], [430, 520], clamp)
-               + paint * 190;
+  /* Continuous, not a boolean. The old `focused` flag flipped the background,
+     the alignment, the text colour and the whole placeholder-to-URL swap on a
+     single frame — six properties changing at once, which is a cut. */
+  const foc = interpolate(f, [T.markFrom + 4, T.markFrom + T.markFor * 0.55], [0, 1], clamp);
+  const g = geom(f);
+  /* Revealed by character, so the caret sitting after the text in flow is
+     always exactly at the end of what has been painted — no measuring, and
+     no way for the two to disagree. */
+  const full = Math.floor(g.chars);
+  const frac = g.chars - full;
+  const gone = 1 - c * 2.2;
 
-  const pw = interpolate(c, [0, 1], [wField, CARD]);
+  const pw = interpolate(c, [0, 1], [g.w, CARD]);
   const ph = interpolate(c, [0, 1], [PILL_H, CARD]);
   const pr = interpolate(c, [0, 1], [PILL_H / 2, 24]);
   const cy = interpolate(c, [0, 1], [BAR_CY, CARD_CY]);
@@ -159,40 +235,41 @@ const Bar: React.FC<{ f: number }> = ({ f }) => {
 
       <div style={{
         width: pw, height: ph, borderRadius: pr, ...glass,
-        background: focused ? "rgba(255,255,255,0.92)" : "rgba(255,255,255,0.66)",
-        display: "flex", alignItems: "center",
-        justifyContent: focused ? "flex-start" : "center",
-        padding: `0 ${interpolate(c, [0, 1], [40, 0])}px`, boxSizing: "border-box",
+        background: `rgba(255,255,255,${0.66 + 0.3 * foc})`,
+        boxSizing: "border-box", overflow: "hidden", position: "relative",
         fontFamily: R.fontSans, fontSize: 37,
-        color: focused ? "#111114" : "#8e8e95",
-        overflow: "hidden", position: "relative",
       }}>
-        <span style={{ opacity: 1 - c * 2.2, whiteSpace: "nowrap" }}>
-          {focused ? (
-            <>
-              <span style={{
-                display: "inline-block", marginLeft: 34,
-                clipPath: `inset(0 ${(1 - paint) * 100}% 0 0)`,
-                filter: paintBlur > 0.2 ? `blur(${paintBlur}px)` : undefined,
-              }}>{URL}</span>
-              {/* Picks up exactly where the mark left off, so the field is
-                  never sitting there unfocused and empty. */}
-              {f >= T.markFrom + T.markFor && (
-                <span style={{
-                  display: "inline-block", width: 3, height: 46, background: "#111114",
-                  marginLeft: paint > 0.02 ? 5 : 0, verticalAlign: "middle",
-                  opacity: Math.floor(f / 17) % 2 === 0 ? 1 : 0,
-                }} />
-              )}
-            </>
-          ) : "search..."}
+        {/* Placeholder and magnifier are absolute, so when they go nothing
+            reflows around them — the field just clears. */}
+        <span style={{
+          position: "absolute", inset: 0, display: "grid", placeItems: "center",
+          color: "#8e8e95", opacity: (1 - foc) * gone, whiteSpace: "nowrap",
+        }}>search...</span>
+        <svg width="32" height="32" viewBox="0 0 24 24" {...ic}
+          style={{ position: "absolute", right: 34, top: "50%", marginTop: -16,
+                   opacity: (1 - foc) * gone }}>
+          <path d="M20 11a8 8 0 10-2.3 5.7" /><path d="M20 5v6h-6" />
+        </svg>
+
+        <span style={{
+          position: "absolute", left: PAD, top: "50%",
+          transform: "translateY(-50%)", display: "flex", alignItems: "center",
+          whiteSpace: "nowrap", color: "#111114", opacity: gone,
+        }}>
+          {URL.slice(0, full)}
+          {full < URL.length && (
+            <span style={{ opacity: frac, filter: `blur(${(1 - frac) * 6}px)` }}>
+              {URL[full]}
+            </span>
+          )}
+          {/* The mark, continued. It ends at 3 x 46 on this exact line, so the
+              swap on CARET_AT moves nothing. No blink — at this length a blink
+              only ever reads as a glitch. */}
+          {f >= CARET_AT && (
+            <span style={{ display: "inline-block", width: 3, height: 46,
+                           background: "#111114", flexShrink: 0 }} />
+          )}
         </span>
-        {!focused && (
-          <svg width="32" height="32" viewBox="0 0 24 24" {...ic}
-            style={{ position: "absolute", right: 34 }}>
-            <path d="M20 11a8 8 0 10-2.3 5.7" /><path d="M20 5v6h-6" />
-          </svg>
-        )}
       </div>
 
       <Round style={{
@@ -559,7 +636,7 @@ export const SearchReel: React.FC = () => {
       />
 
       {/* The mark snapping into the field. */}
-      <Sfx at={T.markFrom + Math.round(T.markFor * 0.74)} file="sfx/uiclick.mp3" v={0.72} len={26} />
+      <Sfx at={T.markFrom + Math.round(T.markFor * 0.90)} file="sfx/uiclick.mp3" v={0.72} len={26} />
       {/* The address resolving. */}
       <Sfx at={T.paint} file="sfx/uitype.mp3" v={0.5} len={70} />
       {/* The field growing into the first panel. */}
