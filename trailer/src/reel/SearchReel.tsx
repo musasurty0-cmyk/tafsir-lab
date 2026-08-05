@@ -922,6 +922,16 @@ export const SearchReel: React.FC = () => {
           is bright, so at the level that suited the old bright whooshes it
           became the loudest thing in the reel. The collapse has to be. */}
       {/*  … the address paints in silence. */}
+      {/* Enter. The house click, four frames ahead of the collapse so the
+          page going reads as the CONSEQUENCE of the keypress rather than as
+          something that happened to coincide with it. Its transient sits 3
+          frames into the file, hence the lead.
+
+          v is well under the 0.24-0.42 the other reels use it at. Those
+          reels cue it against bright material; here it sits among dark,
+          bass-heavy whooshes, and at 0.38 it measured +21.9dB over the bed
+          against the collapse's +12.4 — an accent turning into a stab. */}
+      <Sfx at={T.collapse - 4} file="sfx/click.mp3" v={0.17} len={18} lead={3} />
       {/* The field becoming the first panel: the loudest moment in the reel,
           carried by two whooshes rather than an impact. */}
       <Sfx at={290} file="sfx/whoosh.mp3" v={0.46} len={34} lead={10} />
