@@ -157,3 +157,58 @@ export function buildArc(sx: number, sy: number): ArcTracks {
  */
 export const XS = [0, 0.035, 0.07, 0.115, 1];
 export const XV_SRC = [126.7, 61.3, 18.7, 0, 0];
+
+/* ── The camera ───────────────────────────────────────────────────────────*/
+
+/**
+ * The source's camera never stops — and it is NOT an even drift.
+ *
+ * Tracked off the back-arrow glyph (a fixed point of the chrome, so its
+ * movement is the camera's), with the two outer buttons' separation giving the
+ * scale. Comparing the two side by side per phase is what settled it:
+ *
+ *   phase    source   an even drift
+ *   rule     0.569    0.219   far too still
+ *   launch   0.605    0.541   about right
+ *   hang     0.054    0.196   THREE AND A HALF TIMES TOO BUSY
+ *
+ * It pans hard and early — about 10 source-px a frame while the rule draws —
+ * and then STOPS. Through the hang it is almost perfectly still, which is what
+ * makes the hang land: everything else quits so the one floating object has the
+ * frame. Then it accelerates right as the mark falls. Leaving a composition
+ * locked off instead reads as dead, and filling the hang with drift throws the
+ * shape of the whole sequence away.
+ *
+ * Stops are SOURCE frames, offsets SOURCE pixels — mapped onto a composition's
+ * own clock and scale by buildCamera().
+ */
+export const CAM_F     = [-26, 4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48, 52];
+export const CAM_X_SRC = [77.3, 77.3, 38.7, 17.3, 5, -1, -2, 0, 0.5, 1.5, 2.5, 4.5, 10.5, 27.3];
+export const CAM_Z     = [1.061, 1.061, 1.056, 1.056, 1.054, 1.048, 1.030, 1.009,
+                          1.000, 0.996, 1.000, 1.011, 1.005, 0.995];
+
+/** The two stops after the arc: a drift through the typing, then rest. */
+const CAM_TAIL_X = [9.3, 0];
+const CAM_TAIL_Z = [1, 1];
+
+export interface CameraTrack { F: number[]; X: number[]; Z: number[] }
+
+/**
+ * Map the measured camera onto a composition.
+ * @param markFrom the frame the rule appears (source frame 1)
+ * @param settleAt a frame mid-typing, where the drift has mostly resolved
+ * @param restAt   the frame the camera is back at rest — normally the collapse
+ * @param sx       horizontal scale from the source's 1280
+ */
+export function buildCamera(
+  markFrom: number, settleAt: number, restAt: number, sx: number,
+): CameraTrack {
+  /* The source runs at half our rate, so source frame rf lands on
+     markFrom + (rf - 1) * 2. */
+  const F = CAM_F.map((rf) => markFrom + (rf - 1) * 2).concat([settleAt, restAt]);
+  return {
+    F,
+    X: CAM_X_SRC.concat(CAM_TAIL_X).map((v) => v * sx),
+    Z: CAM_Z.concat(CAM_TAIL_Z),
+  };
+}

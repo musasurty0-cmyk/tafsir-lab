@@ -8,7 +8,7 @@ import { R } from "../reelTokens";
    animation, and a second copy of a tracked table is a copy that quietly
    stops matching. See searchCurves.ts and MOTION-STUDY.md §9. */
 import {
-  clamp, easeIO, springy, track, PS, PV, buildArc, XS, XV_SRC,
+  clamp, easeIO, springy, track, PS, PV, buildArc, XS, XV_SRC, buildCamera,
 } from "./searchCurves";
 
 /* ── Search, then the panels ───────────────────────────────────────────────
@@ -708,10 +708,10 @@ const Sfx: React.FC<{ at: number; file: string; v: number; len?: number; lead?: 
  * object has the frame. An even drift fills that silence in and throws the
  * whole shape of the sequence away. Resolves to identity before the collapse.
  */
-const CS = [0, 60, 68, 76, 84, 92, 100, 108, 116, 124, 132, 140, 148, 156, 200, T.collapse];
-const CX = [116, 116, 58, 26, 7.5, -1.5, -3, 0, 0.8, 2.3, 3.8, 6.8, 15.8, 41, 14, 0];
-const CZ = [1.061, 1.061, 1.056, 1.056, 1.054, 1.048, 1.030, 1.009,
-            1.000, 0.996, 1.000, 1.011, 1.005, 0.995, 1, 1];
+/* Derived from the shared measurement: markFrom 54, a settle mid-typing, at
+   rest by the collapse, at this composition's 1.5 scale. */
+const CAM = buildCamera(54, 200, T.collapse, 1.5);
+const CS = CAM.F, CX = CAM.X, CZ = CAM.Z;
 
 const Drift: React.FC<{ f: number; children: React.ReactNode }> = ({ f, children }) => {
   const p = Math.min(f, T.collapse);

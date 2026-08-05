@@ -3,6 +3,7 @@ import { interpolate } from "remotion";
 import { R } from "../reelTokens";
 import {
   clamp, easeIO, springy, track, PS, PV, buildArc, XS, XV_SRC, ARC_FRAMES,
+  buildCamera,
 } from "./searchCurves";
 
 /**
@@ -69,6 +70,33 @@ export const INTRO: IntroTiming = {
 
 /** Total length of the intro — the frame the trailer's own timeline starts. */
 export const INTRO_FRAMES = INTRO.collapse + INTRO.collapseFor;
+
+/**
+ * The camera, on this composition's clock and scale.
+ *
+ * The same tracked move SearchReel runs, not an approximation of it: pans hard
+ * and early while the rule draws, STOPS dead through the hang so the floating
+ * mark has the frame to itself, then accelerates as the mark falls. Leaving
+ * this off is what made the intro read as static beside the reel.
+ */
+const CAM = buildCamera(INTRO.markFrom, INTRO.paint + 30, INTRO.collapse, S);
+
+/** Where the camera sits at frame 0 — the state the outro has to hand back
+ *  for the loop to be seamless. */
+export const CAM_AT_0 = {
+  x: track(0, CAM.F, CAM.X),
+  z: track(0, CAM.F, CAM.Z),
+};
+
+/** Everything in the scene rides the camera together. */
+const Drift: React.FC<{ x: number; z: number; children: React.ReactNode }> =
+({ x, z, children }) => (
+  <div style={{
+    position: "absolute", inset: 0,
+    transform: `translateX(${x}px) scale(${z})`,
+    transformOrigin: "50% 50%",
+  }}>{children}</div>
+);
 
 /* ── Geometry ─────────────────────────────────────────────────────────────*/
 
@@ -233,7 +261,7 @@ export const SearchIntro: React.FC<{ f: number }> = ({ f }) => {
   if (f >= INTRO_FRAMES) return null;
   const g = geom(f);
   return (
-    <>
+    <Drift x={track(f, CAM.F, CAM.X)} z={track(f, CAM.F, CAM.Z)}>
       <Bar
         c={easeIO((f - INTRO.collapse) / INTRO.collapseFor)}
         fieldW={g.w}
@@ -242,7 +270,7 @@ export const SearchIntro: React.FC<{ f: number }> = ({ f }) => {
         caret={f >= INTRO.landed}
       />
       <Mark f={f} />
-    </>
+    </Drift>
   );
 };
 
@@ -260,6 +288,13 @@ export const Outro: React.FC<{ f: number }> = ({ f }) => {
   if (f < 0 || f > OUTRO_FRAMES) return null;
   /* 1 -> 0. The card holds for a beat before it gives, so the closing title is
      read before it goes. */
-  const c = 1 - easeIO(interpolate(f, [10, OUTRO_FRAMES], [0, 1], clamp));
-  return <Bar c={c} fieldW={420} typed={0} focus={0} caret={false} />;
+  const p = easeIO(interpolate(f, [10, OUTRO_FRAMES], [0, 1], clamp));
+  /* The camera has to arrive exactly where frame 0 has it, or the loop shows a
+     jump in the one thing the eye tracks across the whole piece. The trailer
+     body runs with the camera at rest, so this eases from rest to that state. */
+  return (
+    <Drift x={CAM_AT_0.x * p} z={interpolate(p, [0, 1], [1, CAM_AT_0.z])}>
+      <Bar c={1 - p} fieldW={420} typed={0} focus={0} caret={false} />
+    </Drift>
+  );
 };
