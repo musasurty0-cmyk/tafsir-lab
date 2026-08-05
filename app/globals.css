@@ -8617,6 +8617,40 @@ input, textarea { font: inherit; color: inherit; }
   transform: translateX(-50%);
   animation: sel-toolbar-in var(--dur-fast) var(--ease-out);
 }
+/* Flipped under the selection (no room above): rise from the other side, so
+   the bubble always animates AWAY from the selected words. */
+.sel-toolbar[data-side="below"] { animation-name: sel-toolbar-in-below; }
+@keyframes sel-toolbar-in-below {
+  from { opacity: 0; transform: translateX(-50%) translateY(-4px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* Link popover — one input, Enter applies, empty value unlinks. */
+.sel-link-pop {
+  display: flex; align-items: center; gap: 6px;
+  min-width: 240px;
+}
+.sel-link-input {
+  flex: 1;
+  font-size: 13px;
+  padding: 5px 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--ink);
+  outline: none;
+}
+.sel-link-input:focus { border-color: var(--accent); }
+.sel-link-input::placeholder { color: var(--ink-4); }
+.sel-link-remove {
+  flex: none;
+  width: 24px; height: 24px;
+  display: grid; place-items: center;
+  border-radius: var(--radius-sm);
+  color: var(--ink-3);
+  font-size: 12px;
+}
+.sel-link-remove:hover { background: var(--hover); color: var(--ink); }
 @keyframes sel-toolbar-in {
   from { opacity: 0; transform: translateX(-50%) translateY(4px); }
   to   { opacity: 1; transform: translateX(-50%) translateY(0); }
