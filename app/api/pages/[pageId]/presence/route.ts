@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { db } from "@/lib/db";
+import { assertPageAccess } from "@/lib/services/pages.service";
 
 const PRESENCE_TTL_MS = 45_000; // 45 seconds
 
@@ -11,6 +12,9 @@ export async function GET(
   try {
     const { userId } = await getSession();
     const { pageId } = await params;
+    // Who is on a page is workspace-private. Was ungated: any authenticated
+    // user could enumerate viewers/editors of any page by id.
+    await assertPageAccess(pageId, userId);
     const since = new Date(Date.now() - PRESENCE_TTL_MS);
     const presence = await db.pagePresence.findMany({
       where: { pageId, updatedAt: { gte: since } },
@@ -29,6 +33,8 @@ export async function POST(
   try {
     const { userId } = await getSession();
     const { pageId } = await params;
+    // A stranger must not be able to inject presence/cursors into a page.
+    await assertPageAccess(pageId, userId);
     const body = await req.json().catch(() => ({})) as {
       isTyping?: boolean;
       cursorFrom?: number | null;

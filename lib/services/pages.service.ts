@@ -81,6 +81,32 @@ function filterVisible<T extends { status: string; createdById: string }>(
   });
 }
 
+// ── Access gate ───────────────────────────────────────────────
+
+/**
+ * Assert that `userId` may access the workspace `pageId` lives in, and return
+ * their role. The gate for routes that touch a page directly through `db`
+ * rather than through a service — drawings and presence were doing exactly
+ * that with no membership check at all, which let any authenticated user read
+ * and write any page's ink and presence by id (IDOR). Throws PageError
+ * NOT_FOUND for an unknown page and re-throws WorkspaceError FORBIDDEN for a
+ * non-member, so a stranger cannot even distinguish "no such page" from "not
+ * yours".
+ */
+export async function assertPageAccess(
+  pageId: string,
+  userId: string,
+): Promise<{ workspaceId: string; role: MemberRole }> {
+  const page = await db.page.findUnique({
+    where:  { id: pageId },
+    select: { workspaceSurah: { select: { workspaceId: true } } },
+  });
+  if (!page) throw new PageError("Page not found", "NOT_FOUND");
+  const workspaceId = page.workspaceSurah.workspaceId;
+  const { role } = await getWorkspaceWithRole(workspaceId, userId);
+  return { workspaceId, role };
+}
+
 // ── Internal helpers ──────────────────────────────────────────
 
 /** Resolves page + its workspace in one query. Used by getPage. */

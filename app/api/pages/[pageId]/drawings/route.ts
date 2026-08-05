@@ -21,6 +21,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/session";
+import { assertPageAccess } from "@/lib/services/pages.service";
+import { apiError } from "@/lib/api-errors";
 
 // ── GET ────────────────────────────────────────────────────────────────────
 
@@ -31,6 +33,9 @@ export async function GET(
   try {
     const { userId }  = await getSession();
     const { pageId }  = await params;
+    // Membership gate: this route reads every author's ink on the page, so a
+    // non-member must not reach it. Was previously ungated (IDOR).
+    await assertPageAccess(pageId, userId);
 
     const drawings = await db.canvasDrawing.findMany({
       where:   { pageId },
@@ -57,7 +62,7 @@ export async function GET(
       otherLayers: others,
     });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    return apiError(err);
   }
 }
 
@@ -70,6 +75,9 @@ export async function PUT(
   try {
     const { userId } = await getSession();
     const { pageId } = await params;
+    // Membership is the gate, matching saveDrawing()'s existing policy: any
+    // member may annotate, a non-member cannot reach the page at all.
+    await assertPageAccess(pageId, userId);
 
     const body = await req.json() as { strokes?: unknown; surface?: unknown; deletedIds?: unknown };
     const incoming = Array.isArray(body.strokes) ? body.strokes as { id?: string; surface?: string }[] : [];
@@ -110,6 +118,6 @@ export async function PUT(
 
     return NextResponse.json({ ok: true });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    return apiError(err);
   }
 }
