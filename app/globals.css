@@ -1043,7 +1043,10 @@ input, textarea { font: inherit; color: inherit; }
 .wbw-cell {
   display: flex; flex-direction: column; align-items: center; gap: 3px;
   padding: 6px 8px; text-align: center;
-  border-radius: 6px; background: transparent; border: none; cursor: pointer;
+  /* cursor:default — these are reading cells, not controls. They were buttons
+     opening a word panel that no longer exists; the hover tint stays because
+     it helps track a column while reading word by word. */
+  border-radius: 6px; background: transparent; border: none; cursor: default;
   transition: background .1s;
 }
 .wbw-cell:hover { background: var(--hover); }

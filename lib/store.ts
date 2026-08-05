@@ -13,11 +13,6 @@ interface DrawingState {
   activeStroke: Stroke | null;
 }
 
-interface WordPanelState {
-  wordKey: string | null;
-  expanded: boolean;
-}
-
 interface AppState {
   // active question (0 = Quran text, 1-8 = study questions)
   activeQuestion: number;
@@ -37,11 +32,6 @@ interface AppState {
   clearStrokes: () => void;
   loadStrokes: (strokes: Stroke[]) => void;
 
-  // word panel
-  wordPanel: WordPanelState;
-  openWordPanel: (wordKey: string) => void;
-  closeWordPanel: () => void;
-  toggleExpandWordPanel: () => void;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -136,16 +126,4 @@ export const useAppStore = create<AppState>((set, get) => ({
   loadStrokes: (strokes) =>
     set((s) => ({ drawing: { ...s.drawing, strokes, undoStack: [], activeStroke: null } })),
 
-  wordPanel: { wordKey: null, expanded: false },
-
-  openWordPanel: (wordKey) =>
-    set({ wordPanel: { wordKey, expanded: false } }),
-
-  closeWordPanel: () =>
-    set({ wordPanel: { wordKey: null, expanded: false } }),
-
-  toggleExpandWordPanel: () =>
-    set((s) => ({
-      wordPanel: { ...s.wordPanel, expanded: !s.wordPanel.expanded },
-    })),
 }));

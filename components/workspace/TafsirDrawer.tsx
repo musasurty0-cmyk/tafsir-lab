@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState, useMemo } from "react";
 import { X } from "lucide-react";
-import { useAppStore } from "@/lib/store";
 import { TAFSIR_LANGUAGE_NAMES } from "@/lib/tafsir/spa5k-catalog";
 import { useT } from "@/lib/i18n/LocaleProvider";
 import { sanitizeTafsirHtml } from "@/lib/sanitize-html";
@@ -59,7 +58,6 @@ type LangFilter = string;
 // ── Component ──────────────────────────────────────────────────────────────
 
 export default function TafsirDrawer({ open, verseKey, verses, onClose }: Props) {
-  const { openWordPanel } = useAppStore();
   const t = useT();
 
   // ── Core state ──────────────────────────────────────────────────────────
@@ -474,17 +472,14 @@ export default function TafsirDrawer({ open, verseKey, verses, onClose }: Props)
           {tab === "wbw" && (
             activeVerse ? (
               <div className="wbw">
+                {/* Reading cells, not controls. The "Open in word panel"
+                    action pointed at a panel that was never mounted. */}
                 {words.map((w, i) => (
-                  <button
-                    key={i}
-                    className="wbw-cell"
-                    onClick={() => openWordPanel(`${activeAyah}:${w.position}`)}
-                    title="Open in word panel"
-                  >
+                  <div key={i} className="wbw-cell">
                     <div className="wbw-ar">{w.text}</div>
                     <div className="wbw-tr">{w.transliteration?.text}</div>
                     <div className="wbw-en">{w.translation?.text}</div>
-                  </button>
+                  </div>
                 ))}
               </div>
             ) : (

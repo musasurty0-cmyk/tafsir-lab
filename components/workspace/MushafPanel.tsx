@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { ChevronDown, ChevronUp, BookMarked } from "lucide-react";
-import { useAppStore } from "@/lib/store";
 import type { Chapter, Verse } from "@/lib/types";
 
 interface Props {
@@ -12,7 +11,6 @@ interface Props {
 }
 
 export default function MushafPanel({ chapter, verses, onVerseClick }: Props) {
-  const { openWordPanel } = useAppStore();
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
 
   const toggleVerse = (key: string) =>
@@ -88,16 +86,16 @@ export default function MushafPanel({ chapter, verses, onVerseClick }: Props) {
               {!isCollapsed && (
                 <>
                   <div className="word-chips">
+                    {/* Not a button. These opened a word panel that was never
+                        mounted, against an endpoint that does not exist, so
+                        every word was a focus stop and a click target that did
+                        nothing — a whole verse of them to tab through. */}
                     {words.map((word) => (
-                      <button
-                        key={word.id}
-                        className="word-chip"
-                        onClick={() => openWordPanel(`${verse.verse_key}:${word.position}`)}
-                      >
+                      <div key={word.id} className="word-chip">
                         <span className="word-chip-ar">{word.text}</span>
                         <span className="word-chip-tr">{word.transliteration?.text}</span>
                         <span className="word-chip-en">{word.translation?.text}</span>
-                      </button>
+                      </div>
                     ))}
                   </div>
                   <div className="verse-translation">{translation}</div>

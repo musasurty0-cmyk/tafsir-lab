@@ -4,7 +4,6 @@ import { Tldraw } from "tldraw";
 import "tldraw/tldraw.css";
 import { useState } from "react";
 import { ChevronLeft, ChevronRight, BookMarked } from "lucide-react";
-import { useAppStore } from "@/lib/store";
 import type { Chapter, Verse } from "@/lib/types";
 
 interface Props {
@@ -14,7 +13,6 @@ interface Props {
 }
 
 export default function TldrawCanvas({ chapter, verses, onVerseClick }: Props) {
-  const { openWordPanel } = useAppStore();
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [panelOpen, setPanelOpen] = useState(true);
 
@@ -146,15 +144,14 @@ export default function TldrawCanvas({ chapter, verses, onVerseClick }: Props) {
                       <>
                         <div className="word-chips" style={{ gap: 4 }}>
                           {words.map((word) => (
-                            <button
+                            <div
                               key={word.id}
                               className="word-chip"
-                              onClick={() => openWordPanel(`${verse.verse_key}:${word.position}`)}
                               style={{ padding: "4px 7px" }}
                             >
                               <span className="word-chip-ar" style={{ fontSize: 17 }}>{word.text}</span>
                               <span className="word-chip-tr" style={{ fontSize: 10 }}>{word.transliteration?.text}</span>
-                            </button>
+                            </div>
                           ))}
                         </div>
                         <div style={{ fontSize: 11, color: "var(--ink-3)", lineHeight: 1.6, marginTop: 6 }}>
