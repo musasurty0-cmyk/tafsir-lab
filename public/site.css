@@ -21,9 +21,17 @@
   --shadow-md: 0 6px 18px oklch(0.22 0.012 80 / 0.07), 0 2px 6px oklch(0.22 0.012 80 / 0.04);
   --shadow-lg: 0 30px 60px oklch(0.22 0.012 80 / 0.12), 0 10px 24px oklch(0.22 0.012 80 / 0.08);
 
-  --font-sans: "IBM Plex Sans", -apple-system, "Segoe UI", sans-serif;
-  --font-serif: "IBM Plex Serif", Georgia, serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  /* One serif does the work. Newsreader is variable on optical size, so the
+     display sizes get the tighter, finer drawing and the body sizes get the
+     sturdier one — the thing a real book gets from separate cuts of metal and
+     the thing a single-master webfont scaled up and down never has.
+
+     --font-sans exists only for form controls and the few places a browser
+     insists; nothing editorial uses it. --font-mono is deliberately gone: the
+     uppercase letterspaced mono label above every section was the page's
+     loudest borrowed mannerism. */
+  --font-serif: "Newsreader", Georgia, "Times New Roman", serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-arabic: "Amiri Quran", "Scheherazade New", "Amiri", serif;
 
   --radius: 8px;
@@ -37,15 +45,33 @@
 *{box-sizing:border-box;}
 html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);}
 body{
-  font-family:var(--font-sans);
-  font-size:15px;
-  line-height:1.5;
+  font-family:var(--font-serif);
+  font-size:17px;              /* a reading size, not a UI size */
+  line-height:1.62;
   -webkit-font-smoothing:antialiased;
   text-rendering:optimizeLegibility;
-  font-feature-settings:"ss01","cv11";
+  font-optical-sizing:auto;
   overflow-x:hidden;
 }
 a{color:inherit;text-decoration:none;}
+
+/* The one place mono is still right: a literal command the reader would type.
+   Sized down, because a monospace at the serif's own size always looks a
+   step too big beside it. */
+code{
+  font-family:ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  font-size:0.86em;
+  padding:1px 5px;
+  border-radius:4px;
+  background:var(--panel-2);
+  color:var(--ink-2);
+}
+
+/* Numerals throughout: old-style figures sit on the baseline like lowercase
+   and belong in running text, which is the whole point of a book face. The
+   big standalone stats are the exception and are set lining below. */
+body{font-variant-numeric:oldstyle-nums;}
+.num, .price-amt, .stat-n, .wbw-ar{font-variant-numeric:lining-nums;}
 button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;}
 img,svg{display:block;max-width:100%;}
 
@@ -59,15 +85,20 @@ body::before{
 main, .nav, .foot{position:relative; z-index:1;}
 
 /* ─────────────── PRIMITIVES ─────────────── */
+/* Section labels. Italic serif at reading size — the way a book names a part,
+   not the way a dashboard names a panel. No uppercase, no letterspacing, no
+   mono, and no zero-padded numbers: "— 01 The Editor" is a mannerism, and six
+   of them down one page is a signature. */
 .eyebrow{
-  font-family:var(--font-mono);
-  font-size:11.5px;
-  font-weight:500;
-  letter-spacing:0.08em;
-  text-transform:uppercase;
+  font-family:var(--font-serif);
+  font-size:16px;
+  font-style:italic;
+  font-weight:400;
+  letter-spacing:0;
+  text-transform:none;
   color:var(--ink-3);
-  display:inline-flex;align-items:center;gap:8px;
-  margin:0 0 18px 0;
+  display:inline-flex;align-items:center;gap:9px;
+  margin:0 0 14px 0;
 }
 .eyebrow .dot{
   width:6px;height:6px;border-radius:50%;background:var(--accent);
@@ -76,30 +107,39 @@ main, .nav, .foot{position:relative; z-index:1;}
 .eyebrow.on-dark{color:oklch(0.78 0.02 80);}
 .eyebrow.on-dark .dot{background:oklch(0.78 0.1 160);}
 
+/* Headings are set LIGHT and open. The old scale ran weight 500 at -0.022em
+   with line-height 1.02 — tight, dark and cramped, which is the house look of
+   a product that wants to seem fast. This page is about sitting still with a
+   text, so the display sizes drop to 300, tracking goes to zero, and the
+   leading opens to 1.14. Optical sizing does the rest. */
 .h1, .display{
   font-family:var(--font-serif);
-  font-weight:500;
-  letter-spacing:-0.022em;
-  line-height:1.02;
+  font-weight:300;
+  letter-spacing:-0.005em;
+  line-height:1.14;
   color:var(--ink);
   margin:0;
   text-wrap:balance;
 }
-.display{font-size:clamp(40px, 6.4vw, 84px);}
+/* Sized to the SENTENCE, not to a number that looked good in isolation. The
+   old scale was built for a three-word-per-line fragment; a real sentence at
+   69px ran to six lines and 473px, which put the lede at y=729 and the buttons
+   at y=872 on a 720px viewport — the whole call to action below the fold. */
+.display{font-size:clamp(30px, 3.05vw, 44px);}
 .display-em{
   display:block;
   font-style:italic;
   font-weight:400;
   color:var(--accent-ink);
 }
-.h1{font-size:clamp(36px, 5.4vw, 64px); font-weight:500;}
-.h1-em{font-style:italic;color:var(--accent-ink);font-weight:400;}
+.h1{font-size:clamp(34px, 4.6vw, 56px); font-weight:300;}
+.h1-em{font-style:italic;color:var(--accent-ink);font-weight:300;}
 .h2{
   font-family:var(--font-serif);
-  font-size:clamp(30px, 3.8vw, 50px);
-  font-weight:500;
-  letter-spacing:-0.018em;
-  line-height:1.08;
+  font-size:clamp(27px, 3.1vw, 42px);
+  font-weight:300;
+  letter-spacing:-0.004em;
+  line-height:1.18;
   color:var(--ink);
   margin:0 0 16px 0;
   text-wrap:balance;
@@ -118,7 +158,7 @@ main, .nav, .foot{position:relative; z-index:1;}
 .lede.center{margin-left:auto;margin-right:auto;text-align:center;}
 
 .kbd{
-  font-family:var(--font-mono);
+  font-family:var(--font-serif);
   font-size:12px;
   padding:1px 6px;
   border:1px solid var(--line-2);
@@ -146,7 +186,7 @@ main, .nav, .foot{position:relative; z-index:1;}
 .btn-ghost:hover{background:var(--hover); border-color:var(--ink);}
 
 .link{
-  font-family:var(--font-mono);
+  font-family:var(--font-serif);
   font-size:12.5px;
   letter-spacing:0.04em;
   color:var(--accent-ink);
@@ -205,6 +245,16 @@ main, .nav, .foot{position:relative; z-index:1;}
 @media (max-width:880px){
   .nav-links{display:none;}
 }
+/* Below this the wordmark and three calls to action cannot share a line: the
+   button was wrapping to three, giving a 118px-tall nav on a phone. Keep the
+   one that matters and let the other two go — they both exist again in the
+   footer. */
+@media (max-width:640px){
+  .nav{gap:12px;}
+  .nav-cta{gap:10px;}
+  .nav-cta .link-quiet{display:none;}
+}
+.btn{white-space:nowrap;}
 
 /* ─────────────── HERO ─────────────── */
 .hero{
@@ -246,7 +296,7 @@ main, .nav, .foot{position:relative; z-index:1;}
   padding-top:22px;
 }
 .hero-meta li{
-  font-family:var(--font-mono);
+  font-family:var(--font-serif);
   font-size:12.5px;
   color:var(--ink-3);
   letter-spacing:0.02em;
@@ -285,7 +335,7 @@ main, .nav, .foot{position:relative; z-index:1;}
 .frame-dot.d3{background:oklch(0.78 0.1 145);}
 .frame-tab{
   margin-left:14px;
-  font-family:var(--font-mono);
+  font-family:var(--font-serif);
   font-size:11.5px;
   color:var(--ink-3);
   padding:4px 10px;
@@ -304,7 +354,7 @@ main, .nav, .foot{position:relative; z-index:1;}
 }
 .frame-presence .presence-pip:first-of-type{margin-left:0;}
 .presence-count{
-  font-family:var(--font-mono);font-size:11px;color:var(--ink-3);margin-left:6px;
+  font-family:var(--font-serif);font-size:11px;color:var(--ink-3);margin-left:6px;
 }
 .frame-body{
   display:grid;
@@ -324,12 +374,12 @@ main, .nav, .foot{position:relative; z-index:1;}
 }
 .fs-row-active{background:oklch(0.22 0.012 80 / 0.07); color:var(--ink); font-weight:500;}
 .fs-row-soft{color:var(--ink-3);}
-.fs-icon{font-family:var(--font-mono); font-size:12px; color:var(--ink-4); width:14px; text-align:center;}
+.fs-icon{font-family:var(--font-serif); font-size:12px; color:var(--ink-4); width:14px; text-align:center;}
 .fs-icon-acc{color:var(--accent);}
 .fs-sub{padding-left:14px; border-left:1px solid var(--line); margin-left:14px;}
 .fs-divider{height:1px;background:var(--line);margin:12px 6px;}
 .fs-section{
-  font-family:var(--font-mono);
+  font-family:var(--font-serif);
   font-size:10.5px;
   letter-spacing:0.06em;
   text-transform:uppercase;
@@ -342,7 +392,7 @@ main, .nav, .foot{position:relative; z-index:1;}
   position:relative;
 }
 .doc-tag{
-  font-family:var(--font-mono);
+  font-family:var(--font-serif);
   font-size:11px;
   color:var(--ink-3);
   letter-spacing:0.06em;
@@ -386,7 +436,7 @@ main, .nav, .foot{position:relative; z-index:1;}
 .verse.compact{padding:14px 18px; margin:8px 0;}
 .verse-h{
   display:flex;align-items:center;justify-content:space-between;
-  font-family:var(--font-mono);font-size:11px;
+  font-family:var(--font-serif);font-size:11px;
   color:var(--ink-3);letter-spacing:0.05em;text-transform:uppercase;
 }
 .verse-pip{display:inline-block; width:5px;height:5px;border-radius:50%; background:var(--accent); margin-right:6px;vertical-align:1px;}
@@ -402,7 +452,7 @@ main, .nav, .foot{position:relative; z-index:1;}
 }
 .verse-translit{font-family:var(--font-serif); font-style:italic; font-size:14px; color:var(--ink-3);}
 .verse-en{font-family:var(--font-serif); font-size:15.5px; line-height:1.55; color:var(--ink);}
-.vnum{font-family:var(--font-mono); font-size:10.5px; color:var(--ink-4); vertical-align:super; margin-right:3px;}
+.vnum{font-family:var(--font-serif); font-size:10.5px; color:var(--ink-4); vertical-align:super; margin-right:3px;}
 
 .doc-p{
   font-family:var(--font-serif);
@@ -411,7 +461,7 @@ main, .nav, .foot{position:relative; z-index:1;}
   text-wrap:pretty;
 }
 .anchor{
-  font-family:var(--font-mono);
+  font-family:var(--font-serif);
   font-size:12px;
   color:var(--accent-ink);
   background:var(--accent-soft);
@@ -436,7 +486,7 @@ main, .nav, .foot{position:relative; z-index:1;}
   margin-top:1px;
 }
 .callout-l{
-  font-family:var(--font-mono);font-size:11px;
+  font-family:var(--font-serif);font-size:11px;
   color:var(--ink-3);letter-spacing:0.05em;text-transform:uppercase;
   display:block; margin-bottom:4px;
 }
@@ -462,7 +512,7 @@ main, .nav, .foot{position:relative; z-index:1;}
   position:absolute;
   top:-22px;left:-6px;
   background:var(--warm); color:#fff;
-  font-family:var(--font-mono); font-size:10px;
+  font-family:var(--font-serif); font-size:10px;
   padding:2px 6px; border-radius:4px;
   white-space:nowrap;
   letter-spacing:0.04em;
@@ -499,7 +549,7 @@ main, .nav, .foot{position:relative; z-index:1;}
   background:var(--panel);
 }
 .strip-l{
-  font-family:var(--font-mono);
+  font-family:var(--font-serif);
   font-size:11.5px;color:var(--ink-3);
   letter-spacing:0.06em;text-transform:uppercase;
   margin:0;
@@ -567,7 +617,7 @@ main, .nav, .foot{position:relative; z-index:1;}
 }
 .showcase-chrome .frame-tab{
   margin-left:14px;
-  font-family:var(--font-mono);
+  font-family:var(--font-serif);
   font-size:11.5px;
   color:var(--ink-3);
   padding:4px 10px;
@@ -578,7 +628,7 @@ main, .nav, .foot{position:relative; z-index:1;}
 .showcase-rec{
   margin-left:auto;
   display:inline-flex;align-items:center;gap:6px;
-  font-family:var(--font-mono);
+  font-family:var(--font-serif);
   font-size:10.5px;
   letter-spacing:0.08em;
   color:oklch(0.5 0.18 25);
@@ -600,7 +650,7 @@ main, .nav, .foot{position:relative; z-index:1;}
 .showcase-cap{
   text-align:center;
   margin:18px 0 0;
-  font-family:var(--font-mono);
+  font-family:var(--font-serif);
   font-size:11.5px;
   color:var(--ink-3);
   letter-spacing:0.04em;
@@ -629,7 +679,7 @@ main, .nav, .foot{position:relative; z-index:1;}
   padding:32px 28px 28px;
 }
 .pillar-num{
-  font-family:var(--font-mono);
+  font-family:var(--font-serif);
   font-size:11.5px;
   color:var(--ink-4);
   letter-spacing:0.06em;
@@ -678,7 +728,7 @@ main, .nav, .foot{position:relative; z-index:1;}
 .check-list strong{color:var(--ink); font-weight:500;}
 .cl-i{
   display:inline-block;
-  font-family:var(--font-mono);
+  font-family:var(--font-serif);
   color:var(--accent);
   margin-right:10px;
 }
@@ -700,14 +750,14 @@ main, .nav, .foot{position:relative; z-index:1;}
   padding:12px 18px;
   border-bottom:1px solid var(--line);
   background:var(--panel);
-  font-family:var(--font-mono); font-size:11.5px;
+  font-family:var(--font-serif); font-size:11.5px;
   color:var(--ink-3); letter-spacing:0.04em;
 }
 .me-status{display:flex;align-items:center;gap:8px;}
 .me-status .presence-pip{width:8px;height:8px;border:0;margin:0;}
 .me-body{padding:32px 36px 36px; min-height:480px; position:relative;}
 .me-tag{
-  font-family:var(--font-mono);
+  font-family:var(--font-serif);
   font-size:11px;color:var(--ink-3);
   letter-spacing:0.06em;
   margin:0 0 8px;
@@ -744,7 +794,7 @@ main, .nav, .foot{position:relative; z-index:1;}
   z-index:5;
 }
 .slash-h{
-  font-family:var(--font-mono); font-size:10.5px;
+  font-family:var(--font-serif); font-size:10.5px;
   color:var(--ink-4); letter-spacing:0.05em;
   text-transform:uppercase;
   padding:6px 10px 4px;
@@ -765,7 +815,7 @@ main, .nav, .foot{position:relative; z-index:1;}
   font-size:13px;
 }
 .slash-n{flex:1;}
-.slash-k{font-family:var(--font-mono); font-size:11px; color:var(--ink-4);}
+.slash-k{font-family:var(--font-serif); font-size:11px; color:var(--ink-4);}
 
 .deep-aside{
   margin-top:18px;
@@ -774,7 +824,7 @@ main, .nav, .foot{position:relative; z-index:1;}
   border-left:2px solid var(--accent);
 }
 .aside-l{
-  font-family:var(--font-mono); font-size:11px;
+  font-family:var(--font-serif); font-size:11px;
   color:var(--accent-ink); letter-spacing:0.05em;
   text-transform:uppercase;
   margin:0; min-width:100px;
@@ -834,7 +884,7 @@ main, .nav, .foot{position:relative; z-index:1;}
   padding:11px 16px;
   background:oklch(0.22 0.01 250);
   border-top:1px solid oklch(0.94 0.005 80 / 0.1);
-  font-family:var(--font-mono);
+  font-family:var(--font-serif);
   font-size:11.5px;
   letter-spacing:0.04em;
   color:oklch(0.78 0.006 80);
@@ -866,12 +916,12 @@ main, .nav, .foot{position:relative; z-index:1;}
   letter-spacing:-0.01em;
 }
 .ws-name{margin:0; font-size:14.5px; font-weight:500;}
-.ws-sub{margin:2px 0 0; font-family:var(--font-mono); font-size:11px; color:var(--ink-3); letter-spacing:0.04em;}
+.ws-sub{margin:2px 0 0; font-family:var(--font-serif); font-size:11px; color:var(--ink-3); letter-spacing:0.04em;}
 .ws-line{margin:0; font-size:13.5px; color:var(--ink-2);}
-.ws-mono{font-family:var(--font-mono); font-size:11px; color:var(--ink-4); letter-spacing:0.04em;}
+.ws-mono{font-family:var(--font-serif); font-size:11px; color:var(--ink-4); letter-spacing:0.04em;}
 .ws-pills{display:flex;gap:6px;}
 .ws-pill{
-  font-family:var(--font-mono); font-size:10.5px;
+  font-family:var(--font-serif); font-size:10.5px;
   letter-spacing:0.06em; text-transform:uppercase;
   color:var(--ink-3);
   padding:3px 8px;
@@ -882,7 +932,7 @@ main, .nav, .foot{position:relative; z-index:1;}
 .ws-presence-row .presence-pip{width:18px;height:18px;border:2px solid var(--bg-elev);}
 .ws-presence-row .presence-pip:first-of-type{margin-left:0;}
 .ws-presence-more{
-  margin-left:6px; font-family:var(--font-mono); font-size:11px; color:var(--ink-3);
+  margin-left:6px; font-family:var(--font-serif); font-size:11px; color:var(--ink-3);
 }
 .ws-card-empty{
   border:1px dashed var(--line-2);
@@ -898,7 +948,7 @@ main, .nav, .foot{position:relative; z-index:1;}
   font-family:var(--font-serif); font-size:24px; color:var(--ink-3);
 }
 .ws-empty-l{margin:0; font-family:var(--font-serif); font-size:15px; color:var(--ink-2);}
-.ws-empty-s{margin:0; font-family:var(--font-mono); font-size:11px; color:var(--ink-4); letter-spacing:0.04em;}
+.ws-empty-s{margin:0; font-family:var(--font-serif); font-size:11px; color:var(--ink-4); letter-spacing:0.04em;}
 
 /* ─────────────── SCHOLARSHIP / DRAWER ─────────────── */
 .scholarship{
@@ -943,7 +993,7 @@ main, .nav, .foot{position:relative; z-index:1;}
   border-bottom:1px solid var(--line);
 }
 .drawer-h-l{margin:0; font-size:13px; font-weight:600; letter-spacing:0.02em;}
-.drawer-h-s{margin:2px 0 0; font-family:var(--font-mono); font-size:10.5px; color:var(--ink-3); letter-spacing:0.04em;}
+.drawer-h-s{margin:2px 0 0; font-family:var(--font-serif); font-size:10.5px; color:var(--ink-3); letter-spacing:0.04em;}
 .drawer-x{
   font-size:20px; color:var(--ink-3); cursor:pointer; line-height:1;
 }
@@ -962,7 +1012,7 @@ main, .nav, .foot{position:relative; z-index:1;}
 }
 .drawer-tab-active{color:var(--ink); border-bottom-color:var(--accent); font-weight:500;}
 .drawer-tab .badge{
-  font-family:var(--font-mono); font-size:10px;
+  font-family:var(--font-serif); font-size:10px;
   background:var(--panel-2); border-radius:99px;
   padding:1px 6px; color:var(--ink-2);
 }
@@ -1008,13 +1058,13 @@ main, .nav, .foot{position:relative; z-index:1;}
 }
 .comm-soon-s{
   margin:0;
-  font-family:var(--font-mono);
+  font-family:var(--font-serif);
   font-size:10.5px;
   letter-spacing:0.06em;
   color:var(--ink-3);
 }
 .hero-meta-soon{
-  font-family:var(--font-mono);
+  font-family:var(--font-serif);
   font-size:10px;
   font-weight:400;
   letter-spacing:0.04em;
@@ -1030,7 +1080,7 @@ main, .nav, .foot{position:relative; z-index:1;}
   color:var(--ink);
 }
 .comm-name{margin:0; font-size:13.5px; font-weight:500;}
-.comm-sub{margin:1px 0 0; font-family:var(--font-mono); font-size:10.5px; color:var(--ink-3); letter-spacing:0.04em;}
+.comm-sub{margin:1px 0 0; font-family:var(--font-serif); font-size:10.5px; color:var(--ink-3); letter-spacing:0.04em;}
 .comm-link{margin-left:auto; color:var(--ink-4); font-size:14px;}
 .comm-p{
   font-family:var(--font-serif);
@@ -1055,7 +1105,7 @@ main, .nav, .foot{position:relative; z-index:1;}
   border-radius:var(--radius-lg);
 }
 .wbw-h{
-  font-family:var(--font-mono); font-size:11px;
+  font-family:var(--font-serif); font-size:11px;
   color:var(--ink-3); letter-spacing:0.06em;
   text-transform:uppercase;
   margin:0 0 14px;
@@ -1083,7 +1133,7 @@ main, .nav, .foot{position:relative; z-index:1;}
 }
 .wbw-ar.root{font-size:18px; letter-spacing:0.08em;}
 .wbw-tr{
-  font-family:var(--font-mono); font-size:11px;
+  font-family:var(--font-serif); font-size:11px;
   color:var(--ink-3); letter-spacing:0.04em;
   margin:0;
 }
@@ -1092,7 +1142,7 @@ main, .nav, .foot{position:relative; z-index:1;}
   color:var(--ink); margin:0;
 }
 .wbw-pos{
-  font-family:var(--font-mono); font-size:10px;
+  font-family:var(--font-serif); font-size:10px;
   color:var(--ink-4); letter-spacing:0.06em;
   text-transform:uppercase; margin:0;
 }
@@ -1127,7 +1177,7 @@ main, .nav, .foot{position:relative; z-index:1;}
   margin:0 0 14px;
 }
 .quote-cite{
-  font-family:var(--font-mono);
+  font-family:var(--font-serif);
   font-size:11.5px;
   color:var(--ink-3);
   letter-spacing:0.06em;
@@ -1158,7 +1208,7 @@ main, .nav, .foot{position:relative; z-index:1;}
 .price-foot{
   text-align:center;
   margin:28px 0 0;
-  font-family:var(--font-mono);
+  font-family:var(--font-serif);
   font-size:11.5px;
   color:var(--ink-3);
   letter-spacing:0.04em;
@@ -1188,7 +1238,7 @@ main, .nav, .foot{position:relative; z-index:1;}
 .price-feat .btn-ghost{border-color:oklch(0.94 0.005 80 / 0.2); color:oklch(0.96 0.003 80);}
 .price-tag{
   position:absolute;top:-12px;left:50%;transform:translateX(-50%);
-  font-family:var(--font-mono); font-size:10.5px;
+  font-family:var(--font-serif); font-size:10.5px;
   background:oklch(0.78 0.1 160); color:oklch(0.18 0.01 250);
   padding:4px 10px; border-radius:99px;
   letter-spacing:0.06em; text-transform:uppercase;
@@ -1196,7 +1246,7 @@ main, .nav, .foot{position:relative; z-index:1;}
 }
 .price-name{
   margin:0;
-  font-family:var(--font-mono); font-size:11.5px;
+  font-family:var(--font-serif); font-size:11.5px;
   letter-spacing:0.06em; text-transform:uppercase;
   color:var(--ink-3);
 }
@@ -1208,7 +1258,7 @@ main, .nav, .foot{position:relative; z-index:1;}
   color:var(--ink);
 }
 .price-per{
-  font-family:var(--font-mono); font-size:12px;
+  font-family:var(--font-serif); font-size:12px;
   color:var(--ink-3); letter-spacing:0.02em;
 }
 .price-list{
@@ -1251,7 +1301,7 @@ main, .nav, .foot{position:relative; z-index:1;}
 .faq-i summary::-webkit-details-marker{display:none;}
 .faq-i summary::after{
   content:"+";
-  font-family:var(--font-mono);
+  font-family:var(--font-serif);
   color:var(--ink-3); font-size:18px;
   transition:transform .15s;
 }
@@ -1291,7 +1341,7 @@ main, .nav, .foot{position:relative; z-index:1;}
   max-width:32ch; margin:14px 0 10px;
 }
 .foot-built{
-  font-family:var(--font-mono); font-size:11px;
+  font-family:var(--font-serif); font-size:11px;
   color:var(--ink-4); letter-spacing:0.04em;
   margin:0;
 }
@@ -1300,7 +1350,7 @@ main, .nav, .foot{position:relative; z-index:1;}
 }
 @media (max-width:580px){.foot-cols{grid-template-columns:repeat(2, 1fr);}}
 .foot-col-h{
-  font-family:var(--font-mono); font-size:10.5px;
+  font-family:var(--font-serif); font-size:10.5px;
   letter-spacing:0.08em; text-transform:uppercase;
   color:var(--ink-3); margin:0 0 12px;
 }
@@ -1316,7 +1366,7 @@ main, .nav, .foot{position:relative; z-index:1;}
   display:flex;justify-content:space-between;gap:18px;flex-wrap:wrap;
   font-size:12.5px;color:var(--ink-3);
 }
-.foot-mono{font-family:var(--font-mono); font-size:11px; letter-spacing:0.04em;}
+.foot-mono{font-family:var(--font-serif); font-size:11px; letter-spacing:0.04em;}
 
 /* ─────────────── REVEAL ─────────────── */
 .reveal{opacity:0; transform:translateY(18px); transition:opacity .7s, transform .7s;}
@@ -1605,12 +1655,12 @@ html{scroll-behavior:smooth;}
   border-bottom:1px solid var(--line);
 }
 .dl-l{
-  font-family:var(--font-mono); font-size:9.5px;
+  font-family:var(--font-serif); font-size:9.5px;
   letter-spacing:0.07em; text-transform:uppercase;
   color:var(--ink-4); margin-right:4px;
 }
 .dl-chip{
-  font-family:var(--font-mono); font-size:10.5px;
+  font-family:var(--font-serif); font-size:10.5px;
   letter-spacing:0.03em;
   padding:3px 10px;
   border:1px solid var(--line-2);
@@ -1626,7 +1676,7 @@ html{scroll-behavior:smooth;}
 .comm-avatar-2{background:oklch(0.62 0.11 70 / 0.16) !important; color:oklch(0.45 0.09 70) !important;}
 .comm-lang{
   margin-left:auto;
-  font-family:var(--font-mono); font-size:9.5px; font-weight:600;
+  font-family:var(--font-serif); font-size:9.5px; font-weight:600;
   letter-spacing:0.06em;
   color:oklch(0.45 0.09 70);
   background:oklch(0.62 0.11 70 / 0.14);
@@ -1683,7 +1733,7 @@ html{scroll-behavior:smooth;}
 }
 .lw-sub{
   margin:0;
-  font-family:var(--font-mono);
+  font-family:var(--font-serif);
   font-size:11px; letter-spacing:0.05em; text-transform:uppercase;
   color:var(--ink-3);
 }
@@ -1706,7 +1756,7 @@ html{scroll-behavior:smooth;}
 }
 .lw-lang{
   font-style:normal;
-  font-family:var(--font-mono);
+  font-family:var(--font-serif);
   font-size:8.5px; font-weight:600;
   letter-spacing:0.06em;
   padding:2px 5px;

@@ -4,14 +4,14 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Tafsir Lab — Collaborative Qurʾān study</title>
-<meta name="description" content="Tafsir Lab is a study desk for the Qurʾān — annotate the Mushaf with real ink, write tafsir alongside 67 classical sources, and study alone or with a circle. Free to join the waitlist." />
+<meta name="description" content="Tafsir Lab is a desk for reflecting on the Qurʾān — annotate the Mushaf in real ink, write your tafsīr beside 67 classical sources, and study alone or with your halaqa. Free." />
 <link rel="canonical" href="https://tafsir-lab.com/" />
 
 <!-- Open Graph (Facebook, WhatsApp, LinkedIn, iMessage…) -->
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="Tafsir Lab" />
 <meta property="og:title" content="Tafsir Lab — Collaborative Qurʾān study" />
-<meta property="og:description" content="A study desk for the Qurʾān — Mushaf, notes, ink and classical tafsīr in one workspace." />
+<meta property="og:description" content="A desk for reflecting on the Qurʾān — the Mushaf, your own ink, and sixty-seven classical tafāsīr in one workspace." />
 <meta property="og:url" content="https://tafsir-lab.com/" />
 <meta property="og:image" content="https://tafsir-lab.com/og-image.png" />
 <meta property="og:image:width" content="1200" />
@@ -46,7 +46,13 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Serif:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500;600&family=Amiri+Quran&family=Scheherazade+New:wght@400;700&family=Caveat:wght@400;600&display=swap" rel="stylesheet">
+<!-- Newsreader carries the whole page: an editorial serif with optical sizing,
+     so a 76px headline and a 17px paragraph are drawn differently rather than
+     scaled from one master. Its italic is a true italic, which is what lets
+     transliteration sit inside a sentence without shouting. IBM Plex — the
+     previous stack — is the single most over-used face on generated landing
+     pages, and the mono labels that came with it were the loudest tell. -->
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,300;1,6..72,400;1,6..72,500&family=Amiri+Quran&family=Scheherazade+New:wght@400;700&family=Caveat:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="site.css">
 </head>
 <body>
@@ -62,7 +68,7 @@
     <a href="#editor">Editor</a>
     <a href="#mushaf">Mushaf</a>
     <a href="#workspaces">Workspaces</a>
-    <a href="#scholarship">Mufasir</a>
+    <a href="#scholarship">Commentary</a>
     <a href="#pricing">Pricing</a>
   </nav>
   <div class="nav-cta">
@@ -80,14 +86,15 @@
     <div class="hero-copy">
       <p class="eyebrow"><span class="dot"></span> v0.4 — Public beta · ٢٠٢٦</p>
       <h1 class="display">
-        A study desk
-        <span class="display-em">for the Qurʾān,</span>
-        rebuilt for the way mufasir actually happens.
+        The Book was sent down
+        <span class="display-em">to be reflected upon.</span>
+        This is a desk for that work.
       </h1>
       <p class="lede">
-        Write tafsir in real time. Annotate the Mushaf with ink that persists.
-        Pull classical commentary into the margin of any verse. Do it alone, or
-        do it with your circle.
+        Sit with an āyah as long as it takes. Write down what you find in it,
+        mark the Mushaf in ink that stays put, and open sixty-seven classical
+        commentaries in the margin when you want to know how the scholars read
+        it — on your own, or with your halaqa.
       </p>
       <div class="hero-cta">
         <a href="#" class="btn btn-primary btn-lg js-beta-gate">Start a workspace</a>
@@ -204,8 +211,8 @@
 <!-- ─────────────── VIDEO SHOWCASE ─────────────── -->
 <section class="showcase" id="watch">
   <div class="section-head section-head-c">
-    <p class="eyebrow">— The trailer · 72 seconds</p>
-    <h2 class="h2">Every feature, in motion.</h2>
+    <p class="eyebrow">A short tour</p>
+    <h2 class="h2">Seventy-two seconds of someone actually using it.</h2>
     <p class="lede">Editor, scholar shortcuts, the 67-tafsīr library, ink on the Mushaf, live multiplayer, and workspaces — one continuous tour.</p>
   </div>
 
@@ -234,8 +241,8 @@
 <!-- ─────────────── PILLARS ─────────────── -->
 <section class="pillars">
   <div class="section-head">
-    <p class="eyebrow">— What it does</p>
-    <h2 class="h2">Three primitives. One discipline.</h2>
+    <p class="eyebrow">What you get</p>
+    <h2 class="h2">Three surfaces, and none of them make you leave the page.</h2>
   </div>
   <div class="pillars-grid">
     <article class="pillar">
@@ -262,8 +269,8 @@
 <!-- ─────────────── EDITOR DEEP-DIVE ─────────────── -->
 <section class="deep" id="editor">
   <div class="deep-copy">
-    <p class="eyebrow">— 01 The Editor</p>
-    <h2 class="h2">Write tafsir the way you’d write it<br>on paper. With four hands.</h2>
+    <p class="eyebrow">The editor</p>
+    <h2 class="h2">Writing should still feel like writing, even when four people are doing it at once.</h2>
     <p class="lede">
       A blocks editor where verses are first-class objects. Type <span class="kbd">/</span> to insert
       a verse, a callout, a translation pair, or a Mushaf clip. Mention any āyah with <span class="kbd">@</span> and
@@ -332,7 +339,7 @@
   </div>
 
   <div class="deep-copy">
-    <p class="eyebrow on-dark">— 02 The Mushaf</p>
+    <p class="eyebrow on-dark">The Mushaf</p>
     <h2 class="h2 on-dark">Ink that doesn’t<br>belong to the device.</h2>
     <p class="lede on-dark">
       The full Madinah Mushaf, page-faithful and zoomable. Annotate with pressure-sensitive
@@ -351,8 +358,8 @@
 <!-- ─────────────── WORKSPACES ─────────────── -->
 <section class="deep" id="workspaces">
   <div class="deep-copy">
-    <p class="eyebrow">— 03 Workspaces</p>
-    <h2 class="h2">Private notebooks. Shared halaqas. Public archives.</h2>
+    <p class="eyebrow">Workspaces</p>
+    <h2 class="h2">A workspace can be yours alone, or it can belong to your whole halaqa.</h2>
     <p class="lede">
       Every workspace is a folder of surahs, pages, and notes — owned by one person, by a
       class, or by a community. Invite by link, by domain, or keep a workspace strictly
@@ -431,8 +438,8 @@
 <!-- ─────────────── STUDY MODES ─────────────── -->
 <section class="pillars" id="modes">
   <div class="section-head">
-    <p class="eyebrow">— New · How you open a workspace</p>
-    <h2 class="h2">Three ways to study.</h2>
+    <p class="eyebrow">New — how a workspace opens</p>
+    <h2 class="h2">Begin at the Mushaf, at a blank board, or inside a book.</h2>
   </div>
   <div class="pillars-grid">
     <article class="pillar">
@@ -469,8 +476,8 @@
 <!-- ─────────────── SCHOLARSHIP / DRAWER ─────────────── -->
 <section class="scholarship" id="scholarship">
   <div class="section-head section-head-c">
-    <p class="eyebrow">— 04 Mufasir in the margin</p>
-    <h2 class="h2">Sixty-seven tafāsīr.<br>One keystroke away.</h2>
+    <p class="eyebrow">The margin</p>
+    <h2 class="h2">Sixty-seven commentaries, and not one of them further than a keystroke from the āyah.</h2>
     <p class="lede">
       Open the drawer on any verse and read al-Ṭabarī, al-Qurṭubī, al-Rāzī, Ibn Kathīr,
       al-Saʿdī, al-Baghawī, the Jalālayn — 12 English and 55 Arabic tafāsīr, every one
@@ -658,9 +665,9 @@
 <!-- ─────────────── PRICING ─────────────── -->
 <section class="pricing" id="pricing">
   <div class="section-head">
-    <p class="eyebrow">— What it costs</p>
-    <h2 class="h2">Free forever. For everyone.</h2>
-    <p class="lede">If you’re studying the Qurʾān, you shouldn’t pay for the page. Tafsir Lab is free, with everything unlocked — for solo readers, halaqas, and classrooms alike.</p>
+    <p class="eyebrow">What it costs</p>
+    <h2 class="h2">It costs nothing, and it is going to stay that way.</h2>
+    <p class="lede">Nobody should have to pay to sit with the Qurʾān. Everything is unlocked for everyone — whether you read on your own, run a weekly halaqa, or teach a class of eighty.</p>
   </div>
 
   <div class="price-grid price-grid-2">
@@ -701,8 +708,8 @@
 <!-- ─────────────── FAQ ─────────────── -->
 <section class="faq">
   <div class="section-head">
-    <p class="eyebrow">— Honest questions</p>
-    <h2 class="h2">A few things people ask.</h2>
+    <p class="eyebrow">Questions</p>
+    <h2 class="h2">The things people actually ask us.</h2>
   </div>
   <div class="faq-grid">
     <details class="faq-i" open>
@@ -727,8 +734,8 @@
 <!-- ─────────────── FINAL CTA ─────────────── -->
 <section class="final-cta">
   <p class="quote-ar small">بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ</p>
-  <h2 class="h1">Open the lab.<br><span class="h1-em">Begin the work.</span></h2>
-  <p class="lede center">A workspace takes ten seconds to make. Bring a friend, or a class, or no one.</p>
+  <h2 class="h1">Somewhere to put<br><span class="h1-em">what you notice.</span></h2>
+  <p class="lede center">A workspace takes about ten seconds to make. Bring a friend, bring a class, or bring nobody at all.</p>
   <div class="hero-cta center">
     <a href="#" class="btn btn-primary btn-lg js-beta-gate">Create a workspace</a>
     <a href="#" class="btn btn-ghost btn-lg">Read the docs</a>
