@@ -303,7 +303,25 @@ export default function PageEditor({
     const ydoc = new Y.Doc();
     collabRef.current = {
       ydoc,
-      provider: new YPartyKitProvider(PARTYKIT_HOST, pageId, ydoc, { connect: true }),
+      provider: new YPartyKitProvider(PARTYKIT_HOST, pageId, ydoc, {
+        connect: true,
+        /* The realtime server rejects any socket without a valid, page-scoped
+           token (party/index.ts onBeforeConnect). params is called on every
+           (re)connect, so we mint a fresh 2-minute token each time from the
+           membership-gated endpoint. Same-origin fetch carries the session
+           cookie. On failure we send an empty token, which the server denies —
+           correct: no membership, no realtime. */
+        params: async () => {
+          try {
+            const r = await fetch(`/api/pages/${pageId}/collab-token`, { credentials: "include" });
+            if (!r.ok) return { token: "" };
+            const { token } = await r.json() as { token?: string };
+            return { token: token ?? "" };
+          } catch {
+            return { token: "" };
+          }
+        },
+      }),
     };
   }
   const { ydoc, provider } = collabRef.current;

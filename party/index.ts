@@ -19,6 +19,7 @@
 
 import type * as Party from "partykit/server";
 import { onConnect, type YPartyKitOptions } from "y-partykit";
+import { jwtVerify } from "jose";
 
 // ── Types shared with the client ──────────────────────────────────────────────
 
@@ -50,6 +51,40 @@ const YJS_OPTIONS: YPartyKitOptions = {
 };
 
 export default class TafsirRoom implements Party.Server {
+  /**
+   * Connection gate. Runs before the socket upgrades, so an unauthorised peer
+   * never reaches onConnect and never joins the Yjs document.
+   *
+   * The client attaches a `?token=` minted by /api/pages/[pageId]/collab-token,
+   * which only issues one after a workspace-membership check. Here we verify
+   * that token and confirm it was minted for THIS room (pageId), so a token for
+   * one page cannot be replayed against another.
+   *
+   * Fails CLOSED: if the shared secret is not configured in the party
+   * environment, or the token is missing/invalid/expired/for another room,
+   * the connection is rejected. This is deliberate — a misconfigured secret
+   * should deny access, not silently fall back to the old open behaviour.
+   * Deploy order therefore matters: set COLLAB_SECRET in the party env BEFORE
+   * deploying this, and ship the token-sending client first.
+   */
+  static async onBeforeConnect(req: Party.Request, lobby: Party.Lobby): Promise<Party.Request | Response> {
+    const deny = (why: string) => new Response(why, { status: 401 });
+
+    const raw = lobby.env.COLLAB_SECRET ?? lobby.env.SESSION_SECRET;
+    if (typeof raw !== "string" || !raw) return deny("collab secret not configured");
+
+    const token = new URL(req.url).searchParams.get("token");
+    if (!token) return deny("missing token");
+
+    try {
+      const { payload } = await jwtVerify(token, new TextEncoder().encode(raw));
+      if (payload.room !== lobby.id) return deny("token is for a different page");
+    } catch {
+      return deny("invalid or expired token");
+    }
+    return req;
+  }
+
   /** Live presence per app-connection id */
   private presence = new Map<string, PresenceData>();
   /** Connection ids that have sent JSON — i.e. app sockets, not Yjs providers */

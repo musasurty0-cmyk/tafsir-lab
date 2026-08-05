@@ -47,6 +47,20 @@ export function useRoom(pageId: string): Room {
       host:  PARTYKIT_HOST,
       room:  pageId,
       party: "main",
+      /* Same gate as the Yjs provider: the party rejects any socket without a
+         valid page-scoped token. `query` is re-evaluated on every reconnect,
+         so each carries a fresh 2-minute token from the membership-gated
+         endpoint. */
+      query: async () => {
+        try {
+          const r = await fetch(`/api/pages/${pageId}/collab-token`, { credentials: "include" });
+          if (!r.ok) return { token: "" };
+          const { token } = await r.json() as { token?: string };
+          return { token: token ?? "" };
+        } catch {
+          return { token: "" };
+        }
+      },
     });
 
     socketRef.current = s;
