@@ -4,6 +4,12 @@ import {
   useCurrentFrame, interpolate,
 } from "remotion";
 import { R } from "../reelTokens";
+/* The measured curves live in one place — the trailer opens with this same
+   animation, and a second copy of a tracked table is a copy that quietly
+   stops matching. See searchCurves.ts and MOTION-STUDY.md §9. */
+import {
+  clamp, easeIO, springy, track, PS, PV, buildArc, XS, XV_SRC,
+} from "./searchCurves";
 
 /* ── Search, then the panels ───────────────────────────────────────────────
    Landscape, like the source.
@@ -25,81 +31,8 @@ import { R } from "../reelTokens";
 export const SEARCH_FRAMES = 900;   // 15.0s @ 60fps
 const W = 1920, H = 1080;
 
-const clamp = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
 const ease = (t: number) => 1 - Math.pow(1 - Math.max(0, Math.min(1, t)), 3);
-const easeIO = (t: number) => {
-  const x = Math.max(0, Math.min(1, t));
-  return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
-};
-/** Overshoots and settles — the elastic accel/decel a layout change needs so
- *  it reads as physics rather than as a value being set. */
-const springy = (t: number, k = 1.25) => {
-  const x = Math.max(0, Math.min(1, t));
-  return 1 + (k + 1) * Math.pow(x - 1, 3) + k * Math.pow(x - 1, 2);
-};
-/**
- * How the address arrives, measured off the source's text width per frame.
- *
- * I had this as a linear ramp with sine wobble on it, on the theory that a
- * hand types unevenly. The source does not type. Tracking the ink width
- * across its reveal gives a clean S — 7, 8, 12, 15, 20, 27, 40, 46, 41, 36,
- * 24, 9px a frame — accelerating into a peak and tapering out, with over half
- * the string landing in a third of the time. The whole 26 characters go down
- * in 18 frames, 0.6s, which is far too fast to read as typing.
- *
- * That is what makes it look painted rather than typed, which is the note I
- * was given and could not previously act on: it is not a texture applied to
- * typing, it is a different curve.
- */
-const PS = [0, 0.11, 0.21, 0.32, 0.42, 0.53, 0.63, 0.74, 0.84, 1];
-const PV = [0, 0.042, 0.102, 0.208, 0.410, 0.672, 0.852, 0.931, 0.952, 1];
 
-/**
- * Keyframes with continuous velocity — monotone cubic Hermite, Fritsch–Carlson.
- *
- * Interpolating straight through a set of stops is piecewise LINEAR, so speed
- * is constant inside each segment and STEPS at every stop. Measured on the old
- * mark that step reached 11.7px/frame — it reversed direction between two
- * frames with no deceleration at all. The eye reads a velocity step as a
- * dropped frame, which is the whole of why this looked like stop motion.
- *
- * This is C1: velocity carries through every stop, and at a direction reversal
- * the tangent goes to zero, so an apex decelerates into itself and accelerates
- * out like a thrown object. The limiter also stops the spline bulging past a
- * flat run, which means an overshoot has to be an explicit keyframe rather
- * than an accident of the curve.
- */
-const track = (p: number, S: number[], V: number[]) => {
-  const n = S.length;
-  if (p <= S[0]) return V[0];
-  if (p >= S[n - 1]) return V[n - 1];
-
-  const h: number[] = [], d: number[] = [];
-  for (let i = 0; i < n - 1; i++) {
-    h[i] = S[i + 1] - S[i];
-    d[i] = (V[i + 1] - V[i]) / h[i];
-  }
-  const m: number[] = [d[0]];
-  for (let i = 1; i < n - 1; i++) {
-    /* A reversal is an apex: stop there, then accelerate the other way. */
-    m[i] = d[i - 1] * d[i] <= 0 ? 0
-      : (d[i - 1] * h[i] + d[i] * h[i - 1]) / (h[i - 1] + h[i]);
-  }
-  m[n - 1] = d[n - 2];
-  for (let i = 0; i < n - 1; i++) {
-    if (d[i] === 0) { m[i] = 0; m[i + 1] = 0; continue; }
-    const a = m[i] / d[i], b = m[i + 1] / d[i], s = a * a + b * b;
-    if (s > 9) {
-      const k = 3 / Math.sqrt(s);
-      m[i] = k * a * d[i]; m[i + 1] = k * b * d[i];
-    }
-  }
-  let i = 0;
-  while (i < n - 2 && p > S[i + 1]) i++;
-  const t = (p - S[i]) / h[i], t2 = t * t, t3 = t2 * t;
-  return (2 * t3 - 3 * t2 + 1) * V[i] + (t3 - 2 * t2 + t) * h[i] * m[i]
-       + (-2 * t3 + 3 * t2) * V[i + 1] + (t3 - t2) * h[i] * m[i + 1];
-};
 
 const URL = "tafsir-lab.com";
 
@@ -187,56 +120,10 @@ const geom = (f: number) => {
    edge is pinned to the field's text origin, so the mark rides the field's
    growth for free and ends precisely where the caret belongs. */
 
-/**
- * The mark's arc, measured off the reference frame by frame.
- *
- * Not approximated — tracked. Each row is [ref frame, centre-y, width, height]
- * of the black blob in the source's own 1280x714 / 29.97fps space, found by
- * thresholding and taking the largest connected component.
- *
- * What the numbers say, and what no amount of eyeballing gave me: the arc is
- * badly ASYMMETRIC. The rule sits still, then the gather and the launch are
- * one move — it slingshots, hitting 43.5px/frame upward at f22. It then decays
- * to the apex roughly halving each frame, which is damping, not gravity. It
- * HANGS: nine frames, 300ms, within 3px of the top. Then it falls on an
- * ease-in that builds to 28px/frame. Rise and fall are different curves, and
- * the hang between them is the whole character of the thing.
- */
-const REF: [number, number, number, number][] = [
-  [1, 421.5, 94, 4], [2, 421.5, 126, 6], [3, 422, 150, 7], [4, 422, 168, 7],
-  [5, 422, 183, 7], [6, 422, 193, 7], [7, 421.5, 201, 8], [8, 421, 201, 7],
-  [9, 420.5, 200, 8], [10, 419.5, 199, 8], [11, 418.5, 195, 8], [12, 417, 191, 9],
-  [13, 415.5, 184, 10], [14, 414, 174, 11], [15, 411, 159, 13], [16, 407.5, 133, 14],
-  [17, 403.5, 103, 18], [18, 398.5, 80, 20], [19, 391, 64, 21], [20, 378.5, 54, 24],
-  [21, 358, 45, 23], [22, 314.5, 39, 20], [23, 294.5, 36, 22], [24, 284.5, 32, 24],
-  [25, 278.5, 30, 24], [26, 274, 28, 25], [27, 270.5, 27, 24], [28, 268.5, 26, 24],
-  [29, 266.5, 25, 24], [30, 265, 24, 25], [31, 264, 24, 25], [32, 263, 25, 25],
-  [33, 262.5, 24, 24], [34, 262, 24, 25], [35, 261.5, 24, 24], [36, 261.5, 25, 24],
-  [37, 262, 24, 25], [38, 262.5, 24, 24], [39, 263.5, 24, 24], [40, 265, 25, 25],
-  [41, 267, 24, 25], [42, 269, 24, 25], [43, 272, 24, 25], [44, 275, 24, 25],
-  [45, 279, 24, 25], [46, 284, 24, 25], [47, 291, 24, 25], [48, 299, 24, 25],
-  [49, 309.5, 22, 26], [50, 324.5, 22, 26], [51, 344, 20, 27], [52, 372, 11, 25],
-];
 
-/* The source's bar line, and the scale onto ours. 1280 -> 1920 is exactly 1.5;
-   714 -> 1080 is 1.512. Time is 29.97 -> 60, so almost exactly double. */
-const REF_BAR_Y = 372, SX = 1.5, SY = 1.512;
 
-const build = () => {
-  const n = REF.length, span = REF[n - 1][0] - REF[0][0];
-  const S: number[] = [], Y: number[] = [], Wd: number[] = [], Hd: number[] = [];
-  for (let i = 0; i < n; i++) {
-    S.push((REF[i][0] - REF[0][0]) / span);
-    Y.push((REF[i][1] - REF_BAR_Y) * SY);
-    /* w and h get a 3-tap smooth: at 43px/frame the blob smears, so single
-       frames around the launch measure a shape the mark never actually is. */
-    const a = REF[Math.max(0, i - 1)], b = REF[i], c = REF[Math.min(n - 1, i + 1)];
-    Wd.push(((a[2] + 2 * b[2] + c[2]) / 4) * SX);
-    Hd.push(((a[3] + 2 * b[3] + c[3]) / 4) * SY);
-  }
-  return { S, Y, Wd, Hd };
-};
-const M = build();
+/* 1920/1280 = 1.5 horizontally, 1080/714 = 1.512 vertically. */
+const M = buildArc(1.5, 1.512);
 
 /**
  * The rule does not simply grow in place — it sweeps in from the right, and
@@ -258,8 +145,7 @@ const M = build();
  * through its most visible moment, so it settles dead-centre just before, and
  * the sweep is done by then rather than still finishing under it.
  */
-const XS = [0, 0.035, 0.07, 0.115, 1];
-const XV = [190, 92, 28, 0, 0];
+const XV = XV_SRC.map((v) => v * 1.5);
 
 const Mark: React.FC<{ f: number }> = ({ f }) => {
   if (f < T.markFrom || f >= CARET_AT) return null;
