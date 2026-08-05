@@ -6,22 +6,23 @@ import {
 import { R } from "../reelTokens";
 
 /* ── Search, then the panels ───────────────────────────────────────────────
-   Rebuilt from the reference frame by frame.
+   Landscape, like the source.
 
-   Three things the first attempt got wrong, all of them in the detail:
+   There is only ever ONE small black object on screen. It draws as a rule
+   under the field, gathers into a dot, falls in, and stands up as the caret —
+   every property runs on a single continuous curve so there is never a frame
+   with a rule and a dot at once, and never a jump between states. There is no
+   loading bar; a second line would break the same rule.
 
-     · The dot is not a pointer. It is ONE object changing state — a short
-       rule, which contracts to a dot, which drops into the field and becomes
-       the caret. Nothing arrives and nothing leaves.
-     · The address is PAINTED, not typed. It resolves as a whole out of a
-       blur behind a wipe, rather than appearing a character at a time.
-     · The panels do not line up and slide. Each lands ON TOP of the last,
-       overlapping it, and the one behind falls out of focus. The group eases
-       left only enough to keep the newest one near the middle.
+   When the address is finished the bar does not fade. The two side buttons are
+   drawn into the field and the field itself grows into the first panel, in
+   half a second.
 
-   Landscape, like the source.                                              */
+   Panels land ON TOP of each other, overlapping. The ones behind stay fully
+   visible — the blur is there to move attention forward, not to hide them.
+   At the end all three converge on one rect and become the mark.            */
 
-export const SEARCH_FRAMES = 800;   // 13.3s @ 60fps
+export const SEARCH_FRAMES = 900;   // 15.0s @ 60fps
 const W = 1920, H = 1080;
 
 const clamp = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
@@ -34,150 +35,158 @@ const easeIO = (t: number) => {
 const URL = "tafsir-lab.com";
 
 const T = {
-  sharp: 30,            // the push-in resolves
-  load: 44,             // the page's loading bar runs
-  ruleIn: 92,           // a short rule appears above the field
-  toDot: 116,           // it contracts to a dot
-  drop: 140,            // the dot falls into the field
-  caret: 168,           // and becomes the caret; the field empties
-  paint: 186,           // the address is painted in
-  paintFor: 34,
-  collapse: 268,        // the bar folds down into the first panel
+  sharp: 26,
+  /** The mark's whole life, as one span. */
+  markFrom: 54, markFor: 132,
+  paint: 190, paintFor: 32,
+  /** Icons in, field to panel — half a second. */
+  collapse: 266, collapseFor: 30,
 
-  card1: 292,
-  card2: 452,
-  card3: 612,
+  card1: 296,
+  card2: 456,
+  card3: 616,
+  converge: 784, convergeFor: 46,
 } as const;
 
-/** Square, all three the same, a little over a quarter of the frame wide. */
 const CARD = 560;
-/** How far right of the last one a new panel lands — under one card width, so
- *  they overlap rather than sitting in a row. */
 const STEP = CARD * 0.62;
-const CARD_CY = 560;
+const CARD_CY = 552;
+/** Where the field is, and therefore where the first panel opens. */
+const BAR_CY = H / 2;
+const PILL_W = 640, PILL_H = 96;
 
-/* ── The browser bar ──────────────────────────────────────────────────────*/
+/* ── The one moving object ────────────────────────────────────────────────
+   Rule → dot → caret. Every property is interpolated across the SAME set of
+   stops, which is what makes it continuous: there is no second element to
+   hand over to, and no gap for a frame to fall into. */
+
+const Mark: React.FC<{ f: number }> = ({ f }) => {
+  const p = (f - T.markFrom) / T.markFor;
+  if (p < 0 || p > 1.04) return null;
+
+  const S = [0, 0.30, 0.50, 0.74, 1];
+  const w = interpolate(p, S, [0, 132, 20, 20, 4], clamp);
+  const h = interpolate(p, S, [8, 8, 20, 20, 46], clamp);
+  const r = interpolate(p, S, [4, 4, 10, 10, 2], clamp);
+  /* Under the field, then up, then down into it, then home to the left. */
+  const y = interpolate(p, S,
+    [BAR_CY + PILL_H / 2 + 26, BAR_CY + PILL_H / 2 + 26, BAR_CY - 128, BAR_CY, BAR_CY], clamp);
+  const x = interpolate(p, S, [W / 2, W / 2, W / 2, W / 2, W / 2 - PILL_W / 2 + 42], clamp);
+
+  return (
+    <div style={{
+      position: "absolute", left: x - w / 2, top: y - h / 2,
+      width: w, height: h, borderRadius: r, background: "#111114",
+      zIndex: 40,
+    }} />
+  );
+};
+
+/* ── Glass ────────────────────────────────────────────────────────────────*/
+
+const glass: React.CSSProperties = {
+  background: "linear-gradient(180deg, rgba(255,255,255,0.96), rgba(246,247,251,0.86))",
+  backdropFilter: "blur(26px)",
+  WebkitBackdropFilter: "blur(26px)",
+  border: "1px solid rgba(255,255,255,0.92)",
+  boxShadow:
+    "0 14px 40px rgba(28,36,64,0.13), 0 3px 10px rgba(28,36,64,0.07), " +
+    "0 0 0 1px rgba(28,36,64,0.045), " +
+    "inset 0 1.5px 0 rgba(255,255,255,1), inset 0 -1px 0 rgba(255,255,255,0.6)",
+};
 
 const ic = { fill: "none", stroke: "#3c3c43", strokeWidth: 2.1,
              strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
 
-const Bar: React.FC<{ f: number }> = ({ f }) => {
-  const push = interpolate(f, [0, T.sharp + 10], [0.86, 1], clamp);
-  const soft = interpolate(f, [0, T.sharp], [14, 0], clamp);
+const Round: React.FC<{ children: React.ReactNode; style?: React.CSSProperties }> =
+({ children, style }) => (
+  <div style={{
+    width: 78, height: 78, borderRadius: 39, ...glass,
+    display: "grid", placeItems: "center", flexShrink: 0, ...style,
+  }}>{children}</div>
+);
 
-  /* The bar does not fade — it folds down into where the first panel opens. */
-  const c = ease((f - T.collapse) / 26);
+const Bar: React.FC<{ f: number }> = ({ f }) => {
+  const push = interpolate(f, [0, T.sharp + 12], [0.88, 1], clamp);
+  const soft = interpolate(f, [0, T.sharp], [13, 0], clamp);
+
+  /* The collapse: side buttons drawn in, field grown into the panel. */
+  const c = easeIO((f - T.collapse) / T.collapseFor);
   if (c >= 1) return null;
 
-  const focused = f >= T.caret;
-  const load = interpolate(f, [T.load, T.load + 34], [0, 1], clamp);
-  const settled = interpolate(f, [T.load + 38, T.load + 58], [0, 1], clamp);
-
-  /* Painted: a wipe uncovers the word while its own blur resolves, so it
-     arrives as a whole rather than a letter at a time. */
+  const focused = f >= T.markFrom + T.markFor * 0.82;
   const paint = interpolate(f, [T.paint, T.paint + T.paintFor], [0, 1], clamp);
-  const paintBlur = interpolate(f, [T.paint, T.paint + T.paintFor * 0.8], [9, 0], clamp);
+  const paintBlur = interpolate(f, [T.paint, T.paint + T.paintFor * 0.75], [10, 0], clamp);
 
-  const barY = interpolate(c, [0, 1], [H / 2 - 46, CARD_CY - 30]);
-  const scale = push * interpolate(c, [0, 1], [1, 0.34]);
+  const pw = interpolate(c, [0, 1], [PILL_W, CARD]);
+  const ph = interpolate(c, [0, 1], [PILL_H, CARD]);
+  const pr = interpolate(c, [0, 1], [PILL_H / 2, 24]);
+  const cy = interpolate(c, [0, 1], [BAR_CY, CARD_CY]);
+  /* The first panel opens where the field was, so the side buttons travel
+     inward into it rather than simply switching off. */
+  const side = interpolate(c, [0, 1], [0, 150]);
 
   return (
     <div style={{
-      position: "absolute", left: 0, right: 0, top: barY,
-      display: "flex", flexDirection: "column", alignItems: "center",
-      filter: `blur(${soft + c * 22}px)`,
-      opacity: 1 - c * 0.9,
-      transform: `scale(${scale})`, transformOrigin: "50% 0%",
+      position: "absolute", left: 0, right: 0, top: cy,
+      display: "flex", alignItems: "center", justifyContent: "center", gap: 22,
+      transform: `translateY(-50%) scale(${push})`,
+      filter: soft > 0.1 ? `blur(${soft}px)` : undefined,
+      zIndex: 30,
     }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 26 }}>
-        <svg width="34" height="34" viewBox="0 0 24 24" {...ic}><path d="M15 5l-7 7 7 7" /></svg>
-        <svg width="34" height="34" viewBox="0 0 24 24" {...ic}
-          style={{ opacity: focused ? 0 : 1 }}>
-          <path d="M4 7h16M4 12h11M4 17h16" />
-        </svg>
+      <Round style={{
+        transform: `translateX(${side}px) scale(${1 - c})`, opacity: 1 - c * 1.4,
+      }}>
+        <svg width="32" height="32" viewBox="0 0 24 24" {...ic}><path d="M15 5l-7 7 7 7" /></svg>
+      </Round>
 
-        <div style={{
-          width: focused ? 620 : 430, height: 92, borderRadius: 46,
-          background: focused ? "#ffffff" : "#eeeef1",
-          boxShadow: focused ? "0 0 0 5px rgba(96,150,255,0.22)" : "none",
-          display: "flex", alignItems: "center",
-          justifyContent: focused ? "flex-start" : "center",
-          padding: focused ? "0 38px" : 0, boxSizing: "border-box",
-          fontFamily: R.fontSans, fontSize: 36,
-          color: focused ? "#111114" : "#8e8e95",
-          position: "relative",
-        }}>
+      <div style={{
+        width: pw, height: ph, borderRadius: pr, ...glass,
+        background: focused ? "rgba(255,255,255,0.92)" : "rgba(255,255,255,0.66)",
+        display: "flex", alignItems: "center",
+        justifyContent: focused ? "flex-start" : "center",
+        padding: `0 ${interpolate(c, [0, 1], [40, 0])}px`, boxSizing: "border-box",
+        fontFamily: R.fontSans, fontSize: 37,
+        color: focused ? "#111114" : "#8e8e95",
+        overflow: "hidden", position: "relative",
+      }}>
+        <span style={{ opacity: 1 - c * 2.2, whiteSpace: "nowrap" }}>
           {focused ? (
-            <span style={{ position: "relative", display: "inline-block" }}>
+            <>
               <span style={{
-                display: "inline-block",
+                display: "inline-block", marginLeft: 34,
                 clipPath: `inset(0 ${(1 - paint) * 100}% 0 0)`,
                 filter: paintBlur > 0.2 ? `blur(${paintBlur}px)` : undefined,
               }}>{URL}</span>
-              {paint >= 1 && (
+              {/* Picks up exactly where the mark left off, so the field is
+                  never sitting there unfocused and empty. */}
+              {f >= T.markFrom + T.markFor && (
                 <span style={{
-                  display: "inline-block", width: 3, height: 40, background: "#111114",
-                  marginLeft: 4, verticalAlign: "middle",
+                  display: "inline-block", width: 3, height: 46, background: "#111114",
+                  marginLeft: paint > 0.02 ? 5 : 0, verticalAlign: "middle",
                   opacity: Math.floor(f / 17) % 2 === 0 ? 1 : 0,
                 }} />
               )}
-            </span>
+            </>
           ) : "search..."}
-        </div>
+        </span>
+        {!focused && (
+          <svg width="32" height="32" viewBox="0 0 24 24" {...ic}
+            style={{ position: "absolute", right: 34 }}>
+            <path d="M20 11a8 8 0 10-2.3 5.7" /><path d="M20 5v6h-6" />
+          </svg>
+        )}
+      </div>
 
-        <svg width="34" height="34" viewBox="0 0 24 24" {...ic}>
-          <path d="M20 11a8 8 0 10-2.3 5.7" /><path d="M20 5v6h-6" />
-        </svg>
-        <svg width="34" height="34" viewBox="0 0 24 24" {...ic} strokeLinecap="butt">
+      <Round style={{
+        transform: `translateX(${-side}px) scale(${1 - c})`, opacity: 1 - c * 1.4,
+      }}>
+        <svg width="32" height="32" viewBox="0 0 24 24" {...ic} strokeLinecap="butt">
           <rect x="8" y="4" width="12" height="12" rx="2.5" />
           <path d="M16 20H6a2 2 0 01-2-2V8" strokeLinecap="round" />
         </svg>
-      </div>
-
-      {!focused && (
-        <div style={{ marginTop: 18, width: 430, height: 7, borderRadius: 4, overflow: "hidden" }}>
-          <div style={{
-            width: `${load * 100}%`, height: "100%", borderRadius: 4,
-            background: settled > 0.5 ? "#1c1c1e"
-              : "linear-gradient(90deg,#5ac8fa,#34c759,#ffcc00,#ff375f,#af52de)",
-          }} />
-        </div>
-      )}
+      </Round>
     </div>
-  );
-};
-
-/**
- * The mark above the field.
- *
- * Not a cursor: one object in three states. It draws as a short rule, gathers
- * itself into a dot, falls into the field, and stands up as the caret. Reading
- * it as a mouse arriving was the thing that made the opening feel ordinary.
- */
-const Mark: React.FC<{ f: number }> = ({ f }) => {
-  if (f < T.ruleIn || f > T.caret + 6) return null;
-  const draw = ease((f - T.ruleIn) / 18);
-  const gather = ease((f - T.toDot) / 20);
-  const fall = easeIO((f - T.drop) / 26);
-  const stand = ease((f - (T.caret - 10)) / 14);
-
-  const w = interpolate(gather, [0, 1], [104, 22]);
-  const h = interpolate(gather, [0, 1], [9, 22]);
-  const r = interpolate(gather, [0, 1], [5, 11]);
-  /* From dot to caret: narrow and tall, at the head of the field. */
-  const cw = interpolate(stand, [0, 1], [w, 4]);
-  const ch = interpolate(stand, [0, 1], [h, 42]);
-  const cr = interpolate(stand, [0, 1], [r, 1]);
-
-  const y = interpolate(fall, [0, 1], [H / 2 - 148, H / 2 + 1]);
-  const x = interpolate(stand, [0, 1], [W / 2, W / 2 - 268]);
-
-  return (
-    <div style={{
-      position: "absolute", left: x - cw / 2, top: y - ch / 2,
-      width: cw * draw, height: ch, borderRadius: cr,
-      background: "#111114", opacity: draw,
-    }} />
   );
 };
 
@@ -186,11 +195,10 @@ const Mark: React.FC<{ f: number }> = ({ f }) => {
 const NOTE = "Seven verses, and the naming of them is given elsewhere.";
 
 const EditorPane: React.FC<{ f: number; at: number }> = ({ f, at }) => {
-  const s = at + 18;
-  const n = Math.max(0, Math.floor((f - s - 20) * 0.5));
-  const body = NOTE.slice(0, n);
+  const s = at + 2;
+  const body = NOTE.slice(0, Math.max(0, Math.floor((f - s - 18) * 0.5)));
   return (
-    <div style={{ padding: 34, height: "100%", boxSizing: "border-box", background: "#fefdfc" }}>
+    <div style={{ padding: 34, height: "100%", boxSizing: "border-box", background: "#fff" }}>
       <div style={{
         fontFamily: R.fontSerif, fontSize: 34, fontWeight: 700, color: "#1e1a14",
         opacity: ease((f - s) / 18), letterSpacing: "-0.01em",
@@ -199,10 +207,9 @@ const EditorPane: React.FC<{ f: number; at: number }> = ({ f, at }) => {
         fontFamily: R.fontSans, fontSize: 16, color: "#908d88", marginTop: 8,
         opacity: ease((f - s - 6) / 18),
       }}>Study note · Al-Fātiḥah</div>
-
       <div style={{
         fontFamily: R.fontSans, fontSize: 21, lineHeight: 1.65, color: "#46423b",
-        marginTop: 26, minHeight: 200,
+        marginTop: 26, minHeight: 190,
       }}>
         {body}
         <span style={{
@@ -211,11 +218,10 @@ const EditorPane: React.FC<{ f: number; at: number }> = ({ f, at }) => {
           opacity: Math.floor(f / 16) % 2 === 0 ? 1 : 0,
         }} />
       </div>
-
       <div style={{
-        marginTop: 20, padding: "16px 18px", borderRadius: 10,
+        padding: "16px 18px", borderRadius: 10,
         border: "1px solid rgba(30,26,20,0.10)",
-        opacity: ease((f - s - 108) / 24),
+        opacity: ease((f - s - 106) / 24),
       }}>
         <div style={{
           fontFamily: R.fontMono, fontSize: 13, color: "#908d88",
@@ -229,8 +235,8 @@ const EditorPane: React.FC<{ f: number; at: number }> = ({ f, at }) => {
   );
 };
 
-/* Sūrat al-Fātiḥah, laid out the way the app lays it out: verses run on, with
-   a numbered marker closing each one, rather than one verse to a line. */
+/* Sūrat al-Fātiḥah as the page sets it: verses run on, each closed by a
+   numbered marker, rather than one verse to a line. */
 type Seg = string | number;
 const FATIHA: Seg[][] = [
   ["بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ", 1],
@@ -241,62 +247,69 @@ const FATIHA: Seg[][] = [
   ["عَلَيْهِمْ غَيْرِ ٱلْمَغْضُوبِ عَلَيْهِمْ"],
   ["وَلَا ٱلضَّآلِّينَ", 7],
 ];
-const AR_DIGITS = ["٠", "١", "٢", "٣", "٤", "٥", "٦", "٧", "٨", "٩"];
+const AR = ["٠", "١", "٢", "٣", "٤", "٥", "٦", "٧"];
 
+/** The page's āyah marker: a fine double ring, the last one warmed. */
 const AyahMark: React.FC<{ n: number }> = ({ n }) => (
   <span style={{
     display: "inline-flex", alignItems: "center", justifyContent: "center",
-    width: 25, height: 25, borderRadius: "50%",
-    border: "1px solid rgba(30,26,20,0.34)",
-    fontFamily: R.fontArabic, fontSize: 13, color: "#1e1a14",
-    margin: "0 6px", verticalAlign: "middle",
-  }}>{AR_DIGITS[n]}</span>
+    width: 23, height: 23, borderRadius: "50%",
+    border: `1px solid ${n === 7 ? "rgba(196,110,64,0.75)" : "rgba(30,26,20,0.42)"}`,
+    boxShadow: `inset 0 0 0 2px #fff, inset 0 0 0 3px ${
+      n === 7 ? "rgba(196,110,64,0.30)" : "rgba(30,26,20,0.16)"}`,
+    fontFamily: R.fontArabic, fontSize: 11,
+    color: n === 7 ? "#b1613a" : "#1e1a14",
+    margin: "0 5px", verticalAlign: "middle", flexShrink: 0,
+  }}>{AR[n]}</span>
 );
 
-/** The canvas: the muṣḥaf as the app renders it, written on line by line. */
 const CanvasPane: React.FC<{ f: number; at: number }> = ({ f, at }) => {
-  const s = at + 16;
+  const s = at + 14;
   return (
     <div style={{
-      height: "100%", boxSizing: "border-box", background: "#fdfcfa",
-      padding: "26px 24px", display: "flex", flexDirection: "column", alignItems: "center",
+      height: "100%", boxSizing: "border-box", background: "#fff",
+      padding: "30px 18px 0", display: "flex", flexDirection: "column", alignItems: "center",
     }}>
-      {/* The sūrah picker, exactly as it sits on the page. */}
       <div style={{
-        display: "flex", alignItems: "center", gap: 12,
-        padding: "9px 26px", borderRadius: 999,
-        border: "1px solid rgba(30,26,20,0.13)", background: "#fff",
+        display: "flex", alignItems: "center", gap: 13,
+        padding: "11px 26px", borderRadius: 14,
+        border: "1px solid rgba(30,26,20,0.12)", background: "#fff",
         opacity: ease((f - s) / 18),
       }}>
-        <span style={{ fontSize: 11, color: "#908d88" }}>▾</span>
-        <span style={{ fontFamily: R.fontArabic, fontSize: 22, color: "#1e1a14" }}>الفاتحة</span>
-        <span style={{ fontFamily: R.fontSans, fontSize: 17, color: "#46423b" }}>Al-Fatihah</span>
+        <span style={{ fontSize: 11, color: "#a8a29a" }}>▾</span>
+        <span style={{ fontFamily: R.fontSans, fontSize: 19, color: "#2b2823" }}>Al-Fatihah</span>
+        <span style={{ fontFamily: R.fontArabic, fontSize: 25, fontWeight: 700, color: "#1e1a14" }}>
+          الفاتحة
+        </span>
       </div>
       <div style={{
-        fontFamily: R.fontSans, fontSize: 13, color: "#a09484", marginTop: 14,
+        fontFamily: R.fontSans, fontSize: 14, color: "#a2938a", marginTop: 16,
         opacity: ease((f - s - 8) / 18),
       }}>Press the Surah name to start studying</div>
 
-      <div style={{ marginTop: 16, width: "100%" }}>
+      <div style={{ marginTop: 20, width: "100%" }}>
         {FATIHA.map((line, i) => {
-          /* Each line is written, right to left, one after the other. */
-          const p = ease((f - (s + 26 + i * 15)) / 26);
+          const p = ease((f - (s + 24 + i * 14)) / 26);
           if (p <= 0) return null;
           return (
             <div key={i} dir="rtl" style={{
-              textAlign: "center", fontFamily: R.fontArabic, fontSize: 27,
-              lineHeight: 2.1, color: "#1e1a14", whiteSpace: "nowrap",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontFamily: R.fontArabic, fontSize: 25, lineHeight: 2.05,
+              color: "#1e1a14", whiteSpace: "nowrap",
               clipPath: `inset(0 0 0 ${(1 - p) * 100}%)`,
             }}>
               {line.map((seg, k) =>
                 typeof seg === "number"
                   ? <AyahMark key={k} n={seg} />
-                  : <span key={k}>{seg} </span>)}
+                  : <span key={k}>{seg}&nbsp;</span>)}
             </div>
           );
         })}
       </div>
-
+      <div style={{
+        marginTop: "auto", width: "100%", height: 1,
+        background: "rgba(30,26,20,0.09)", opacity: ease((f - s - 140) / 20),
+      }} />
     </div>
   );
 };
@@ -312,7 +325,6 @@ const BOOKS = [
   { ar: "الآجرومية",          en: "Al-Ājurrūmiyyah",   c: "#9e6b6b" },
 ];
 
-/** The mutoon library, running past. */
 const LibraryPane: React.FC<{ f: number; at: number }> = ({ f, at }) => {
   const s = at + 16;
   const BW = 132, BG = 16;
@@ -320,7 +332,7 @@ const LibraryPane: React.FC<{ f: number; at: number }> = ({ f, at }) => {
   const scroll = interpolate(f, [s + 26, s + 190], [0, total - (CARD - 56)], clamp);
   return (
     <div style={{
-      height: "100%", boxSizing: "border-box", background: "#fefdfc",
+      height: "100%", boxSizing: "border-box", background: "#fff",
       padding: "26px 0 0", overflow: "hidden",
     }}>
       <div style={{
@@ -328,7 +340,6 @@ const LibraryPane: React.FC<{ f: number; at: number }> = ({ f, at }) => {
         letterSpacing: "0.11em", textTransform: "uppercase",
         opacity: ease((f - s) / 18),
       }}>Mutūn · {BOOKS.length} texts</div>
-
       <div style={{
         display: "flex", gap: BG, marginTop: 22, paddingLeft: 28,
         transform: `translateX(${-scroll}px)`,
@@ -366,74 +377,121 @@ const LibraryPane: React.FC<{ f: number; at: number }> = ({ f, at }) => {
   );
 };
 
-/* ── The stack ────────────────────────────────────────────────────────────*/
+/* ── The stack, and the mark it becomes ───────────────────────────────────*/
 
 const PANELS = [
-  { at: T.card1, label: "editor", tint: "#63b3f5", Pane: EditorPane },
-  { at: T.card2, label: "canvas", tint: "#63b3f5", Pane: CanvasPane },
-  { at: T.card3, label: "mutoon", tint: "#63b3f5", Pane: LibraryPane },
+  { at: T.card1, label: "editor", Pane: EditorPane },
+  { at: T.card2, label: "canvas", Pane: CanvasPane },
+  { at: T.card3, label: "mutoon", Pane: LibraryPane },
 ] as const;
 
+const LOGO = 300;
+
 const Stack: React.FC<{ f: number }> = ({ f }) => {
-  /* How many have landed, as a smooth number — the group eases left by half a
-     step per arrival so the newest sits near the middle and the older ones
-     walk off to the left. */
   let landed = 0;
   for (const p of PANELS) landed += easeIO((f - p.at) / 40);
   const groupX = -(landed - 1) * (STEP * 0.52);
 
-  /* One shared smear while the group is moving, which is what the reference
-     shows on every arrival. */
   let speed = 0;
   for (const p of PANELS) {
     const d = f - p.at;
     if (d > -6 && d < 46) speed = Math.max(speed, Math.sin(Math.max(0, Math.min(1, (d + 6) / 52)) * Math.PI));
   }
 
+  /* The close: every panel travels to the SAME rect, so three become one. */
+  const cv = easeIO((f - T.converge) / T.convergeFor);
+
   return (
     <div style={{
       position: "absolute", inset: 0,
-      transform: `translateX(${groupX}px)`,
+      transform: `translateX(${groupX * (1 - cv)}px)`,
       filter: speed > 0.02 ? `blur(${speed * 7}px)` : undefined,
     }}>
       {PANELS.map((p, i) => {
         if (f < p.at - 10) return null;
         const e = easeIO((f - p.at) / 40);
-        /* Later panels sit on top; earlier ones fall out of focus behind. */
-        const behind = PANELS.length - 1 - i;
         let depth = 0;
         for (let k = i + 1; k < PANELS.length; k++) depth += easeIO((f - PANELS[k].at) / 40);
+        depth *= 1 - cv;
 
         const home = W / 2 - CARD / 2 - STEP * 0.5 + i * STEP;
-        const x = home + (1 - e) * 300;
+        const x0 = home + (1 - e) * 300;
+        const x = interpolate(cv, [0, 1], [x0, W / 2 - LOGO / 2 - groupX * 0], clamp);
+        const size = interpolate(cv, [0, 1], [CARD, LOGO]);
+        const y = interpolate(cv, [0, 1], [CARD_CY - CARD / 2, CARD_CY - LOGO / 2]);
+
         return (
           <div key={p.label} style={{
-            position: "absolute", left: x, top: CARD_CY - CARD / 2,
-            width: CARD, zIndex: 10 + i,
-            opacity: Math.min(1, e * 1.7) * (1 - depth * 0.16),
-            filter: depth > 0.02 ? `blur(${depth * 5}px)` : undefined,
-            transform: `scale(${1 - depth * 0.03})`,
+            position: "absolute", left: x, top: y,
+            width: size, zIndex: 10 + i,
+            /* Behind panels stay VISIBLE — the blur moves attention forward,
+               it is not there to hide them. */
+            opacity: Math.min(1, e * 1.7) * (1 - depth * 0.05),
+            filter: depth > 0.02 ? `blur(${depth * 6}px)` : undefined,
           }}>
             <div style={{
               display: "flex", alignItems: "center", gap: 9, marginBottom: 11, paddingLeft: 4,
+              opacity: 1 - cv * 2,
             }}>
               <svg width="22" height="18" viewBox="0 0 22 18">
                 <path d="M1 3.5A2.5 2.5 0 013.5 1h4.2l2 2.2h8.8A2.5 2.5 0 0121 5.7v9.8A2.5 2.5 0 0118.5 18h-15A2.5 2.5 0 011 15.5z"
-                  fill={p.tint} />
+                  fill="#63b3f5" />
               </svg>
               <span style={{ fontFamily: R.fontSans, fontSize: 20, color: "#4a4a51" }}>
                 {p.label}
               </span>
             </div>
             <div style={{
-              width: CARD, height: CARD, borderRadius: 24, overflow: "hidden",
-              boxShadow: "0 22px 54px rgba(20,22,34,0.14), 0 4px 12px rgba(20,22,34,0.08)",
+              width: size, height: size,
+              borderRadius: interpolate(cv, [0, 1], [24, 72]),
+              overflow: "hidden",
+              boxShadow: "0 22px 54px rgba(20,22,34,0.13), 0 4px 12px rgba(20,22,34,0.07), " +
+                         "0 0 0 1px rgba(20,22,34,0.065)",
+              background: "#fff",
             }}>
-              <p.Pane f={f} at={p.at} />
+              <div style={{
+                width: CARD, height: CARD,
+                transform: `scale(${size / CARD})`, transformOrigin: "0 0",
+                opacity: 1 - cv * 1.6,
+              }}>
+                <p.Pane f={f} at={p.at} />
+              </div>
             </div>
           </div>
         );
       })}
+
+      {/* What they become. */}
+      {cv > 0.02 && (
+        <div style={{
+          position: "absolute", left: W / 2 - LOGO / 2, top: CARD_CY - LOGO / 2,
+          width: LOGO, height: LOGO, borderRadius: 72, background: "#1e1a14",
+          display: "grid", placeItems: "center", zIndex: 60,
+          opacity: interpolate(cv, [0.45, 1], [0, 1], clamp),
+          transform: `scale(${interpolate(cv, [0.45, 1], [1.06, 1], clamp)})`,
+          boxShadow: "0 26px 60px rgba(20,22,34,0.20)",
+        }}>
+          <span style={{
+            fontFamily: R.fontSans, fontSize: 168, fontWeight: 700, color: "#fff",
+          }}>T</span>
+        </div>
+      )}
+
+      {cv >= 1 && (
+        <div style={{
+          position: "absolute", left: 0, right: 0, top: CARD_CY + LOGO / 2 + 54,
+          textAlign: "center", zIndex: 60,
+          opacity: ease((f - (T.converge + T.convergeFor + 6)) / 22),
+        }}>
+          <div style={{
+            fontFamily: R.fontSerif, fontSize: 62, color: "#1e1a14", letterSpacing: "-0.025em",
+          }}>Tafsir Lab</div>
+          <div style={{
+            fontFamily: R.fontSans, fontSize: 21, color: "#8b8880", marginTop: 14,
+            letterSpacing: "0.2em", textTransform: "uppercase",
+          }}>tafsir-lab.com</div>
+        </div>
+      )}
     </div>
   );
 };
@@ -450,7 +508,18 @@ const Sfx: React.FC<{ at: number; file: string; v: number; len?: number }> =
 export const SearchReel: React.FC = () => {
   const f = useCurrentFrame();
   return (
-    <AbsoluteFill style={{ background: "#f8f8f9" }}>
+    <AbsoluteFill style={{ background: "#ffffff" }}>
+      {/* The bloom the reference carries above the field — the only thing on
+          the page that is not white. */}
+      {f < T.collapse + T.collapseFor && (
+        <div style={{
+          position: "absolute", left: W / 2 - 260, top: BAR_CY - 150,
+          width: 520, height: 120, borderRadius: "50%",
+          background: "radial-gradient(closest-side, rgba(120,165,255,0.22), rgba(120,165,255,0))",
+          filter: "blur(26px)",
+          opacity: interpolate(f, [0, 30, T.collapse, T.collapse + 20], [0, 1, 1, 0], clamp),
+        }} />
+      )}
       <Stack f={f} />
       <Bar f={f} />
       <Mark f={f} />
@@ -462,11 +531,13 @@ export const SearchReel: React.FC = () => {
           0.18 * interpolate(fr, [0, 50, SEARCH_FRAMES - 60, SEARCH_FRAMES], [0, 1, 1, 0], clamp)}
       />
 
-      <Sfx at={T.drop} file="sfx/magnetic.mp3" v={0.5} len={14} />
-      <Sfx at={T.paint} file="sfx/granular.mp3" v={0.34} len={22} />
-      {PANELS.map((p) => (
+      <Sfx at={T.markFrom + Math.round(T.markFor * 0.5)} file="sfx/magnetic.mp3" v={0.46} len={14} />
+      <Sfx at={T.paint} file="sfx/granular.mp3" v={0.32} len={22} />
+      <Sfx at={T.collapse} file="sfx/whoosh.mp3" v={0.44} len={30} />
+      {PANELS.slice(1).map((p) => (
         <Sfx key={p.label} at={p.at} file="sfx/whoosh.mp3" v={0.42} len={36} />
       ))}
+      <Sfx at={T.converge} file="sfx/whoosh.mp3" v={0.5} len={52} />
     </AbsoluteFill>
   );
 };
