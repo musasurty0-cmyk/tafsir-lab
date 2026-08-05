@@ -900,26 +900,39 @@ export const SearchReel: React.FC = () => {
         source's reveal is its music, not a sound effect.
       */}
 
+      {/* Every whoosh is the house one — the same sfx/whoosh.mp3 the other six
+          reels move on. Worth recording that it FAILS the tonality gate above
+          (flatness 0.207, pitch-locked 72%) and sounds completely right
+          anyway. The gate catches a scan tone and a pitched boom, which is
+          what it was for, but it is a proxy: a resonant whoosh reads as
+          "tonal" to it and as a whoosh to an ear. The ear is the authority
+          and the gate is a way of narrowing the search, not deciding it.
+
+          Its transient sits 10 frames in, so every cue leads by that. */}
+
       {/* The rule drawing out. */}
-      <Sfx at={58}  file="sfx/rule.mp3"   v={1.00} len={26} lead={11} />
+      <Sfx at={58}  file="sfx/whoosh.mp3" v={0.20} len={26} lead={10} />
       {/* Gather and launch — one move, and the source's second-loudest hit. */}
-      <Sfx at={90}  file="sfx/launch.mp3" v={0.23} len={30} lead={9} />
+      <Sfx at={90}  file="sfx/whoosh.mp3" v={0.34} len={30} lead={10} />
       {/*  … the hang. Nothing here, on purpose. */}
       {/* The fall, crescendoing into the landing. */}
-      <Sfx at={154} file="sfx/fall.mp3"   v={0.15} len={30} lead={25} />
-      <Sfx at={LANDED} file="sfx/land.mp3" v={0.55} len={14} lead={3} />
+      <Sfx at={154} file="sfx/whoosh.mp3" v={0.22} len={28} lead={10} />
+      <Sfx at={LANDED} file="sfx/land.mp3" v={0.26} len={14} lead={3} />
+      {/* Pulled well down: the house whoosh is bass-heavy and this click
+          is bright, so at the level that suited the old bright whooshes it
+          became the loudest thing in the reel. The collapse has to be. */}
       {/*  … the address paints in silence. */}
       {/* The field becoming the first panel: the loudest moment in the reel,
           carried by two whooshes rather than an impact. */}
-      <Sfx at={290} file="sfx/morph.mp3"  v={0.20} len={30} lead={15} />
-      <Sfx at={292} file="sfx/card.mp3"   v={0.15} len={32} lead={7} />
+      <Sfx at={290} file="sfx/whoosh.mp3" v={0.46} len={34} lead={10} />
+      <Sfx at={296} file="sfx/whoosh.mp3" v={0.24} len={44} lead={10} />
       {/* Each later panel, peaking ON arrival rather than after it. */}
       {PANELS.slice(1).map((p) => (
-        <Sfx key={p.label} at={p.at} file="sfx/card.mp3" v={0.28} len={34} lead={7} />
+        <Sfx key={p.label} at={p.at} file="sfx/whoosh.mp3" v={0.38} len={34} lead={10} />
       ))}
       {/* Three becoming one. */}
-      <Sfx at={T.converge + 40} file="sfx/big.mp3"   v={0.30} len={62} lead={52} />
-      <Sfx at={T.converge + T.convergeFor} file="sfx/morph.mp3" v={0.22} len={28} lead={15} />
+      <Sfx at={T.converge + 40} file="sfx/whoosh.mp3" v={0.50} len={56} lead={10} />
+      <Sfx at={T.converge + T.convergeFor} file="sfx/whoosh.mp3" v={0.26} len={30} lead={10} />
     </AbsoluteFill>
   );
 };
