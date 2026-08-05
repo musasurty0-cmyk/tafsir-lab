@@ -9,6 +9,7 @@
  * RESEND_API_KEY is set; without it the endpoint still succeeds and the signup
  * is queryable from the database.
  */
+import { memoryLimit, clientIp } from "@/lib/rate-limit";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 
@@ -55,6 +56,13 @@ async function notify(entry: {
 }
 
 export async function POST(req: NextRequest) {
+  // Best-effort per-IP throttle: a public, unauthenticated form that both
+  // writes a row and sends mail, so it wants some brake on flooding. This is
+  // the per-instance layer only (see lib/rate-limit) — a soft cap, not a wall.
+  if (!memoryLimit(`waitlist:${clientIp(req)}`, 5, 60_000)) {
+    return NextResponse.json({ error: "Too many requests. Please slow down." }, { status: 429 });
+  }
+
   let body: { email?: unknown; name?: unknown; context?: unknown; source?: unknown };
   try {
     body = await req.json();
