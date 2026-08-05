@@ -224,16 +224,27 @@ const build = () => {
 const M = build();
 
 /**
- * The rule does not simply grow in place — it sweeps in from the right.
+ * The rule does not simply grow in place — it sweeps in from the right, and
+ * it comes to rest CENTRED under the field.
  *
- * The raw track shows its centre travelling 224 source-px left, but most of
- * that is the camera panning underneath it. Subtracting the back-arrow's own
- * movement leaves 119px of real travel relative to the UI, nearly all of it
- * in the first eight source frames. Stops are in the arc's own normalised
- * time; values are our pixels, right of where the rule comes to rest.
+ * I first derived this by subtracting the back-arrow glyph's movement from
+ * the rule's, treating the arrow as a fixed point on the UI. It is not: it
+ * carries both the camera and the field's own layout shifts, so the residual
+ * left the rule sitting 20-odd pixels right of centre for the whole of its
+ * visible life. Measured instead against the field's true centre — the
+ * midpoint of the placeholder, which is what the eye actually reads the rule
+ * as being under — the source converges by source frame 8 and is centred from
+ * frame 16 on. Stops are the arc's normalised time, values our pixels right
+ * of the field's centre.
+ *
+ * The source still carries about 13px of residual right of centre at the
+ * rule's widest, decaying to zero over the next twenty frames. I am not
+ * keeping that. The rule reaches full width around p=0.13 and holds there
+ * through its most visible moment, so it settles dead-centre just before, and
+ * the sweep is done by then rather than still finishing under it.
  */
-const XS = [0, 0.059, 0.137, 0.216, 0.294, 0.373, 0.451, 0.529, 0.608, 1];
-const XV = [178.5, 63.8, 33, 27, 23.3, 18, 10.5, 3, 0, 0];
+const XS = [0, 0.035, 0.07, 0.115, 1];
+const XV = [190, 92, 28, 0, 0];
 
 const Mark: React.FC<{ f: number }> = ({ f }) => {
   if (f < T.markFrom || f >= CARET_AT) return null;
