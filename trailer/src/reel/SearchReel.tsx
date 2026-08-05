@@ -879,33 +879,47 @@ export const SearchReel: React.FC = () => {
         launch's tail is faded out by frame 113 and nothing else starts until
         137, so the float has the mix to itself exactly as it has the frame.
 
-        Files were chosen by measuring the source's envelope per event and
-        matching within a plausible family. Ranking on the envelope ALONE —
-        duration, centroid, attack, flatness — returned a pistol shot for the
-        rule and a cash register for the launch. Both matched numerically.
-        Those features describe an envelope, not an identity.
+        The TIMBRE target from that same measurement is thrown away, though,
+        and this is the part I got wrong twice. Subtracting the bed leaves
+        residue, and the residue is tonal — the "SFX" I measured came back
+        with flatness 0.02-0.09, which is a pure tone, and no whoosh or impact
+        ever is. Those were the source's MUSIC leaking through. Matching them
+        asked the library for tonal sounds and duly got them: an 8.4kHz scan
+        tone under the typing and a 773Hz pitched boom on the collapse. Two
+        beeps, both of which I requested. Ranking on envelope alone had
+        already produced a pistol shot for the rule and a cash register for
+        the launch — those features describe an envelope, not an identity.
+
+        So every file here had to pass a gate instead: spectral flatness above
+        0.32 (it must BE noise) and no pitch held across frames. Worth knowing
+        that ZERO files in either pack named impact/hit/boom pass it — a bass
+        hit is tuned by nature, which is exactly what put a tone on the
+        collapse. Weight there comes from layered whooshes now, not a boom.
+
+        And there is no typing cue at all. The +19.9dB I measured under the
+        source's reveal is its music, not a sound effect.
       */}
 
       {/* The rule drawing out. */}
-      <Sfx at={58}  file="sfx/card.mp3"     v={0.90} len={30} lead={19} />
+      <Sfx at={58}  file="sfx/rule.mp3"   v={1.00} len={26} lead={11} />
       {/* Gather and launch — one move, and the source's second-loudest hit. */}
-      <Sfx at={90}  file="sfx/launch.mp3"   v={0.66} len={34} lead={11} />
+      <Sfx at={90}  file="sfx/launch.mp3" v={0.23} len={30} lead={9} />
       {/*  … the hang. Nothing here, on purpose. */}
       {/* The fall, crescendoing into the landing. */}
-      <Sfx at={154} file="sfx/fall.mp3"     v={0.70} len={24} lead={15} />
-      <Sfx at={LANDED} file="sfx/land.mp3"  v={0.60} len={16} />
-      {/* The address resolving — a text/scan texture under the reveal. */}
-      <Sfx at={212} file="sfx/type.mp3"     v={0.42} len={46} lead={25} />
-      {/* The field becoming the first panel: the loudest moment in the reel. */}
-      <Sfx at={288} file="sfx/card.mp3"     v={0.70} len={32} lead={19} />
-      <Sfx at={293} file="sfx/collapse.mp3" v={1.00} len={34} />
+      <Sfx at={154} file="sfx/fall.mp3"   v={0.15} len={30} lead={25} />
+      <Sfx at={LANDED} file="sfx/land.mp3" v={0.55} len={14} lead={3} />
+      {/*  … the address paints in silence. */}
+      {/* The field becoming the first panel: the loudest moment in the reel,
+          carried by two whooshes rather than an impact. */}
+      <Sfx at={290} file="sfx/morph.mp3"  v={0.20} len={30} lead={15} />
+      <Sfx at={292} file="sfx/card.mp3"   v={0.15} len={32} lead={7} />
       {/* Each later panel, peaking ON arrival rather than after it. */}
       {PANELS.slice(1).map((p) => (
-        <Sfx key={p.label} at={p.at} file="sfx/card.mp3" v={0.85} len={38} lead={19} />
+        <Sfx key={p.label} at={p.at} file="sfx/card.mp3" v={0.28} len={34} lead={7} />
       ))}
       {/* Three becoming one. */}
-      <Sfx at={T.converge + 38} file="sfx/converge.mp3" v={1.00} len={40} lead={22} />
-      <Sfx at={T.converge + T.convergeFor} file="sfx/collapse.mp3" v={0.80} len={36} />
+      <Sfx at={T.converge + 40} file="sfx/big.mp3"   v={0.30} len={62} lead={52} />
+      <Sfx at={T.converge + T.convergeFor} file="sfx/morph.mp3" v={0.22} len={28} lead={15} />
     </AbsoluteFill>
   );
 };

@@ -359,7 +359,77 @@ and carried strokes half again too pale.
 **Do instead:** before optimising further against a number, check whether the gap is
 explained by something outside that metric's scope.
 
-## 12. Two things that are just true about this work
+## 12. Sound — what survives measurement and what does not
+
+The source's hits sit under a **128 BPM** bed, so nothing about them can be read
+directly. Subtracting the median spectrum of a neighbouring music-only window
+gets you *part* of the way. Knowing which part is the whole lesson.
+
+### 12.1 The envelope survives. The timbre does not.
+
+**Envelope — trustworthy.** Gross energy per event is robust to imperfect
+subtraction, and it comes back with the same shape as the picture:
+
+| rule | launch | rise | **HANG** | fall | landing | typing | collapse | cards |
+|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| +28.2 | +26.7 | +9.7 | **+5.9** | +20.2 | +21.3 | +19.9 | **+34.3** | +30.6 / +32.3 |
+
+Two things fall out: the **collapse and the card arrivals are the loudest
+moments in the reel, not the launch**, and the **hang is near-silent** — the
+audio quits exactly where the camera does, so the float has the mix to itself
+as well as the frame.
+
+**Timbre — worthless.** The same subtraction returned spectral flatness of
+**0.02–0.09** for those events. That is a pure tone. No whoosh, click or impact
+is ever tonal — real ones measure 0.35–0.75. Those readings were the source's
+*music* leaking through the subtraction.
+
+I then matched a library against them, which asked for tonal sounds and got
+exactly that: an **8.4kHz scan tone** under the typing and a **773Hz pitched
+boom** on the collapse. Two beeps, both of which I had requested. And ranking
+on envelope alone — duration, centroid, attack, flatness — had already
+returned a **pistol shot** for the rule and a **cash register** for the launch,
+all three matching numerically. Envelope features describe a shape, not an
+identity.
+
+### 12.2 Gate on tonality, and pick on intrinsic quality
+
+Filter to a plausible family per cue, then require of every candidate:
+
+```
+flatness > 0.32                     # it must BE noise
+pitch-locked fraction < 0.35        # no bin stays the loudest across frames
+```
+
+A "beep" is both together: a **locked pitch WITH energy behind it**. The old
+collapse held one bin at 86% of frames carrying 8.1% of total energy. A clean
+whoosh can read 50% locked at 1.2% — that is a broadband peak wandering, not a
+tone, so both numbers are needed.
+
+Useful finding: **zero files named impact / hit / boom passed the gate, in
+either pack.** A bass hit is tuned by nature. Weight on a big moment has to
+come from layered whooshes instead.
+
+### 12.3 Two mechanical faults worth not repeating
+
+- **Place a one-shot by its transient, not its first sample.** `Deep, Mini,
+  Whoosh 9` carries 0.88s of near-silence before it swells. Placed by sample
+  zero it lands a third of a second late; trimmed blind, the trim removes the
+  very peak the gain was computed from and the file bakes **33dB quiet**.
+  Measure each file's peak offset when baking and pass it as a lead.
+- **Fade tails.** Remotion's `Sequence` stops audio dead at
+  `durationInFrames`, and chopping a decaying tail mid-sample is an audible
+  click. Every cue in the first set ended on one.
+
+### 12.4 Measure flatness IN BAND
+
+Spectral flatness is a geometric mean, so empty bins destroy it. An mp3 zeroes
+everything above ~16kHz, which made my own baked files read 0.13–0.19 —
+"tonal" — when band-limited to 120Hz–15.5kHz they were 0.47–0.96. Always
+restrict to where the format actually has content, or you will fail good files
+and chase a fault that is in the ruler.
+
+## 13. Two things that are just true about this work
 
 **A passing test is not evidence against a report.** At the centring point I had
 "verified" it green. Weighting that over what was actually on screen would have meant
