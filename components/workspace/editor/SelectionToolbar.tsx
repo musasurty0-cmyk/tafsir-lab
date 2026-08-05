@@ -188,8 +188,12 @@ export default function SelectionToolbar({ editor }: Props) {
     const onKey = (e: KeyboardEvent) => {
       if (e.key.toLowerCase() !== "k" || !(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey) return;
       if (editor.state.selection.empty) return;
-      const inEditor = editor.isFocused ||
-        (barRef.current?.contains(document.activeElement) ?? false);
+      /* DOM containment, NOT editor.isFocused — PM's hasFocus() folds in
+         document.hasFocus(), so it reports false in an unfocused window even
+         with the caret visibly in the editor, and the shortcut went dead. */
+      const active = document.activeElement;
+      const inEditor = editor.view.dom.contains(active) ||
+        (barRef.current?.contains(active) ?? false);
       if (!inEditor) return;
       e.preventDefault();
       e.stopPropagation();

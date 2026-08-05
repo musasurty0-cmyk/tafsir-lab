@@ -49,6 +49,8 @@ import { AyahBlockExtension } from "./AyahBlockExtension";
 import { TafsirBlockExtension } from "./TafsirBlockExtension";
 import { ToggleListExtension } from "./ToggleListExtension";
 import { TextDirection } from "./TextDirection";
+import { BlockMove } from "./BlockMove";
+import BlockHandle from "./BlockHandle";
 import { ConnectionBlockExtension } from "./ConnectionBlockExtension";
 import EditorInkLayer from "./EditorInkLayer";
 import FreeTextBox, { TEXTBOX_DEFAULT_WIDTH } from "../FreeTextBox";
@@ -390,6 +392,9 @@ export default function PageEditor({
         history:        false,
         heading:        { levels: [1, 2, 3] },
         horizontalRule: {},
+        // The line shown while dragging a block: accent, not the default
+        // black, so the drop target reads as part of the app.
+        dropcursor:     { color: "var(--accent)", width: 2 },
       }),
 
       Placeholder.configure({
@@ -434,6 +439,8 @@ export default function PageEditor({
       TafsirBlockExtension,
       ToggleListExtension,
       TextDirection,
+      // Alt+↑/↓ walks the current block up or down the page.
+      BlockMove,
       // workspaceId lets the card fetch its Connection; the node itself only
       // ever stores an id.
       ConnectionBlockExtension.configure({ workspaceId }),
@@ -907,6 +914,8 @@ export default function PageEditor({
         <EditorContent editor={editor} />
       </div>
       <SelectionToolbar editor={editor} />
+      {/* The ⋮⋮ grip that appears beside whichever block the mouse is near. */}
+      <BlockHandle editor={editor} wrapperRef={pageEditorRef} />
       <SlashHelp />
 
       {/* Freeform movable text containers — every one (including a freshly
