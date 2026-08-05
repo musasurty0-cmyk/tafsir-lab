@@ -95,9 +95,13 @@ const URL = "tafsir-lab.com";
 
 const T = {
   sharp: 26,
-  /** The mark's whole life, as one span. */
-  markFrom: 54, markFor: 112,
-  paint: 190, paintFor: 44,
+  /** The arc, measured: 51 source frames at 29.97 is 102 of ours. */
+  markFrom: 54, markFor: 102,
+  /** The landing. Four source frames, and violent — the whole focus change
+   *  happens at once, which is why the source's last fall frame is its busiest
+   *  of the entire arc. Spreading it out was making the landing limp. */
+  markFor2: 8,
+  paint: 182, paintFor: 44,
   /** Icons in, field to panel — half a second. */
   collapse: 266, collapseFor: 30,
 
@@ -118,7 +122,11 @@ const PILL_H = 96;
 const PAD = 40;
 /** The frame the mark finishes and the field's own caret takes over. Both
  *  sides read this one constant, so they can never both be on screen. */
-const CARET_AT = T.markFrom + T.markFor;
+const CARET_AT = T.markFrom + T.markFor + T.markFor2;
+/** The frame the mark lands on the bar line. Everything about the field's
+ *  focus hangs off this: in the source the field does not light up early, it
+ *  lights up BECAUSE the mark drops into it. */
+const LANDED = T.markFrom + T.markFor;
 
 /**
  * One source of truth for the field.
@@ -128,9 +136,16 @@ const CARET_AT = T.markFrom + T.markFor;
  * cannot drift apart — the mark's left edge IS the field's text origin.
  */
 const geom = (f: number) => {
-  const grow = springy((f - (T.markFrom + 12)) / 46);
+  /* The field only opens out once the mark is in it. */
+  const grow = springy((f - LANDED) / 30);
   const paint = rhythm(interpolate(f, [T.paint, T.paint + T.paintFor], [0, 1], clamp));
-  const w = interpolate(grow, [0, 1], [430, 520], clamp) + paint * 190;
+  /* The source's back-arrow to refresh distance is 350 / 406 / 489 of its
+     1280 across unfocused, focused-empty and full. That gap is not the field
+     though — it also spans two buttons and two gutters, so the field itself
+     is about 268 / 324 / 407 source-px, which is what these are. Taking the
+     centre distance for the field made the bar 39.7% of the frame against
+     the source's 35.9%; the missing width was really the missing button. */
+  const w = interpolate(grow, [0, 1], [430, 500], clamp) + paint * 140;
   return { w, chars: paint * URL.length, textLeft: W / 2 - w / 2 + PAD };
 };
 
@@ -145,24 +160,110 @@ const geom = (f: number) => {
    edge is pinned to the field's text origin, so the mark rides the field's
    growth for free and ends precisely where the caret belongs. */
 
-const MS = [0, 0.30, 0.52, 0.66, 0.86, 0.94, 1];
-const MW = [0, 230, 16, 16, 3, 3, 3];
-const MH = [7, 7, 16, 16, 40, 50, 46];   // 50 is a deliberate overshoot
-const MR = [3.5, 3.5, 8, 8, 1.5, 1.5, 1.5];
-const MY = [22, 22, 22, 20, 2, 0, 0];    // relative to the text line
+/**
+ * The mark's arc, measured off the reference frame by frame.
+ *
+ * Not approximated — tracked. Each row is [ref frame, centre-y, width, height]
+ * of the black blob in the source's own 1280x714 / 29.97fps space, found by
+ * thresholding and taking the largest connected component.
+ *
+ * What the numbers say, and what no amount of eyeballing gave me: the arc is
+ * badly ASYMMETRIC. The rule sits still, then the gather and the launch are
+ * one move — it slingshots, hitting 43.5px/frame upward at f22. It then decays
+ * to the apex roughly halving each frame, which is damping, not gravity. It
+ * HANGS: nine frames, 300ms, within 3px of the top. Then it falls on an
+ * ease-in that builds to 28px/frame. Rise and fall are different curves, and
+ * the hang between them is the whole character of the thing.
+ */
+const REF: [number, number, number, number][] = [
+  [1, 421.5, 94, 4], [2, 421.5, 126, 6], [3, 422, 150, 7], [4, 422, 168, 7],
+  [5, 422, 183, 7], [6, 422, 193, 7], [7, 421.5, 201, 8], [8, 421, 201, 7],
+  [9, 420.5, 200, 8], [10, 419.5, 199, 8], [11, 418.5, 195, 8], [12, 417, 191, 9],
+  [13, 415.5, 184, 10], [14, 414, 174, 11], [15, 411, 159, 13], [16, 407.5, 133, 14],
+  [17, 403.5, 103, 18], [18, 398.5, 80, 20], [19, 391, 64, 21], [20, 378.5, 54, 24],
+  [21, 358, 45, 23], [22, 314.5, 39, 20], [23, 294.5, 36, 22], [24, 284.5, 32, 24],
+  [25, 278.5, 30, 24], [26, 274, 28, 25], [27, 270.5, 27, 24], [28, 268.5, 26, 24],
+  [29, 266.5, 25, 24], [30, 265, 24, 25], [31, 264, 24, 25], [32, 263, 25, 25],
+  [33, 262.5, 24, 24], [34, 262, 24, 25], [35, 261.5, 24, 24], [36, 261.5, 25, 24],
+  [37, 262, 24, 25], [38, 262.5, 24, 24], [39, 263.5, 24, 24], [40, 265, 25, 25],
+  [41, 267, 24, 25], [42, 269, 24, 25], [43, 272, 24, 25], [44, 275, 24, 25],
+  [45, 279, 24, 25], [46, 284, 24, 25], [47, 291, 24, 25], [48, 299, 24, 25],
+  [49, 309.5, 22, 26], [50, 324.5, 22, 26], [51, 344, 20, 27], [52, 372, 11, 25],
+];
+
+/* The source's bar line, and the scale onto ours. 1280 -> 1920 is exactly 1.5;
+   714 -> 1080 is 1.512. Time is 29.97 -> 60, so almost exactly double. */
+const REF_BAR_Y = 372, SX = 1.5, SY = 1.512;
+
+const build = () => {
+  const n = REF.length, span = REF[n - 1][0] - REF[0][0];
+  const S: number[] = [], Y: number[] = [], Wd: number[] = [], Hd: number[] = [];
+  for (let i = 0; i < n; i++) {
+    S.push((REF[i][0] - REF[0][0]) / span);
+    Y.push((REF[i][1] - REF_BAR_Y) * SY);
+    /* w and h get a 3-tap smooth: at 43px/frame the blob smears, so single
+       frames around the launch measure a shape the mark never actually is. */
+    const a = REF[Math.max(0, i - 1)], b = REF[i], c = REF[Math.min(n - 1, i + 1)];
+    Wd.push(((a[2] + 2 * b[2] + c[2]) / 4) * SX);
+    Hd.push(((a[3] + 2 * b[3] + c[3]) / 4) * SY);
+  }
+  return { S, Y, Wd, Hd };
+};
+const M = build();
+
+/**
+ * The rule does not simply grow in place — it sweeps in from the right.
+ *
+ * The raw track shows its centre travelling 224 source-px left, but most of
+ * that is the camera panning underneath it. Subtracting the back-arrow's own
+ * movement leaves 119px of real travel relative to the UI, nearly all of it
+ * in the first eight source frames. Stops are in the arc's own normalised
+ * time; values are our pixels, right of where the rule comes to rest.
+ */
+const XS = [0, 0.059, 0.137, 0.216, 0.294, 0.373, 0.451, 0.529, 0.608, 1];
+const XV = [178.5, 63.8, 33, 27, 23.3, 18, 10.5, 3, 0, 0];
 
 const Mark: React.FC<{ f: number }> = ({ f }) => {
   if (f < T.markFrom || f >= CARET_AT) return null;
   const p = (f - T.markFrom) / T.markFor;
-  const h = track(p, MS, MH);
 
+  /* Through the arc the mark is shape only — it sits over the field's centre,
+     directly above the placeholder, exactly as the source does. The move to
+     the text inset is the FOCUS, and belongs to the landing, not the flight. */
+  const arc = Math.min(1, p);
+  let w = track(arc, M.S, M.Wd);
+  let h = track(arc, M.S, M.Hd);
+  let x = W / 2 + track(arc, XS, XV);
+  let y = BAR_CY + track(arc, M.S, M.Y);
+
+  /* Smear. The launch peaks at 33px/frame — three times the mark's own height
+     — and the source carries motion blur from its render, so it reads as a
+     streak. Drawn sharp at that speed it would strobe instead, landing in
+     discrete places. Stretching along travel and thinning as it goes is how
+     this is done by hand, and it costs nothing. */
+  const v = arc >= 1 ? 0
+    : (track(Math.min(1, (f + 1 - T.markFrom) / T.markFor), M.S, M.Y)
+     - track(Math.min(1, (f - 1 - T.markFrom) / T.markFor), M.S, M.Y)) / 2;
+  const smear = Math.min(Math.abs(v) * 1.15, 78);
+
+  if (p > 1) {
+    /* Landed. The field focuses: the placeholder goes, the text origin moves
+       left, and the mark rides across with it, thinning into the caret. */
+    const s = easeIO((f - (T.markFrom + T.markFor)) / (T.markFor2));
+    x = interpolate(s, [0, 1], [W / 2, geom(f).textLeft + 1.5]);
+    w = interpolate(s, [0, 1], [w, 3]);
+    h = interpolate(s, [0, 1], [h, 46]);
+    y = BAR_CY;
+  }
+
+  const hs = h + smear;
   return (
     <div style={{
-      position: "absolute",
-      left: geom(f).textLeft,
-      top: BAR_CY + track(p, MS, MY) - h / 2,
-      width: track(p, MS, MW), height: h, borderRadius: track(p, MS, MR),
+      position: "absolute", left: x - w / 2, top: y - hs / 2,
+      width: w, height: hs, borderRadius: Math.min(w, hs) / 2,
       background: "#111114", zIndex: 40,
+      opacity: 1 - Math.min(smear / 78, 1) * 0.22,
+      filter: smear > 2 ? `blur(${smear * 0.075}px)` : undefined,
     }} />
   );
 };
@@ -180,7 +281,7 @@ const glass: React.CSSProperties = {
     "inset 0 1.5px 0 rgba(255,255,255,1), inset 0 -1px 0 rgba(255,255,255,0.6)",
 };
 
-const ic = { fill: "none", stroke: "#3c3c43", strokeWidth: 2.1,
+const ic = { fill: "none", stroke: "#3c3c43", strokeWidth: 2.45,
              strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
 
 const Round: React.FC<{ children: React.ReactNode; style?: React.CSSProperties }> =
@@ -202,7 +303,7 @@ const Bar: React.FC<{ f: number }> = ({ f }) => {
   /* Continuous, not a boolean. The old `focused` flag flipped the background,
      the alignment, the text colour and the whole placeholder-to-URL swap on a
      single frame — six properties changing at once, which is a cut. */
-  const foc = interpolate(f, [T.markFrom + 4, T.markFrom + T.markFor * 0.55], [0, 1], clamp);
+  const foc = interpolate(f, [LANDED - 2, LANDED + 6], [0, 1], clamp);
   const g = geom(f);
   /* Revealed by character, so the caret sitting after the text in flow is
      always exactly at the end of what has been painted — no measuring, and
@@ -250,6 +351,14 @@ const Bar: React.FC<{ f: number }> = ({ f }) => {
                    opacity: (1 - foc) * gone }}>
           <path d="M20 11a8 8 0 10-2.3 5.7" /><path d="M20 5v6h-6" />
         </svg>
+        {/* The source carries a fifth glyph here, leading the field. It reads
+            as chrome rather than as content, and it is part of why its bar
+            has half again as much ink as mine did. */}
+        <svg width="30" height="30" viewBox="0 0 24 24" {...ic}
+          style={{ position: "absolute", left: 32, top: "50%", marginTop: -15,
+                   opacity: (1 - foc * 1.6) * gone }}>
+          <path d="M4 7h16M4 12h10M4 17h13" />
+        </svg>
 
         <span style={{
           position: "absolute", left: PAD, top: "50%",
@@ -271,6 +380,16 @@ const Bar: React.FC<{ f: number }> = ({ f }) => {
           )}
         </span>
       </div>
+
+      {/* Refresh, then copy — the source has both, and they travel inward at
+          slightly different rates so the collapse gathers rather than slides. */}
+      <Round style={{
+        transform: `translateX(${-side * 0.72}px) scale(${1 - c})`, opacity: 1 - c * 1.4,
+      }}>
+        <svg width="32" height="32" viewBox="0 0 24 24" {...ic}>
+          <path d="M20 11a8 8 0 10-2.3 5.7" /><path d="M20 5v6h-6" />
+        </svg>
+      </Round>
 
       <Round style={{
         transform: `translateX(${-side}px) scale(${1 - c})`, opacity: 1 - c * 1.4,
@@ -609,24 +728,55 @@ const Sfx: React.FC<{ at: number; file: string; v: number; len?: number }> =
   </Sequence>
 );
 
+/**
+ * The camera, which in the source never stops.
+ *
+ * Tracked off the back-arrow glyph, with the two outer buttons' separation
+ * giving the scale. It is NOT a constant drift, which is what I assumed and
+ * built first. Measuring the two side by side, per phase, showed the opposite:
+ *
+ *   phase    ref    my first attempt
+ *   rule     0.569  0.219   far too still
+ *   launch   0.605  0.541   about right
+ *   hang     0.054  0.196   THREE AND A HALF TIMES TOO BUSY
+ *
+ * The source pans hard and early — about 10 source-px a frame while the rule
+ * draws — and then stops dead. Through the hang it is almost perfectly still,
+ * which is what makes the hang land: everything else quits so the one floating
+ * object has the frame. An even drift fills that silence in and throws the
+ * whole shape of the sequence away. Resolves to identity before the collapse.
+ */
+const CS = [0, 60, 68, 76, 84, 92, 100, 108, 116, 124, 132, 140, 148, 156, 200, T.collapse];
+const CX = [116, 116, 58, 26, 7.5, -1.5, -3, 0, 0.8, 2.3, 3.8, 6.8, 15.8, 41, 14, 0];
+const CZ = [1.061, 1.061, 1.056, 1.056, 1.054, 1.048, 1.030, 1.009,
+            1.000, 0.996, 1.000, 1.011, 1.005, 0.995, 1, 1];
+
+const Drift: React.FC<{ f: number; children: React.ReactNode }> = ({ f, children }) => {
+  const p = Math.min(f, T.collapse);
+  return (
+    <AbsoluteFill style={{
+      transform: `translateX(${track(p, CS, CX)}px) scale(${track(p, CS, CZ)})`,
+      transformOrigin: "50% 50%",
+    }}>{children}</AbsoluteFill>
+  );
+};
+
 export const SearchReel: React.FC = () => {
   const f = useCurrentFrame();
+  /* The source's page, sampled: 252,249,253. Reads as white, but it lets the
+     white chrome and the white cards sit ON it rather than dissolve into it. */
   return (
-    <AbsoluteFill style={{ background: "#ffffff" }}>
-      {/* The bloom the reference carries above the field — the only thing on
-          the page that is not white. */}
-      {f < T.collapse + T.collapseFor && (
-        <div style={{
-          position: "absolute", left: W / 2 - 260, top: BAR_CY - 150,
-          width: 520, height: 120, borderRadius: "50%",
-          background: "radial-gradient(closest-side, rgba(120,165,255,0.22), rgba(120,165,255,0))",
-          filter: "blur(26px)",
-          opacity: interpolate(f, [0, 30, T.collapse, T.collapse + 20], [0, 1, 1, 0], clamp),
-        }} />
-      )}
+    <AbsoluteFill style={{ background: "#fcf9fd" }}>
+     <Drift f={f}>
+      {/* There is no bloom. I had put a blue one above the field believing the
+          source carried one; sampling the band directly above its bar gives
+          blue-minus-red of +0.90, which is neutral, against +4.58 for mine.
+          The source's page is flat — every soft edge on it comes from the
+          drop shadows under the chrome, and nothing else. */}
       <Stack f={f} />
       <Bar f={f} />
       <Mark f={f} />
+     </Drift>
 
       <Audio
         src={staticFile("bg2.mp3")}
