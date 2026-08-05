@@ -10230,3 +10230,94 @@ input, textarea { font: inherit; color: inherit; }
 /* The "use initials" option shows the actual initials, so the choice is
    between two things you can see rather than a glyph and an abstraction. */
 .ws-icon-opt--initials { font-size: 11px; font-weight: 600; letter-spacing: 0.02em; }
+
+
+/* ─────────────── SQUIRCLES ───────────────
+   Apple's corner is not an arc. A rounded rectangle joins its straight edge to
+   a circular arc abruptly — the curvature jumps from zero to 1/r at the tangent
+   point, and the eye reads that discontinuity as a slight pinch. A squircle
+   (superellipse, n=4) ramps the curvature continuously instead, which is why
+   Apple's icons and hardware look softer without looking rounder.
+
+   `corner-shape` reshapes whatever corner `border-radius` already describes, so
+   this is purely additive: browsers without it render the existing radii
+   unchanged. NOTE: a mask-image "fallback" is sometimes suggested for this —
+   it does not work. A radial-gradient mask fades the whole element and clips
+   its content; the correct fallback is the plain border-radius already here.
+
+   The reset below is GENERATED (scratchpad/squircle.py) from every rule in this
+   file whose radius is 50%/999px/9999px — i.e. every circle and pill. Those
+   must stay round: squircling a 50% radius pushes the diagonal from 60px to
+   71px on a 120px box, which visibly deforms avatars, pips, spinners and
+   toggle knobs. Rerun the generator if you add a new circle. */
+
+*, *::before, *::after { corner-shape: squircle; }
+
+/* Circles and pills stay circular. Vendor-prefixed pseudo-elements are split
+   into their own rules below: a selector list is all-or-nothing, so one
+   selector an engine cannot parse would drop every reset with it. */
+.rail-account,
+.rail-account::after,
+.doc-meta-avatar,
+.verse-ref-dot,
+.commentary-body .tf-list li::before,
+.tw-swatch-dot,
+.login-spinner,
+.tut-dot,
+.home-user-avatar,
+.hw-nav-spinner,
+.hw-nav-overlay-spinner,
+.page-progress-dot,
+.page-admin-dot,
+.prog-dot,
+.study-bar,
+.study-bar-done,
+.sab-progress-dot,
+.mode-b-word-hint-dismiss,
+.anc-note-type-option,
+.anchor-session-chip,
+.anchor-session-done,
+.ctr-color-dot,
+.ctr-swatch,
+.topbar-loading-dot,
+.editor-insert-fab,
+.editor-ink-pill,
+.editor-ink-btn,
+.editor-ink-swatch,
+.ayah-block-loading-dot,
+.splash-logo-ring,
+.lv-dots span,
+.ws-switch,
+.ws-switch-knob,
+.ws-settings-member-avatar,
+.ws-settings-member-role,
+.live-pill-dot,
+.presence-avatar,
+.presence-mode-badge,
+.bt-dot,
+.bt-swatch,
+.bt-presence-pill,
+.bt-presence-dot,
+.settings-cog,
+.settings-avatar,
+.segbar-color,
+.cxmap-clear,
+.cxcat-total,
+.cxp-count,
+.anchor-session-conn,
+.cxc-cat,
+.sellist-dot,
+.sellist-swatch,
+.anchor-session-color,
+.tr-dot,
+.ws-card-spinner,
+.et-btn-indicator,
+.notes-review-chip,
+.notes-review-ayah-count,
+.eraser-ring,
+.ctr-eraser-dot,
+.ctr-eraser-preview-ring,
+.tree-row-pending-dot { corner-shape: round; }
+
+.ctr-size-slider::-webkit-slider-thumb { corner-shape: round; }
+.ctr-size-slider::-moz-range-thumb { corner-shape: round; }
