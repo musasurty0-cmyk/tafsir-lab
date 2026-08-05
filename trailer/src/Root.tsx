@@ -39,8 +39,8 @@ export const RemotionRoot: React.FC = () => {
         component={SearchReel}
         durationInFrames={SEARCH_FRAMES}
         fps={60}
-        width={1080}
-        height={1920}
+        width={1920}
+        height={1080}
         defaultProps={{}}
       />
 
