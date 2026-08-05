@@ -7,14 +7,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import * as PagesService from "@/lib/services/pages.service";
-
-function errResponse(err: unknown) {
-  if (err instanceof PagesService.PageError) {
-    const status = err.code === "NOT_FOUND" ? 404 : err.code === "FORBIDDEN" ? 403 : 400;
-    return NextResponse.json({ error: err.message }, { status });
-  }
-  return NextResponse.json({ error: String(err) }, { status: 500 });
-}
+import { apiError } from "@/lib/api-errors";
 
 export async function GET(
   _req: NextRequest,
@@ -25,7 +18,7 @@ export async function GET(
     const { pageId } = await params;
     const page = await PagesService.getPage(pageId, userId);
     return NextResponse.json({ page });
-  } catch (err) { return errResponse(err); }
+  } catch (err) { return apiError(err); }
 }
 
 export async function PATCH(
@@ -41,7 +34,7 @@ export async function PATCH(
     }
     const page = await PagesService.renamePage(pageId, userId, body.title);
     return NextResponse.json({ page });
-  } catch (err) { return errResponse(err); }
+  } catch (err) { return apiError(err); }
 }
 
 export async function DELETE(
@@ -53,5 +46,5 @@ export async function DELETE(
     const { pageId } = await params;
     await PagesService.deletePage(pageId, userId);
     return NextResponse.json({ ok: true });
-  } catch (err) { return errResponse(err); }
+  } catch (err) { return apiError(err); }
 }

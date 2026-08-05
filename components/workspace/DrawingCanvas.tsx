@@ -577,7 +577,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
   }, [pageId]);
 
   // Re-filter when the mushaf page OR the active annotation layer changes
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   useEffect(() => {
     const filtered = filterForPage(allMyStrokesRef.current, mushafPage);
     setMyStrokes(filtered);
@@ -592,19 +592,25 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
   // same account on a second device converges instead of diverging.
   useEffect(() => {
     if (!pageId) return;
+    /* Clearing the interval does not cancel a request already in flight. This
+       component is reused across pages rather than remounted, so a reply for
+       the page just left would apply ITS strokes to the page now open — one
+       page's ink appearing on another, which then saves. The flag drops any
+       reply that arrives after the page changed. */
+    let live = true;
     const id = setInterval(() => {
       if (document.visibilityState !== "visible") return;
       const issuedAt = Date.now();   // anything saved after this cannot be in the reply
       fetch(`/api/pages/${pageId}/drawings`)
         .then(r => r.ok ? r.json() : null)
         .then((d: { myStrokes?: Stroke[]; otherLayers?: DrawingLayer[] } | null) => {
-          if (!d) return;
+          if (!live || !d) return;
           if (d.otherLayers) setOtherLayers(d.otherLayers);
           if (d.myStrokes && loadedRef.current) syncMyStrokes(d.myStrokes, issuedAt);
         })
         .catch(() => {});
     }, 15000);
-    return () => clearInterval(id);
+    return () => { live = false; clearInterval(id); };
   }, [pageId, syncMyStrokes]);
 
   // ── Real-time remote strokes via PartyKit socket ──────────────────────
@@ -677,19 +683,20 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
   useEffect(() => {
     if (!roomSocket) return;
     let first = true;
+    let live = true;   // same cross-page guard as the poll and the refocus
     const onOpen = () => {
       if (first) { first = false; return; } // skip the initial connect
       fetch(`/api/pages/${pageId}/drawings`)
         .then((r) => (r.ok ? r.json() : null))
         .then((d: { myStrokes?: Stroke[]; otherLayers?: DrawingLayer[] } | null) => {
-          if (!d) return;
+          if (!live || !d) return;
           if (d.otherLayers) setOtherLayers(d.otherLayers);
           if (d.myStrokes && loadedRef.current) syncMyStrokes(d.myStrokes);
         })
         .catch(() => {});
     };
     roomSocket.addEventListener("open", onOpen);
-    return () => roomSocket.removeEventListener("open", onOpen);
+    return () => { live = false; roomSocket.removeEventListener("open", onOpen); };
   }, [roomSocket, pageId, syncMyStrokes]);
 
   // ── Debounced save ─────────────────────────────────────────────────────
@@ -735,6 +742,10 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
 
   // Flush pending saves before the tab suspends; refresh peers on refocus.
   useEffect(() => {
+    /* Same guard as the poll: removing the listener cannot recall a refresh
+       already in flight, and this one fires on refocus — precisely when a
+       reader is likely to come back and immediately move to another page. */
+    let live = true;
     function flushPending() {
       if (!saveTimerRef.current) return;
       clearTimeout(saveTimerRef.current);
@@ -749,7 +760,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
         fetch(`/api/pages/${pageId}/drawings`)
           .then(r => r.ok ? r.json() : null)
           .then((d: { myStrokes?: Stroke[]; otherLayers?: DrawingLayer[] } | null) => {
-            if (!d) return;
+            if (!live || !d) return;
             if (d.otherLayers) setOtherLayers(d.otherLayers);
             if (d.myStrokes && loadedRef.current) syncMyStrokes(d.myStrokes);
           })
@@ -759,6 +770,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     document.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("pagehide", flushPending);
     return () => {
+      live = false;
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("pagehide", flushPending);
     };
@@ -855,7 +867,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
       scheduleSave();
       onHistoryRef.current?.(false, false);
     },
-  }), [scheduleSave]); // eslint-disable-line react-hooks/exhaustive-deps
+  }), [scheduleSave]);  
 
   // ── Coordinate helpers ─────────────────────────────────────────────────
 

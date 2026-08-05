@@ -884,7 +884,7 @@ export default function ModeBPage({
       if (pos) positions.set(note.id, pos);
     }
     setNotePositions(positions);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [pageNotes]);
 
   // ── Connector anchor points ───────────────────────────────────────────
@@ -907,7 +907,7 @@ export default function ModeBPage({
       }
     }
     return map;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [pageNotes, notePositions]);
 
   // ── Viewport persistence ──────────────────────────────────────────────

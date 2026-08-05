@@ -271,7 +271,7 @@ export default function FocusAnnotation({
     viewportRef.current = init;
     setViewport(init);
   // re-centre when the focus target changes; bodyRef is stable
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [verseKey, wordPos]);
 
   // ── Canvas render ──────────────────────────────────────────────────────

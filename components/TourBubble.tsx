@@ -263,6 +263,13 @@ export default function TourBubble() {
         setError(err instanceof Error ? err.message : "Setup failed — please try again.");
       } finally {
         setLoading(false);
+        /* eslint-disable-next-line require-atomic-updates --
+           `busy` is a re-entrancy mutex, not derived state. The rule fires on
+           any ref assigned after an await, but the guard at the top of next()
+           and the `busy.current = true` below it sit in the SAME tick with no
+           await between them, so two clicks cannot both get past the check.
+           Releasing it here is the only correct place — an early return would
+           otherwise leave the tour permanently wedged. */
         busy.current = false;
       }
 

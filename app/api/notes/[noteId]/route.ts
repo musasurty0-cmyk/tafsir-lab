@@ -23,6 +23,7 @@ import { getSession } from "@/lib/session";
 import * as NotesService from "@/lib/services/notes.service";
 import { WorkspaceError } from "@/lib/services/workspaces.service";
 import { db } from "@/lib/db";
+import { apiError } from "@/lib/api-errors";
 
 function errorResponse(err: unknown) {
   if (err instanceof NotesService.NoteError) {
@@ -32,7 +33,7 @@ function errorResponse(err: unknown) {
   if (err instanceof WorkspaceError) {
     return NextResponse.json({ error: err.message }, { status: err.code === "NOT_FOUND" ? 404 : 403 });
   }
-  return NextResponse.json({ error: String(err) }, { status: 500 });
+  return apiError(err);
 }
 
 export async function PATCH(

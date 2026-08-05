@@ -10,6 +10,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import * as WorkspacesService from "@/lib/services/workspaces.service";
+import { apiError } from "@/lib/api-errors";
 
 export async function POST(
   req: NextRequest,
@@ -37,6 +38,6 @@ export async function POST(
       const status = err.code === "NOT_FOUND" ? 404 : err.code === "FORBIDDEN" ? 403 : 409;
       return NextResponse.json({ error: err.message }, { status });
     }
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    return apiError(err);
   }
 }

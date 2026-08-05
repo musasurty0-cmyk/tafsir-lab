@@ -10,6 +10,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { apiError } from "@/lib/api-errors";
 
 const BASE = "https://api.quran.com/api/v4";
 
@@ -39,6 +40,6 @@ export async function GET(
     const data = await res.json();
     return NextResponse.json({ verse: data.verse });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    return apiError(err);
   }
 }

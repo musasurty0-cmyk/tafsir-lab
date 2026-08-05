@@ -1,21 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
-import { listSegments, createSegment, SegmentError } from "@/lib/services/segments.service";
-
-/** Map a service error to a status; anything else is a genuine 500. */
-function errStatus(e: unknown): number {
-  if (e instanceof SegmentError) {
-    return e.code === "NOT_FOUND" ? 404 : e.code === "FORBIDDEN" ? 403 : 400;
-  }
-  const s = String(e);
-  // getSession throws plain Errors when there is no valid cookie. Without
-  // this the caller sees a 500 and cannot tell "log back in" from "the
-  // server is broken".
-  if (/Not authenticated|Invalid or expired session|Malformed session/.test(s)) return 401;
-  if (s.includes("FORBIDDEN") || s.includes("not a member")) return 403;
-  if (s.includes("NOT_FOUND") || s.includes("not found"))    return 404;
-  return 500;
-}
+import { listSegments, createSegment } from "@/lib/services/segments.service";
+import { apiError } from "@/lib/api-errors";
 
 export async function GET(
   req: Request,
@@ -30,7 +16,7 @@ export async function GET(
     );
     return NextResponse.json({ segments });
   } catch (e) {
-    return NextResponse.json({ error: String(e) }, { status: errStatus(e) });
+    return apiError(e);
   }
 }
 
@@ -52,6 +38,6 @@ export async function POST(
     });
     return NextResponse.json({ segment }, { status: 201 });
   } catch (e) {
-    return NextResponse.json({ error: String(e) }, { status: errStatus(e) });
+    return apiError(e);
   }
 }

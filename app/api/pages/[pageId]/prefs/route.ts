@@ -20,6 +20,7 @@ import { Prisma } from "@prisma/client";
 import { getSession } from "@/lib/session";
 import { db } from "@/lib/db";
 import * as WorkspacesService from "@/lib/services/workspaces.service";
+import { apiError } from "@/lib/api-errors";
 
 // Resolve the workspaceId from a pageId (needed for auth gate).
 async function getWorkspaceIdForPage(pageId: string): Promise<string | null> {
@@ -53,7 +54,7 @@ export async function GET(
     if (err instanceof WorkspacesService.WorkspaceError) {
       return NextResponse.json({ error: err.message }, { status: err.code === "NOT_FOUND" ? 404 : 403 });
     }
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    return apiError(err);
   }
 }
 
@@ -109,6 +110,6 @@ export async function PATCH(
     if (err instanceof WorkspacesService.WorkspaceError) {
       return NextResponse.json({ error: err.message }, { status: err.code === "NOT_FOUND" ? 404 : 403 });
     }
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    return apiError(err);
   }
 }

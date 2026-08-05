@@ -132,7 +132,7 @@ export function usePresence({
       type: "presence-update",
       data: ownPresenceRef.current,
     }));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [mode, mushafPage, socket]);
 
   const updatePresence = useCallback(

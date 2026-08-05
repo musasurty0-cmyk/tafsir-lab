@@ -255,17 +255,22 @@ export default function WorkspacePageView({
     });
   }, []);
 
-  // Fetch personal progress whenever the active page changes.
+  /* Fetch personal progress whenever the active page changes.
+     Guarded: switching pages faster than the request completes would apply the
+     previous page's read-progress to the new one, and progress is written back,
+     so a stale reply does not just display wrong — it can persist wrong. */
   useEffect(() => {
     if (!activePageId) return;
+    let live = true;
     setProgressLoading(true);
     fetch(`/api/pages/${activePageId}/progress?scope=personal`)
       .then((r) => (r.ok ? r.json() : null))
       .then((data: { progress?: Record<string, ProgressStatus> } | null) => {
-        if (data?.progress) setPersonalProgress(data.progress);
+        if (live && data?.progress) setPersonalProgress(data.progress);
       })
       .catch(() => {})
-      .finally(() => setProgressLoading(false));
+      .finally(() => { if (live) setProgressLoading(false); });
+    return () => { live = false; };
   }, [activePageId]);
 
   // ── Live sync polling ─────────────────────────────────────────────────────

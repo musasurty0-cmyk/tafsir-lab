@@ -211,7 +211,7 @@ function penOutline(raw: Pt[], base: number): [number, number][] {
   for (let i = 0; i < n; i++) {
     const a = P[Math.max(0, i - 1)];
     const b = P[Math.min(n - 1, i + 1)];
-    let dx = b[0] - a[0], dy = b[1] - a[1];
+    const dx = b[0] - a[0], dy = b[1] - a[1];
     const m = Math.hypot(dx, dy) || 1;
     rawTx[i] = dx / m; rawTy[i] = dy / m;
   }

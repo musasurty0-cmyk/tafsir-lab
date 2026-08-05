@@ -32,7 +32,7 @@ export default function WorkspacePicker({ workspaces }: { workspaces: Workspace[
               <Link key={ws.id} href={`/workspaces/${ws.id}`} className="picker-item">
                 <div className="picker-avatar">
                   {ws.avatarUrl
-                    // eslint-disable-next-line @next/next/no-img-element
+                     
                     ? <img src={ws.avatarUrl} alt={ws.name} width={36} height={36} />
                     : ws.name.slice(0, 2).toUpperCase()
                   }

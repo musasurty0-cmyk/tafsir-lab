@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { fetchVerses } from "@/lib/quran-api";
+import { apiError } from "@/lib/api-errors";
 
 export async function GET(
   _req: Request,
@@ -10,6 +11,6 @@ export async function GET(
     const verses = await fetchVerses(Number(surahId));
     return NextResponse.json({ verses });
   } catch (e) {
-    return NextResponse.json({ error: String(e) }, { status: 500 });
+    return apiError(e);
   }
 }

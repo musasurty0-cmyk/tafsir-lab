@@ -78,7 +78,7 @@ const CommandList = forwardRef<CommandListHandle, Props>(
     if (items.length === 0) {
       return (
         <div className="slash-palette" style={maxHeight ? { maxHeight } : undefined}>
-          <div className="slash-palette-empty">No commands match "{query}"</div>
+          <div className="slash-palette-empty">No commands match “{query}”</div>
         </div>
       );
     }

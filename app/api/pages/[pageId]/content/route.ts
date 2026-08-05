@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { db } from "@/lib/db";
 import * as WorkspacesService from "@/lib/services/workspaces.service";
+import { apiError } from "@/lib/api-errors";
 
 async function getWorkspaceIdForPage(pageId: string): Promise<string | null> {
   const page = await db.page.findUnique({
@@ -52,6 +53,6 @@ export async function PATCH(
         { status: err.code === "NOT_FOUND" ? 404 : 403 }
       );
     }
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    return apiError(err);
   }
 }

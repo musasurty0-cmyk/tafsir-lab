@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/session";
+import { apiError } from "@/lib/api-errors";
 
 export async function PATCH(req: NextRequest) {
   try {
@@ -27,6 +28,6 @@ export async function PATCH(req: NextRequest) {
 
     return NextResponse.json({ ok: true, name: user.name });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    return apiError(err);
   }
 }

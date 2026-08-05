@@ -695,7 +695,7 @@ export default function PageEditor({
       .focus()
       .scrollIntoView()
       .run();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [editor, ayahSearch]);
 
   /* Load the workspace Selections once /link opens, so they can be offered as
@@ -847,7 +847,7 @@ export default function PageEditor({
     if (!editor || !versePicker) return;
     setTafsirChoice({ verseKey, ...versePicker });
     setVersePicker(null);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [editor, versePicker]);
 
   /** Embed the whole entry — the block fetches it from the empty contentHtml. */

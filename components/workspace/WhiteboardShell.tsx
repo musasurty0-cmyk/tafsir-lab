@@ -59,23 +59,29 @@ export default function WhiteboardShell({
     setNotes((prev) => prev.filter((n) => n.id !== noteId));
   }, []);
 
-  // Initial load
+  /* Initial load. `live` because the notes list survives a page change: a
+     reply for the page just left would drop its notes into the page now open,
+     and the poll's merge below keeps unrecognised local notes, so once a stale
+     one is in it stays. */
   useEffect(() => {
+    let live = true;
     fetch(`/api/pages/${pageId}/notes`)
       .then((r) => (r.ok ? r.json() : null))
-      .then((d: { notes?: NoteData[] } | null) => { if (d?.notes) setNotes(d.notes); })
+      .then((d: { notes?: NoteData[] } | null) => { if (live && d?.notes) setNotes(d.notes); })
       .catch(() => {});
+    return () => { live = false; };
   }, [pageId]);
 
   // Poll every 5s (merge: keep temps + recently-created so the server catch-up
   // never wipes a fresh container)
   useEffect(() => {
+    let live = true;
     const id = setInterval(() => {
       if (document.visibilityState !== "visible") return;
       fetch(`/api/pages/${pageId}/notes`)
         .then((r) => (r.ok ? r.json() : null))
         .then((d: { notes?: NoteData[] } | null) => {
-          if (!d?.notes) return;
+          if (!live || !d?.notes) return;
           setNotes((prev) => {
             const server = d.notes!;
             const ids = new Set(server.map((n) => n.id));
@@ -87,7 +93,7 @@ export default function WhiteboardShell({
         })
         .catch(() => {});
     }, 5000);
-    return () => clearInterval(id);
+    return () => { live = false; clearInterval(id); };
   }, [pageId]);
 
   const whiteboardNotes = useMemo(

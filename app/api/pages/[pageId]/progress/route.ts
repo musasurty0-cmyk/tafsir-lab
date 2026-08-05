@@ -24,6 +24,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import * as ProgressService from "@/lib/services/progress.service";
 import { PageError } from "@/lib/services/pages.service";
+import { apiError } from "@/lib/api-errors";
 
 type ProgressBody = {
   scope?:       string;
@@ -64,7 +65,7 @@ export async function GET(
     if (err instanceof PageError) {
       return NextResponse.json({ error: err.message }, { status: 404 });
     }
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    return apiError(err);
   }
 }
 
@@ -110,6 +111,6 @@ export async function POST(
     if (err instanceof PageError) {
       return NextResponse.json({ error: err.message }, { status: 404 });
     }
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    return apiError(err);
   }
 }

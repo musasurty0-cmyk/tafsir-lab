@@ -7,6 +7,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import * as PagesService from "@/lib/services/pages.service";
+import { apiError } from "@/lib/api-errors";
 
 export async function POST(
   req: Request,
@@ -21,6 +22,6 @@ export async function POST(
     const board = await PagesService.createWorkspaceBoard(workspaceId, userId, title);
     return NextResponse.json({ board }, { status: 201 });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    return apiError(err);
   }
 }

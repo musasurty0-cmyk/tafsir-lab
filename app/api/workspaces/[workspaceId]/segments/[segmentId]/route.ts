@@ -1,22 +1,9 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import {
-  updateSegment, deleteSegment, duplicateSegment, selectionImpact, SegmentError,
+  updateSegment, deleteSegment, duplicateSegment, selectionImpact,
 } from "@/lib/services/segments.service";
-
-function errStatus(e: unknown): number {
-  if (e instanceof SegmentError) {
-    return e.code === "NOT_FOUND" ? 404 : e.code === "FORBIDDEN" ? 403 : 400;
-  }
-  const s = String(e);
-  // getSession throws plain Errors when there is no valid cookie. Without
-  // this the caller sees a 500 and cannot tell "log back in" from "the
-  // server is broken".
-  if (/Not authenticated|Invalid or expired session|Malformed session/.test(s)) return 401;
-  if (s.includes("FORBIDDEN") || s.includes("not a member")) return 403;
-  if (s.includes("NOT_FOUND") || s.includes("not found"))    return 404;
-  return 500;
-}
+import { apiError } from "@/lib/api-errors";
 
 type Ctx = { params: Promise<{ workspaceId: string; segmentId: string }> };
 
@@ -29,7 +16,7 @@ export async function GET(_req: Request, { params }: Ctx) {
     const impact = await selectionImpact(workspaceId, userId, segmentId);
     return NextResponse.json({ impact });
   } catch (e) {
-    return NextResponse.json({ error: String(e) }, { status: errStatus(e) });
+    return apiError(e);
   }
 }
 
@@ -49,7 +36,7 @@ export async function PATCH(req: Request, { params }: Ctx) {
     });
     return NextResponse.json({ segment });
   } catch (e) {
-    return NextResponse.json({ error: String(e) }, { status: errStatus(e) });
+    return apiError(e);
   }
 }
 
@@ -61,7 +48,7 @@ export async function POST(req: Request, { params }: Ctx) {
     const segment = await duplicateSegment(workspaceId, userId, segmentId);
     return NextResponse.json({ segment }, { status: 201 });
   } catch (e) {
-    return NextResponse.json({ error: String(e) }, { status: errStatus(e) });
+    return apiError(e);
   }
 }
 
@@ -72,6 +59,6 @@ export async function DELETE(req: Request, { params }: Ctx) {
     const res = await deleteSegment(workspaceId, userId, segmentId);
     return NextResponse.json(res);
   } catch (e) {
-    return NextResponse.json({ error: String(e) }, { status: errStatus(e) });
+    return apiError(e);
   }
 }

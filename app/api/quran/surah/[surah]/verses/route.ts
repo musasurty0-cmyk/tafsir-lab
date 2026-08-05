@@ -47,6 +47,7 @@ export async function GET(
     }));
     return NextResponse.json({ verses });
   } catch (e) {
-    return NextResponse.json({ verses: [], error: String(e) }, { status: 500 });
+    console.error("[api] quran/surah/verses:", e);
+    return NextResponse.json({ verses: [], error: "Could not load these verses." }, { status: 500 });
   }
 }

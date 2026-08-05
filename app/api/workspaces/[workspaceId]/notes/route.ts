@@ -14,6 +14,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import * as NotesService from "@/lib/services/notes.service";
 import { WorkspaceError } from "@/lib/services/workspaces.service";
+import { apiError } from "@/lib/api-errors";
 
 export async function GET(
   req: NextRequest,
@@ -38,6 +39,6 @@ export async function GET(
     if (err instanceof WorkspaceError) {
       return NextResponse.json({ error: err.message }, { status: err.code === "NOT_FOUND" ? 404 : 403 });
     }
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    return apiError(err);
   }
 }

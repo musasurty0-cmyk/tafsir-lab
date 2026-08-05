@@ -441,7 +441,7 @@ function RichBody({
     if (JSON.stringify(editor.getJSON()) === JSON.stringify(incoming)) return;
     if (isEmptyDoc(incoming) && !editor.isEmpty) return;
     editor.commands.setContent(incoming);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [editor, note.content]);
 
   // Tap-outside dismiss for the palette (portal lives outside the box)
@@ -525,7 +525,7 @@ function RichBody({
       { type: "paragraph" },
     ]).scrollIntoView().run();
     setVersePicker(null);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [editor, versePicker]);
 
   // Insert the verse's Arabic + translation as PLAIN inline text at a slash

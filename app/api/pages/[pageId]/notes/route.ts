@@ -24,6 +24,7 @@ import { getSession } from "@/lib/session";
 import * as NotesService from "@/lib/services/notes.service";
 import { WorkspaceError, getWorkspaceWithRole } from "@/lib/services/workspaces.service";
 import { db } from "@/lib/db";
+import { apiError } from "@/lib/api-errors";
 
 export async function GET(
   _req: NextRequest,
@@ -48,7 +49,7 @@ export async function GET(
     if (err instanceof WorkspaceError) {
       return NextResponse.json({ error: err.message }, { status: err.code === "NOT_FOUND" ? 404 : 403 });
     }
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    return apiError(err);
   }
 }
 
@@ -111,6 +112,6 @@ export async function POST(
     if (err instanceof WorkspaceError) {
       return NextResponse.json({ error: err.message }, { status: err.code === "NOT_FOUND" ? 404 : 403 });
     }
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    return apiError(err);
   }
 }

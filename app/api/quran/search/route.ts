@@ -73,6 +73,7 @@ export async function GET(req: Request) {
 
     return NextResponse.json({ results });
   } catch (e) {
-    return NextResponse.json({ results: [], error: String(e) }, { status: 500 });
+    console.error("[api] quran/search:", e);
+    return NextResponse.json({ results: [], error: "Search is unavailable." }, { status: 500 });
   }
 }

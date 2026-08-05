@@ -14,11 +14,23 @@ import { NextResponse } from "next/server";
 
 type CodedError = { code?: unknown; message?: unknown };
 
+/**
+ * Every code the services actually throw, verified against them rather than
+ * assumed. INVALID, BAD_RANGE and DUPLICATE were missing, which meant a bad
+ * ayah range or a duplicate Connection came back as a 500 "Something went
+ * wrong" — the client could not tell the user what to correct, and the log
+ * filled with server errors for what was really user input.
+ *
+ * Keep this in step with the `code` values in lib/services/*.service.ts.
+ */
 const STATUS: Record<string, number> = {
-  NOT_FOUND: 404,
-  FORBIDDEN: 403,
-  CONFLICT:  409,
-  BAD_REQUEST: 400,
+  NOT_FOUND:    404,
+  FORBIDDEN:    403,
+  CONFLICT:     409,
+  DUPLICATE:    409,
+  BAD_REQUEST:  400,
+  INVALID:      400,
+  BAD_RANGE:    400,
   UNAUTHORIZED: 401,
 };
 

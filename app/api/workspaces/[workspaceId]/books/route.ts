@@ -9,6 +9,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import * as PagesService from "@/lib/services/pages.service";
+import { apiError } from "@/lib/api-errors";
 
 export async function POST(
   req: Request,
@@ -38,6 +39,6 @@ export async function POST(
     const book = await PagesService.createWorkspaceBook(workspaceId, userId, { title, pdfUrl, pdfName });
     return NextResponse.json({ book }, { status: 201 });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    return apiError(err);
   }
 }

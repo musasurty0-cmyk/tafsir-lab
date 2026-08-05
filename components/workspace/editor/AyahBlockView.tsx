@@ -116,19 +116,28 @@ export default function AyahBlockView({
       return;
     }
 
-    // Cross-surah verse: fetch from the server proxy.
+    /* Cross-surah verse: fetch from the server proxy.
+
+       `live` guards updateAttributes() in particular. This is a TipTap node
+       view, and the success path writes back into the document — if the block
+       was deleted, or the reader navigated away, while the request was in
+       flight, that write targets a node position that no longer exists. A
+       display-only stale update would merely look wrong; this one throws. */
+    let live = true;
     const urlKey = verseKey.replace(":", "_");
     fetch(`/api/ayah/${urlKey}`)
       .then((r) => (r.ok ? r.json() : Promise.reject(r.statusText)))
       .then(({ verse }) => {
+        if (!live) return;
         const ar = verse.text_uthmani as string;
         const tr = (verse.translations?.[0]?.text as string | undefined)?.replace(/<[^>]+>/g, "") ?? "";
         setDisplayArabic(ar);
         setDisplayTranslation(tr);
         updateAttributes({ arabicText: ar, translationText: tr });
       })
-      .catch((e) => setFetchError(String(e)))
-      .finally(() => setFetching(false));
+      .catch(() => { if (live) setFetchError("Could not load this verse."); })
+      .finally(() => { if (live) setFetching(false); });
+    return () => { live = false; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [verseKey, retryKey]);
 

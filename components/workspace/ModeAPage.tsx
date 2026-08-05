@@ -88,7 +88,7 @@ function StatusBadge({ status }: { status: string }) {
 
 function Avatar({ name, avatarUrl }: { name: string; avatarUrl: string | null }) {
   if (avatarUrl) {
-    // eslint-disable-next-line @next/next/no-img-element
+     
     return <img src={avatarUrl} alt={name} className="doc-meta-avatar" />;
   }
   return <div className="doc-meta-avatar">{name.slice(0, 2).toUpperCase()}</div>;

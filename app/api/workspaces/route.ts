@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import * as WorkspacesService from "@/lib/services/workspaces.service";
+import { apiError } from "@/lib/api-errors";
 
 export async function GET() {
   try {
@@ -16,7 +17,7 @@ export async function GET() {
     if (err instanceof Error && err.message.includes("DEFAULT_USER_ID")) {
       return NextResponse.json({ error: "Not configured — run db:seed" }, { status: 503 });
     }
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    return apiError(err);
   }
 }
 
@@ -46,6 +47,6 @@ export async function POST(req: NextRequest) {
     );
     return NextResponse.json({ workspace }, { status: 201 });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    return apiError(err);
   }
 }

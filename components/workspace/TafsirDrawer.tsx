@@ -118,7 +118,7 @@ export default function TafsirDrawer({ open, verseKey, verses, onClose }: Props)
           cur !== "all" && !data.sources!.some((s) => s.language === cur) ? "all" : cur);
       })
       .catch(() => {/* non-fatal */});
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [open]);
 
   // ── Persist source choice ────────────────────────────────────────────────
@@ -157,25 +157,38 @@ export default function TafsirDrawer({ open, verseKey, verses, onClose }: Props)
     }
   }
 
-  // ── Fetch tafsir whenever ayah or source changes ─────────────────────────
+  /* Fetch tafsir whenever ayah or source changes.
+
+     Guarded with `live`, like the surah lookup below. The drawer is mounted
+     once and kept open across verse changes, so its state outlives any single
+     fetch: move from one āyah to the next while the first is still in flight
+     and the slower reply lands last, leaving the drawer showing commentary on
+     a verse the reader is no longer looking at — with nothing on screen to say
+     so. Clicking down a list of verses is exactly how the drawer is used. */
   useEffect(() => {
     if (!activeAyah || !open) return;
+    let live = true;
     setLoading(true);
     setError(null);
     setEntry(null);
 
     const urlKey = activeAyah.replace(":", "_");
     fetch(`/api/tafsir/${urlKey}?sources=${sourceSlug}`)
-      .then((r) => r.json())
+      /* Check ok before parsing: an error response is an HTML page, and
+         .json() on it throws a SyntaxError that used to reach the user as
+         "SyntaxError: Unexpected token <". */
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
       .then((data: { entries?: TafsirEntry[]; error?: string }) => {
+        if (!live) return;
         if (data.error) { setError(data.error); return; }
         const e = data.entries?.[0] ?? null;
         if (!e)       { setError("No tafsir available for this verse."); return; }
         if (e.error)  { setError(e.error); return; }
         setEntry(e);
       })
-      .catch((e) => setError(String(e)))
-      .finally(() => setLoading(false));
+      .catch(() => { if (live) setError("Could not load tafsir for this verse."); })
+      .finally(() => { if (live) setLoading(false); });
+    return () => { live = false; };
   }, [activeAyah, sourceSlug, open]);
 
   /* Surah information. Keyed on the SURAH, not the āyah, so moving between

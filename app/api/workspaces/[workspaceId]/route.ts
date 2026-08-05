@@ -11,6 +11,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import * as WorkspacesService from "@/lib/services/workspaces.service";
 import { WorkspaceError } from "@/lib/services/workspaces.service";
+import { apiError } from "@/lib/api-errors";
 
 export async function PATCH(
   req: NextRequest,
@@ -68,6 +69,6 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
       const s = err.code === "NOT_FOUND" ? 404 : err.code === "FORBIDDEN" ? 403 : 400;
       return NextResponse.json({ error: err.message }, { status: s });
     }
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    return apiError(err);
   }
 }

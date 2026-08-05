@@ -4,20 +4,7 @@ import {
   createConnection, listForObject, listCatalogue, connectionMap, ConnectionError,
 } from "@/lib/services/connections.service";
 import type { ObjectType } from "@/lib/quran-objects";
-
-function errStatus(e: unknown): number {
-  if (e instanceof ConnectionError) {
-    return e.code === "NOT_FOUND" ? 404
-         : e.code === "FORBIDDEN" ? 403
-         : e.code === "DUPLICATE" ? 409
-         : 400;
-  }
-  const s = String(e);
-  if (/Not authenticated|Invalid or expired session|Malformed session/.test(s)) return 401;
-  if (s.includes("FORBIDDEN") || s.includes("not a member")) return 403;
-  if (s.includes("NOT_FOUND") || s.includes("not found"))    return 404;
-  return 500;
-}
+import { apiError } from "@/lib/api-errors";
 
 /**
  * ?object=<key>  → every Connection touching that object (either end)
@@ -59,7 +46,7 @@ export async function GET(
     });
     return NextResponse.json(res);
   } catch (e) {
-    return NextResponse.json({ error: String(e) }, { status: errStatus(e) });
+    return apiError(e);
   }
 }
 
@@ -90,6 +77,6 @@ export async function POST(
         { error: e.message, existing: e.existing }, { status: 409 },
       );
     }
-    return NextResponse.json({ error: String(e) }, { status: errStatus(e) });
+    return apiError(e);
   }
 }

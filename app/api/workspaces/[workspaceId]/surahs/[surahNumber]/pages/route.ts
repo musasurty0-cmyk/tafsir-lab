@@ -13,6 +13,7 @@ import { getSession } from "@/lib/session";
 import * as WorkspacesService from "@/lib/services/workspaces.service";
 import * as PagesService from "@/lib/services/pages.service";
 import { db } from "@/lib/db";
+import { apiError } from "@/lib/api-errors";
 
 export async function GET(
   req: NextRequest,
@@ -58,7 +59,7 @@ export async function GET(
     if (err instanceof PagesService.PageError) {
       return NextResponse.json({ error: err.message }, { status: 404 });
     }
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    return apiError(err);
   }
 }
 
@@ -99,6 +100,6 @@ export async function POST(
       const status = err.code === "NOT_FOUND" ? 404 : 403;
       return NextResponse.json({ error: err.message }, { status });
     }
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    return apiError(err);
   }
 }

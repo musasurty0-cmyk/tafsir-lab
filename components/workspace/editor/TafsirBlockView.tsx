@@ -63,8 +63,14 @@ export default function TafsirBlockView({
     return () => { alive = false; };
   }, []);
 
+  /* `live` matters more here than in a display-only fetch: the success path
+     calls updateAttributes(), which WRITES the commentary into the document.
+     switchSource() clears contentHtml to re-trigger this effect, so picking a
+     second source before the first replies would persist the first source's
+     text under the second source's name — and it is saved, not just shown. */
   useEffect(() => {
     if (contentHtml) return;
+    let live = true;
     setFetching(true);
     setFetchError(null);
 
@@ -72,6 +78,7 @@ export default function TafsirBlockView({
     fetch(`/api/tafsir/${urlKey}?sources=${encodeURIComponent(slug)}`)
       .then((r) => (r.ok ? r.json() : Promise.reject(r.statusText)))
       .then((data) => {
+        if (!live) return;
         const entry = data.entries?.[0];
         if (!entry || entry.error || (!entry.contentHtml && !entry.content)) {
           throw new Error("No tafsir found for this verse");
@@ -90,8 +97,9 @@ export default function TafsirBlockView({
           sourceSlug:  entry.source?.slug ?? slug,
         });
       })
-      .catch((e) => setFetchError(String(e)))
-      .finally(() => setFetching(false));
+      .catch(() => { if (live) setFetchError("Could not load this tafsir."); })
+      .finally(() => { if (live) setFetching(false); });
+    return () => { live = false; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [verseKey, slug, retryKey]);
 
