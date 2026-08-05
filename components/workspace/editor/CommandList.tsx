@@ -63,7 +63,10 @@ const CommandList = forwardRef<CommandListHandle, Props>(
           setSelectedIndex((i) => (i + 1) % items.length);
           return true;
         }
-        if (e.key === "Enter") {
+        /* Tab confirms exactly like Enter — hands stay in typing position and
+           the muscle memory from every other palette (Notion, Linear, VS Code)
+           carries over. Shift+Tab is left alone. */
+        if (e.key === "Enter" || (e.key === "Tab" && !e.shiftKey)) {
           const item = items[selectedIndex];
           if (item) onSelect(item);
           return true;

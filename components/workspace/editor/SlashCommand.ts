@@ -118,7 +118,10 @@ export function buildCommands(): SlashCommandItem[] {
       title:       "All commands",
       description: "Show every slash command available here",
       icon:        "❓",
-      aliases:     ["commands", "?", "list"],
+      /* No "list" alias: it collided with Bullet list's, and help sits first
+         in the registry so it won the tie — "/list" surfaced the help sheet
+         above the actual list block. */
+      aliases:     ["commands", "?"],
       execute(editor, range) {
         editor.chain().focus().deleteRange(range).run();
         if (typeof window !== "undefined") {
@@ -294,6 +297,23 @@ export function buildCommands(): SlashCommandItem[] {
       },
     },
     {
+      /* The Table extensions were fully installed and configured (resizable
+         columns, every mark) but no command inserted one — the feature was
+         unreachable except by pasting. Found when the fuzzy-filter test typed
+         "tabel" and got nothing back. */
+      id:          "table",
+      title:       "Table",
+      description: "3×3 table with a header row — columns resize by dragging",
+      icon:        "▦",
+      aliases:     ["grid", "tabel"],
+      execute(editor, range) {
+        editor.chain().focus().deleteRange(range)
+          .insertTable({ rows: 3, cols: 3, withHeaderRow: true })
+          .scrollIntoView()
+          .run();
+      },
+    },
+    {
       id:          "divider",
       title:       "Divider",
       description: "Horizontal rule",
@@ -311,6 +331,45 @@ export function buildCommands(): SlashCommandItem[] {
 
 // ── Filter helper (used by PageEditor to pass items to CommandList) ────────
 
+/**
+ * Score one candidate string against the typed word. Higher is better; 0 is
+ * no match. The tiers matter more than the numbers: an exact or prefix match
+ * must always beat a word-boundary match, which must always beat a scattered
+ * subsequence — so "/h1" puts Heading 1 first even though "help" also
+ * contains an h and a 1.
+ */
+function scoreCandidate(candidate: string, word: string): number {
+  const c = candidate.toLowerCase();
+  if (c === word)          return 1000;
+  if (c.startsWith(word))  return 800 - c.length;          // shorter wins ties
+  // Word-boundary prefix: "kat" → "ibn kathīr", "list" → "task list".
+  const bound = c.search(/[\s-]/) >= 0 ? c.split(/[\s-]+/) : null;
+  if (bound?.some((part) => part.startsWith(word))) return 600 - c.length;
+  if (c.includes(word))    return 400 - c.indexOf(word);
+  // One adjacent transposition: "tafisr" → "tafsir". Checked BEFORE the
+  // subsequence tier — a transposed prefix is a near-exact match, and it must
+  // beat a six-letter query scattered across a seventeen-letter title, which
+  // is how "tafisr" once ranked Ibn ʿĀshūr above Tafsīr itself.
+  for (let t = 0; t + 1 < word.length; t++) {
+    const swapped = word.slice(0, t) + word[t + 1] + word[t] + word.slice(t + 2);
+    if (c.startsWith(swapped)) return 350 - c.length;
+    if (c.includes(swapped))   return 300 - c.length;
+  }
+  // Subsequence, in order but scattered: "tfsr" → "tafsir". Every typed
+  // character must appear, in order — this is what absorbs skipped letters.
+  let i = 0;
+  for (const ch of c) { if (ch === word[i]) i++; if (i === word.length) break; }
+  if (i === word.length)   return 200 - c.length;
+  return 0;
+}
+
+function scoreCommand(cmd: SlashCommandItem, word: string): number {
+  let best = scoreCandidate(cmd.id, word);
+  best = Math.max(best, scoreCandidate(cmd.title, word) - 1); // id edges title
+  for (const a of cmd.aliases ?? []) best = Math.max(best, scoreCandidate(a, word));
+  return best;
+}
+
 export function filterCommands(
   items: SlashCommandItem[],
   query: string
@@ -319,12 +378,14 @@ export function filterCommands(
   const q    = query.toLowerCase().trim();
   // Match against the first word of the query (before any space + param)
   const word = q.split(/\s+/)[0];
-  return items.filter(
-    (cmd) =>
-      cmd.id.startsWith(word) ||
-      cmd.title.toLowerCase().includes(word) ||
-      cmd.aliases?.some((a) => a.startsWith(word))
-  );
+  if (!word) return items;
+  return items
+    .map((cmd, i) => ({ cmd, i, score: scoreCommand(cmd, word) }))
+    .filter((r) => r.score > 0)
+    // Stable on registry order within a tier, so browsing order is preserved
+    // when scores tie — blocks stay ahead of the scholar shortcuts.
+    .sort((a, b) => b.score - a.score || a.i - b.i)
+    .map((r) => r.cmd);
 }
 
 // ── TipTap extension ──────────────────────────────────────────────────────

@@ -205,6 +205,20 @@ input, textarea { font: inherit; color: inherit; }
 ::-webkit-scrollbar-thumb:hover { background: var(--ink-4); }
 ::-webkit-scrollbar-track { background: transparent; }
 
+/* ── Text selection ──
+   The browser's default selection is a saturated system blue — the single
+   loudest "default software" tell on a paper-toned page. Tinting it from the
+   accent keeps selected text readable (the wash is translucent, so ink and
+   highlight marks show through) and means it re-tunes itself automatically
+   with every accent choice and with dark mode, where it needs to be a little
+   stronger to read against the darker page. */
+::selection {
+  background: color-mix(in oklch, var(--accent) 24%, transparent);
+}
+[data-theme="dark"] ::selection {
+  background: color-mix(in oklch, var(--accent) 34%, transparent);
+}
+
 /* ── App shell ── */
 .app {
   display: grid;
@@ -512,6 +526,11 @@ input, textarea { font: inherit; color: inherit; }
   padding: 0 48px;
   overflow: auto;              /* both axes */
   overscroll-behavior-x: contain;
+  /* Breathing room for anything scrolled into view — a block jumped to via
+     scrollIntoView lands 96px clear of the edges instead of kissing them.
+     (Caret-driven typing gets the same treatment from the editor's own
+     scrollThreshold/scrollMargin props, which PM applies while typing.) */
+  scroll-padding-block: 96px 120px;
 }
 /* The PAGE — a surface, not a column.
    width:max-content lets it grow to whatever its widest child needs, and
