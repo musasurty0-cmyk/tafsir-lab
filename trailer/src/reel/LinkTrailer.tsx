@@ -16,8 +16,12 @@ import {
   MAGNETIC, FALLS, PAIR,
   type Conn,
 } from "./trailerSpec";
+import { SearchIntro, INTRO, INTRO_FRAMES } from "./SearchIntro";
 
 export { TRAILER_FRAMES };
+
+/** The whole piece: the opening question, then the trailer it answers. */
+export const TOTAL_FRAMES = INTRO_FRAMES + TRAILER_FRAMES;
 
 /* ── The Connections trailer ───────────────────────────────────────────────
    One container for 38 seconds. It becomes the title card, the brand mark, a
@@ -693,71 +697,137 @@ const Body: React.FC = () => {
   );
 };
 
-const Sfx: React.FC<{ at: number; file: string; v: number; len?: number }> =
-({ at, file, v, len = 26 }) => (
-  <Sequence from={at} durationInFrames={len}>
-    <Audio src={staticFile(file)} volume={v} />
-  </Sequence>
+/**
+ * One shot, placed by its TRANSIENT rather than its first sample.
+ *
+ * `at` is the frame the hit should be HEARD on; `lead` is how far into the file
+ * its peak sits, so the sequence starts that much earlier. whoosh.mp3 peaks 10
+ * frames in — placed by sample zero it lands a sixth of a second late, which
+ * reads as sound that does not belong to the picture.
+ *
+ * The tail is faded rather than cut: Sequence stops audio dead at
+ * durationInFrames, and chopping a decaying tail mid-sample is an audible click.
+ */
+const Sfx: React.FC<{ at: number; file: string; v: number; len?: number; lead?: number }> =
+({ at, file, v, len = 26, lead = 0 }) => {
+  const n    = Math.max(8, len);
+  const fade = Math.max(2, Math.min(10, Math.round(n * 0.3)));
+  return (
+    <Sequence from={Math.max(0, at - lead)} durationInFrames={n}>
+      <Audio
+        src={staticFile(file)}
+        volume={(fr) => v * interpolate(fr, [0, 1, n - fade, n], [0, 1, 1, 0],
+          { extrapolateLeft: "clamp", extrapolateRight: "clamp" })}
+      />
+    </Sequence>
+  );
+};
+
+/** The trailer's own cues. Rendered inside the intro's Sequence, so every
+ *  frame number here is the one trailerSpec states — no offsets, and the suite
+ *  that checks the spec keeps checking the thing that renders. */
+const TrailerCues: React.FC = () => (
+  <>
+    <Sequence from={T.slashStart} durationInFrames={T_END.slash - T.slashStart + 10}>
+      <Audio src={staticFile("sfx/typing.mp3")} volume={0.34} />
+    </Sequence>
+    <Sequence from={T.nameStart} durationInFrames={T_END.name - T.nameStart + 10}>
+      <Audio src={staticFile("sfx/typing.mp3")} volume={0.38} />
+    </Sequence>
+
+    {/* Two weights of click: a soft tap for placing a caret or focusing a
+        field, the magnetic snap for the three actions that commit — choosing
+        the menu item, creating the Connection, throwing the appearance
+        switch. */}
+    {LEGS.filter((l) => l.click).map((l) => (
+      MAGNETIC.has(l.at)
+        ? <Sfx key={l.at} at={l.at} file="sfx/magnetic.mp3" v={0.65} len={14} />
+        : <Sfx key={l.at} at={l.at} file="sfx/click.mp3" v={0.40} len={18} />
+    ))}
+
+    {/* Things dropping out of the container. The source was peaking at -1 dB,
+        so it is baked 12 dB down and played back gently on top — it should
+        register as weight, not as a stab. */}
+    {FALLS.map((at) => (
+      <Sfx key={`fall-${at}`} at={at} file="sfx/granular.mp3" v={0.45} len={22} />
+    ))}
+
+    {/* One swoosh per large container move, and one on each card that joins
+        the stack, so the cascade is heard as well as seen. */}
+    <Sfx at={S[IX.verseB].at - S[IX.verseB].morph} file="sfx/whoosh.mp3" v={0.22} len={36} />
+    <Sfx at={S[IX.note].at - S[IX.note].morph} file="sfx/whoosh.mp3" v={0.30} len={48} />
+    <Sfx at={S[IX.stack].at - S[IX.stack].morph} file="sfx/whoosh.mp3" v={0.34} len={48} />
+    {[1, 2, 3].map((i) => (
+      <Sfx key={i} at={S[IX.stack].at - 20 + i * STACK.step} file="sfx/click.mp3" v={0.24} len={16} />
+    ))}
+    <Sfx at={S[IX.wheel].at - S[IX.wheel].morph} file="sfx/whoosh.mp3" v={0.5} len={60} />
+    <Sfx at={S[IX.count].at - S[IX.count].morph} file="sfx/whoosh.mp3" v={0.38} len={52} />
+    <Sfx at={S[IX.cta].at - S[IX.cta].morph} file="sfx/whoosh.mp3" v={0.28} len={44} />
+  </>
+);
+
+/**
+ * The intro's cues, on the ABSOLUTE clock.
+ *
+ * Levels follow the envelope measured off the source in MOTION-STUDY §12: the
+ * rule and the launch carry it, the hang is SILENT (the launch's tail is faded
+ * out before it and nothing starts until the fall), and the collapse is the
+ * loudest moment. Enter lands four frames before the collapse so the card
+ * appearing reads as the consequence of the keypress.
+ */
+const IntroCues: React.FC = () => (
+  <>
+    <Sfx at={INTRO.markFrom + 4}  file="sfx/whoosh.mp3" v={0.20} len={26} lead={10} />
+    <Sfx at={INTRO.markFrom + 36} file="sfx/whoosh.mp3" v={0.34} len={30} lead={10} />
+    {/*  … the hang. Nothing here, on purpose. */}
+    <Sfx at={INTRO.landed - 2}    file="sfx/whoosh.mp3" v={0.22} len={28} lead={10} />
+    <Sfx at={INTRO.landed}        file="sfx/land.mp3"   v={0.26} len={14} lead={3} />
+    {/*  … the question paints in silence. */}
+    <Sfx at={INTRO.collapse - 4}  file="sfx/click.mp3"  v={0.17} len={18} lead={3} />
+    <Sfx at={INTRO.collapse + 22} file="sfx/whoosh.mp3" v={0.46} len={34} lead={10} />
+  </>
 );
 
 export const LinkTrailer: React.FC = () => {
   const f = useCurrentFrame();
-  const theme = themeAt(f, THEME);
+  /* Everything after the intro runs on the trailer's OWN clock. Wrapping the
+     body and its cues in one Sequence is what lets trailerSpec — and the suite
+     that verifies it — keep describing a timeline that starts at zero, instead
+     of every literal in it gaining an offset. The theme is read on the same
+     shifted clock so the switch still lands on the frame the spec says. */
+  const theme = themeAt(Math.max(0, f - INTRO_FRAMES), THEME);
   return (
     <ThemeProvide value={theme}>
       <AbsoluteFill style={{ background: theme.stage }}>
         <Stage theme={theme}>
-          <Body />
+          {/* The question the next forty seconds is an answer to. It collapses
+              into exactly the geometry of STATES[0], so the trailer opens on
+              this same object continued rather than on a card cut to. */}
+          <SearchIntro f={f} />
+
+          <Sequence from={INTRO_FRAMES}>
+            <Body />
+          </Sequence>
         </Stage>
 
-        {/* Bed from 33s in. Played at 0.18 rather than the old 0.28 because
-            this track is 3.8 dB hotter and peaks at -0.7 dB; matched by
-            measurement so it sits exactly where the SFX were balanced. */}
+        {/* Bed across the whole piece, intro included. Played at 0.18 rather
+            than the old 0.28 because this track is 3.8 dB hotter and peaks at
+            -0.7 dB; matched by measurement so it sits where the SFX were
+            balanced. */}
         <Audio
           src={staticFile("bg2.mp3")}
           startFrom={33 * 60}
           volume={(fr) =>
-            0.18 * interpolate(fr, [0, 120, TRAILER_FRAMES - 120, TRAILER_FRAMES], [0, 1, 1, 0],
+            0.18 * interpolate(fr, [0, 120, TOTAL_FRAMES - 120, TOTAL_FRAMES], [0, 1, 1, 0],
               { extrapolateLeft: "clamp", extrapolateRight: "clamp" })}
         />
 
-        <Sequence from={T.slashStart} durationInFrames={T_END.slash - T.slashStart + 10}>
-          <Audio src={staticFile("sfx/typing.mp3")} volume={0.34} />
+        <IntroCues />
+
+        <Sequence from={INTRO_FRAMES}>
+          <TrailerCues />
         </Sequence>
-        <Sequence from={T.nameStart} durationInFrames={T_END.name - T.nameStart + 10}>
-          <Audio src={staticFile("sfx/typing.mp3")} volume={0.38} />
-        </Sequence>
-
-        {/* Two weights of click: a soft tap for placing a caret or focusing a
-            field, the magnetic snap for the three actions that commit —
-            choosing the menu item, creating the Connection, throwing the
-            appearance switch. */}
-        {LEGS.filter((l) => l.click).map((l) => (
-          MAGNETIC.has(l.at)
-            ? <Sfx key={l.at} at={l.at} file="sfx/magnetic.mp3" v={0.65} len={14} />
-            : <Sfx key={l.at} at={l.at} file="sfx/click.mp3" v={0.40} len={18} />
-        ))}
-
-        {/* Things dropping out of the container. The source was peaking at
-            -1 dB, so it is baked 12 dB down and played back gently on top —
-            it should register as weight, not as a stab. */}
-        {FALLS.map((at) => (
-          <Sfx key={`fall-${at}`} at={at} file="sfx/granular.mp3" v={0.45} len={22} />
-        ))}
-
-        {/* One swoosh per large container move, and one on each card that
-            joins the stack, so the cascade is heard as well as seen. */}
-        <Sfx at={S[IX.verseB].at - S[IX.verseB].morph} file="sfx/whoosh.mp3" v={0.22} len={36} />
-        <Sfx at={S[IX.note].at - S[IX.note].morph} file="sfx/whoosh.mp3" v={0.30} len={48} />
-        <Sfx at={S[IX.stack].at - S[IX.stack].morph} file="sfx/whoosh.mp3" v={0.34} len={48} />
-        {[1, 2, 3].map((i) => (
-          <Sfx key={i} at={S[IX.stack].at - 20 + i * STACK.step} file="sfx/click.mp3" v={0.24} len={16} />
-        ))}
-        <Sfx at={S[IX.wheel].at - S[IX.wheel].morph} file="sfx/whoosh.mp3" v={0.5} len={60} />
-        <Sfx at={S[IX.count].at - S[IX.count].morph} file="sfx/whoosh.mp3" v={0.38} len={52} />
-        <Sfx at={S[IX.cta].at - S[IX.cta].morph} file="sfx/whoosh.mp3" v={0.28} len={44} />
       </AbsoluteFill>
     </ThemeProvide>
   );
 };
-

@@ -3,7 +3,7 @@ import { Composition } from "remotion";
 import { TafsirTrailer } from "./TafsirTrailer";
 import { LinkReel, REEL_FRAMES } from "./reel/LinkReel";
 import { TestReel, TEST_FRAMES } from "./reel/TestReel";
-import { LinkTrailer, TRAILER_FRAMES } from "./reel/LinkTrailer";
+import { LinkTrailer, TOTAL_FRAMES } from "./reel/LinkTrailer";
 import { SurahStudy, STUDY_FRAMES } from "./reel/SurahStudy";
 import { ToolsReel, TOOLS_FRAMES } from "./reel/ToolsReel";
 import { StrokeReel, STROKE_FRAMES } from "./reel/StrokeReel";
@@ -81,7 +81,7 @@ export const RemotionRoot: React.FC = () => {
       <Composition
         id="LinkTrailer"
         component={LinkTrailer}
-        durationInFrames={TRAILER_FRAMES}
+        durationInFrames={TOTAL_FRAMES}
         fps={60}
         width={1080}
         height={1920}
