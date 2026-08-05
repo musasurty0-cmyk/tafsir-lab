@@ -130,6 +130,21 @@ const CARD_CY = 552;
 const BAR_CY = H / 2;
 const PILL_H = 96;
 
+/**
+ * The bar's last stretch of collapse, which is also the first panel's rise.
+ *
+ * One value drives both, so their opacities always sum to one. Easing the two
+ * sides independently — which is what I had — leaves both near zero in the
+ * middle, and since these are white cards on an off-white page the card
+ * momentarily thins out to nothing. Measured on the render it disappeared
+ * entirely for six frames, which is a worse artefact than the cut it was
+ * meant to remove.
+ */
+const handover = (f: number) => {
+  const c = easeIO((f - T.collapse) / T.collapseFor);
+  return Math.max(0, Math.min(1, (c - 0.62) / 0.38));
+};
+
 /** Text inset from the field's left edge. */
 const PAD = 40;
 /** The frame the mark finishes and the field's own caret takes over. Both
@@ -151,13 +166,13 @@ const geom = (f: number) => {
   /* The field only opens out once the mark is in it. */
   const grow = springy((f - LANDED) / 30);
   const paint = track(interpolate(f, [T.paint, T.paint + T.paintFor], [0, 1], clamp), PS, PV);
-  /* The source's back-arrow to refresh distance is 350 / 406 / 489 of its
-     1280 across unfocused, focused-empty and full. That gap is not the field
-     though — it also spans two buttons and two gutters, so the field itself
-     is about 268 / 324 / 407 source-px, which is what these are. Taking the
-     centre distance for the field made the bar 39.7% of the frame against
-     the source's 35.9%; the missing width was really the missing button. */
-  const w = interpolate(grow, [0, 1], [430, 500], clamp) + paint * 140;
+  /* Bounded properly this time. The source's placeholder centres at 623, and
+     the field has to sit between the menu glyph ending at 514 and the refresh
+     starting at 738 — so symmetric about 623 it can be at most 218 source-px
+     wide, not the 268 I had inferred from button centres. Its focus and text
+     steps add 56 and 83. Scaled: 330 / 411 / 536, which puts the whole bar at
+     35.6% of frame width against the source's 35.9%. */
+  const w = interpolate(grow, [0, 1], [330, 411], clamp) + paint * 125;
   return { w, chars: paint * URL.length, textLeft: W / 2 - w / 2 + PAD };
 };
 
@@ -325,6 +340,11 @@ const Bar: React.FC<{ f: number }> = ({ f }) => {
   /* The collapse: side buttons drawn in, field grown into the panel. */
   const c = easeIO((f - T.collapse) / T.collapseFor);
   if (c >= 1) return null;
+  /* The field ends the collapse at exactly the first panel's size, radius,
+     centre and y, so the two are the same rectangle. The panel rises on the
+     complement of this, so the shape is continuous and only its contents
+     change — the panel IS the field, continued. */
+  const hand = handover(f);
 
   /* Continuous, not a boolean. The old `focused` flag flipped the background,
      the alignment, the text colour and the whole placeholder-to-URL swap on a
@@ -352,12 +372,26 @@ const Bar: React.FC<{ f: number }> = ({ f }) => {
       display: "flex", alignItems: "center", justifyContent: "center", gap: 22,
       transform: `translateY(-50%) scale(${push})`,
       filter: soft > 0.1 ? `blur(${soft}px)` : undefined,
-      zIndex: 30,
+      zIndex: 30, opacity: 1 - hand,
     }}>
+      {/* Two buttons each side, which is how the source is laid out and, more
+          to the point, the only way the field's centre and the row's centre
+          are the same point. With one button left and two right the field sat
+          50px left of the row — so the mark, the caret and the panel the field
+          collapses into were all measuring from a centre the field was not on.
+          That is why the rule looked off, and why the collapse cut. */}
       <Round style={{
         transform: `translateX(${side}px) scale(${1 - c})`, opacity: 1 - c * 1.4,
       }}>
         <svg width="32" height="32" viewBox="0 0 24 24" {...ic}><path d="M15 5l-7 7 7 7" /></svg>
+      </Round>
+
+      <Round style={{
+        transform: `translateX(${side * 0.72}px) scale(${1 - c})`, opacity: 1 - c * 1.4,
+      }}>
+        <svg width="30" height="30" viewBox="0 0 24 24" {...ic}>
+          <path d="M4 7h16M4 12h10M4 17h13" />
+        </svg>
       </Round>
 
       <div style={{
@@ -378,14 +412,6 @@ const Bar: React.FC<{ f: number }> = ({ f }) => {
           style={{ position: "absolute", right: 34, top: "50%", marginTop: -16,
                    opacity: (1 - foc) * gone }}>
           <path d="M20 11a8 8 0 10-2.3 5.7" /><path d="M20 5v6h-6" />
-        </svg>
-        {/* The source carries a fifth glyph here, leading the field. It reads
-            as chrome rather than as content, and it is part of why its bar
-            has half again as much ink as mine did. */}
-        <svg width="30" height="30" viewBox="0 0 24 24" {...ic}
-          style={{ position: "absolute", left: 32, top: "50%", marginTop: -15,
-                   opacity: (1 - foc * 1.6) * gone }}>
-          <path d="M4 7h16M4 12h10M4 17h13" />
         </svg>
 
         <span style={{
@@ -650,10 +676,10 @@ const Stack: React.FC<{ f: number }> = ({ f }) => {
     <div style={{
       position: "absolute", inset: 0,
       transform: `translateX(${groupX * (1 - cv)}px)`,
-      filter: speed > 0.02 ? `blur(${speed * 5}px)` : undefined,
+      filter: speed > 0.02 ? `blur(${speed * 1.9}px)` : undefined,
     }}>
       {PANELS.map((p, i) => {
-        if (f < p.at - 10) return null;
+        if (f < (i === 0 ? T.collapse : p.at - 10)) return null;
         const e = easeIO((f - p.at) / 40);
         let depth = 0;
         for (let k = i + 1; k < PANELS.length; k++) depth += easeIO((f - PANELS[k].at) / 40);
@@ -673,9 +699,9 @@ const Stack: React.FC<{ f: number }> = ({ f }) => {
           <div key={p.label} style={{
             position: "absolute", left: x, top: y,
             width: size, zIndex: 10 + i,
-            opacity: first ? ease((f - (p.at - 10)) / 9) : Math.min(1, e * 1.7),
+            opacity: first ? handover(f) : Math.min(1, e * 1.7),
             /* Enough to move attention forward, not enough to hide anything. */
-            filter: depth > 0.02 ? `blur(${Math.min(depth, 1) * 2.6}px)` : undefined,
+            filter: depth > 0.02 ? `blur(${Math.min(depth, 1) * 1.35}px)` : undefined,
           }}>
             {/* Sits ABOVE the card rather than in the flow, so the card's top
                 edge is the container's top edge — otherwise the panel ends up
