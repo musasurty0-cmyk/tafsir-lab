@@ -31,6 +31,18 @@ const easeIO = (t: number) => {
   const x = Math.max(0, Math.min(1, t));
   return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
 };
+/** Overshoots and settles — the elastic accel/decel a layout change needs so
+ *  it reads as physics rather than as a value being set. */
+const springy = (t: number, k = 1.25) => {
+  const x = Math.max(0, Math.min(1, t));
+  return 1 + (k + 1) * Math.pow(x - 1, 3) + k * Math.pow(x - 1, 2);
+};
+/** A hand does not type at a constant rate: it runs, then hesitates. Same
+ *  total duration, uneven cadence, so the reveal has a pulse to it. */
+const rhythm = (t: number) => {
+  const x = Math.max(0, Math.min(1, t));
+  return Math.max(0, Math.min(1, x + 0.055 * Math.sin(x * 15.5) + 0.03 * Math.sin(x * 6.1)));
+};
 
 const URL = "tafsir-lab.com";
 
@@ -115,10 +127,15 @@ const Bar: React.FC<{ f: number }> = ({ f }) => {
   if (c >= 1) return null;
 
   const focused = f >= T.markFrom + T.markFor * 0.82;
-  const paint = interpolate(f, [T.paint, T.paint + T.paintFor], [0, 1], clamp);
-  const paintBlur = interpolate(f, [T.paint, T.paint + T.paintFor * 0.75], [10, 0], clamp);
+  const paint = rhythm(interpolate(f, [T.paint, T.paint + T.paintFor], [0, 1], clamp));
+  const paintBlur = interpolate(f, [T.paint, T.paint + T.paintFor * 0.7], [9, 0], clamp);
+  /* Fluid morph: the field is not a fixed box that text lands in — it grows
+     to hold what is in it, on a spring, and the buttons ride outward with it. */
+  const focusGrow = springy((f - (T.markFrom + T.markFor * 0.74)) / 26);
+  const wField = interpolate(focusGrow, [0, 1], [430, 520], clamp)
+               + paint * 190;
 
-  const pw = interpolate(c, [0, 1], [PILL_W, CARD]);
+  const pw = interpolate(c, [0, 1], [wField, CARD]);
   const ph = interpolate(c, [0, 1], [PILL_H, CARD]);
   const pr = interpolate(c, [0, 1], [PILL_H / 2, 24]);
   const cy = interpolate(c, [0, 1], [BAR_CY, CARD_CY]);
@@ -388,24 +405,27 @@ const PANELS = [
 const LOGO = 300;
 
 const Stack: React.FC<{ f: number }> = ({ f }) => {
-  let landed = 0;
-  for (const p of PANELS) landed += easeIO((f - p.at) / 40);
-  const groupX = -(landed - 1) * (STEP * 0.52);
+  /* Only arrivals AFTER the first move the group. Counting the first one meant
+     the whole stack sat 180px right of centre until it had "landed", so the
+     field collapsed into a panel that was not where the field had been — which
+     is what put a second edge alongside it during the handover. */
+  let after = 0;
+  for (const p of PANELS.slice(1)) after += easeIO((f - p.at) / 40);
+  const groupX = -after * (STEP * 0.52);
 
   let speed = 0;
-  for (const p of PANELS) {
+  for (const p of PANELS.slice(1)) {
     const d = f - p.at;
     if (d > -6 && d < 46) speed = Math.max(speed, Math.sin(Math.max(0, Math.min(1, (d + 6) / 52)) * Math.PI));
   }
 
-  /* The close: every panel travels to the SAME rect, so three become one. */
   const cv = easeIO((f - T.converge) / T.convergeFor);
 
   return (
     <div style={{
       position: "absolute", inset: 0,
       transform: `translateX(${groupX * (1 - cv)}px)`,
-      filter: speed > 0.02 ? `blur(${speed * 7}px)` : undefined,
+      filter: speed > 0.02 ? `blur(${speed * 5}px)` : undefined,
     }}>
       {PANELS.map((p, i) => {
         if (f < p.at - 10) return null;
@@ -414,33 +434,41 @@ const Stack: React.FC<{ f: number }> = ({ f }) => {
         for (let k = i + 1; k < PANELS.length; k++) depth += easeIO((f - PANELS[k].at) / 40);
         depth *= 1 - cv;
 
-        const home = W / 2 - CARD / 2 - STEP * 0.5 + i * STEP;
-        const x0 = home + (1 - e) * 300;
-        const x = interpolate(cv, [0, 1], [x0, W / 2 - LOGO / 2 - groupX * 0], clamp);
+        /* The FIRST panel is what the search field became. It does not fly in
+           from anywhere — it is already there, at exactly the size and place
+           the field collapsed to, or the collapse was for nothing. */
+        const first = i === 0;
+        const home = W / 2 - CARD / 2 + i * STEP;
+        const x0 = first ? home : home + (1 - e) * 320;
+        const x = interpolate(cv, [0, 1], [x0, W / 2 - LOGO / 2], clamp);
         const size = interpolate(cv, [0, 1], [CARD, LOGO]);
-        const y = interpolate(cv, [0, 1], [CARD_CY - CARD / 2, CARD_CY - LOGO / 2]);
+        const y = interpolate(cv, [0, 1], [CARD_CY - CARD / 2, CARD_CY - LOGO / 2], clamp);
 
         return (
           <div key={p.label} style={{
             position: "absolute", left: x, top: y,
             width: size, zIndex: 10 + i,
-            /* Behind panels stay VISIBLE — the blur moves attention forward,
-               it is not there to hide them. */
-            opacity: Math.min(1, e * 1.7) * (1 - depth * 0.05),
-            filter: depth > 0.02 ? `blur(${depth * 6}px)` : undefined,
+            opacity: first ? ease((f - (p.at - 10)) / 9) : Math.min(1, e * 1.7),
+            /* Enough to move attention forward, not enough to hide anything. */
+            filter: depth > 0.02 ? `blur(${Math.min(depth, 1) * 2.6}px)` : undefined,
           }}>
+            {/* Sits ABOVE the card rather than in the flow, so the card's top
+                edge is the container's top edge — otherwise the panel ends up
+                40px below the mark it converges into and leaves a white lip
+                under it. */}
             <div style={{
-              display: "flex", alignItems: "center", gap: 9, marginBottom: 11, paddingLeft: 4,
-              opacity: 1 - cv * 2,
+              position: "absolute", left: 4, bottom: "100%", marginBottom: 11,
+              display: "flex", alignItems: "center", gap: 9,
+              opacity: (1 - cv * 2) * (first ? ease((f - p.at) / 20) : 1),
             }}>
               <svg width="22" height="18" viewBox="0 0 22 18">
                 <path d="M1 3.5A2.5 2.5 0 013.5 1h4.2l2 2.2h8.8A2.5 2.5 0 0121 5.7v9.8A2.5 2.5 0 0118.5 18h-15A2.5 2.5 0 011 15.5z"
                   fill="#63b3f5" />
               </svg>
-              <span style={{ fontFamily: R.fontSans, fontSize: 20, color: "#4a4a51" }}>
-                {p.label}
-              </span>
+              <span style={{ fontFamily: R.fontSans, fontSize: 20, color: "#4a4a51",
+                whiteSpace: "nowrap" }}>{p.label}</span>
             </div>
+
             <div style={{
               width: size, height: size,
               borderRadius: interpolate(cv, [0, 1], [24, 72]),
@@ -461,7 +489,6 @@ const Stack: React.FC<{ f: number }> = ({ f }) => {
         );
       })}
 
-      {/* What they become. */}
       {cv > 0.02 && (
         <div style={{
           position: "absolute", left: W / 2 - LOGO / 2, top: CARD_CY - LOGO / 2,
@@ -531,13 +558,23 @@ export const SearchReel: React.FC = () => {
           0.18 * interpolate(fr, [0, 50, SEARCH_FRAMES - 60, SEARCH_FRAMES], [0, 1, 1, 0], clamp)}
       />
 
-      <Sfx at={T.markFrom + Math.round(T.markFor * 0.5)} file="sfx/magnetic.mp3" v={0.46} len={14} />
-      <Sfx at={T.paint} file="sfx/granular.mp3" v={0.32} len={22} />
-      <Sfx at={T.collapse} file="sfx/whoosh.mp3" v={0.44} len={30} />
+      {/* The mark snapping into the field. */}
+      <Sfx at={T.markFrom + Math.round(T.markFor * 0.74)} file="sfx/uiclick.mp3" v={0.72} len={26} />
+      {/* The address resolving. */}
+      <Sfx at={T.paint} file="sfx/uitype.mp3" v={0.5} len={70} />
+      {/* The field growing into the first panel. */}
+      <Sfx at={T.collapse} file="sfx/uiwhoosh.mp3" v={0.9} len={80} />
+      <Sfx at={T.collapse + 22} file="sfx/uipop.mp3" v={0.5} len={40} />
+      {/* Each later panel: the travel, then the landing. */}
       {PANELS.slice(1).map((p) => (
-        <Sfx key={p.label} at={p.at} file="sfx/whoosh.mp3" v={0.42} len={36} />
+        <React.Fragment key={p.label}>
+          <Sfx at={p.at - 8} file="sfx/uiswish.mp3" v={0.66} len={32} />
+          <Sfx at={p.at + 16} file="sfx/uipop.mp3" v={0.44} len={40} />
+        </React.Fragment>
       ))}
-      <Sfx at={T.converge} file="sfx/whoosh.mp3" v={0.5} len={52} />
+      {/* Three becoming one. */}
+      <Sfx at={T.converge} file="sfx/uiwhoosh.mp3" v={1.0} len={80} />
+      <Sfx at={T.converge + T.convergeFor - 6} file="sfx/uiclick.mp3" v={0.6} len={26} />
     </AbsoluteFill>
   );
 };
