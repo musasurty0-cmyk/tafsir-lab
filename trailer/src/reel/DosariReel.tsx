@@ -109,7 +109,7 @@ const Clip: React.FC = () => {
             opacity: e, transform: `translateY(${(1 - e) * 8}px)`,
           }}>
             <div style={{
-              fontFamily: R.fontArabic, fontSize: 46, lineHeight: 1.7,
+              fontFamily: R.fontArabic, fontSize: 52, lineHeight: 1.7,
               color: CREAM, direction: "rtl", textAlign: "center",
               textWrap: "balance",
               /* A soft dark halo rather than a box: legible over a bright
@@ -119,9 +119,9 @@ const Clip: React.FC = () => {
               {cur.ar}
             </div>
             <div style={{
-              fontFamily: R.fontSerif, fontSize: 25, lineHeight: 1.45,
+              fontFamily: R.fontSerif, fontSize: 28, lineHeight: 1.45,
               color: "rgba(246,240,226,0.82)", textAlign: "center",
-              textWrap: "balance", maxWidth: 800,
+              textWrap: "balance", maxWidth: 860,
               textShadow: "0 2px 12px rgba(0,0,0,0.9)",
             }}>
               {cur.en}
