@@ -1,25 +1,18 @@
 /**
  * POST /api/auth/demo — open a throwaway demo session (no sign-in).
  *
- * Body: { code: string } — must match the demo code (env DEMO_CODE, default
- * "1653"; the code prompt is hidden behind the login-page logo).
+ * Body: { code: string } — must match DEMO_CODE. If that env var is unset,
+ * demo mode is OFF entirely and this 404s.
  *
- * Creates an ephemeral demo user + a pre-seeded workspace (Sūrat Al-Fātiḥa
- * started with a first page), and sets a BROWSER-SESSION cookie — closing the
- * browser ends the demo. Demo data is discarded: every call also deletes demo
- * accounts (and everything they made) older than 24 hours.
+ * The account, its seeded Tutorial Workspace and the browser-session cookie
+ * are all created by provisionDemoSession(), shared with the public tour entry
+ * at /api/beta/start. Demo data is discarded after 24 hours.
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { randomUUID }   from "crypto";
-import { db }           from "@/lib/db";
-import { createSession } from "@/lib/session";
 import { memoryLimit, clientIp } from "@/lib/rate-limit";
 import { apiError } from "@/lib/api-errors";
-import * as WorkspacesService from "@/lib/services/workspaces.service";
-import * as PagesService      from "@/lib/services/pages.service";
-
-const DEMO_DOMAIN = "demo.tafsirlab.local";
+import { provisionDemoSession, DemoBusyError } from "@/lib/demo/provision";
 
 export async function POST(req: NextRequest) {
   try {
@@ -37,55 +30,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid code" }, { status: 403 });
     }
 
-    // ── Rate limit ────────────────────────────────────────────────────────
-    // Two layers (see lib/rate-limit). The memory layer sheds a flood on one
-    // instance; the DB count is the real ceiling and survives serverless.
-    const ip = clientIp(req);
-    if (!memoryLimit(`demo:${ip}`, 5, 60_000)) {
+    /* Per-instance brake. The global ceiling lives in provisionDemoSession,
+       where it can be counted in the database and so survives serverless. */
+    if (!memoryLimit(`demo:${clientIp(req)}`, 5, 60_000)) {
       return NextResponse.json({ error: "Too many requests" }, { status: 429 });
     }
-    const recentDemos = await db.user.count({
-      where: {
-        email:     { endsWith: `@${DEMO_DOMAIN}` },
-        createdAt: { gt: new Date(Date.now() - 60_000) },
-      },
-    });
-    if (recentDemos >= 30) {
-      return NextResponse.json({ error: "Demo is busy — try again shortly" }, { status: 429 });
-    }
 
-    // ── Opportunistic cleanup: discard demo accounts older than 24h ───────
-    // (workspace deletion cascades surahs/pages/notes/drawings/activity)
-    const stale = await db.user.findMany({
-      where:  { email: { endsWith: `@${DEMO_DOMAIN}` }, createdAt: { lt: new Date(Date.now() - 24 * 60 * 60 * 1000) } },
-      select: { id: true },
-    });
-    for (const u of stale) {
-      try {
-        await db.workspace.deleteMany({ where: { ownerId: u.id } });
-        await db.user.delete({ where: { id: u.id } });
-      } catch { /* skip users with data outside their own workspaces */ }
-    }
-
-    // ── Fresh demo user + seeded workspace ────────────────────────────────
-    const user = await db.user.create({
-      data: {
-        email: `demo-${randomUUID()}@${DEMO_DOMAIN}`,
-        name:  "Demo Guest",
-      },
-    });
-
-    const ws = await WorkspacesService.createWorkspace(user.id, "Demo Workspace", "private", "study");
-    try {
-      const session = await WorkspacesService.startSurah(ws.id, 1, user.id);
-      await PagesService.createPage(session.id, user.id, "Welcome");
-    } catch { /* seeding is best-effort — the empty workspace still demos fine */ }
-
-    // Browser-session cookie: demo ends when the browser closes.
-    await createSession(user.id, { ephemeral: true });
-
-    return NextResponse.json({ ok: true, userId: user.id }, { status: 201 });
+    const demo = await provisionDemoSession();
+    return NextResponse.json(
+      { ok: true, userId: demo.userId, workspaceId: demo.workspaceId, pageId: demo.pageId },
+      { status: 201 },
+    );
   } catch (err) {
+    if (err instanceof DemoBusyError) {
+      return NextResponse.json({ error: err.message }, { status: 429 });
+    }
     return apiError(err);
   }
 }

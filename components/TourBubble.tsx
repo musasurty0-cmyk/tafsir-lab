@@ -153,6 +153,35 @@ export default function TourBubble() {
     };
   }, []);
 
+  /* ── Arriving from /beta ──────────────────────────────────────────────────
+     /api/beta/start has already built the workspace, the seeded page and the
+     Connections that step 0 would otherwise create from the browser, so the
+     tour joins at step 1 with those ids taken from the URL it landed on.
+     Starting at 0 here would build a SECOND workspace and leave the visitor
+     looking at the wrong one.
+
+     The flag is cleared from the address bar immediately: it must not survive
+     a refresh, or the tour restarts every time the page is reloaded. */
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("tour") !== "1") return;
+
+    const m = pathname.match(/^\/workspaces\/([^/]+)(?:\/surahs\/\d+\/pages\/([^/]+))?/);
+    /* Replaying is the point of following this link, so a previous visit
+       having finished the tour must not suppress it. */
+    localStorage.removeItem("tl-tutorial-done");
+    setTour({
+      active: true,
+      step: m?.[2] ? 1 : 0,
+      workspaceId: m?.[1],
+      pageId: m?.[2],
+    });
+
+    url.searchParams.delete("tour");
+    window.history.replaceState(null, "", url.pathname + url.search + url.hash);
+  }, [pathname]);
+
   // ── Auto-advance when user navigates naturally ────────────────────────────
   useEffect(() => {
     const t = getTour();
