@@ -12,19 +12,17 @@
 /**
  * Where submissions are sent.
  *
- * TEMPORARILY the Resend account's own address rather than salaam@tafsir-lab.com.
- * No domain is verified in the Resend account, so WAITLIST_FROM is unset and
- * the shared onboarding@resend.dev sender is used — and that sandbox sender is
- * only permitted to DELIVER to the address owning the account. Every message to
+ * Back to salaam@ now that tafsir-lab.com is verified in Resend and
+ * WAITLIST_FROM is set in Vercel. Both are load-bearing: with an unverified
+ * domain the code falls back to onboarding@resend.dev, and that sandbox sender
+ * may only DELIVER to the address owning the Resend account — every message to
  * salaam@ came back 403 "Testing domain restriction", which cost 13 waitlist
  * signups that were stored but never announced.
  *
- * Revert this to salaam@tafsir-lab.com once tafsir-lab.com is verified in
- * Resend and WAITLIST_FROM is set in Vercel. `npm run check:email` reports
- * exactly when that is true.
+ * `npm run check:email` reports whether that is still true.
  */
 export const TEAM_INBOX =
-  process.env.TEAM_INBOX || "studywithtafsirlab@gmail.com";
+  process.env.TEAM_INBOX || "salaam@tafsir-lab.com";
 
 /**
  * Resend will only accept a `from` on a domain verified in the account. The
