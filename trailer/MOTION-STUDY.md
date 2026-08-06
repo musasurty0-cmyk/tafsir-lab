@@ -3,8 +3,19 @@
 Frame-by-frame measurements taken from reference reels. Numbers below are counted
 frames and tracked pixels, not estimates.
 
-Part I is what the references *do*. Part II is how to find that out without wasting
-three render cycles guessing — written after doing exactly that.
+**Two different disciplines live in this file. Do not read across them.**
+
+- **Parts I–II — motion authored from nothing.** Every pixel is ours. The reference is
+  a *target to converge on*, timing is chosen, and a defect is a curve with the wrong
+  shape. Failures are found by tracking pixels.
+- **Part III — footage we were given.** The material is fixed: the shot cannot be
+  re-framed, the backdrop cannot be re-lit, and the speaker pauses where he pauses.
+  Here the source is measured to *discover constraints to obey*, not to copy. Failures
+  are found with a level meter and a still.
+
+§14 lists exactly what carries between them and what does not. Read it before
+borrowing a habit from one part into the other — most of them do not transfer, and the
+ones that look like they should are the dangerous ones.
 
 Sources (outside the repo):
 - `~/Downloads/videoexamples/WhatsApp Video 2026-08-04 at 14.13.12.mp4` — iMessage, 14.9s
@@ -13,6 +24,14 @@ Sources (outside the repo):
 - `~/Downloads/SnapInsta.to_AQOAN…mp4` — Notion `/` command, 13.0s
 - `~/Downloads/SnapInsta.to_AQOYcXgpa4…mp4` — **search bar → panels, 1280×714 @ 29.97fps, 18.9s**
   (the source for `SearchReel`; §9 below is tracked from it)
+
+Part III sources — note the difference in kind. These are not references to converge
+on; the first is raw material with fixed properties, the second is a reference only
+for *treatment*:
+- `~/Downloads/YTDown.com_YouTube_Media_IzOClzqHQt8_001_1080p.mp4` — lecture, Shaykh
+  Yasser al-Dosari. **09:06–09:40** is the cut used by `DosariReel`
+- `~/Downloads/SnapInsta.to_AQP7pcGdvpn0J…mp4` — the *same lecture*, already captioned
+  by someone else. Used for caption treatment (§15, §16)
 
 ---
 
@@ -576,3 +595,201 @@ job is to go find the mechanism — not to re-run the check that already lied.
 (correlation 0.832) — not when the absolute numbers did. Chase the curve's shape
 first; scale is a second-order fix and often turns out to be a different problem
 entirely.
+
+---
+
+# Part III — Cut footage
+
+**This part is not about animation.** Nothing above it was involved in making
+`DosariReel`, and nothing in it applies to `SearchReel`, `LinkTrailer` or anything
+else built frame by frame. It is kept in the same file because both are "the reel
+work", not because the techniques are related.
+
+The distinction that matters: in Parts I–II the material is infinite and taste is the
+constraint — if a curve is wrong, change the curve. Here the material is fixed and
+*it* is the constraint. He pauses for four and a half seconds whether or not that
+suits the caption plan. The backdrop is white and the thawb is gold whether or not
+cream text sits well on them. **The job is to find what the footage already does and
+build to it.**
+
+## 14. What transfers, and what does not
+
+Carries across:
+
+- **Measure the source before building** (§10). Same rule, opposite purpose — there it
+  produces a target to hit, here it produces limits to respect.
+- **A "feel" complaint is a measurable defect** (§11.1). "The captions don't line up"
+  turned out to be an exact 4.5s hole, not a vibe.
+- **A passing check is not evidence against a report** (§13).
+
+Does **not** carry across, and assuming it does costs a render:
+
+| Authored motion | Cut footage |
+|---|---|
+| Timing is chosen; put the beat where it reads best | Timing is dictated by when he actually speaks |
+| Contrast is a colour choice — change the ground | Contrast must be *graded in*; the ground is a photograph |
+| Frame rate is ours; 60fps for smoothness | Match the source. Resampling 30→60 invents frames on a face |
+| Verify by tracking pixels against a reference | Verify with a level meter, a still, and a transcript |
+| Errors are visible — a wrong curve looks wrong | **Errors are silent** — a wrong Arabic word renders beautifully |
+
+That last row is the important one. In authored motion a mistake announces itself on
+screen. In cut footage the most serious defects — a mistranscribed word, a doubled
+audio track, a caption over silence — all produce output that *looks* completely
+finished.
+
+## 15. Caption timing comes from the source's silences
+
+Whisper's segment boundaries are useless for captions. Segments run five to eight
+seconds and are cut on the model's own convenience, so they **cannot see a pause**.
+
+Measured in this clip: he stops speaking at **19.0s** and does not resume until
+**23.56s**. A segment-timed caption sat on screen through all 4.56s of that, and every
+card after it felt late — which is what was reported as "the captions don't line up".
+It was not an offset. Adding a global delay would have made it worse.
+
+`word_timestamps=True` makes the hole visible in one pass. Thirteen phrase-length
+cards cut from word timings fixed it, with **no card at all** across the pause.
+
+> **Rule.** Cut captions from word-level timings, never segment boundaries. Silence is
+> content — find every gap over ~1s in the source and decide deliberately what is on
+> screen during it. Usually the answer is nothing.
+
+## 16. Legibility is a property of the picture, not the type
+
+The source is a white backdrop and a brightly lit gold thawb. Cream captions on that
+washed out, so the first attempt put a heavy `text-shadow` behind them. It did not
+work, and it could not have: **a halo cannot supply contrast that the picture does not
+have.** It only darkens the few pixels touching each glyph.
+
+The captioned reference read cleanly because they had graded the whole image down —
+which had looked like a stylistic choice until this failed. It is load-bearing.
+
+What worked, in this order:
+
+1. Grade the footage: `brightness(0.82) saturate(0.88) contrast(1.04)`
+2. A scrim gradient over the bottom 460px only — `rgba(6,6,6,0)` → `0.78` — so his
+   face keeps its exposure and only the caption zone goes dark
+3. *Then* set the type, with a soft shadow as a finishing touch rather than the fix
+
+> **Rule.** Fix the ground before setting the type. If text is hard to read on
+> footage, the picture is the defect.
+
+## 17. The transcript is a first draft, and its errors are silent
+
+Model size here is a **correctness** question, not a quality one.
+
+| Model | Output | Actual |
+|---|---|---|
+| `small` | "Come, we worship you and we ask you" | إِيَّاكَ نَعْبُدُ وَإِيَّاكَ نَسْتَعِينُ |
+| `small` | صورة ("picture") | سورة ("chapter") |
+| `medium` | نستعيد ("we retrieve") | نستعين ("we ask for help") |
+
+Every one of those renders as clean, confident, well-set Arabic. Nothing on screen
+indicates a problem. For a reel about the Qurʾān, publishing the third one would have
+been considerably worse than publishing no captions at all.
+
+> **Rule.** Where the exact words matter, treat the transcript as a draft to be checked
+> against text you already know. State plainly which lines were verified and which were
+> reconstructed, and get the reconstructed ones heard by someone before publishing.
+
+Outstanding in this reel: **16.6–19.1s** (`إلا لأجل تحقيق لا إله إلا الله`) is a
+reconstruction — the model produced garbage there. Editable in
+`reel-work/captions.json`.
+
+## 18. Audio must be measured on the render
+
+The rendered file and my arithmetic disagreed by about **25 dB**, and the gap was never
+fully explained. Calculating stopped being useful; every level below was read off an
+actual render.
+
+Two false starts before it was right:
+
+| Bed gain | Measured in his pause | Verdict |
+|---|---|---|
+| 0.006 | −62.9 dB | inaudible — might as well not be there |
+| 0.20 | 1.6 dB under speech | fighting every word |
+| **0.032** | **−43.2 dB** (~15 dB under) | audible in his pauses, never in the way |
+
+Two things that made the measurement trustworthy:
+
+- **Measure in the exposed window.** The bed was read across his 19.0–23.56s pause,
+  where it plays alone. Measuring during speech tells you about the speech.
+- **Measure the full render, not a probe.** A short probe render re-bases the audio
+  timeline, so its levels are not the levels of the finished file. That produced one
+  reading I acted on before noticing.
+
+Final delivered: bed −43.2 dB in the pause, speech −29.7 dB, outro −23.4 LUFS.
+
+## 19. Enumerate every node that can emit
+
+`OffthreadVideo` plays the file's own audio track by default. The speech was *also*
+mounted as a separate `<Audio>` so it could be ducked against the nasheed — so his
+voice played twice, a few samples apart. That is not a doubling you hear as an error;
+it reads as phasing, as though the room were wrong.
+
+One second of listening would have caught it. It was found instead by listing every
+component in the tree that could produce sound.
+
+> **Rule.** When you cannot perceive the output, audit the graph rather than the
+> result. Enumerate every node that can emit and account for each one. The `muted` on
+> that `OffthreadVideo` is load-bearing — there is a comment on it saying so.
+
+## 20. Verify the artefact's identity, not just its contents
+
+The most dangerous failure of the whole reel. A render failed, which left the
+**previous** file in place. The level check then ran happily and printed the old
+numbers as if they were new. Everything looked correct and nothing was.
+
+It was caught only because that particular failure also removed the output file. Had
+the render failed *after* writing a partial file, the numbers would have been reported
+as verified.
+
+> **Rule.** A measurement of the wrong file is indistinguishable from a measurement of
+> the right one. Delete the output before rendering, or check mtime/size before
+> trusting anything read from it. Never chain a verification onto a render step without
+> gating on the render's exit status.
+
+## 21. "Too faint" was a hierarchy bug, not a brightness bug
+
+The brand lockup was set in `MUTED` at `opacity: 0.62`. The shaykh's credit was set in
+`MUTED` at full. So the brand rendered **fainter than the attribution** — the wrong
+ranking, since the credit is an obligation and the mark is the reason the reel exists.
+
+Raising the opacity would have treated the symptom. The fix was giving the lockup its
+own token, `BRAND = #BAB4A8`, placed deliberately above `MUTED` and well below the
+captions' `CREAM`.
+
+> **Rule.** Assign tones by rank in the hierarchy. Taking one element's tone and dimming
+> it produces an ordering you did not choose.
+
+## 22. Two mechanical facts about the toolchain
+
+**`No frame found at position N` is a partially-written cache file.** Remotion copies
+the source into a temp assets dir and the compositor can start reading before the copy
+completes. The tell is that N is small and round — 8192 here. It is intermittent, so it
+"fixes itself" on retry and looks like a bad source file. Re-encoding does not help it.
+`--concurrency=1` does, reliably. Clearing `%TEMP%/remotion-v*-assets*` clears a
+genuinely corrupted one.
+
+**Match the source frame rate.** This reel is 30fps because the lecture is. Resampling
+a talking head to 60 invents intermediate frames on a face — the one subject where
+interpolation artefacts are most visible — and buys nothing, since there is no authored
+motion to smooth.
+
+## 23. The pre-flight that would have saved three passes
+
+Captions, grade, levels and branding were each fixed in a separate render cycle,
+because each problem only became visible once the one in front of it was gone. Nothing
+about them was actually sequential.
+
+Before the first delivery of any cut, in one pass:
+
+1. **Stills at every caption boundary** — catches timing drift and contrast together
+2. **Every gap >1s in the word timings**, listed — catches captions over silence
+3. **Levels in the exposed window** — bed alone, speech alone, outro
+4. **One still of the full frame with no captions** — catches hierarchy problems in the
+   furniture, which are invisible while you are looking at the text
+5. **Every audio-emitting node in the tree**, listed and accounted for
+
+Four of the five are text output and cost seconds. The renders are the expensive part,
+and this is how you stop needing four of them.
