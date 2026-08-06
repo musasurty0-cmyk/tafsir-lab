@@ -1,0 +1,51 @@
+/* Supplements waitlist.css rather than restating it — the two pages are
+   siblings and should be visibly the same product. Only the pieces the
+   waitlist form has no need for live here: a select, and the name/age row. */
+
+.br-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.br-col { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+/* Enough for three digits and no more, so "Age" does not read as a field of
+   equal weight to the name beside it. */
+.br-col--age { flex: 0 0 96px; }
+
+/* A <select> does not inherit the text-input styling from .wl-input on its
+   own — it keeps the platform control's font and arrow. */
+.br-select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'><path d='M1 1.5L6 6.5L11 1.5' stroke='%239c968e' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 16px center;
+  padding-right: 40px;
+  cursor: pointer;
+}
+/* Until something is chosen the placeholder option is showing, and it should
+   read as placeholder text rather than as an answer. */
+.br-select:invalid { color: #b4b0aa; }
+
+.br-intro {
+  font-size: 15px;
+  line-height: 1.65;
+  color: #56514b;
+  margin: 0 0 clamp(24px, 5vw, 34px);
+}
+
+.br-back {
+  display: inline-block;
+  margin-top: 28px;
+  font-size: 14px;
+  color: #56514b;
+  text-decoration: none;
+}
+.br-back:hover { text-decoration: underline; }
+
+@media (max-width: 420px) {
+  /* Stacked, because a 96px field beside a name field is cramped once the
+     viewport is narrow enough that the name has nowhere to go. */
+  .br-row { flex-direction: column; gap: 0; }
+  .br-col--age { flex: 1 1 auto; width: 100%; }
+}

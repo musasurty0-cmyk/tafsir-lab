@@ -472,3 +472,33 @@ model WaitlistSignup {
 
   @@index([createdAt])
 }
+
+/// Requests to join the CLOSED BETA, from /beta/request.
+///
+/// Separate from WaitlistSignup on purpose. A waitlist entry is "tell me when
+/// it opens" and wants to stay one field long; this is an application, and the
+/// answers are the whole point — they decide who gets a place. Keeping them in
+/// their own columns means the cohort can actually be sorted and filtered
+/// rather than read as prose.
+model BetaRequest {
+  id         String   @id @default(uuid())
+  email      String   @unique
+  name       String
+  /// Nullable: asked for, but never a reason to reject a submission.
+  age        Int?
+  /// One of the buckets offered by the form, stored as its label.
+  studyDaily String
+  /// What they use today — apps, books, whatever.
+  studyTools String
+  /// What they expect TafsirLab to change for them.
+  benefit    String
+  /// Where the click came from, e.g. "instagram-bio".
+  source     String?
+  /// Whether the notification email to the team actually went out. False here
+  /// with a row present means the request arrived but nobody was told.
+  notified   Boolean  @default(false)
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+}
