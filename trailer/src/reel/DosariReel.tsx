@@ -41,14 +41,26 @@ const MUTED  = "#8A857C";
    corner of the eye rather than a thing you read. */
 const BRAND  = "#BAB4A8";
 
-/* Source is 1920x1080 and he sits dead centre, so the square crop takes
-   x 420..1500 at 1:1 — no scaling, no softening of the face. */
+/* Source is 1920x1080 and he sits dead centre, so the crop is taken at 1:1 —
+   no scaling, no softening of the face. */
 const VIDEO_NATIVE_W = 1920;
-const CROP_X = -420;
 
 /* The inset card. Rounded, held off the edges, so the reel reads as something
-   presented rather than something posted. */
-const CARD_TOP = 300, CARD_H = 1080, CARD_INSET = 36;
+   presented rather than something posted.
+
+   INSET was 36, and at that width the card did not read as a card at all: 36px
+   at the sides against 300 above and 540 below is not a margin, it is a hairline,
+   so the picture looked full-bleed and the rounded corners were invisible on a
+   phone. The side margin now has similar weight to the vertical ones, which is
+   what makes the shape legible as an object on a ground.
+
+   CARD_H stays at the source's own 1080 so the video is still placed 1:1. */
+const CARD_TOP = 390, CARD_H = 1080, CARD_INSET = 100;
+const CARD_W = W - CARD_INSET * 2;
+/* Centre the native-size video in the card's window. Derived rather than a
+   hand-tuned constant, so changing CARD_INSET cannot silently push him
+   off-centre — which is exactly what a fixed CROP_X would have done here. */
+const VIDEO_LEFT = -(VIDEO_NATIVE_W - CARD_W) / 2;
 
 const clamp = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
 
@@ -70,8 +82,8 @@ const Clip: React.FC = () => {
     <AbsoluteFill style={{ background: GROUND }}>
       <div style={{
         position: "absolute", top: CARD_TOP, left: CARD_INSET,
-        width: W - CARD_INSET * 2, height: CARD_H,
-        overflow: "hidden", borderRadius: 28, background: "#000",
+        width: CARD_W, height: CARD_H,
+        overflow: "hidden", borderRadius: 40, background: "#000",
       }}>
         {/* MUTED. OffthreadVideo plays the file's audio by default, and the
             speech is mounted separately below so it can be ducked against the
@@ -86,7 +98,7 @@ const Clip: React.FC = () => {
           muted
           src={staticFile("dosari-clip.mp4")}
           style={{
-            position: "absolute", left: CROP_X - CARD_INSET, top: 0,
+            position: "absolute", left: VIDEO_LEFT, top: 0,
             width: VIDEO_NATIVE_W, height: CARD_H,
             filter: "brightness(0.82) saturate(0.88) contrast(1.04)",
           }}
@@ -104,7 +116,7 @@ const Clip: React.FC = () => {
             The scrim is only under the text so his face stays untouched. */}
         {cur && (
           <div key={i} style={{
-            position: "absolute", left: 40, right: 40, bottom: 108,
+            position: "absolute", left: 34, right: 34, bottom: 108,
             display: "flex", flexDirection: "column", alignItems: "center", gap: 14,
             opacity: e, transform: `translateY(${(1 - e) * 8}px)`,
           }}>
@@ -121,7 +133,7 @@ const Clip: React.FC = () => {
             <div style={{
               fontFamily: R.fontSerif, fontSize: 28, lineHeight: 1.45,
               color: "rgba(246,240,226,0.82)", textAlign: "center",
-              textWrap: "balance", maxWidth: 860,
+              textWrap: "balance", maxWidth: 800,
               textShadow: "0 2px 12px rgba(0,0,0,0.9)",
             }}>
               {cur.en}
