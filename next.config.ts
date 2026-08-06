@@ -36,6 +36,59 @@ const nextConfig: NextConfig = {
     ],
   },
 
+  /* ── Security headers ──────────────────────────────────────────────────
+     The app renders user-authored rich text, so this is load-bearing rather
+     than hygiene.
+
+     Note SAMEORIGIN, not DENY. Firebase's sign-in flow creates an iframe on
+     /__/auth/*, which the rewrite below serves from THIS domain — that proxy
+     is the whole reason iOS sign-in works. DENY would break it.
+
+     The CSP ships Report-Only on purpose. A blocking policy written blind
+     against tldraw, mupdf's WASM, Firebase, PartyKit and 226 inline styles
+     will break something, and a broken CSP fails silently in exactly the way
+     this codebase has been bitten by all day. Collect violations first,
+     then switch the header name to Content-Security-Policy. */
+  async headers() {
+    const csp = [
+      "default-src 'self'",
+      /* Next injects inline bootstrap scripts; nonces would need middleware.
+         'unsafe-eval' is required by mupdf's WASM glue. */
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+      /* 226 inline style props across the components, plus the Google Fonts
+         stylesheet loaded in app/layout.tsx. */
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      /* QCF mushaf faces come from quran.foundation; Google serves its own
+         font files from gstatic. */
+      "font-src 'self' data: https://fonts.gstatic.com https://verses.quran.foundation",
+      "img-src 'self' data: blob: https://api.quran.com https://cdn.islamic.network https://verses.quran.foundation",
+      /* Realtime collaboration is a WebSocket to PartyKit; Firebase Auth talks
+         to Google's identity endpoints. */
+      "connect-src 'self' https://api.quran.com https://*.partykit.dev wss://*.partykit.dev ws://localhost:1999 https://identitytoolkit.googleapis.com https://securetoken.googleapis.com",
+      "worker-src 'self' blob:",
+      "frame-src 'self'",
+      "object-src 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
+      "frame-ancestors 'self'",
+    ].join("; ");
+
+    return [{
+      source: "/:path*",
+      headers: [
+        { key: "X-Frame-Options",        value: "SAMEORIGIN" },
+        { key: "X-Content-Type-Options", value: "nosniff" },
+        { key: "Referrer-Policy",        value: "strict-origin-when-cross-origin" },
+        /* No camera or microphone anywhere in the app. Geolocation neither. */
+        { key: "Permissions-Policy",     value: "camera=(), microphone=(), geolocation=(), interest-cohort=()" },
+        /* Vercel serves HTTPS only; two years with preload is the standard
+           value once you are sure every subdomain is HTTPS. */
+        { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
+        { key: "Content-Security-Policy-Report-Only", value: csp },
+      ],
+    }];
+  },
+
   async rewrites() {
     const authProxy = authProxyTarget
       ? [
