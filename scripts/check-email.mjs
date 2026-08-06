@@ -60,15 +60,46 @@ console.log(`  to:   ${TEAM_INBOX}\n`);
 const res = await fetch("https://api.resend.com/domains", {
   headers: { Authorization: `Bearer ${key}` },
 });
+
+/* A sending-only key cannot list domains, and that is the RIGHT kind of key
+   for an app that only ever posts to /emails — least privilege. Treating the
+   401 as "bad key" was wrong: it says nothing about whether sending works. */
+let domains = [];
+let canListDomains = true;
 if (!res.ok) {
-  no(`Resend rejected the API key (HTTP ${res.status}).`);
-  console.log("  " + (await res.text()).slice(0, 300));
-  console.log("\n  A key is tied to one Resend account. If you rebuilt the");
-  console.log("  account or rotated keys, generate a new one and update Vercel.\n");
-  process.exit(1);
+  const detail = await res.text();
+  if (res.status === 401 && detail.includes("restricted_api_key")) {
+    canListDomains = false;
+    ok("RESEND_API_KEY is a send-only key (cannot list domains — that is fine)");
+  } else {
+    no(`Resend rejected the API key (HTTP ${res.status}).`);
+    console.log("  " + detail.slice(0, 300));
+    console.log("\n  A key is tied to one Resend account. If you rebuilt the");
+    console.log("  account or rotated keys, generate a new one and update Vercel.\n");
+    process.exit(1);
+  }
+} else {
+  domains = (await res.json()).data ?? [];
 }
 
-const domains = (await res.json()).data ?? [];
+if (!canListDomains) {
+  console.log("");
+  if (usingSandbox) {
+    hm("WAITLIST_FROM is unset, so the shared sandbox sender is being used.");
+    console.log(`
+  onboarding@resend.dev can ONLY deliver to the address that owns the Resend
+  account, so anything sent to ${TEAM_INBOX} is refused. Set WAITLIST_FROM to
+  an address on a verified domain.
+`);
+  } else {
+    ok(`Sending as ${from}.`);
+    console.log(`
+  This key cannot list domains, so verification cannot be confirmed from here
+  — check Resend → Domains, or just run with --send and read the result.
+`);
+  }
+  if (!process.argv.includes("--send")) process.exit(usingSandbox ? 1 : 0);
+}
 console.log("Domains in this Resend account:");
 if (!domains.length) hm("none — no custom domain has been added yet");
 for (const d of domains) {
