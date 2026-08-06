@@ -140,12 +140,8 @@
   --bg:       oklch(0.205 0 0);      --bg-elev: oklch(0.245 0 0);
   --panel:    oklch(0.275 0 0);      --panel-2: oklch(0.315 0 0);
   --ink:      oklch(0.95 0 0);       --ink-2:   oklch(0.80 0 0);
-  /* Same defect as light mode: ink-3 was 5.91:1 and ink-4 3.95:1 against --bg,
-     so ink-4 failed AA here too. Solved against --panel-2 (the LIGHTEST surface
-     these sit on) rather than --bg — a first pass tuned to --bg still left four
-     labels at 4.36:1 because they render on --panel, not the page. Worst case
-     is now ink-3 6.54:1 and ink-4 4.68:1, and both only improve on darker
-     surfaces. */
+  /* Same defect as light mode, measured on this background: ink-3 was 5.91:1
+     and ink-4 3.95:1, so ink-4 failed AA here too. Now 6.94:1 and 4.79:1. */
   --ink-3:    oklch(0.781 0 0);      --ink-4:   oklch(0.691 0 0);
   --line:       oklch(0.95 0 0 / 0.11);
   --line-strong:oklch(0.95 0 0 / 0.20);
@@ -198,7 +194,7 @@
 html, body { margin: 0; padding: 0; height: 100%; }
 body {
   font-family: var(--font-sans);
-  font-size: 15px;
+  font-size: 14px;
   color: var(--ink);
   background: var(--bg);
   -webkit-font-smoothing: antialiased;
@@ -289,7 +285,7 @@ input, textarea { font: inherit; color: inherit; }
   width: 32px; height: 32px;
   border-radius: 7px;
   display: grid; place-items: center;
-  font-size: 13px; font-weight: 600; letter-spacing: -0.01em;
+  font-size: 12px; font-weight: 600; letter-spacing: -0.01em;
   color: var(--ink);
   background: var(--panel);
   border: 1px solid var(--line);
@@ -303,7 +299,7 @@ input, textarea { font: inherit; color: inherit; }
   background: linear-gradient(135deg, oklch(0.55 0.08 160) 0%, oklch(0.42 0.07 160) 100%);
   color: white;
   display: grid; place-items: center;
-  font-size: 12px; font-weight: 600;
+  font-size: 11px; font-weight: 600;
   position: relative;
   cursor: pointer;
 }
@@ -344,27 +340,27 @@ input, textarea { font: inherit; color: inherit; }
   background: var(--ink);
   color: var(--bg);
   display: grid; place-items: center;
-  font-size: 11px; font-weight: 700;
+  font-size: 10px; font-weight: 700;
   letter-spacing: -0.01em;
   flex-shrink: 0;
 }
-.ws-switcher-name { font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ink); }
+.ws-switcher-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ink); }
 .sidebar-search {
   margin: 10px 12px 4px;
   display: flex; align-items: center; gap: 6px;
   padding: 5px 10px;
   background: transparent; border: none;
   border-bottom: 1px solid var(--line);
-  border-radius: 0; color: var(--ink-3); font-size: 14px;
+  border-radius: 0; color: var(--ink-3); font-size: 13px;
   transition: border-color .12s;
 }
 .sidebar-search:focus-within { border-bottom-color: var(--ink-3); }
-.sidebar-search input { border: 0; background: transparent; outline: none; flex: 1; min-width: 0; color: var(--ink); font-size: 14px; }
+.sidebar-search input { border: 0; background: transparent; outline: none; flex: 1; min-width: 0; color: var(--ink); font-size: 13px; }
 .sidebar-search input::placeholder { color: var(--ink-4); }
-.sidebar-search-kbd { font-family: var(--font-mono); font-size: 12px; color: var(--ink-4); }
+.sidebar-search-kbd { font-family: var(--font-mono); font-size: 11px; color: var(--ink-4); }
 .sidebar-section {
   padding: 16px 16px 6px;
-  font-size: 11.5px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+  font-size: 10.5px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
   color: var(--ink-4);
   display: flex; align-items: center; justify-content: space-between;
 }
@@ -384,7 +380,7 @@ input, textarea { font: inherit; color: inherit; }
   min-height: var(--row-h);
   padding: 4px 10px;
   border-radius: 6px;
-  color: var(--ink-2); font-size: 14.5px; line-height: 1.3;
+  color: var(--ink-2); font-size: 13.5px; line-height: 1.3;
   cursor: pointer; user-select: none; position: relative;
   transition: background var(--dur-fast) ease, color var(--dur-fast) ease;
 }
@@ -398,7 +394,7 @@ input, textarea { font: inherit; color: inherit; }
 .tree-chevron { display: none; }
 .tree-icon    { display: none; }
 .tree-label { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.tree-count { font-family: var(--font-mono); font-size: 11.5px; color: var(--ink-4); padding: 0 4px; }
+.tree-count { font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-4); padding: 0 4px; }
 .tree-more { width: 18px; height: 18px; border-radius: 3px; display: grid; place-items: center; opacity: 0; color: var(--ink-3); flex-shrink: 0; }
 .tree-row:hover .tree-more { opacity: 1; }
 .tree-more:hover { background: var(--line); color: var(--ink); }
@@ -439,7 +435,7 @@ input, textarea { font: inherit; color: inherit; }
 .tree-row-rename-input {
   flex: 1; width: 100%;
   padding: 2px 6px;
-  font-size: 14.5px;
+  font-size: 13.5px;
   background: var(--bg-elev);
   border: 1px solid var(--accent);
   border-radius: 4px;
@@ -481,17 +477,17 @@ input, textarea { font: inherit; color: inherit; }
    right, so the crumbs must not grow and push it away. Slack is taken by
    .topbar-actions' auto margin instead, which keeps the actions right-aligned
    whether or not the navigator is present. */
-.crumbs { display: flex; align-items: center; gap: 4px; font-size: 14px; color: var(--ink-3); flex: 0 1 auto; min-width: 0; }
+.crumbs { display: flex; align-items: center; gap: 4px; font-size: 13px; color: var(--ink-3); flex: 0 1 auto; min-width: 0; }
 .crumb { padding: 3px 6px; border-radius: 4px; white-space: nowrap; transition: background var(--dur-fast) ease, color var(--dur-fast) ease; }
 .crumb:hover { background: var(--hover); color: var(--ink); }
 .crumb[data-current="true"] { color: var(--ink); font-weight: 500; }
-.crumb-sep { color: var(--ink-4); font-size: 13px; }
+.crumb-sep { color: var(--ink-4); font-size: 12px; }
 .topbar-actions { display: flex; align-items: center; gap: 4px; margin-left: auto; }
 .tb-btn {
   height: 28px; padding: 0 10px;
   border-radius: 6px;
   display: flex; align-items: center; gap: 6px;
-  color: var(--ink-2); font-size: 14px;
+  color: var(--ink-2); font-size: 13px;
   transition: background var(--dur-fast) ease, color var(--dur-fast) ease;
 }
 .tb-btn:hover { background: var(--hover); color: var(--ink); }
@@ -509,7 +505,7 @@ input, textarea { font: inherit; color: inherit; }
   height: 28px; padding: 0 12px;
   border-radius: 6px;
   background: var(--ink); color: var(--bg);
-  font-size: 14px; font-weight: 500;
+  font-size: 13px; font-weight: 500;
   display: flex; align-items: center; gap: 6px;
   transition: opacity .12s;
 }
@@ -598,21 +594,21 @@ input, textarea { font: inherit; color: inherit; }
    applying. Real table display, and the page widens when a table needs it. */
 .page-editor-content table { max-width: none; }
 .doc-cover { margin-bottom: 24px; display: flex; flex-direction: column; gap: 12px; }
-.doc-cover-tag { font-family: var(--font-mono); font-size: 12px; color: var(--ink-3); letter-spacing: 0.04em; text-transform: uppercase; }
+.doc-cover-tag { font-family: var(--font-mono); font-size: 11px; color: var(--ink-3); letter-spacing: 0.04em; text-transform: uppercase; }
 .doc-title {
   font-family: var(--font-serif);
   font-size: 40px; font-weight: 600;
   letter-spacing: -0.02em; line-height: 1.1;
   color: var(--ink); margin: 0;
 }
-.doc-meta { display: flex; align-items: center; gap: 14px; font-size: 13.5px; color: var(--ink-3); margin-top: 4px; }
+.doc-meta { display: flex; align-items: center; gap: 14px; font-size: 12.5px; color: var(--ink-3); margin-top: 4px; }
 .doc-meta-item { display: flex; align-items: center; gap: 5px; }
 .doc-meta-sep { color: var(--line-strong); }
 .doc-meta-avatar {
   width: 18px; height: 18px; border-radius: 50%;
   background: linear-gradient(135deg, var(--accent), var(--accent-ink));
   color: white; display: grid; place-items: center;
-  font-size: 11.5px; font-weight: 600;
+  font-size: 9.5px; font-weight: 600;
 }
 
 /* ── Blocks ── */
@@ -624,7 +620,7 @@ input, textarea { font: inherit; color: inherit; }
 .block p, .block-p { font-family: var(--font-serif); font-size: 16.5px; line-height: 1.65; margin: 0; color: var(--ink); }
 .block-h1 { font-family: var(--font-serif); font-size: 30px; font-weight: 600; letter-spacing: -0.015em; line-height: 1.2; margin: 32px 0 4px 0; color: var(--ink); }
 .block-h2 { font-family: var(--font-serif); font-size: 22px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.3; margin: 28px 0 4px 0; color: var(--ink); }
-.block-h3 { font-family: var(--font-sans); font-size: 15px; font-weight: 600; letter-spacing: 0.02em; text-transform: uppercase; color: var(--ink-2); margin: 24px 0 2px 0; }
+.block-h3 { font-family: var(--font-sans); font-size: 14px; font-weight: 600; letter-spacing: 0.02em; text-transform: uppercase; color: var(--ink-2); margin: 24px 0 2px 0; }
 .block-callout { display: flex; gap: 12px; padding: 14px 16px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-lg); margin: 8px 0; }
 .callout-icon { width: 22px; height: 22px; flex-shrink: 0; display: grid; place-items: center; color: var(--accent-ink); margin-top: 2px; }
 .callout-body { font-family: var(--font-serif); font-size: 15px; line-height: 1.6; color: var(--ink-2); }
@@ -663,7 +659,7 @@ input, textarea { font: inherit; color: inherit; }
 .verse-header {
   display: flex; align-items: center; justify-content: space-between;
 }
-.verse-ref { display: flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: 12px; color: var(--ink-4); letter-spacing: 0.04em; }
+.verse-ref { display: flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: 11px; color: var(--ink-4); letter-spacing: 0.04em; }
 .verse-ref-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--accent); opacity: 0.6; }
 .verse-actions { display: flex; gap: 1px; }
 .verse-action {
@@ -676,14 +672,14 @@ input, textarea { font: inherit; color: inherit; }
 .verse-action:hover { background: var(--hover); color: var(--ink); }
 .verse-action[data-active="true"] { opacity: 1; background: var(--accent-soft); color: var(--accent-ink); }
 .verse-arabic { font-family: var(--font-arabic); font-size: 29px; line-height: 2.3; direction: rtl; text-align: right; color: var(--ink); word-spacing: 0.06em; }
-.verse-translit { font-family: var(--font-serif); font-style: italic; font-size: 15.5px; color: var(--ink-3); line-height: 1.6; }
+.verse-translit { font-family: var(--font-serif); font-style: italic; font-size: 14.5px; color: var(--ink-3); line-height: 1.6; }
 .verse-translation { font-family: var(--font-serif); font-size: calc(16px * var(--fs-reading)); line-height: 1.72; color: var(--ink-2); }
-.tr-num { font-family: var(--font-mono); font-size: 12px; color: var(--ink-4); vertical-align: super; margin-right: 3px; }
+.tr-num { font-family: var(--font-mono); font-size: 11px; color: var(--ink-4); vertical-align: super; margin-right: 3px; }
 .verse-anchor {
   display: inline-flex; align-items: center; gap: 3px;
   padding: 1px 5px; margin: 0 1px;
   border-radius: 4px;
-  font-family: var(--font-mono); font-size: 13px;
+  font-family: var(--font-mono); font-size: 12px;
   color: var(--accent-ink); background: var(--accent-soft);
   cursor: pointer; transition: background var(--dur-fast) ease;
   text-decoration: none; white-space: nowrap;
@@ -698,12 +694,12 @@ input, textarea { font: inherit; color: inherit; }
   padding: 6px; width: 280px; z-index: 50;
   max-height: 340px; overflow-y: auto;
 }
-.slash-section { padding: 6px 8px 2px 8px; font-size: 11.5px; font-weight: 500; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-4); }
+.slash-section { padding: 6px 8px 2px 8px; font-size: 10.5px; font-weight: 500; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-4); }
 .slash-item { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 6px; cursor: pointer; color: var(--ink); }
 .slash-item:hover, .slash-item[data-selected="true"] { background: var(--hover); }
 .slash-item-icon { width: 32px; height: 32px; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); display: grid; place-items: center; color: var(--ink-2); flex-shrink: 0; }
-.slash-item-name { font-size: 14px; font-weight: 500; }
-.slash-item-desc { font-size: 12.5px; color: var(--ink-3); margin-top: 1px; }
+.slash-item-name { font-size: 13px; font-weight: 500; }
+.slash-item-desc { font-size: 11.5px; color: var(--ink-3); margin-top: 1px; }
 
 /* ── Format bar ── */
 .format-bar {
@@ -712,7 +708,7 @@ input, textarea { font: inherit; color: inherit; }
   box-shadow: var(--shadow-md); padding: 4px;
   display: flex; gap: 1px; z-index: 40;
 }
-.fb-btn { width: 28px; height: 28px; border-radius: 5px; display: grid; place-items: center; color: var(--ink-2); font-size: 14px; transition: background .12s, color .12s; }
+.fb-btn { width: 28px; height: 28px; border-radius: 5px; display: grid; place-items: center; color: var(--ink-2); font-size: 13px; transition: background .12s, color .12s; }
 .fb-btn:hover, .fb-btn[data-active="true"] { background: var(--hover); color: var(--ink); }
 .fb-sep { width: 1px; height: 18px; background: var(--line); margin: 0 2px; align-self: center; }
 
@@ -721,11 +717,11 @@ input, textarea { font: inherit; color: inherit; }
 .tiptap p.is-editor-empty:first-child::before { color: var(--ink-4); content: attr(data-placeholder); float: left; height: 0; pointer-events: none; }
 .tiptap h1 { font-family: var(--font-serif); font-size: 30px; font-weight: 600; letter-spacing: -0.015em; line-height: 1.2; margin: 32px 0 4px 0; }
 .tiptap h2 { font-family: var(--font-serif); font-size: 22px; font-weight: 600; letter-spacing: -0.01em; margin: 28px 0 4px 0; }
-.tiptap h3 { font-family: var(--font-sans); font-size: 15px; font-weight: 600; letter-spacing: 0.02em; text-transform: uppercase; color: var(--ink-2); margin: 24px 0 2px 0; }
+.tiptap h3 { font-family: var(--font-sans); font-size: 14px; font-weight: 600; letter-spacing: 0.02em; text-transform: uppercase; color: var(--ink-2); margin: 24px 0 2px 0; }
 .tiptap ul, .tiptap ol { padding-left: 22px; margin: 4px 0; }
 .tiptap li { margin: 2px 0; font-family: var(--font-serif); font-size: 16px; }
 .tiptap blockquote { margin: 10px 0; padding: 4px 0 4px 18px; border-left: 2px solid var(--line-strong); font-style: italic; color: var(--ink-2); }
-.tiptap code { background: var(--panel); padding: 1px 4px; border-radius: 4px; font-family: var(--font-mono); font-size: 13px; }
+.tiptap code { background: var(--panel); padding: 1px 4px; border-radius: 4px; font-family: var(--font-mono); font-size: 12px; }
 .tiptap strong { font-weight: 600; }
 .tiptap em { font-style: italic; }
 .tiptap u { text-decoration: underline; }
@@ -733,7 +729,7 @@ input, textarea { font: inherit; color: inherit; }
 /* Add block hint */
 .add-block {
   height: 28px; display: flex; align-items: center; gap: 6px;
-  color: var(--ink-4); font-size: 14px;
+  color: var(--ink-4); font-size: 13px;
   padding: 0 4px; border-radius: 5px;
   opacity: 0; transition: opacity .15s, background .12s;
   margin-top: 4px; width: fit-content;
@@ -818,11 +814,11 @@ input, textarea { font: inherit; color: inherit; }
 }
 /* Source names run long and are user-chosen, so both sublines truncate. */
 .drawer-head-sub {
-  font-size: 13px; color: var(--ink-2); margin-top: 3px;
+  font-size: 12px; color: var(--ink-2); margin-top: 3px;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .drawer-head-ref {
-  font-size: 12.5px; color: var(--ink-3); margin-top: 1px;
+  font-size: 11.5px; color: var(--ink-3); margin-top: 1px;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .drawer-close {
@@ -856,7 +852,7 @@ input, textarea { font: inherit; color: inherit; }
 .drawer-tabs::-webkit-scrollbar { display: none; }
 .drawer-tab {
   padding: var(--sp-2) 0 7px;
-  font-size: 13.5px; line-height: 1.2; white-space: nowrap;
+  font-size: 12.5px; line-height: 1.2; white-space: nowrap;
   color: var(--ink-3);
   background: none; border: 0;
   border-bottom: 2px solid transparent; margin-bottom: -1px;
@@ -894,7 +890,7 @@ input, textarea { font: inherit; color: inherit; }
   /* 7px keeps the target at 25px tall against a 34px rail: still quiet, but
      above the 24px minimum. At 6px it measured 23px. */
   width: 100%; padding: 7px 0;
-  font-family: var(--font-mono); font-size: 11.5px; font-weight: 400;
+  font-family: var(--font-mono); font-size: 10.5px; font-weight: 400;
   color: var(--ink-3); text-align: center;
   background: none; border: 0; cursor: pointer; border-radius: 0;
   line-height: 1;
@@ -954,12 +950,12 @@ input, textarea { font: inherit; color: inherit; }
 .commentary-name {
   display: block;
   font-family: var(--font-serif); font-style: normal;
-  font-size: 15px; font-weight: 600; color: var(--ink);
+  font-size: 14px; font-weight: 600; color: var(--ink);
   line-height: 1.3;
 }
 .commentary-sub {
   display: block;
-  font-size: 12.5px; color: var(--ink-3);
+  font-size: 11.5px; color: var(--ink-3);
   margin-top: 2px; letter-spacing: 0;
 }
 
@@ -986,11 +982,11 @@ input, textarea { font: inherit; color: inherit; }
   line-height: 1.35;
   margin: var(--sp-6) 0 var(--sp-2);
 }
-.commentary-body h1 { font-size: 15.5px; }
-.commentary-body h2 { font-size: 15px; }
+.commentary-body h1 { font-size: 14.5px; }
+.commentary-body h2 { font-size: 14px; }
 .commentary-body h3,
 .commentary-body h4,
-.commentary-body .tf-h { font-size: 14.5px; }
+.commentary-body .tf-h { font-size: 13.5px; }
 .commentary-body > :first-child { margin-top: 0; }
 
 /* Arabic evidence inside the commentary. Deliberately distinct from the ayah
@@ -1065,8 +1061,8 @@ input, textarea { font: inherit; color: inherit; }
 }
 .wbw-cell:hover { background: var(--hover); }
 .wbw-ar { font-family: var(--font-arabic); font-size: 19px; direction: rtl; color: var(--ink); }
-.wbw-tr { font-family: var(--font-mono); font-size: 11.5px; color: var(--ink-4); letter-spacing: 0.02em; }
-.wbw-en { font-family: var(--font-serif); font-size: 12px; color: var(--ink-2); }
+.wbw-tr { font-family: var(--font-mono); font-size: 9.5px; color: var(--ink-4); letter-spacing: 0.02em; }
+.wbw-en { font-family: var(--font-serif); font-size: 11px; color: var(--ink-2); }
 
 /* Translations & recitation lists.
    Were bordered, tinted, rounded rows — the same stacked-card look the panel
@@ -1082,20 +1078,20 @@ input, textarea { font: inherit; color: inherit; }
 }
 .lang-item:last-child { border-bottom: 0; }
 .lang-item[data-active="true"] { border-color: var(--line); background: none; }
-.lang-item-name { font-size: 14px; font-weight: 500; color: var(--ink); }
-.lang-item-sub  { font-size: 12.5px; color: var(--ink-3); margin-top: 2px; font-family: inherit; }
+.lang-item-name { font-size: 13px; font-weight: 500; color: var(--ink); }
+.lang-item-sub  { font-size: 11.5px; color: var(--ink-3); margin-top: 2px; font-family: inherit; }
 .lang-item--static { cursor: default; }
 /* Quiet text, not a green pill: the accent belongs to the tab underline and
    the active ayah tick. */
 .lang-item-active-badge {
-  font-size: 12px; font-weight: 500;
+  font-size: 11px; font-weight: 500;
   text-transform: none; letter-spacing: 0;
   color: var(--accent-ink);
   padding: 0; border: 0; border-radius: 0; background: none;
   flex-shrink: 0;
 }
 .lang-item-soon {
-  font-size: 12px; font-weight: 400;
+  font-size: 11px; font-weight: 400;
   text-transform: none; letter-spacing: 0;
   color: var(--ink-3);
   padding: 0; border: 0; border-radius: 0; background: none;
@@ -1105,14 +1101,14 @@ input, textarea { font: inherit; color: inherit; }
 
 /* Utility text helpers */
 .drawer-error {
-  color: var(--danger); font-size: 14px; padding: var(--sp-3) 0; line-height: 1.6;
+  color: var(--danger); font-size: 13px; padding: var(--sp-3) 0; line-height: 1.6;
 }
 .drawer-empty {
-  color: var(--ink-3); font-size: 14px;
+  color: var(--ink-3); font-size: 13px;
   text-align: center; padding: var(--sp-8) var(--sp-4); line-height: 1.6;
 }
 .drawer-coming-soon {
-  font-size: 13px; color: var(--ink-3);
+  font-size: 12px; color: var(--ink-3);
   margin: var(--sp-4) 0 0;
   padding: 0; border: 0; border-radius: 0; background: none;
   line-height: 1.6;
@@ -1127,14 +1123,14 @@ input, textarea { font: inherit; color: inherit; }
   z-index: 100; overflow: hidden;
 }
 .tweaks-head { padding: 12px 14px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); }
-.tweaks-title { font-size: 13px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-2); }
+.tweaks-title { font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-2); }
 .tweaks-close { color: var(--ink-3); width: 22px; height: 22px; border-radius: 5px; display: grid; place-items: center; }
 .tweaks-close:hover { background: var(--hover); color: var(--ink); }
 .tweaks-body { padding: 12px 14px 14px 14px; display: flex; flex-direction: column; gap: 14px; }
 .tw-row { display: flex; flex-direction: column; gap: 6px; }
-.tw-label { font-size: 12px; color: var(--ink-3); letter-spacing: 0.03em; text-transform: uppercase; font-weight: 500; }
+.tw-label { font-size: 11px; color: var(--ink-3); letter-spacing: 0.03em; text-transform: uppercase; font-weight: 500; }
 .tw-segments { display: flex; gap: 2px; padding: 2px; background: var(--panel); border: 1px solid var(--line); border-radius: 7px; }
-.tw-seg { flex: 1; padding: 5px 8px; border-radius: 5px; font-size: 13px; color: var(--ink-2); text-align: center; transition: background .12s, color .12s; }
+.tw-seg { flex: 1; padding: 5px 8px; border-radius: 5px; font-size: 12px; color: var(--ink-2); text-align: center; transition: background .12s, color .12s; }
 .tw-seg:hover { color: var(--ink); }
 .tw-seg[data-active="true"] { background: var(--bg-elev); color: var(--ink); font-weight: 500; box-shadow: var(--shadow-sm); }
 .tw-swatches { display: flex; gap: 6px; }
@@ -1159,9 +1155,9 @@ input, textarea { font: inherit; color: inherit; }
 .word-panel-head { padding: 12px 16px; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 8px; }
 .word-panel-body { flex: 1; overflow-y: auto; padding: 18px 20px 40px; }
 .word-panel-arabic { font-family: var(--font-arabic); font-size: 32px; direction: rtl; text-align: center; color: var(--ink); padding: 16px 0 8px; }
-.word-panel-translit { font-family: var(--font-mono); font-size: 14px; color: var(--ink-3); text-align: center; letter-spacing: 0.04em; margin-bottom: 4px; }
+.word-panel-translit { font-family: var(--font-mono); font-size: 13px; color: var(--ink-3); text-align: center; letter-spacing: 0.04em; margin-bottom: 4px; }
 .word-panel-meaning { font-family: var(--font-serif); font-size: 16px; color: var(--ink); text-align: center; margin-bottom: 20px; }
-.word-panel-section { font-family: var(--font-mono); font-size: 11.5px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 8px; }
+.word-panel-section { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 8px; }
 
 /* ── Word chips in verse blocks (Mode A — read-only display, <span> elements) ── */
 .word-chips { display: flex; flex-wrap: wrap; gap: 10px 16px; direction: rtl; margin-top: 8px; justify-content: flex-start; }
@@ -1173,8 +1169,8 @@ input, textarea { font: inherit; color: inherit; }
 }
 .word-chip:hover { background: var(--hover); }
 .word-chip-ar { font-family: var(--font-arabic); font-size: 17px; direction: rtl; color: var(--ink); }
-.word-chip-tr { font-family: var(--font-mono); font-size: 11.5px; color: var(--ink-4); letter-spacing: 0.03em; }
-.word-chip-en { font-family: var(--font-sans); font-size: 11px; color: var(--ink-3); }
+.word-chip-tr { font-family: var(--font-mono); font-size: 9px; color: var(--ink-4); letter-spacing: 0.03em; }
+.word-chip-en { font-family: var(--font-sans); font-size: 10px; color: var(--ink-3); }
 
 /* ── Canvas mode toggle ── */
 /* No tray. The bordered container made four modes read as a separate widget
@@ -1204,8 +1200,8 @@ input, textarea { font: inherit; color: inherit; }
 }
 
 /* ── Utility ── */
-.kbd { font-family: var(--font-mono); font-size: 12px; color: var(--ink-3); padding: 1px 5px; border: 1px solid var(--line-strong); border-radius: 4px; background: var(--bg-elev); }
-.autosave-badge { font-size: 12px; color: var(--ink-4); display: flex; align-items: center; gap: 4px; }
+.kbd { font-family: var(--font-mono); font-size: 11px; color: var(--ink-3); padding: 1px 5px; border: 1px solid var(--line-strong); border-radius: 4px; background: var(--bg-elev); }
+.autosave-badge { font-size: 11px; color: var(--ink-4); display: flex; align-items: center; gap: 4px; }
 .autosave-badge[data-saving="true"] { color: var(--accent); }
 
 /* ── Surah grid (homepage) ── */
@@ -1216,10 +1212,10 @@ input, textarea { font: inherit; color: inherit; }
 .surah-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
 .surah-card { background: var(--bg-elev); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 14px 16px; cursor: pointer; transition: box-shadow var(--dur-mid) var(--ease-out), border-color var(--dur-mid) ease; text-decoration: none; display: block; }
 .surah-card:hover { box-shadow: var(--shadow-sm); border-color: var(--line-strong); }
-.surah-card-num { font-family: var(--font-mono); font-size: 11.5px; color: var(--accent-ink); margin-bottom: 6px; letter-spacing: 0.03em; }
-.surah-card-name { font-size: 15px; font-weight: 600; color: var(--ink); }
+.surah-card-num { font-family: var(--font-mono); font-size: 10.5px; color: var(--accent-ink); margin-bottom: 6px; letter-spacing: 0.03em; }
+.surah-card-name { font-size: 14px; font-weight: 600; color: var(--ink); }
 .surah-card-arabic { font-family: var(--font-arabic); font-size: 20px; direction: rtl; text-align: right; color: var(--ink-2); margin-top: 8px; margin-bottom: 4px; }
-.surah-card-meta { font-size: 13px; color: var(--ink-3); }
+.surah-card-meta { font-size: 12px; color: var(--ink-3); }
 
 /* ── Spatial canvas panel (Mode B mushaf overlay) ── */
 .canvas-mushaf-panel { box-shadow: var(--shadow-md); }
@@ -1261,13 +1257,13 @@ input, textarea { font: inherit; color: inherit; }
   color: var(--ink); margin: 0 0 6px; letter-spacing: -0.02em;
 }
 .login-subtitle {
-  font-size: 14.5px; color: var(--ink-3); margin: 0 0 28px; line-height: 1.4;
+  font-size: 13.5px; color: var(--ink-3); margin: 0 0 28px; line-height: 1.4;
 }
 .login-google-btn {
   width: 100%; display: flex; align-items: center; justify-content: center;
   gap: 10px; padding: 11px 20px;
   background: var(--bg-elev); border: 1px solid var(--line-strong);
-  border-radius: 9px; font-size: 15px; font-weight: 500; color: var(--ink);
+  border-radius: 9px; font-size: 14px; font-weight: 500; color: var(--ink);
   cursor: pointer; transition: background .12s, box-shadow .12s;
   margin-bottom: 14px;
 }
@@ -1281,21 +1277,21 @@ input, textarea { font: inherit; color: inherit; }
   animation: spin .7s linear infinite; flex-shrink: 0;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
-.login-error  { font-size: 13.5px; color: oklch(0.55 0.15 25); margin: 2px 0 10px; }
-.login-footer { font-size: 12.5px; color: var(--ink-4); line-height: 1.5; margin-top: 6px; }
-.login-build  { font-size: 11px; color: var(--ink-4); opacity: 0.7; margin-top: 10px; font-family: var(--font-mono); }
+.login-error  { font-size: 12.5px; color: oklch(0.55 0.15 25); margin: 2px 0 10px; }
+.login-footer { font-size: 11.5px; color: var(--ink-4); line-height: 1.5; margin-top: 6px; }
+.login-build  { font-size: 10px; color: var(--ink-4); opacity: 0.7; margin-top: 10px; font-family: var(--font-mono); }
 
 /* ── Beta gate ── */
 .beta-gate-eyebrow { margin-bottom: 24px; }
 .beta-gate-form { width: 100%; display: flex; flex-direction: column; gap: 8px; }
 .beta-gate-label {
-  font-size: 13px; font-weight: 500; color: var(--ink-3);
+  font-size: 12px; font-weight: 500; color: var(--ink-3);
   text-align: left; letter-spacing: 0.02em;
 }
 .beta-gate-input {
   width: 100%; padding: 11px 14px;
   background: var(--bg); border: 1px solid var(--line-strong);
-  border-radius: 9px; font-size: 15px; color: var(--ink);
+  border-radius: 9px; font-size: 14px; color: var(--ink);
   font-family: var(--font-sans);
   outline: none; transition: border-color .12s, box-shadow .12s;
   box-sizing: border-box;
@@ -1309,7 +1305,7 @@ input, textarea { font: inherit; color: inherit; }
   width: 100%; display: flex; align-items: center; justify-content: center;
   gap: 8px; padding: 11px 20px; margin-top: 4px;
   background: var(--ink); border: none; border-radius: 9px;
-  font-size: 15px; font-weight: 500; color: var(--bg);
+  font-size: 14px; font-weight: 500; color: var(--bg);
   font-family: var(--font-sans);
   cursor: pointer; transition: opacity .12s;
 }
@@ -1335,16 +1331,16 @@ input, textarea { font: inherit; color: inherit; }
   margin: 0 auto 20px;
 }
 .setup-title { font-family: var(--font-serif); font-size: 22px; font-weight: 600; color: var(--ink); margin: 0 0 10px; letter-spacing: -0.01em; }
-.setup-body { font-size: 15px; color: var(--ink-2); line-height: 1.55; margin: 0 0 16px; }
-.setup-hint { font-size: 14px; color: var(--ink-3); margin: 12px 0 6px; }
+.setup-body { font-size: 14px; color: var(--ink-2); line-height: 1.55; margin: 0 0 16px; }
+.setup-hint { font-size: 13px; color: var(--ink-3); margin: 12px 0 6px; }
 .setup-code {
-  font-family: var(--font-mono); font-size: 13.5px;
+  font-family: var(--font-mono); font-size: 12.5px;
   background: var(--panel); border: 1px solid var(--line);
   border-radius: 8px; padding: 12px 16px; text-align: left;
   color: var(--ink-2); white-space: pre-wrap; word-break: break-all;
   margin: 0 0 8px;
 }
-.setup-error { font-family: var(--font-mono); font-size: 12px; color: oklch(0.62 0.09 28); margin-top: 12px; }
+.setup-error { font-family: var(--font-mono); font-size: 11px; color: oklch(0.62 0.09 28); margin-top: 12px; }
 
 /* Workspace picker */
 .picker-list { display: flex; flex-direction: column; gap: 6px; text-align: left; }
@@ -1359,12 +1355,12 @@ input, textarea { font: inherit; color: inherit; }
   width: 36px; height: 36px; border-radius: 8px; flex-shrink: 0;
   background: linear-gradient(135deg, var(--accent), var(--accent-ink));
   color: white; display: grid; place-items: center;
-  font-size: 13px; font-weight: 600; overflow: hidden;
+  font-size: 12px; font-weight: 600; overflow: hidden;
 }
 .picker-avatar img { width: 100%; height: 100%; object-fit: cover; }
 .picker-info { flex: 1; min-width: 0; }
-.picker-name { font-size: 15px; font-weight: 600; color: var(--ink); }
-.picker-meta { font-size: 13px; color: var(--ink-3); margin-top: 2px; }
+.picker-name { font-size: 14px; font-weight: 600; color: var(--ink); }
+.picker-meta { font-size: 12px; color: var(--ink-3); margin-top: 2px; }
 .picker-arrow { color: var(--ink-4); font-size: 16px; }
 
 /* ── Tutorial overlay ── */
@@ -1395,7 +1391,7 @@ input, textarea { font: inherit; color: inherit; }
 .tut-skip {
   position: absolute; top: 16px; right: 16px;
   background: none; border: none;
-  font-size: 13px; color: var(--ink-4, #aaa);
+  font-size: 12px; color: var(--ink-4, #aaa);
   cursor: pointer; padding: 4px 8px; border-radius: 6px;
   transition: color .15s, background .15s;
 }
@@ -1410,14 +1406,14 @@ input, textarea { font: inherit; color: inherit; }
   color: var(--ink, #111);
 }
 .tut-body {
-  font-size: 15.5px; line-height: 1.75;
+  font-size: 14.5px; line-height: 1.75;
   color: var(--ink-2, #444);
   margin: 0 0 24px;
 }
 .tut-code {
   display: inline-block;
   font-family: var(--font-mono, monospace);
-  font-size: 13.5px;
+  font-size: 12.5px;
   background: var(--surface, #f5f5f5);
   border: 1px solid var(--line, #e0e0e0);
   padding: 2px 7px; border-radius: 5px;
@@ -1444,7 +1440,7 @@ input, textarea { font: inherit; color: inherit; }
 }
 .tut-btn {
   padding: 8px 20px; border-radius: 8px;
-  font-size: 14.5px; font-weight: 500;
+  font-size: 13.5px; font-weight: 500;
   cursor: pointer; border: none; transition: background .15s, opacity .15s;
 }
 .tut-btn--ghost {
@@ -1477,14 +1473,14 @@ input, textarea { font: inherit; color: inherit; }
   width: 26px; height: 26px; border-radius: 6px;
   background: var(--ink); color: var(--bg);
   display: grid; place-items: center;
-  font-family: var(--font-serif); font-weight: 700; font-size: 14px; flex-shrink: 0;
+  font-family: var(--font-serif); font-weight: 700; font-size: 13px; flex-shrink: 0;
 }
 .home-brand-name  { font-size: 15px; font-weight: 600; color: var(--ink); letter-spacing: -0.02em; }
 .home-user-avatar {
   width: 32px; height: 32px; border-radius: 50%;
   background: var(--panel-2); color: var(--ink-2);
   display: grid; place-items: center;
-  font-size: 12px; font-weight: 700; letter-spacing: 0.04em; overflow: hidden;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.04em; overflow: hidden;
   border: none; padding: 0; cursor: pointer; flex-shrink: 0;
   transition: opacity 0.15s, box-shadow 0.15s;
 }
@@ -1512,7 +1508,7 @@ input, textarea { font: inherit; color: inherit; }
   letter-spacing: -0.025em; line-height: 1.15; margin: 0;
 }
 .hw-greeting-sub {
-  font-size: 15px; color: var(--ink-3); line-height: 1.5; margin: 0;
+  font-size: 14px; color: var(--ink-3); line-height: 1.5; margin: 0;
 }
 
 /* Resume card — the focal point */
@@ -1535,7 +1531,7 @@ input, textarea { font: inherit; color: inherit; }
 }
 .hw-resume-body { flex: 1; min-width: 0; padding-left: 4px; }
 .hw-resume-label {
-  font-size: 11.5px; font-weight: 600; letter-spacing: 0.09em;
+  font-size: 10.5px; font-weight: 600; letter-spacing: 0.09em;
   text-transform: uppercase; color: var(--ink-4); display: block; margin-bottom: 10px;
 }
 .hw-resume-surah {
@@ -1550,13 +1546,13 @@ input, textarea { font: inherit; color: inherit; }
   line-height: 1;
 }
 .hw-resume-page {
-  font-size: 14.5px; color: var(--ink-2); margin: 0 0 4px;
+  font-size: 13.5px; color: var(--ink-2); margin: 0 0 4px;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.hw-resume-ws { font-size: 13px; color: var(--ink-4); margin: 0; }
+.hw-resume-ws { font-size: 12px; color: var(--ink-4); margin: 0; }
 .hw-resume-btn {
   display: inline-flex; align-items: center; gap: 7px; flex-shrink: 0;
-  font-size: 14px; font-weight: 500; color: var(--accent-ink);
+  font-size: 13px; font-weight: 500; color: var(--accent-ink);
   background: var(--accent-soft); border: none; border-radius: 8px;
   padding: 10px 16px; cursor: pointer; white-space: nowrap;
   transition: background .12s, opacity .12s;
@@ -1650,7 +1646,7 @@ input, textarea { font: inherit; color: inherit; }
   border-radius: 10px;
   background:    var(--ink);
   color:         #fff;
-  font-size: 14.5px;
+  font-size:     13.5px;
   font-weight:   450;
   box-shadow:    0 4px 20px rgba(0,0,0,0.20);
   animation:     hw-slide-up 180ms var(--ease-out);
@@ -1686,11 +1682,11 @@ input, textarea { font: inherit; color: inherit; }
   display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;
 }
 .hw-ws-title {
-  font-size: 15px; font-weight: 600; color: var(--ink);
+  font-size: 14px; font-weight: 600; color: var(--ink);
   letter-spacing: -0.01em; margin: 0;
 }
 .hw-ws-new-btn {
-  font-size: 14px; font-weight: 500; color: var(--ink-2);
+  font-size: 13px; font-weight: 500; color: var(--ink-2);
   background: transparent; border: 1px solid var(--line-strong);
   border-radius: 7px; padding: 5px 12px; cursor: pointer;
   transition: background .12s, border-color .12s;
@@ -1716,7 +1712,7 @@ input, textarea { font: inherit; color: inherit; }
   width: 36px; height: 36px; border-radius: 9px; flex-shrink: 0;
   background: var(--panel-2); color: var(--ink-2);
   display: grid; place-items: center;
-  font-size: 13px; font-weight: 700; letter-spacing: 0.03em;
+  font-size: 12px; font-weight: 700; letter-spacing: 0.03em;
 }
 /* Action button group (pencil + trash) */
 .hw-ws-card-actions {
@@ -1734,7 +1730,7 @@ input, textarea { font: inherit; color: inherit; }
 /* Two-step delete confirm */
 .hw-ws-card-del-confirm {
   height: 24px; padding: 0 8px; border-radius: 5px;
-  font-size: 12.5px; font-weight: 600;
+  font-size: 11.5px; font-weight: 600;
   background: oklch(0.52 0.18 25); color: #fff; border: none; cursor: pointer;
   transition: opacity var(--dur-fast) ease;
 }
@@ -1752,24 +1748,24 @@ input, textarea { font: inherit; color: inherit; }
 }
 .hw-ws-card-meta { display: flex; align-items: center; gap: 8px; }
 .hw-ws-card-type {
-  font-size: 12px; font-weight: 500; padding: 2px 7px; border-radius: 4px;
+  font-size: 11px; font-weight: 500; padding: 2px 7px; border-radius: 4px;
 }
 .hw-ws-card-type--private { background: var(--panel-2); color: var(--ink-3); }
 .hw-ws-card-type--group   { background: var(--accent-soft); color: var(--accent-ink); }
-.hw-ws-card-count { font-size: 13px; color: var(--ink-4); }
+.hw-ws-card-count { font-size: 12px; color: var(--ink-4); }
 .hw-ws-card-last {
   display: flex; align-items: center; justify-content: space-between;
   padding-top: 10px; border-top: 1px solid var(--line);
 }
-.hw-ws-card-last-surah { font-size: 13px; font-weight: 500; color: var(--ink-3); }
-.hw-ws-card-last-date  { font-size: 12px; color: var(--ink-4); }
-.hw-ws-card-error      { font-size: 12px; color: oklch(0.55 0.09 28); margin: 0; }
+.hw-ws-card-last-surah { font-size: 12px; font-weight: 500; color: var(--ink-3); }
+.hw-ws-card-last-date  { font-size: 11px; color: var(--ink-4); }
+.hw-ws-card-error      { font-size: 11px; color: oklch(0.55 0.09 28); margin: 0; }
 
 /* Empty */
-.hw-ws-empty { font-size: 15px; color: var(--ink-4); padding: 8px 0; }
+.hw-ws-empty { font-size: 14px; color: var(--ink-4); padding: 8px 0; }
 .hw-ws-empty-btn {
   background: none; border: none; cursor: pointer;
-  color: var(--accent-ink); font-size: 15px; font-weight: 500;
+  color: var(--accent-ink); font-size: 14px; font-weight: 500;
 }
 .hw-ws-empty-btn:hover { text-decoration: underline; }
 
@@ -1782,7 +1778,7 @@ input, textarea { font: inherit; color: inherit; }
   gap: 8px;
 }
 .home-join-btn {
-  font-size: 14px; color: var(--ink-4);
+  font-size: 13px; color: var(--ink-4);
   background: none; border: none; cursor: pointer;
   text-decoration: underline; text-underline-offset: 3px; opacity: 0.55;
   transition: opacity 0.15s;
@@ -1834,7 +1830,7 @@ input, textarea { font: inherit; color: inherit; }
   border-radius: 4px; padding: 0 6px; outline: none;
   width: 320px; max-width: 100%;
 }
-.ws-home-sub { font-size: 14px; color: var(--ink-3); margin: 0; }
+.ws-home-sub { font-size: 13px; color: var(--ink-3); margin: 0; }
 
 /* Filter tabs — segmented control with a sliding pill */
 .ws-filter-tabs {
@@ -1858,7 +1854,7 @@ input, textarea { font: inherit; color: inherit; }
   align-items: center;
   gap: 6px;
   border-radius: 8px;
-  font-size: 13.5px;
+  font-size: 12.5px;
   font-weight: 500;
   color: var(--ink-3);
   white-space: nowrap;
@@ -1868,7 +1864,7 @@ input, textarea { font: inherit; color: inherit; }
 .ws-filter-tab[data-active="true"] { color: var(--ink); }
 
 .ws-filter-count {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--ink-4);
   font-variant-numeric: tabular-nums;
@@ -1944,7 +1940,7 @@ input, textarea { font: inherit; color: inherit; }
 .ws-surah-card:disabled { cursor: not-allowed; }
 
 .ws-card-num {
-  font-family: var(--font-mono); font-size: 11px; color: var(--accent-ink);
+  font-family: var(--font-mono); font-size: 10px; color: var(--accent-ink);
   letter-spacing: 0.04em; margin-bottom: 4px;
 }
 .ws-surah-card:not([data-started="true"]) .ws-card-num { color: var(--ink-4); }
@@ -1953,8 +1949,8 @@ input, textarea { font: inherit; color: inherit; }
   font-family: var(--font-arabic); font-size: 20px; direction: rtl;
   text-align: right; color: var(--ink); line-height: 1.6;
 }
-.ws-card-name { font-size: 14px; font-weight: 600; color: var(--ink); line-height: 1.3; }
-.ws-card-meta { font-size: 12.5px; color: var(--ink-3); }
+.ws-card-name { font-size: 13px; font-weight: 600; color: var(--ink); line-height: 1.3; }
+.ws-card-meta { font-size: 11.5px; color: var(--ink-3); }
 
 .ws-card-footer {
   margin-top: 8px; padding-top: 8px;
@@ -1962,18 +1958,18 @@ input, textarea { font: inherit; color: inherit; }
   display: flex; align-items: center; justify-content: space-between; gap: 4px;
 }
 .ws-card-tag {
-  font-family: var(--font-mono); font-size: 11px;
+  font-family: var(--font-mono); font-size: 10px;
   color: var(--ink-4); letter-spacing: 0.03em;
 }
 .ws-card-badge {
-  font-size: 11.5px; font-weight: 500;
+  font-size: 10.5px; font-weight: 500;
   padding: 2px 7px; border-radius: 20px;
   background: var(--accent-soft); color: var(--accent-ink);
   white-space: nowrap;
 }
 .ws-card-badge--loading { background: var(--panel); color: var(--ink-4); }
 .ws-card-start-hint {
-  font-size: 12px; color: var(--ink-4); opacity: 0;
+  font-size: 11px; color: var(--ink-4); opacity: 0;
   transition: opacity var(--dur-mid) ease;
 }
 .ws-surah-card:hover .ws-card-start-hint { opacity: 1; }
@@ -1986,7 +1982,7 @@ input, textarea { font: inherit; color: inherit; }
 .ws-surah-card[data-locked="true"]:hover { transform: none; }
 .ws-card-locked-hint {
   display: inline-flex; align-items: center; gap: 4px;
-  font-size: 11.5px; color: var(--ink-4);
+  font-size: 10.5px; color: var(--ink-4);
 }
 
 /* ── Workspace page view layout (Rail + Sidebar + Canvas) ── */
@@ -2045,7 +2041,7 @@ input, textarea { font: inherit; color: inherit; }
   border-top: 1px solid var(--line);
 }
 .sidebar-footer-link {
-  font-size: 13px; color: var(--ink-4);
+  font-size: 12px; color: var(--ink-4);
   text-decoration: none; display: flex; align-items: center; gap: 4px;
   padding: 4px 6px; border-radius: 5px;
   transition: background .12s, color .12s;
@@ -2053,27 +2049,27 @@ input, textarea { font: inherit; color: inherit; }
 .sidebar-footer-link:hover { background: var(--hover); color: var(--ink); }
 .sidebar-empty {
   padding: 24px 16px; text-align: center;
-  font-size: 14px; color: var(--ink-4); line-height: 1.5;
+  font-size: 13px; color: var(--ink-4); line-height: 1.5;
 }
 /* Sidebar new-page form */
 .sidebar-new-page-form { padding: 8px 12px 4px; }
 .sidebar-new-page-input {
   width: 100%; padding: 6px 10px; border-radius: 5px;
   border: 1px solid var(--line-strong); background: var(--bg-elev);
-  font-size: 14px; color: var(--ink); outline: none;
+  font-size: 13px; color: var(--ink); outline: none;
 }
 .sidebar-new-page-input:focus { border-color: var(--accent); }
-.sidebar-new-page-error { font-size: 12.5px; color: oklch(0.55 0.12 20); margin: 4px 0 0; }
+.sidebar-new-page-error { font-size: 11.5px; color: oklch(0.55 0.12 20); margin: 4px 0 0; }
 .sidebar-new-page-actions { display: flex; gap: 6px; margin-top: 6px; }
 .sidebar-new-page-save {
   padding: 4px 12px; border-radius: 5px;
-  background: var(--ink); color: var(--bg); font-size: 13.5px; font-weight: 500;
+  background: var(--ink); color: var(--bg); font-size: 12.5px; font-weight: 500;
   cursor: pointer; transition: opacity .12s;
 }
 .sidebar-new-page-save:disabled { opacity: 0.4; cursor: not-allowed; }
 .sidebar-new-page-cancel {
   padding: 4px 10px; border-radius: 5px;
-  background: transparent; color: var(--ink-3); font-size: 13.5px;
+  background: transparent; color: var(--ink-3); font-size: 12.5px;
   cursor: pointer; transition: background var(--dur-fast) ease;
 }
 .sidebar-new-page-cancel:hover { background: var(--hover); color: var(--ink); }
@@ -2091,7 +2087,7 @@ input, textarea { font: inherit; color: inherit; }
 /* ── SurahNoPages empty state ── */
 .no-pages-crumbs {
   display: flex; align-items: center; gap: 8px;
-  margin-bottom: 40px; font-size: 14px; color: var(--ink-3);
+  margin-bottom: 40px; font-size: 13px; color: var(--ink-3);
 }
 .no-pages-back {
   text-decoration: none; color: var(--ink-2); font-weight: 500;
@@ -2103,11 +2099,11 @@ input, textarea { font: inherit; color: inherit; }
   gap: 12px; max-width: 540px; margin: 0 auto; text-align: center; padding: 40px 0;
 }
 .no-pages-title { font-family: var(--font-serif); font-size: 22px; font-weight: 600; color: var(--ink); margin: 0; }
-.no-pages-body { font-size: 15px; color: var(--ink-2); line-height: 1.6; margin: 0; }
-.no-pages-hint { font-size: 14px; color: var(--ink-3); margin: 8px 0 0; }
+.no-pages-body { font-size: 14px; color: var(--ink-2); line-height: 1.6; margin: 0; }
+.no-pages-hint { font-size: 13px; color: var(--ink-3); margin: 8px 0 0; }
 .no-pages-return {
   margin-top: 16px; text-decoration: none;
-  font-size: 14px; font-weight: 500; color: var(--accent-ink);
+  font-size: 13px; font-weight: 500; color: var(--accent-ink);
   padding: 6px 14px; border-radius: 7px; border: 1px solid var(--accent);
   transition: background .12s;
 }
@@ -2116,14 +2112,14 @@ input, textarea { font: inherit; color: inherit; }
 /* ── Page placeholder (Phase 2 content area stub) ── */
 .page-status-badge {
   display: inline-block; padding: 2px 8px; border-radius: 20px;
-  font-size: 12.5px; font-weight: 500; text-transform: capitalize;
+  font-size: 11.5px; font-weight: 500; text-transform: capitalize;
 }
 .placeholder-progress-row {
   display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 28px;
 }
 .placeholder-progress-chip {
   display: flex; align-items: center; gap: 6px;
-  font-size: 13.5px; color: var(--ink-2);
+  font-size: 12.5px; color: var(--ink-2);
   padding: 5px 10px; border-radius: 20px;
   background: var(--panel); border: 1px solid var(--line);
 }
@@ -2144,10 +2140,10 @@ input, textarea { font: inherit; color: inherit; }
   padding-top: 2px; flex-shrink: 0;
 }
 .placeholder-notice-title {
-  font-size: 15px; font-weight: 600; color: var(--ink); margin-bottom: 5px;
+  font-size: 14px; font-weight: 600; color: var(--ink); margin-bottom: 5px;
 }
 .placeholder-notice-body {
-  font-size: 14.5px; color: var(--ink-2); line-height: 1.55;
+  font-size: 13.5px; color: var(--ink-2); line-height: 1.55;
 }
 
 /* ── Progress ring ── */
@@ -2187,7 +2183,7 @@ input, textarea { font: inherit; color: inherit; }
   min-height: 26px;
 }
 .prog-label {
-  font-family: var(--font-mono); font-size: 11px;
+  font-family: var(--font-mono); font-size: 10px;
   letter-spacing: 0.06em; text-transform: uppercase;
   color: var(--ink-4); width: 56px; flex-shrink: 0;
 }
@@ -2197,7 +2193,7 @@ input, textarea { font: inherit; color: inherit; }
 .prog-btn {
   width: 28px; height: 24px;
   border-radius: 5px;
-  font-family: var(--font-mono); font-size: 13px;
+  font-family: var(--font-mono); font-size: 12px;
   color: var(--ink-3);
   border: 1px solid var(--line);
   display: grid; place-items: center;
@@ -2209,7 +2205,7 @@ input, textarea { font: inherit; color: inherit; }
 .prog-btn[data-status="studied"][data-active="true"] { background: var(--accent); color: white; border-color: var(--accent); }
 .prog-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 .prog-changed-by {
-  font-family: var(--font-mono); font-size: 11.5px;
+  font-family: var(--font-mono); font-size: 9.5px;
   color: var(--ink-4); letter-spacing: 0.02em;
   white-space: nowrap; margin-left: 4px;
 }
@@ -2242,24 +2238,24 @@ input, textarea { font: inherit; color: inherit; }
   margin-bottom: 5px; flex-wrap: wrap;
 }
 .note-type-chip {
-  font-family: var(--font-mono); font-size: 11px;
+  font-family: var(--font-mono); font-size: 10px;
   letter-spacing: 0.05em; text-transform: uppercase;
   font-weight: 500;
 }
 .note-admin-badge {
   display: flex; align-items: center; gap: 3px;
-  font-family: var(--font-mono); font-size: 11px;
+  font-family: var(--font-mono); font-size: 10px;
   color: oklch(0.62 0.09 28); letter-spacing: 0.03em;
 }
 .note-card-author {
-  font-size: 12.5px; color: var(--ink-3); flex: 1;
+  font-size: 11.5px; color: var(--ink-3); flex: 1;
 }
 .note-card-ts {
-  font-family: var(--font-mono); font-size: 11.5px; color: var(--ink-4);
+  font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-4);
   white-space: nowrap;
 }
 .note-card-body {
-  font-family: var(--font-serif); font-size: 15px;
+  font-family: var(--font-serif); font-size: 14px;
   line-height: 1.6; color: var(--ink);
   white-space: pre-wrap; word-break: break-word;
 }
@@ -2277,7 +2273,7 @@ input, textarea { font: inherit; color: inherit; }
 }
 .note-type-btn {
   height: 24px; padding: 0 10px;
-  border-radius: 20px; font-size: 13px;
+  border-radius: 20px; font-size: 12px;
   border: 1px solid var(--line);
   color: var(--ink-2);
   transition: background .1s, border-color .1s, color .1s;
@@ -2292,14 +2288,14 @@ input, textarea { font: inherit; color: inherit; }
   padding: 8px 10px;
   background: var(--bg-elev); border: 1px solid var(--line);
   border-radius: var(--radius); resize: none; overflow: hidden;
-  font-family: var(--font-serif); font-size: 15px; line-height: 1.6;
+  font-family: var(--font-serif); font-size: 14px; line-height: 1.6;
   color: var(--ink); outline: none;
   transition: border-color .12s;
 }
 .note-creator-textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
 .note-creator-textarea::placeholder { color: var(--ink-4); }
 .note-creator-error {
-  font-size: 13.5px; color: oklch(0.62 0.09 28);
+  font-size: 12.5px; color: oklch(0.62 0.09 28);
   padding: 6px 8px; background: oklch(0.62 0.09 28 / 0.08);
   border-radius: 5px;
 }
@@ -2308,14 +2304,14 @@ input, textarea { font: inherit; color: inherit; }
 }
 .note-creator-cancel {
   height: 28px; padding: 0 12px;
-  border-radius: 6px; font-size: 14px;
+  border-radius: 6px; font-size: 13px;
   color: var(--ink-2); border: 1px solid var(--line);
   transition: background .12s;
 }
 .note-creator-cancel:hover { background: var(--hover); }
 .note-creator-submit {
   height: 28px; padding: 0 14px;
-  border-radius: 6px; font-size: 14px; font-weight: 500;
+  border-radius: 6px; font-size: 13px; font-weight: 500;
   background: var(--ink); color: var(--bg);
   transition: opacity .12s;
 }
@@ -2361,7 +2357,7 @@ input, textarea { font: inherit; color: inherit; }
   display: flex; align-items: center; justify-content: center;
 }
 .mode-b-empty-msg {
-  font-size: 15px; color: var(--ink-4);
+  font-size: 14px; color: var(--ink-4);
 }
 
 /* ── Reading Mode ↔ Study Mode ──────────────────────────────────────────────
@@ -2429,7 +2425,7 @@ input, textarea { font: inherit; color: inherit; }
   padding: 7px 8px 7px 16px; z-index: 31;
   background: var(--bg-elev); border: 1px solid var(--line-strong);
   border-radius: 999px; box-shadow: var(--shadow-md);
-  font-size: 14px; color: var(--ink-2);
+  font-size: 13px; color: var(--ink-2);
 }
 .study-bar[data-visible="false"] { transform: translateY(-8px); }
 .study-bar[data-visible="true"]  { transform: none; }
@@ -2516,7 +2512,7 @@ input, textarea { font: inherit; color: inherit; }
 }
 .mode-b-zoom-btn:hover { background: var(--hover); color: var(--ink); }
 .mode-b-zoom-label {
-  font-size: 12.5px; color: var(--ink-3);
+  font-size: 11.5px; color: var(--ink-3);
   min-width: 36px; text-align: center;
   font-family: var(--font-mono);
 }
@@ -2568,7 +2564,7 @@ input, textarea { font: inherit; color: inherit; }
 
 .sab-ref {
   font-family: var(--font-mono);
-  font-size: 12px; font-weight: 600;
+  font-size: 11px; font-weight: 600;
   color: var(--ink-4);
   letter-spacing: 0.04em;
   flex-shrink: 0;
@@ -2598,7 +2594,7 @@ input, textarea { font: inherit; color: inherit; }
 }
 
 .sab-note-chip {
-  font-size: 11.5px; font-weight: 600;
+  font-size: 10.5px; font-weight: 600;
   color: var(--accent-ink);
   background: var(--accent-soft);
   border-radius: 10px;
@@ -2630,7 +2626,7 @@ input, textarea { font: inherit; color: inherit; }
 }
 .sab-word-chip {
   font-family: var(--font-mono);
-  font-size: 11.5px; color: var(--ink-3);
+  font-size: 10.5px; color: var(--ink-3);
   background: var(--panel-2);
   border: 1px solid var(--line);
   border-radius: 4px;
@@ -2639,11 +2635,11 @@ input, textarea { font: inherit; color: inherit; }
 
 .sab-translation {
   font-family: var(--font-serif);
-  font-size: 15px; line-height: 1.7;
+  font-size: 14px; line-height: 1.7;
   color: var(--ink-2);
 }
 .sab-tr-num {
-  font-size: 11px; color: var(--ink-4);
+  font-size: 10px; color: var(--ink-4);
   margin-right: 4px;
   font-family: var(--font-mono);
 }
@@ -2654,7 +2650,7 @@ input, textarea { font: inherit; color: inherit; }
   flex-wrap: wrap;
 }
 .sab-progress-label {
-  font-size: 12px; color: var(--ink-4);
+  font-size: 11px; color: var(--ink-4);
   font-weight: 500; letter-spacing: 0.03em;
 }
 .sab-progress-sep {
@@ -2662,7 +2658,7 @@ input, textarea { font: inherit; color: inherit; }
   margin: 0 4px;
 }
 .sab-status-pill {
-  font-size: 12px; font-weight: 500;
+  font-size: 11px; font-weight: 500;
   padding: 1px 7px; border-radius: 20px;
   letter-spacing: 0.02em;
 }
@@ -2686,7 +2682,7 @@ input, textarea { font: inherit; color: inherit; }
   border-radius: var(--radius);
   background: var(--panel);
   border: 1px solid var(--line);
-  font-size: 13px;
+  font-size: 12px;
 }
 .sab-note-type {
   font-weight: 600; color: var(--ink-3);
@@ -2694,7 +2690,7 @@ input, textarea { font: inherit; color: inherit; }
   letter-spacing: 0.02em;
 }
 .sab-note-author {
-  color: var(--ink-4); font-size: 12px;
+  color: var(--ink-4); font-size: 11px;
 }
 
 /* ── Group status palette (border-color + subtle background tint) ── */
@@ -2720,7 +2716,7 @@ input, textarea { font: inherit; color: inherit; }
   border: 1px solid var(--line-strong);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-md);
-  font-size: 14px;
+  font-size: 13px;
   font-family: var(--font-sans);
   /* Prevent the card from triggering canvas pan on drag start */
   cursor: default;
@@ -2746,11 +2742,11 @@ input, textarea { font: inherit; color: inherit; }
   white-space: nowrap;
 }
 .anc-note-type-pill {
-  font-size: 12px; font-weight: 600;
+  font-size: 11px; font-weight: 600;
   letter-spacing: 0.03em;
 }
 .anc-note-author-pill {
-  font-size: 12px; color: var(--ink-4);
+  font-size: 11px; color: var(--ink-4);
 }
 
 /* Full card header */
@@ -2762,7 +2758,7 @@ input, textarea { font: inherit; color: inherit; }
   border-bottom: 1px solid var(--line);
 }
 .anc-note-type {
-  font-size: 12px; font-weight: 700;
+  font-size: 11px; font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -2772,7 +2768,7 @@ input, textarea { font: inherit; color: inherit; }
 }
 .anc-note-author {
   margin-left: auto;
-  font-size: 12px; color: var(--ink-4);
+  font-size: 11px; color: var(--ink-4);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   max-width: 96px;
 }
@@ -2781,7 +2777,7 @@ input, textarea { font: inherit; color: inherit; }
 .anc-note-body {
   padding: 8px 10px 10px;
   font-family: var(--font-serif);
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.65;
   color: var(--ink);
   /* Clip very long notes to 5 lines */
@@ -2957,7 +2953,7 @@ input, textarea { font: inherit; color: inherit; }
   border: 1px solid var(--line-strong);
   border-radius: 20px;
   padding: 6px 14px 6px 10px;
-  font-size: 13px;
+  font-size: 12px;
   color: var(--ink-2);
   box-shadow: 0 2px 12px oklch(0 0 0 / 0.10);
   pointer-events: auto;
@@ -2970,7 +2966,7 @@ input, textarea { font: inherit; color: inherit; }
   width: 18px; height: 18px;
   display: flex; align-items: center; justify-content: center;
   border-radius: 50%;
-  font-size: 13px;
+  font-size: 12px;
   color: var(--ink-4);
   cursor: pointer;
   transition: background .1s, color .1s;
@@ -3013,7 +3009,7 @@ input, textarea { font: inherit; color: inherit; }
   text-align: center;
   padding-top: 20px;
   padding-bottom: 4px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
   letter-spacing: 0.12em;
   color: oklch(0.60 0.035 65);
@@ -3053,7 +3049,7 @@ input, textarea { font: inherit; color: inherit; }
 .tb-page-nav-info {
   display: flex; align-items: center; gap: 5px;
   padding: 0 6px;
-  font-size: 13.5px;
+  font-size: 12.5px;
   white-space: nowrap;
 }
 .tb-page-nav-page  { color: var(--ink); font-weight: 500; }
@@ -3140,7 +3136,7 @@ input, textarea { font: inherit; color: inherit; }
    gloss on the name, not a second title competing with it. */
 .qcf-surah-name-en {
   font-family:  var(--font-sans);
-  font-size: 13.5px;
+  font-size:    12.5px;
   font-weight:  500;
   letter-spacing: 0.01em;
   color:        color-mix(in srgb, var(--paper-ink) 58%, transparent);
@@ -3327,13 +3323,13 @@ input, textarea { font: inherit; color: inherit; }
 }
 
 .qcf-error-msg {
-  font-size: 15px;
+  font-size:   14px;
   color:       var(--ink-3);
   margin:      0;
 }
 
 .qcf-error-retry {
-  font-size: 14px;
+  font-size:     13px;
   font-weight:   500;
   color:         var(--accent-ink);
   background:    var(--accent-soft);
@@ -3352,7 +3348,7 @@ input, textarea { font: inherit; color: inherit; }
   padding-top:    12px;
   /* Very thin rule above the page number — the only structural marker */
   border-top:     1px solid rgba(0,0,0,0.10);
-  font-size: 12px;
+  font-size:      11px;
   font-weight:    500;
   letter-spacing: 0.08em;
   color:          rgba(0,0,0,0.30);
@@ -3448,7 +3444,7 @@ input, textarea { font: inherit; color: inherit; }
 
 .word-popup-translit {
   font-family: var(--font-mono);
-  font-size: 13px;
+  font-size: 12px;
   color: var(--accent-ink);
   letter-spacing: 0.03em;
   margin-bottom: 4px;
@@ -3456,7 +3452,7 @@ input, textarea { font: inherit; color: inherit; }
 
 .word-popup-translation {
   font-family: var(--font-serif);
-  font-size: 14px;
+  font-size: 13px;
   color: var(--ink-2);
   line-height: 1.5;
   margin-bottom: 8px;
@@ -3464,7 +3460,7 @@ input, textarea { font: inherit; color: inherit; }
 
 .word-popup-ref {
   font-family: var(--font-mono);
-  font-size: 11.5px;
+  font-size: 10.5px;
   color: var(--ink-4);
   letter-spacing: 0.06em;
   border-top: 1px solid var(--line);
@@ -3484,7 +3480,7 @@ input, textarea { font: inherit; color: inherit; }
 .word-popup-action {
   flex: 1 1 0;
   min-width: 0;
-  font-size: 12.5px;
+  font-size: 11.5px;
   font-weight: 500;
   padding: 5px 8px;
   border-radius: 6px;
@@ -3512,7 +3508,7 @@ input, textarea { font: inherit; color: inherit; }
 }
 
 .word-popup-back {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--ink-4);
   text-align: left;
   padding: 0;
@@ -3521,7 +3517,7 @@ input, textarea { font: inherit; color: inherit; }
 .word-popup-back:hover { color: var(--ink-2); }
 
 .word-popup-form-label {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--ink-3);
   font-family: var(--font-sans);
 }
@@ -3537,7 +3533,7 @@ input, textarea { font: inherit; color: inherit; }
   gap: 4px;
 }
 .word-popup-type-btn {
-  font-size: 12px;
+  font-size: 11px;
   padding: 3px 8px;
   border-radius: 20px;
   border: 1px solid var(--line);
@@ -3557,7 +3553,7 @@ input, textarea { font: inherit; color: inherit; }
   min-height: 72px;
   max-height: 200px;
   padding: 8px 10px;
-  font-size: 14px;
+  font-size: 13px;
   font-family: var(--font-serif);
   color: var(--ink);
   background: var(--panel);
@@ -3571,7 +3567,7 @@ input, textarea { font: inherit; color: inherit; }
 .word-popup-textarea:disabled { opacity: 0.6; }
 
 .word-popup-error {
-  font-size: 12.5px;
+  font-size: 11.5px;
   color: oklch(0.5 0.18 25);
   background: oklch(0.97 0.04 25);
   border-radius: 4px;
@@ -3584,7 +3580,7 @@ input, textarea { font: inherit; color: inherit; }
   justify-content: flex-end;
 }
 .word-popup-cancel {
-  font-size: 13px;
+  font-size: 12px;
   padding: 5px 10px;
   border-radius: 6px;
   color: var(--ink-3);
@@ -3593,7 +3589,7 @@ input, textarea { font: inherit; color: inherit; }
 }
 .word-popup-cancel:hover { background: var(--hover); color: var(--ink); }
 .word-popup-save {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   padding: 5px 14px;
   border-radius: 6px;
@@ -3622,7 +3618,7 @@ input, textarea { font: inherit; color: inherit; }
   margin: 6px 0 8px;
 }
 .anc-note-type-option {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
   padding: 2px 8px;
   border-radius: 999px;
@@ -3694,7 +3690,7 @@ input, textarea { font: inherit; color: inherit; }
 .free-textbox-chrome:active { cursor: var(--cursor-grabbing); }
 .free-textbox-chrome[data-visible="true"] { opacity: 1; }
 .free-textbox-gripdots {
-  font-size: 13px;
+  font-size: 12px;
   line-height: 1;
   letter-spacing: 1px;
   color: var(--ink-4);
@@ -3704,7 +3700,7 @@ input, textarea { font: inherit; color: inherit; }
   position: absolute;
   right: 3px;
   top: 1px;
-  font-size: 11px;
+  font-size: 10px;
   line-height: 1;
   color: var(--ink-4);
   background: none;
@@ -3748,7 +3744,7 @@ input, textarea { font: inherit; color: inherit; }
   position: absolute;
   bottom: 2px;
   right: 8px;
-  font-size: 11.5px;
+  font-size: 9px;
   color: var(--ink-4);
   opacity: 0;
   transition: opacity 0.15s;
@@ -3779,13 +3775,13 @@ input, textarea { font: inherit; color: inherit; }
   to   { opacity: 1; transform: translateX(-50%); }
 }
 .anchor-session-label {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--ink-2);
   white-space: nowrap;
 }
 .anchor-session-done {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   padding: 4px 14px;
   border-radius: 999px;
@@ -3960,7 +3956,7 @@ input, textarea { font: inherit; color: inherit; }
 }
 
 .ctr-popover-label {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.07em;
@@ -4070,7 +4066,7 @@ input, textarea { font: inherit; color: inherit; }
 
 .fa-toolbar-label {
   flex: 1;
-  font-size: 0.9375rem;
+  font-size: 0.875rem;
   color: var(--ink-2);
   font-weight: 500;
   display: flex;
@@ -4100,7 +4096,7 @@ input, textarea { font: inherit; color: inherit; }
   border-radius:   var(--radius);
   border:          1px solid var(--line-strong);
   background:      var(--bg-elev);
-  font-size: 0.8125rem;
+  font-size:       0.75rem;
   font-weight:     500;
   color:           var(--ink-3);
   cursor:          pointer;
@@ -4216,7 +4212,7 @@ input, textarea { font: inherit; color: inherit; }
     max-width: 42vw;
   }
   .fa-label-ref {
-    font-size: 0.78rem;
+    font-size: 0.72rem;
     white-space: nowrap;
     flex-shrink: 0;
   }
@@ -4358,7 +4354,7 @@ input, textarea { font: inherit; color: inherit; }
 }
 
 .name-entry-subtitle {
-  font-size: 0.9375rem;
+  font-size: 0.875rem;
   color: var(--ink-3);
   line-height: 1.5;
   margin: 0 0 24px;
@@ -4453,7 +4449,7 @@ input, textarea { font: inherit; color: inherit; }
 .note-edit-type-btn {
   padding: 2px 8px;
   border-radius: 20px;
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: 500;
   border: 1.5px solid var(--line-strong);
   background: transparent;
@@ -4486,7 +4482,7 @@ input, textarea { font: inherit; color: inherit; }
 .note-edit-textarea:focus { border-color: var(--accent); }
 
 .note-edit-error {
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   color: oklch(0.5 0.18 25);
   margin-top: 4px;
 }
@@ -4569,7 +4565,7 @@ input, textarea { font: inherit; color: inherit; }
   cursor: pointer;
   transition: background 0.1s, color 0.1s;
   flex-shrink: 0;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
 }
 .anc-note-action-btn:hover { background: var(--hover); color: var(--ink-2); }
 .anc-note-action-btn--danger:hover { background: oklch(0.97 0.04 25); color: oklch(0.5 0.18 25); }
@@ -4601,7 +4597,7 @@ input, textarea { font: inherit; color: inherit; }
 .anc-note-edit-textarea:focus { border-color: var(--accent); }
 
 .anc-note-error {
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   color: oklch(0.5 0.18 25);
   margin-top: 4px;
 }
@@ -4615,7 +4611,7 @@ input, textarea { font: inherit; color: inherit; }
 
 .anc-note-edit-cancel {
   padding: 3px 8px;
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   border: 1.5px solid var(--line-strong);
   border-radius: 4px;
   background: transparent;
@@ -4627,7 +4623,7 @@ input, textarea { font: inherit; color: inherit; }
 
 .anc-note-edit-save {
   padding: 3px 10px;
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   border: none;
   border-radius: 4px;
   background: var(--ink);
@@ -5086,7 +5082,7 @@ input, textarea { font: inherit; color: inherit; }
 }
 .page-editor-content pre {
   font-family: var(--font-mono, monospace);
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.6;
   background: var(--panel);
   border: 1px solid var(--line);
@@ -5250,7 +5246,7 @@ input, textarea { font: inherit; color: inherit; }
   justify-content: center;
   padding: 14px 6px 14px 8px;
   color: var(--ink-4);
-  font-size: 14px;
+  font-size: 13px;
   cursor: var(--cursor-grab);
   flex-shrink: 0;
   user-select: none;
@@ -5276,7 +5272,7 @@ input, textarea { font: inherit; color: inherit; }
 }
 .ayah-block-ref {
   font-family: var(--font-mono);
-  font-size: 11.5px; font-weight: 500;
+  font-size: 10.5px; font-weight: 500;
   letter-spacing: 0.06em; color: var(--ink-4);
   flex-shrink: 0;
 }
@@ -5295,7 +5291,7 @@ input, textarea { font: inherit; color: inherit; }
   display: flex; align-items: center; justify-content: center;
   border-radius: 5px;
   color: var(--ink-4);
-  font-size: 12px;
+  font-size: 11px;
   transition: background var(--dur-fast) ease, color var(--dur-fast) ease;
 }
 .ayah-block-tool:hover { background: var(--hover); color: var(--ink); }
@@ -5318,7 +5314,7 @@ input, textarea { font: inherit; color: inherit; }
 /* Translation */
 .ayah-block-translation {
   font-family: var(--font-sans);
-  font-size: 14px; line-height: 1.55;
+  font-size: 13px; line-height: 1.55;
   color: var(--ink-2);
   padding-top: 7px;
   border-top: 1px solid var(--line);
@@ -5327,7 +5323,7 @@ input, textarea { font: inherit; color: inherit; }
 /* Loading skeleton */
 .ayah-block-loading {
   display: flex; align-items: center; gap: 8px;
-  font-size: 14px; color: var(--ink-4);
+  font-size: 13px; color: var(--ink-4);
   padding: 12px 0;
   font-family: var(--font-mono);
 }
@@ -5359,18 +5355,18 @@ input, textarea { font: inherit; color: inherit; }
 
 .ayah-block-error {
   display: flex; flex-direction: column; gap: 4px;
-  font-size: 14px; color: oklch(0.55 0.12 20);
+  font-size: 13px; color: oklch(0.55 0.12 20);
   padding: 10px 12px; border-radius: 6px;
   background: oklch(0.97 0.02 20); border: 1px solid oklch(0.88 0.05 20);
 }
 .ayah-block-error-detail {
-  font-size: 12px; opacity: 0.7; font-family: var(--font-mono);
+  font-size: 11px; opacity: 0.7; font-family: var(--font-mono);
 }
 .ayah-block-retry {
   align-self: flex-start;
   margin-top: 4px;
   padding: 3px 10px;
-  font-size: 12px; border-radius: 4px;
+  font-size: 11px; border-radius: 4px;
   border: 1px solid oklch(0.78 0.08 20);
   background: var(--bg); color: oklch(0.45 0.12 20);
   cursor: pointer; transition: background 0.15s;
@@ -5413,7 +5409,7 @@ input, textarea { font: inherit; color: inherit; }
   opacity: 0;
   cursor: var(--cursor-grab);
   color: var(--ink-4);
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1.6;
   user-select: none;
   transition: opacity .15s;
@@ -5432,13 +5428,13 @@ input, textarea { font: inherit; color: inherit; }
 .tafsir-block-meta { display: flex; align-items: center; gap: 8px; }
 .tafsir-block-ref {
   font-family: var(--font-mono);
-  font-size: 11.5px; font-weight: 600;
+  font-size: 10.5px; font-weight: 600;
   color: var(--accent-ink);
   background: var(--accent-soft);
   padding: 1px 6px; border-radius: 4px;
 }
 .tafsir-block-source {
-  font-size: 12px; font-weight: 500;
+  font-size: 11px; font-weight: 500;
   color: var(--ink-3);
   font-style: italic;
 }
@@ -5454,7 +5450,7 @@ input, textarea { font: inherit; color: inherit; }
 
 .tafsir-block-content {
   font-family: var(--font-serif);
-  font-size: 15px; line-height: 1.8;
+  font-size: 14px; line-height: 1.8;
   color: var(--ink-2);
 }
 .tafsir-block-content p { margin: 0 0 10px; }
@@ -5477,14 +5473,14 @@ input, textarea { font: inherit; color: inherit; }
 
 .tafsir-block-error {
   display: flex; flex-direction: column; gap: 4px;
-  font-size: 14px; color: oklch(0.55 0.12 20);
+  font-size: 13px; color: oklch(0.55 0.12 20);
   padding: 10px 12px; border-radius: 6px;
   background: oklch(0.97 0.02 20); border: 1px solid oklch(0.88 0.05 20);
 }
-.tafsir-block-error-detail { font-size: 12px; opacity: 0.7; font-family: var(--font-mono); }
+.tafsir-block-error-detail { font-size: 11px; opacity: 0.7; font-family: var(--font-mono); }
 .tafsir-block-retry {
   align-self: flex-start; margin-top: 4px;
-  padding: 3px 10px; font-size: 12px; border-radius: 4px;
+  padding: 3px 10px; font-size: 11px; border-radius: 4px;
   border: 1px solid oklch(0.78 0.08 20);
   background: var(--bg); color: oklch(0.45 0.12 20);
   cursor: pointer; transition: background 0.15s;
@@ -5518,7 +5514,7 @@ input, textarea { font: inherit; color: inherit; }
 }
 .slash-palette-empty {
   padding: 12px 14px;
-  font-size: 14px; color: var(--ink-4);
+  font-size: 13px; color: var(--ink-4);
 }
 .slash-palette-item {
   display: flex; align-items: center; gap: 10px;
@@ -5538,7 +5534,7 @@ input, textarea { font: inherit; color: inherit; }
   border-radius: 6px;
   background: var(--panel);
   border: 1px solid var(--line);
-  font-size: 14px; flex-shrink: 0;
+  font-size: 13px; flex-shrink: 0;
   font-family: var(--font-mono); font-weight: 700;
   color: var(--ink-2);
   transition: border-color var(--dur-hover) var(--ease-soft),
@@ -5552,11 +5548,11 @@ input, textarea { font: inherit; color: inherit; }
   display: flex; flex-direction: column; gap: 1px; min-width: 0;
 }
 .slash-palette-title {
-  font-size: 14.5px; font-weight: 500; color: var(--ink);
+  font-size: 13.5px; font-weight: 500; color: var(--ink);
   white-space: nowrap;
 }
 .slash-palette-desc {
-  font-size: 12.5px; color: var(--ink-4);
+  font-size: 11.5px; color: var(--ink-4);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
@@ -5595,7 +5591,7 @@ input, textarea { font: inherit; color: inherit; }
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
   padding: 2px 8px;
   border-radius: 99px;
@@ -5618,7 +5614,7 @@ input, textarea { font: inherit; color: inherit; }
   align-items: center;
   gap: 5px;
   padding: 6px 14px;
-  font-size: 13.5px;
+  font-size: 12.5px;
   font-weight: 500;
   color: var(--ink-2);
   background: var(--panel);
@@ -5711,7 +5707,7 @@ input, textarea { font: inherit; color: inherit; }
 }
 .modal-label {
   display: block;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--ink-3);
   text-transform: uppercase;
@@ -5721,7 +5717,7 @@ input, textarea { font: inherit; color: inherit; }
 .modal-input {
   width: 100%;
   padding: 9px 12px;
-  font-size: 15px;
+  font-size: 14px;
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -5755,11 +5751,11 @@ input, textarea { font: inherit; color: inherit; }
   background: var(--accent-soft);
 }
 .modal-type-icon { font-size: 18px; flex-shrink: 0; line-height: 1; }
-.modal-type-name { font-size: 14px; font-weight: 600; color: var(--ink); margin-bottom: 2px; }
-.modal-type-desc { font-size: 12px; color: var(--ink-4); }
+.modal-type-name { font-size: 13px; font-weight: 600; color: var(--ink); margin-bottom: 2px; }
+.modal-type-desc { font-size: 11px; color: var(--ink-4); }
 
 .modal-error {
-  font-size: 13px;
+  font-size: 12px;
   color: oklch(0.55 0.18 25);
   margin: 10px 0 0;
 }
@@ -5771,7 +5767,7 @@ input, textarea { font: inherit; color: inherit; }
 }
 .modal-btn-cancel {
   padding: 7px 16px;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   background: transparent;
   border: 1px solid var(--line);
@@ -5783,7 +5779,7 @@ input, textarea { font: inherit; color: inherit; }
 .modal-btn-cancel:hover { background: var(--hover); }
 .modal-btn-create {
   padding: 7px 16px;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   background: var(--ink);
   border: 1px solid transparent;
@@ -5804,7 +5800,7 @@ input, textarea { font: inherit; color: inherit; }
 .sidebar-new-page-input {
   width: 100%;
   padding: 6px 8px;
-  font-size: 13.5px;
+  font-size: 12.5px;
   background: var(--bg-elev);
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -5814,7 +5810,7 @@ input, textarea { font: inherit; color: inherit; }
 .sidebar-new-page-input:focus { border-color: var(--accent); }
 .sidebar-new-page-input::placeholder { color: var(--ink-4); }
 .sidebar-new-page-error {
-  font-size: 12px;
+  font-size: 11px;
   color: oklch(0.55 0.18 25);
   margin: 4px 0 0;
 }
@@ -5825,7 +5821,7 @@ input, textarea { font: inherit; color: inherit; }
 }
 .sidebar-new-page-save {
   padding: 4px 12px;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   background: var(--ink);
   color: var(--bg);
@@ -5837,7 +5833,7 @@ input, textarea { font: inherit; color: inherit; }
 .sidebar-new-page-save:disabled { opacity: 0.4; cursor: not-allowed; }
 .sidebar-new-page-cancel {
   padding: 4px 10px;
-  font-size: 13px;
+  font-size: 12px;
   color: var(--ink-3);
   background: transparent;
   border: 1px solid var(--line);
@@ -5858,7 +5854,7 @@ input, textarea { font: inherit; color: inherit; }
 .no-pages-input {
   width: 100%;
   padding: 10px 14px;
-  font-size: 15px;
+  font-size: 14px;
   background: var(--bg-elev);
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -5943,7 +5939,7 @@ input, textarea { font: inherit; color: inherit; }
 
 .splash-subtitle {
   font-family: var(--font-sans);
-  font-size: 14px;
+  font-size: 13px;
   color: var(--ink-3);
   animation: splash-text-in 0.35s 0.18s ease both;
 }
@@ -6010,7 +6006,7 @@ input, textarea { font: inherit; color: inherit; }
 
 .lv-ref {
   font-family: var(--font-sans);
-  font-size: 13px;
+  font-size: 12px;
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--accent);
@@ -6076,7 +6072,7 @@ input, textarea { font: inherit; color: inherit; }
 }
 
 .ws-settings-section-title {
-  font-size: 12px;
+  font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--ink-3);
@@ -6095,14 +6091,14 @@ input, textarea { font: inherit; color: inherit; }
   grid-template-columns: 1fr 64px 64px;
   align-items: center;
   padding: 8px 12px;
-  font-size: 13.5px;
+  font-size: 12.5px;
   color: var(--ink-2);
   border-top: 1px solid var(--line);
 }
 .ws-perm-row:first-child { border-top: none; }
 .ws-perm-row--head {
   background: var(--panel);
-  font-size: 12px;
+  font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--ink-3);
@@ -6129,8 +6125,8 @@ input, textarea { font: inherit; color: inherit; }
   background: var(--panel);
 }
 .ws-perm-toggle-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.ws-perm-toggle-label { font-size: 14px; font-weight: 500; color: var(--ink); }
-.ws-perm-toggle-sub { font-size: 12.5px; color: var(--ink-3); }
+.ws-perm-toggle-label { font-size: 13px; font-weight: 500; color: var(--ink); }
+.ws-perm-toggle-sub { font-size: 11.5px; color: var(--ink-3); }
 
 .ws-switch {
   position: relative;
@@ -6190,7 +6186,7 @@ input, textarea { font: inherit; color: inherit; }
   background: var(--accent-soft);
   color: var(--accent-ink);
   font-weight: 600;
-  font-size: 13px;
+  font-size: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -6203,7 +6199,7 @@ input, textarea { font: inherit; color: inherit; }
 }
 
 .ws-settings-member-role {
-  font-size: 12px;
+  font-size: 11px;
   padding: 2px 7px;
   border-radius: 999px;
   font-weight: 600;
@@ -6297,7 +6293,7 @@ input, textarea { font: inherit; color: inherit; }
   color: #fff;
   border: none;
   border-radius: var(--radius);
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: opacity 0.15s;
@@ -6310,7 +6306,7 @@ input, textarea { font: inherit; color: inherit; }
 }
 
 .join-modal-error {
-  font-size: 13px;
+  font-size: 12px;
   color: oklch(0.55 0.18 25);
   margin: 0 0 8px;
 }
@@ -6320,7 +6316,7 @@ input, textarea { font: inherit; color: inherit; }
 .note-badge {
   display: inline-flex;
   align-items: center;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -6352,7 +6348,7 @@ input, textarea { font: inherit; color: inherit; }
   display:       inline-flex;
   align-items:   center;
   gap:           5px;
-  font-size: 11.5px;
+  font-size:     10.5px;
   font-weight:   600;
   letter-spacing: 0.02em;
   padding:       3px 0;
@@ -6412,7 +6408,7 @@ input, textarea { font: inherit; color: inherit; }
   height:          28px;
   border-radius:   50%;
   color:           #fff;
-  font-size: 11px;
+  font-size:       10px;
   font-weight:     700;
   display:         flex;
   align-items:     center;
@@ -6429,7 +6425,7 @@ input, textarea { font: inherit; color: inherit; }
 .presence-avatar--overflow {
   background: var(--panel-2);
   color:      var(--ink-2);
-  font-size: 11.5px;
+  font-size:  9px;
 }
 
 .presence-mode-badge {
@@ -6464,12 +6460,12 @@ input, textarea { font: inherit; color: inherit; }
   gap:          2px;
 }
 .presence-tooltip-name {
-  font-size: 13px;
+  font-size:   12px;
   font-weight: 600;
   color:       var(--ink);
 }
 .presence-tooltip-mode {
-  font-size: 11.5px;
+  font-size:  10.5px;
   color:      var(--ink-3);
 }
 
@@ -6509,7 +6505,7 @@ input, textarea { font: inherit; color: inherit; }
   white-space:   nowrap;
   background:    var(--rc-color, #4285F4);
   color:         #fff;
-  font-size: 11px;
+  font-size:     10px;
   font-weight:   600;
   font-family:   system-ui, sans-serif;
   padding:       1px 6px 2px;
@@ -6553,7 +6549,7 @@ input, textarea { font: inherit; color: inherit; }
 .collaboration-cursor__label {
   border-radius:    4px 4px 4px 1px;
   color:            #fff;
-  font-size: 11px;
+  font-size:        10px;
   font-style:       normal;
   font-weight:      600;
   font-family:      system-ui, sans-serif;
@@ -6633,7 +6629,7 @@ input, textarea { font: inherit; color: inherit; }
 .bt-dot--cur  { background: var(--bt-acc); transform: scale(1.35); }
 .bt-dot--done { background: var(--bt-ink-2); }
 .bt-step-counter {
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   color: var(--bt-ink-3);
   font-feature-settings: "tnum";
   min-width: 28px;
@@ -6671,7 +6667,7 @@ input, textarea { font: inherit; color: inherit; }
   border-top: 1px solid var(--bt-line);
 }
 .bt-footer-hint {
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   color: var(--bt-ink-3);
   font-style: italic;
 }
@@ -6728,7 +6724,7 @@ input, textarea { font: inherit; color: inherit; }
   margin: 0 0 12px;
 }
 .bt-step-desc {
-  font-size: 0.9375rem;
+  font-size: 0.875rem;
   font-weight: 300;
   line-height: 1.75;
   color: var(--bt-ink-2);
@@ -6765,7 +6761,7 @@ input, textarea { font: inherit; color: inherit; }
   border-bottom: 1px solid oklch(0.22 0.012 80 / 0.08);
 }
 .bt-bar-pill {
-  font-size: 0.75rem;
+  font-size: 0.6875rem;
   font-weight: 600;
   color: oklch(0.38 0.012 80);
   padding: 3px 8px;
@@ -6776,7 +6772,7 @@ input, textarea { font: inherit; color: inherit; }
 }
 .bt-bar-flex { flex: 1; }
 .bt-bar-hint {
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   color: oklch(0.56 0.01 80);
   font-style: italic;
 }
@@ -6837,7 +6833,7 @@ input, textarea { font: inherit; color: inherit; }
 .bt-swatch:hover { transform: scale(1.2); }
 .bt-swatch--on   { border-color: #fff; transform: scale(1.25); }
 .bt-clear-btn {
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   font-weight: 500;
   color: var(--bt-ink-3);
   background: none;
@@ -6910,7 +6906,7 @@ input, textarea { font: inherit; color: inherit; }
   border-bottom: 1px solid oklch(0.22 0.012 80 / 0.08);
 }
 .bt-collab-title {
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   font-weight: 500;
   color: oklch(0.38 0.012 80);
   font-family: "Sora", system-ui, sans-serif;
@@ -6920,7 +6916,7 @@ input, textarea { font: inherit; color: inherit; }
   display: flex;
   align-items: center;
   gap: 5px;
-  font-size: 0.75rem;
+  font-size: 0.6875rem;
   font-weight: 500;
   color: var(--pc, #888);
   background: color-mix(in srgb, var(--pc, #888) 12%, transparent);
@@ -6953,7 +6949,7 @@ input, textarea { font: inherit; color: inherit; }
 }
 .bt-collab-block--you { opacity: 0.45; }
 .bt-collab-author {
-  font-size: 0.75rem;
+  font-size: 0.6875rem;
   font-weight: 600;
   letter-spacing: 0.07em;
   text-transform: uppercase;
@@ -7043,7 +7039,7 @@ input, textarea { font: inherit; color: inherit; }
 .bt-cta-primary:hover { background: oklch(0.78 0.14 155); transform: translateY(-1px); }
 .bt-cta-ghost {
   font-family: var(--bt-body);
-  font-size: 0.9375rem;
+  font-size: 0.875rem;
   color: var(--bt-ink-2);
   text-decoration: none;
   border-bottom: 1px solid var(--bt-line);
@@ -7054,7 +7050,7 @@ input, textarea { font: inherit; color: inherit; }
 .bt-replay-btn {
   margin-top: 32px;
   font-family: var(--bt-body);
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   color: var(--bt-ink-3);
   background: none;
   border: none;
@@ -7068,7 +7064,7 @@ input, textarea { font: inherit; color: inherit; }
 /* Close button (overlay mode only) */
 .bt-close-btn {
   margin-left: 12px;
-  font-size: 0.9375rem;
+  font-size: 0.875rem;
   color: var(--bt-ink-3);
   background: none;
   border: none;
@@ -7159,21 +7155,21 @@ input, textarea { font: inherit; color: inherit; }
   width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
   overflow: hidden; display: grid; place-items: center;
   background: var(--panel); color: var(--ink-2);
-  font-size: 14px; font-weight: 600;
+  font-size: 13px; font-weight: 600;
 }
 .settings-avatar img { width: 100%; height: 100%; object-fit: cover; }
 .settings-profile-text { min-width: 0; }
 .settings-profile-name {
-  font-size: 14.5px; font-weight: 500; color: var(--ink);
+  font-size: 13.5px; font-weight: 500; color: var(--ink);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.settings-profile-sub { font-size: 12.5px; color: var(--ink-4); }
+.settings-profile-sub { font-size: 11.5px; color: var(--ink-4); }
 
 .settings-sep { height: 1px; background: var(--line); margin: 4px 0; }
 
 .settings-group { padding: 6px 10px 8px; }
 .settings-label {
-  font-size: 11.5px; font-weight: 600; letter-spacing: 0.06em;
+  font-size: 10.5px; font-weight: 600; letter-spacing: 0.06em;
   text-transform: uppercase; color: var(--ink-4); margin-bottom: 7px;
 }
 
@@ -7185,7 +7181,7 @@ input, textarea { font: inherit; color: inherit; }
 .settings-seg-btn {
   border: 0; background: none; cursor: pointer;
   padding: 6px 0; border-radius: 6px;
-  font-size: 13.5px; color: var(--ink-3);
+  font-size: 12.5px; color: var(--ink-3);
   transition: background var(--dur-hover) var(--ease-soft),
               color      var(--dur-hover) var(--ease-soft);
 }
@@ -7199,8 +7195,8 @@ input, textarea { font: inherit; color: inherit; }
 /* The Arabic stepper previews its own effect: each button shows the letter at
    the size it selects, so the choice is made by looking. */
 .settings-seg-btn--ar { font-family: var(--font-arabic), serif; line-height: 1; }
-.settings-seg--4 .settings-seg-btn:nth-child(1) { font-size: 12px; }
-.settings-seg--4 .settings-seg-btn:nth-child(2) { font-size: 14px; }
+.settings-seg--4 .settings-seg-btn:nth-child(1) { font-size: 11px; }
+.settings-seg--4 .settings-seg-btn:nth-child(2) { font-size: 13px; }
 .settings-seg--4 .settings-seg-btn:nth-child(3) { font-size: 15px; }
 .settings-seg--4 .settings-seg-btn:nth-child(4) { font-size: 17.5px; }
 
@@ -7208,14 +7204,14 @@ input, textarea { font: inherit; color: inherit; }
   width: 100%; padding: 7px 9px;
   border-radius: 8px; border: 1px solid var(--line-strong);
   background: var(--bg-elev); color: var(--ink);
-  font-size: 14px; font-family: inherit; cursor: pointer;
+  font-size: 13px; font-family: inherit; cursor: pointer;
 }
 
 .settings-item {
   width: 100%; text-align: left;
   border: 0; background: none; cursor: pointer;
   padding: 9px 10px; border-radius: 8px;
-  font-size: 14px; color: var(--ink-2);
+  font-size: 13px; color: var(--ink-2);
   transition: background var(--dur-hover) var(--ease-soft),
               color      var(--dur-hover) var(--ease-soft);
 }
@@ -7249,7 +7245,7 @@ input, textarea { font: inherit; color: inherit; }
   to   { opacity: 1; transform: translate(-50%, 10px); }
 }
 .segbar-range {
-  font-size: 12px; font-weight: 600; letter-spacing: 0.04em;
+  font-size: 11px; font-weight: 600; letter-spacing: 0.04em;
   text-transform: uppercase; color: var(--ink-4);
   padding: 0 2px;
 }
@@ -7258,7 +7254,7 @@ input, textarea { font: inherit; color: inherit; }
   flex: 1 1 auto;
   border: 1px solid var(--line-strong);
   background: none; color: var(--ink-2);
-  font: inherit; font-size: 13.5px;
+  font: inherit; font-size: 12.5px;
   padding: 6px 10px; border-radius: 7px;
   cursor: pointer; white-space: nowrap;
   transition: background var(--dur-hover) var(--ease-soft),
@@ -7279,7 +7275,7 @@ input, textarea { font: inherit; color: inherit; }
   border-radius: 7px;
   background: var(--bg);
   color: var(--ink);
-  font: inherit; font-size: 14px;
+  font: inherit; font-size: 13px;
   padding: 7px 9px;
   outline: none;
   /* Arabic names align to their own side inside an LTR panel. */
@@ -7316,15 +7312,15 @@ input, textarea { font: inherit; color: inherit; }
   background: var(--panel); padding: 9px 12px;
 }
 .cxf-endpoint-role {
-  flex: 0 0 34px; font-size: 11.5px; font-weight: 600;
+  flex: 0 0 34px; font-size: 10.5px; font-weight: 600;
   letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-4);
 }
 .cxf-endpoint-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .cxf-endpoint-kind {
-  font-size: 11px; font-weight: 600; letter-spacing: 0.05em;
+  font-size: 10px; font-weight: 600; letter-spacing: 0.05em;
   text-transform: uppercase; color: var(--accent);
 }
-.cxf-endpoint-label { font-size: 14.5px; color: var(--ink); }
+.cxf-endpoint-label { font-size: 13.5px; color: var(--ink); }
 
 /* Both endpoints are buttons. The Change affordance stays quiet until hover so
    the pair reads as a statement first and a control second. */
@@ -7335,7 +7331,7 @@ input, textarea { font: inherit; color: inherit; }
 .cxf-endpoint--btn:hover { background: var(--panel-2, var(--hover)); }
 .cxf-endpoint-change {
   margin-inline-start: auto; align-self: center; flex-shrink: 0;
-  font-size: 12px; color: var(--ink-4);
+  font-size: 11px; color: var(--ink-4);
   opacity: 0; transition: opacity var(--dur-hover) var(--ease-soft);
 }
 .cxf-endpoint--btn:hover .cxf-endpoint-change,
@@ -7348,7 +7344,7 @@ input, textarea { font: inherit; color: inherit; }
 }
 
 .cxf-label {
-  display: block; font-size: 12px; font-weight: 600;
+  display: block; font-size: 11px; font-weight: 600;
   letter-spacing: 0.05em; text-transform: uppercase;
   color: var(--ink-4); margin: 10px 0 5px;
 }
@@ -7357,7 +7353,7 @@ input, textarea { font: inherit; color: inherit; }
 .cxf-row { display: flex; gap: 10px; }
 .cxf-col { flex: 1; min-width: 0; }
 .cxf-error {
-  margin: 10px 0 0; font-size: 13.5px;
+  margin: 10px 0 0; font-size: 12.5px;
   color: oklch(0.5 0.19 25);
 }
 .cxf-dupe { display: flex; flex-direction: column; gap: 10px; }
@@ -7369,7 +7365,7 @@ input, textarea { font: inherit; color: inherit; }
 .cxcat-view-btn {
   border: 0; background: none; cursor: pointer;
   padding: 5px 16px; border-radius: 6px;
-  font: inherit; font-size: 13.5px; color: var(--ink-3);
+  font: inherit; font-size: 12.5px; color: var(--ink-3);
   transition: background var(--dur-hover) var(--ease-soft), color var(--dur-hover) var(--ease-soft);
 }
 .cxcat-view-btn:hover { color: var(--ink); }
@@ -7379,11 +7375,11 @@ input, textarea { font: inherit; color: inherit; }
 
 .cxmap { position: relative; }
 .cxmap-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 2px; flex-wrap: wrap; }
-.cxmap-stat { font-size: 12.5px; color: var(--ink-4); }
+.cxmap-stat { font-size: 11.5px; color: var(--ink-4); }
 .cxmap-clear {
   margin-inline-start: auto;
   border: 1px solid var(--line-strong); background: none;
-  color: var(--ink-2); font: inherit; font-size: 12.5px;
+  color: var(--ink-2); font: inherit; font-size: 11.5px;
   padding: 3px 11px; border-radius: 999px; cursor: pointer;
 }
 .cxmap-clear:hover { background: var(--hover); color: var(--ink); }
@@ -7443,13 +7439,13 @@ input, textarea { font: inherit; color: inherit; }
   font-size: calc(17px * var(--fs-arabic));
   color: var(--ink); line-height: 1.7; margin-bottom: 1px;
 }
-.cxmap-tip-name { font-size: 14px; color: var(--ink); }
-.cxmap-tip-meta { font-size: 12.5px; color: var(--ink-4); margin-top: 2px; }
+.cxmap-tip-name { font-size: 13px; color: var(--ink); }
+.cxmap-tip-meta { font-size: 11.5px; color: var(--ink-4); margin-top: 2px; }
 
-.cxmap-hint { text-align: center; font-size: 12.5px; color: var(--ink-4); margin: 2px 0 0; }
-.cxmap-empty { padding: 40px 4px; text-align: center; font-size: 14px; color: var(--ink-4); }
+.cxmap-hint { text-align: center; font-size: 11.5px; color: var(--ink-4); margin: 2px 0 0; }
+.cxmap-empty { padding: 40px 4px; text-align: center; font-size: 13px; color: var(--ink-4); }
 .cxmap-empty code {
-  font-family: var(--font-mono); font-size: 12.5px;
+  font-family: var(--font-mono); font-size: 11.5px;
   background: var(--panel); padding: 1px 5px; border-radius: 4px;
 }
 
@@ -7467,7 +7463,7 @@ input, textarea { font: inherit; color: inherit; }
 .cxcat-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .cxcat-back {
   display: inline-flex; align-items: center; gap: 4px;
-  font-size: 13.5px; color: var(--ink-3); text-decoration: none;
+  font-size: 12.5px; color: var(--ink-3); text-decoration: none;
 }
 .cxcat-back:hover { color: var(--ink); }
 .cxcat-title {
@@ -7475,7 +7471,7 @@ input, textarea { font: inherit; color: inherit; }
   color: var(--ink); margin: 0;
 }
 .cxcat-total {
-  font-size: 12.5px; font-weight: 600; color: var(--ink-3);
+  font-size: 11.5px; font-weight: 600; color: var(--ink-3);
   background: var(--panel); border-radius: 999px; padding: 2px 9px;
 }
 
@@ -7485,17 +7481,17 @@ input, textarea { font: inherit; color: inherit; }
   padding: 8px 12px; border-radius: 8px;
   border: 1px solid var(--line-strong);
   background: var(--bg-elev); color: var(--ink);
-  font: inherit; font-size: 14.5px; outline: none; text-align: start;
+  font: inherit; font-size: 13.5px; outline: none; text-align: start;
 }
 .cxcat-search:focus { border-color: var(--accent); }
 .cxcat-select {
   padding: 8px 10px; border-radius: 8px;
   border: 1px solid var(--line-strong);
   background: var(--bg-elev); color: var(--ink-2);
-  font: inherit; font-size: 13.5px; cursor: pointer;
+  font: inherit; font-size: 12.5px; cursor: pointer;
 }
 
-.cxcat-empty { padding: 30px 4px; font-size: 14px; color: var(--ink-4); text-align: center; }
+.cxcat-empty { padding: 30px 4px; font-size: 13px; color: var(--ink-4); text-align: center; }
 .cxcat-list { list-style: none; margin: 0; padding: 0; }
 /* No card: no border, no fill, no radius, no accent bar. A boxed row per
    Connection turned a register into a stack of widgets, and the accent edge
@@ -7509,31 +7505,31 @@ input, textarea { font: inherit; color: inherit; }
 }
 .cxcat-item + .cxcat-item { border-top: 1px solid var(--line); }
 .cxcat-item-top { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
-.cxcat-name { font-size: 14px; color: var(--ink-2); line-height: 1.5; }
+.cxcat-name { font-size: 13px; color: var(--ink-2); line-height: 1.5; }
 /* The pair is the point of a Connection, so it reads as one line. */
 .cxcat-pair {
   display: flex; align-items: baseline; gap: var(--sp-2); flex-wrap: wrap;
   font-family: var(--font-serif);
-  font-size: 15.5px; font-weight: 600; line-height: 1.35;
+  font-size: 14.5px; font-weight: 600; line-height: 1.35;
 }
 .cxcat-end { color: var(--ink); }
 .cxcat-arrow { color: var(--ink-4); }
 .cxcat-comm {
-  margin: 2px 0 0; font-size: 13.5px; color: var(--ink-3); line-height: 1.55;
+  margin: 2px 0 0; font-size: 12.5px; color: var(--ink-3); line-height: 1.55;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
 /* Provenance, spaced apart rather than run together with dots. */
 .cxcat-meta {
   display: flex; gap: var(--sp-3); flex-wrap: wrap;
   margin-top: 2px;
-  font-size: 12px; color: var(--ink-4);
+  font-size: 11px; color: var(--ink-4);
 }
 .cxcat-cat { color: var(--accent-ink); }
 .cxcat-more {
   align-self: center; margin-top: 6px;
   padding: 8px 18px; border-radius: 8px;
   border: 1px solid var(--line-strong); background: none;
-  color: var(--ink-2); font: inherit; font-size: 13.5px; cursor: pointer;
+  color: var(--ink-2); font: inherit; font-size: 12.5px; cursor: pointer;
 }
 .cxcat-more:hover { background: var(--hover); color: var(--ink); }
 
@@ -7560,9 +7556,9 @@ input, textarea { font: inherit; color: inherit; }
   display: flex; align-items: center; gap: 8px;
   padding: 13px 16px; border-bottom: 1px solid var(--line);
 }
-.cxp-title { font-size: 14.5px; font-weight: 600; color: var(--ink); display: flex; align-items: center; gap: 7px; }
+.cxp-title { font-size: 13.5px; font-weight: 600; color: var(--ink); display: flex; align-items: center; gap: 7px; }
 .cxp-count {
-  font-size: 12px; font-weight: 600; color: var(--ink-3);
+  font-size: 11px; font-weight: 600; color: var(--ink-3);
   background: var(--panel); border-radius: 999px; padding: 1px 8px;
 }
 .cxp-close {
@@ -7571,9 +7567,9 @@ input, textarea { font: inherit; color: inherit; }
 }
 .cxp-close:hover { background: var(--hover); color: var(--ink); }
 
-.cxp-empty { padding: 22px 16px; font-size: 13.5px; color: var(--ink-4); line-height: 1.6; }
+.cxp-empty { padding: 22px 16px; font-size: 12.5px; color: var(--ink-4); line-height: 1.6; }
 .cxp-empty code {
-  font-family: var(--font-mono); font-size: 12.5px;
+  font-family: var(--font-mono); font-size: 11.5px;
   background: var(--panel); padding: 1px 5px; border-radius: 4px;
 }
 .cxp-link { border: 0; background: none; color: var(--accent); cursor: pointer; text-decoration: underline; font: inherit; }
@@ -7589,24 +7585,24 @@ input, textarea { font: inherit; color: inherit; }
 .cxp-row:hover { background: var(--hover); }
 .cxp-row-top { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
 .cxp-row-kind {
-  font-size: 11.5px; font-weight: 700; letter-spacing: 0.06em;
+  font-size: 9.5px; font-weight: 700; letter-spacing: 0.06em;
   text-transform: uppercase; color: var(--accent);
 }
-.cxp-row-to  { font-size: 13px; color: var(--ink-2); }
+.cxp-row-to  { font-size: 12px; color: var(--ink-2); }
 .cxp-row-cat {
-  font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.04em;
+  font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.04em;
   color: var(--ink-4); margin-inline-start: auto;
 }
-.cxp-row-name { font-size: 14.5px; font-weight: 500; color: var(--ink); }
+.cxp-row-name { font-size: 13.5px; font-weight: 500; color: var(--ink); }
 .cxp-row-comm {
-  font-size: 13px; color: var(--ink-3); line-height: 1.5;
+  font-size: 12px; color: var(--ink-3); line-height: 1.5;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
 
 .cxp-detail { flex: 1; overflow-y: auto; padding: 12px 16px 20px; display: flex; flex-direction: column; gap: 10px; }
 .cxp-back {
   align-self: flex-start; border: 0; background: none; cursor: pointer;
-  font-size: 13px; color: var(--ink-3); padding: 2px 0;
+  font-size: 12px; color: var(--ink-3); padding: 2px 0;
 }
 .cxp-back:hover { color: var(--ink); }
 .cxp-detail-name { font-family: var(--font-serif); font-size: 17px; font-weight: 600; color: var(--ink); margin: 0; }
@@ -7616,15 +7612,15 @@ input, textarea { font: inherit; color: inherit; }
 }
 .cxp-end {
   display: flex; gap: 10px; align-items: baseline;
-  background: var(--panel); padding: 8px 11px; font-size: 14px; color: var(--ink);
+  background: var(--panel); padding: 8px 11px; font-size: 13px; color: var(--ink);
 }
-.cxp-comm { font-size: 14px; line-height: 1.65; color: var(--ink-2); margin: 0; white-space: pre-wrap; }
-.cxp-meta { font-size: 12px; color: var(--ink-4); }
+.cxp-comm { font-size: 13px; line-height: 1.65; color: var(--ink-2); margin: 0; white-space: pre-wrap; }
+.cxp-meta { font-size: 11px; color: var(--ink-4); }
 .cxp-actions { display: flex; gap: 7px; }
-.cxp-actions .seldlg-btn { flex: 1; padding: 7px 12px; font-size: 13.5px; }
+.cxp-actions .seldlg-btn { flex: 1; padding: 7px 12px; font-size: 12.5px; }
 .cxp-confirm {
   display: flex; flex-direction: column; gap: 8px;
-  font-size: 13.5px; color: var(--ink-2);
+  font-size: 12.5px; color: var(--ink-2);
   background: var(--panel); border-radius: var(--radius); padding: 11px;
 }
 /* Delete is the quietest control here — a Connection removed from one side
@@ -7632,14 +7628,14 @@ input, textarea { font: inherit; color: inherit; }
 .cxp-delete {
   align-self: center; margin-top: 4px;
   border: 0; background: none; cursor: pointer;
-  font-size: 12.5px; color: var(--ink-4); text-decoration: underline;
+  font-size: 11.5px; color: var(--ink-4); text-decoration: underline;
 }
 .cxp-delete:hover { color: oklch(0.55 0.19 25); }
 
 /* Connections control on the session chip. */
 .anchor-session-conn {
   border: 1px solid var(--line-strong); background: none;
-  color: var(--ink-2); font: inherit; font-size: 12.5px;
+  color: var(--ink-2); font: inherit; font-size: 11.5px;
   padding: 3px 9px; border-radius: 999px; cursor: pointer; margin-inline-end: 4px;
   transition: background var(--dur-hover) var(--ease-soft);
 }
@@ -7663,16 +7659,16 @@ input, textarea { font: inherit; color: inherit; }
   cursor: default;
 }
 .cxc-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.cxc-icon { font-size: 13px; opacity: 0.75; }
-.cxc-to   { font-size: 12.5px; color: var(--ink-3); }
+.cxc-icon { font-size: 12px; opacity: 0.75; }
+.cxc-to   { font-size: 11.5px; color: var(--ink-3); }
 .cxc-cat {
-  font-size: 11px; font-weight: 600; letter-spacing: 0.04em;
+  font-size: 10px; font-weight: 600; letter-spacing: 0.04em;
   text-transform: uppercase; color: var(--accent);
   background: var(--accent-soft); padding: 2px 7px; border-radius: 999px;
 }
-.cxc-name { font-size: 15px; font-weight: 500; color: var(--ink); margin-top: 4px; }
+.cxc-name { font-size: 14px; font-weight: 500; color: var(--ink); margin-top: 4px; }
 .cxc-comm {
-  font-size: 13.5px; color: var(--ink-2); line-height: 1.6; margin-top: 4px;
+  font-size: 12.5px; color: var(--ink-2); line-height: 1.6; margin-top: 4px;
   display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
 }
 .cxc--loading, .cxc--missing {
@@ -7681,7 +7677,7 @@ input, textarea { font: inherit; color: inherit; }
   color: var(--ink-4);
 }
 .cxc--missing .cxc-name, .cxc--loading .cxc-name {
-  font-size: 13.5px; font-weight: 400; color: var(--ink-4); margin: 0;
+  font-size: 12.5px; font-weight: 400; color: var(--ink-4); margin: 0;
 }
 
 /* Selection dialogs. Focused cards over a dimmed Mushaf, deliberately small:
@@ -7716,21 +7712,21 @@ input, textarea { font: inherit; color: inherit; }
   background: var(--panel); border-radius: var(--radius);
   padding: 10px 12px; display: flex; flex-direction: column; gap: 2px;
 }
-.seldlg-surah { font-size: 14.5px; font-weight: 500; color: var(--ink); }
-.seldlg-range { font-size: 13.5px; color: var(--ink-3); }
-.seldlg-note  { font-size: 13.5px; color: var(--ink-3); line-height: 1.55; margin: 0; }
+.seldlg-surah { font-size: 13.5px; font-weight: 500; color: var(--ink); }
+.seldlg-range { font-size: 12.5px; color: var(--ink-3); }
+.seldlg-note  { font-size: 12.5px; color: var(--ink-3); line-height: 1.55; margin: 0; }
 .seldlg-input {
   width: 100%; padding: 9px 11px;
   border: 1px solid var(--line-strong); border-radius: 8px;
   background: var(--bg); color: var(--ink);
-  font: inherit; font-size: 15px; outline: none; text-align: start;
+  font: inherit; font-size: 14px; outline: none; text-align: start;
 }
 .seldlg-input:focus { border-color: var(--accent); }
 .seldlg-actions { display: flex; gap: 8px; margin-top: 4px; }
 .seldlg-btn {
   flex: 1; padding: 9px 14px; border-radius: 8px;
   border: 1px solid var(--line-strong); background: none;
-  color: var(--ink-2); font: inherit; font-size: 14.5px; cursor: pointer;
+  color: var(--ink-2); font: inherit; font-size: 13.5px; cursor: pointer;
   transition: background var(--dur-hover) var(--ease-soft), color var(--dur-hover) var(--ease-soft);
 }
 .seldlg-btn:hover:not(:disabled) { background: var(--hover); color: var(--ink); }
@@ -7742,7 +7738,7 @@ input, textarea { font: inherit; color: inherit; }
 .seldlg-discard {
   align-self: center; margin-top: 2px;
   border: 0; background: none; cursor: pointer;
-  font-size: 12.5px; color: var(--ink-4); text-decoration: underline;
+  font-size: 11.5px; color: var(--ink-4); text-decoration: underline;
 }
 .seldlg-discard:hover { color: var(--ink-2); }
 
@@ -7758,16 +7754,16 @@ input, textarea { font: inherit; color: inherit; }
   animation: seldlg-in 160ms var(--ease-out) both;
 }
 .sellist-head {
-  font-size: 12px; font-weight: 600; letter-spacing: 0.07em;
+  font-size: 11px; font-weight: 600; letter-spacing: 0.07em;
   text-transform: uppercase; color: var(--ink-4); padding: 11px 14px 6px;
 }
 .sellist-input {
   border: 0; border-bottom: 1px solid var(--line);
   background: none; color: var(--ink);
-  font: inherit; font-size: 15px; padding: 8px 14px 11px; outline: none;
+  font: inherit; font-size: 14px; padding: 8px 14px 11px; outline: none;
 }
 .sellist-rows { max-height: 320px; overflow-y: auto; overscroll-behavior: contain; padding: 5px; }
-.sellist-empty { padding: 18px; text-align: center; font-size: 13.5px; color: var(--ink-4); }
+.sellist-empty { padding: 18px; text-align: center; font-size: 12.5px; color: var(--ink-4); }
 .sellist-row {
   width: 100%; text-align: start;
   display: flex; align-items: center; gap: 10px;
@@ -7778,8 +7774,8 @@ input, textarea { font: inherit; color: inherit; }
 .sellist-row[data-active="true"] { background: var(--hover); }
 .sellist-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 .sellist-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
-.sellist-range { font-size: 14px; font-weight: 500; color: var(--ink); }
-.sellist-name  { font-size: 13px; color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sellist-range { font-size: 13px; font-weight: 500; color: var(--ink); }
+.sellist-name  { font-size: 12px; color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* Row management. Opens inline so the list never navigates away from what the
    user is looking at, and stays hidden until the row is hovered — a list you
@@ -7805,7 +7801,7 @@ input, textarea { font: inherit; color: inherit; }
   width: 100%; padding: 6px 9px;
   border: 1px solid var(--line-strong); border-radius: 7px;
   background: var(--bg); color: var(--ink);
-  font: inherit; font-size: 13.5px; outline: none; text-align: start;
+  font: inherit; font-size: 12.5px; outline: none; text-align: start;
 }
 .sellist-rename:focus { border-color: var(--accent); }
 .sellist-swatches { display: flex; align-items: center; gap: 5px; }
@@ -7817,13 +7813,13 @@ input, textarea { font: inherit; color: inherit; }
 .sellist-mini {
   margin-inline-start: auto;
   border: 1px solid var(--line-strong); background: none;
-  color: var(--ink-3); font: inherit; font-size: 12.5px;
+  color: var(--ink-3); font: inherit; font-size: 11.5px;
   padding: 3px 9px; border-radius: 6px; cursor: pointer;
 }
 .sellist-mini:hover { background: var(--hover); color: var(--ink); }
 .sellist-mini--danger { color: oklch(0.55 0.19 25); border-color: oklch(0.55 0.19 25 / 0.4); }
 .sellist-mini--danger:hover { background: oklch(0.55 0.19 25 / 0.1); color: oklch(0.5 0.19 25); }
-.sellist-confirm { display: flex; flex-direction: column; gap: 7px; font-size: 13px; color: var(--ink-2); }
+.sellist-confirm { display: flex; flex-direction: column; gap: 7px; font-size: 12px; color: var(--ink-2); }
 .sellist-confirm-actions { display: flex; gap: 6px; }
 .sellist-confirm-actions .sellist-mini { margin-inline-start: 0; }
 .sellist-confirm-actions .sellist-mini--danger { margin-inline-start: auto; }
@@ -7846,7 +7842,7 @@ input, textarea { font: inherit; color: inherit; }
 /* Reading Mode guidance. Quiet by construction: small, muted, no border, no
    repeated motion — it is a hint, not a notice. */
 .qcf-read-hint {
-  font-size: 12.5px;
+  font-size: 11.5px;
   color: var(--ink-4);
   text-align: center;
   margin-top: 6px;
@@ -7873,17 +7869,17 @@ input, textarea { font: inherit; color: inherit; }
 .qs-input {
   border: 0; border-bottom: 1px solid var(--line);
   background: none; color: var(--ink);
-  font: inherit; font-size: 15px;
+  font: inherit; font-size: 14px;
   padding: 11px 14px; outline: none;
 }
 .qs-input::placeholder { color: var(--ink-4); }
 
 .qs-results { max-height: 340px; overflow-y: auto; overscroll-behavior: contain; padding: 4px; }
-.qs-empty, .qs-loading { padding: 14px; font-size: 13.5px; color: var(--ink-4); text-align: center; }
+.qs-empty, .qs-loading { padding: 14px; font-size: 12.5px; color: var(--ink-4); text-align: center; }
 
 .qs-group + .qs-group { margin-top: 2px; }
 .qs-group-label {
-  font-size: 11px; font-weight: 600; letter-spacing: 0.07em;
+  font-size: 10px; font-weight: 600; letter-spacing: 0.07em;
   text-transform: uppercase; color: var(--ink-4);
   padding: 7px 10px 4px;
 }
@@ -7896,7 +7892,7 @@ input, textarea { font: inherit; color: inherit; }
   transition: background var(--dur-fast) ease;
 }
 .qs-row[data-active="true"] { background: var(--hover); }
-.qs-row-label   { font-size: 14px; color: var(--ink); font-weight: 500; }
+.qs-row-label   { font-size: 13px; color: var(--ink); font-weight: 500; }
 /* Arabic keeps the reading face and its own direction inside an LTR panel. */
 .qs-row-arabic  {
   font-family: var(--font-arabic), serif;
@@ -7906,7 +7902,7 @@ input, textarea { font: inherit; color: inherit; }
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .qs-row-preview {
-  font-size: 13px; color: var(--ink-3);
+  font-size: 12px; color: var(--ink-3);
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -7926,12 +7922,12 @@ input, textarea { font: inherit; color: inherit; }
   transition: background var(--dur-fast) ease, color var(--dur-fast) ease;
 }
 .qs-back:hover { background: var(--hover); color: var(--ink); }
-.qs-stage-name { font-size: 14px; font-weight: 500; color: var(--ink); }
+.qs-stage-name { font-size: 13px; font-weight: 500; color: var(--ink); }
 
 .qs-row--ayah { flex-direction: row; align-items: baseline; gap: 9px; }
 .qs-ayah-num {
   flex: 0 0 auto; min-width: 22px;
-  font-family: var(--font-mono); font-size: 12.5px;
+  font-family: var(--font-mono); font-size: 11.5px;
   color: var(--ink-4); text-align: end;
 }
 .qs-ayah-body { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
@@ -7971,7 +7967,7 @@ input, textarea { font: inherit; color: inherit; }
   border: 1px solid var(--line-strong);
   background: none;
   color: var(--ink-2);
-  font-size: 14px;
+  font-size: 13px;
   cursor: pointer;
   transition: background var(--dur-hover) var(--ease-soft);
 }
@@ -8004,7 +8000,7 @@ input, textarea { font: inherit; color: inherit; }
 .tr-dot--done { background: var(--ink-4); }
 
 .tr-skip {
-  font-size: 0.8125rem;
+  font-size:   0.75rem;
   color:       var(--ink-4);
   background:  none;
   border:      none;
@@ -8016,7 +8012,7 @@ input, textarea { font: inherit; color: inherit; }
 .tr-skip:hover { color: var(--ink-2); }
 
 .tr-title {
-  font-size: 0.9375rem;
+  font-size:      0.875rem;
   font-weight:    600;
   color:          var(--ink);
   margin:         0;
@@ -8025,7 +8021,7 @@ input, textarea { font: inherit; color: inherit; }
 }
 
 .tr-body {
-  font-size: 0.875rem;
+  font-size:   0.8125rem;
   line-height: 1.6;
   color:       var(--ink-2);
   margin:      0;
@@ -8034,7 +8030,7 @@ input, textarea { font: inherit; color: inherit; }
 
 .tr-next-btn {
   font-family:   var(--font-sans, system-ui);
-  font-size: 0.875rem;
+  font-size:     0.8125rem;
   font-weight:   500;
   color:         #fff;
   background:    var(--accent);
@@ -8051,7 +8047,7 @@ input, textarea { font: inherit; color: inherit; }
 .tr-next-btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
 
 .tr-error {
-  font-size: 0.8125rem;
+  font-size:   0.75rem;
   color:       oklch(0.5 0.15 25);
   margin:      0;
   font-family: var(--font-sans, system-ui);
@@ -8093,7 +8089,7 @@ input, textarea { font: inherit; color: inherit; }
 }
 
 .tr-bismillah-en {
-  font-size: 0.875rem;
+  font-size:   0.8125rem;
   color:       var(--ink-3);
   font-style:  italic;
   margin:      0;
@@ -8107,7 +8103,7 @@ input, textarea { font: inherit; color: inherit; }
 }
 
 .tr-finale-msg {
-  font-size: 0.9375rem;
+  font-size:   0.875rem;
   color:       var(--ink-2);
   margin:      0;
   font-family: var(--font-sans, system-ui);
@@ -8232,7 +8228,7 @@ input, textarea { font: inherit; color: inherit; }
 
 .lp-nav-cta {
   font-family: var(--lp-body);
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   font-weight: 500;
   color: var(--lp-ink-2);
   text-decoration: none;
@@ -8275,7 +8271,7 @@ input, textarea { font: inherit; color: inherit; }
 }
 
 .lp-eyebrow {
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   font-weight: 500;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -8347,7 +8343,7 @@ input, textarea { font: inherit; color: inherit; }
   direction: rtl;
 }
 .lp-verse-en {
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   color: var(--lp-ink-3);
   font-style: italic;
   letter-spacing: 0.01em;
@@ -8360,7 +8356,7 @@ input, textarea { font: inherit; color: inherit; }
 }
 
 .lp-section-label {
-  font-size: 0.75rem;
+  font-size: 0.6875rem;
   font-weight: 500;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -8440,7 +8436,7 @@ input, textarea { font: inherit; color: inherit; }
 }
 
 .lp-quote-footer cite {
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   font-weight: 500;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -8487,7 +8483,7 @@ input, textarea { font: inherit; color: inherit; }
 }
 
 .lp-footer-copy {
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   color: var(--lp-ink-3);
   font-style: italic;
 }
@@ -8505,13 +8501,13 @@ input, textarea { font: inherit; color: inherit; }
 .beta-gate-eyebrow { margin-bottom: 24px; }
 .beta-gate-form { width: 100%; display: flex; flex-direction: column; gap: 8px; }
 .beta-gate-label {
-  font-size: 13px; font-weight: 500; color: var(--ink-3);
+  font-size: 12px; font-weight: 500; color: var(--ink-3);
   text-align: left; letter-spacing: 0.02em;
 }
 .beta-gate-input {
   width: 100%; padding: 11px 14px;
   background: var(--bg); border: 1px solid var(--line-strong);
-  border-radius: 9px; font-size: 15px; color: var(--ink);
+  border-radius: 9px; font-size: 14px; color: var(--ink);
   font-family: var(--font-sans);
   outline: none; transition: border-color .12s, box-shadow .12s;
   box-sizing: border-box;
@@ -8525,7 +8521,7 @@ input, textarea { font: inherit; color: inherit; }
   width: 100%; display: flex; align-items: center; justify-content: center;
   gap: 8px; padding: 11px 20px; margin-top: 4px;
   background: var(--ink); border: none; border-radius: 9px;
-  font-size: 15px; font-weight: 500; color: var(--bg);
+  font-size: 14px; font-weight: 500; color: var(--bg);
   font-family: var(--font-sans);
   cursor: pointer; transition: opacity .12s;
 }
@@ -8604,7 +8600,7 @@ input, textarea { font: inherit; color: inherit; }
   width: 6px; height: 6px; border-radius: 50%; pointer-events: none;
 }
 .et-heading-label {
-  font-size: 11px; font-weight: 700; font-family: var(--font-sans);
+  font-size: 10px; font-weight: 700; font-family: var(--font-sans);
   letter-spacing: -0.01em; line-height: 1;
 }
 .et-sep { width: 1px; height: 18px; background: var(--line); margin: 0 4px; flex-shrink: 0; }
@@ -8628,7 +8624,7 @@ input, textarea { font: inherit; color: inherit; }
   transition: transform var(--dur-fast) ease, box-shadow var(--dur-fast) ease;
 }
 .et-swatch:hover { transform: scale(1.18); box-shadow: var(--shadow-sm); }
-.et-swatch-x { font-size: 14px; color: var(--ink-4); line-height: 1; }
+.et-swatch-x { font-size: 13px; color: var(--ink-4); line-height: 1; }
 
 /* Font picker — each row is set in the face it applies, so the choice is
    made by looking rather than by reading a name. */
@@ -8644,7 +8640,7 @@ input, textarea { font: inherit; color: inherit; }
 .et-font-item--active { background: var(--selected, var(--hover)); font-weight: 500; }
 /* Direction rows carry a hint, so they lay out as two columns. */
 .et-font-item:has(.et-dir-hint) { display: flex; align-items: baseline; gap: 12px; justify-content: space-between; }
-.et-dir-hint { font-size: 12px; color: var(--ink-4); }
+.et-dir-hint { font-size: 11px; color: var(--ink-4); }
 
 /* ── Collapsible top ribbon ── */
 .et-ribbon {
@@ -8691,7 +8687,7 @@ input, textarea { font: inherit; color: inherit; }
 }
 .sel-link-input {
   flex: 1;
-  font-size: 14px;
+  font-size: 13px;
   padding: 5px 8px;
   border: 1px solid var(--line-strong);
   border-radius: var(--radius-sm);
@@ -8707,7 +8703,7 @@ input, textarea { font: inherit; color: inherit; }
   display: grid; place-items: center;
   border-radius: var(--radius-sm);
   color: var(--ink-3);
-  font-size: 13px;
+  font-size: 12px;
 }
 .sel-link-remove:hover { background: var(--hover); color: var(--ink); }
 @keyframes sel-toolbar-in {
@@ -8831,7 +8827,7 @@ input, textarea { font: inherit; color: inherit; }
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 13.5px;
+  font-size: 12.5px;
   color: var(--ink-3);
   margin-bottom: 14px;
   transition: color var(--dur-hover) var(--ease-soft);
@@ -8845,7 +8841,7 @@ input, textarea { font: inherit; color: inherit; }
   color: var(--ink);
   margin: 0 0 4px;
 }
-.notes-review-sub { font-size: 14px; color: var(--ink-3); margin: 0 0 18px; }
+.notes-review-sub { font-size: 13px; color: var(--ink-3); margin: 0 0 18px; }
 
 .notes-review-search {
   display: flex;
@@ -8862,14 +8858,14 @@ input, textarea { font: inherit; color: inherit; }
   border: none;
   outline: none;
   background: transparent;
-  font-size: 14.5px;
+  font-size: 13.5px;
   color: var(--ink);
 }
 .notes-review-search input::placeholder { color: var(--ink-4); }
 
 .notes-review-filters { display: flex; flex-wrap: wrap; gap: 5px; }
 .notes-review-chip {
-  font-size: 12.5px;
+  font-size: 11.5px;
   font-weight: 500;
   padding: 4px 11px;
   border-radius: 999px;
@@ -8896,7 +8892,7 @@ input, textarea { font: inherit; color: inherit; }
   align-items: center;
   gap: 10px;
   text-align: center;
-  font-size: 14.5px;
+  font-size: 13.5px;
   color: var(--ink-3);
 }
 
@@ -8920,7 +8916,7 @@ input, textarea { font: inherit; color: inherit; }
   background: var(--panel);
   border: 1px solid var(--line);
   font-family: var(--font-mono);
-  font-size: 12.5px;
+  font-size: 11.5px;
   color: var(--ink-2);
 }
 .notes-review-surah-ar {
@@ -8935,7 +8931,7 @@ input, textarea { font: inherit; color: inherit; }
   display: flex;
   align-items: center;
   gap: 7px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -8943,7 +8939,7 @@ input, textarea { font: inherit; color: inherit; }
   margin: 0 0 6px;
 }
 .notes-review-ayah-count {
-  font-size: 11px;
+  font-size: 10px;
   padding: 1px 7px;
   border-radius: 999px;
   background: var(--panel);
@@ -8976,7 +8972,7 @@ input, textarea { font: inherit; color: inherit; }
 }
 .notes-review-note-type {
   grid-area: type;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -8985,7 +8981,7 @@ input, textarea { font: inherit; color: inherit; }
 }
 .notes-review-note-text {
   grid-area: text;
-  font-size: 14.5px;
+  font-size: 13.5px;
   line-height: 1.55;
   color: var(--ink);
   white-space: pre-wrap;
@@ -8998,7 +8994,7 @@ input, textarea { font: inherit; color: inherit; }
 }
 .notes-review-note-meta {
   grid-area: meta;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--ink-4);
 }
 
@@ -9056,7 +9052,7 @@ input, textarea { font: inherit; color: inherit; }
   flex: none;
   padding: 2px 0;
   border: 0; border-radius: 0; background: none;
-  font-size: 12.5px;
+  font-size: 11.5px;
   font-weight: 400;
   letter-spacing: 0;
   color: var(--ink-3);
@@ -9089,7 +9085,7 @@ input, textarea { font: inherit; color: inherit; }
   border-radius: var(--radius-sm);
   padding: 2px 16px 2px 0;
   font-family: inherit;
-  font-size: 12.5px; font-weight: 400; color: var(--ink-3);
+  font-size: 11.5px; font-weight: 400; color: var(--ink-3);
   text-overflow: ellipsis;
   cursor: pointer; outline: none;
   transition: color var(--dur-fast) ease;
@@ -9107,7 +9103,7 @@ input, textarea { font: inherit; color: inherit; }
 /* ── Tafsir block: inline source picker (any provisioned source) ─────────── */
 .tafsir-block-source-select {
   max-width: 240px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
   color: var(--ink-3);
   background: transparent;
@@ -9184,7 +9180,7 @@ input, textarea { font: inherit; color: inherit; }
 .ctr-size-value {
   float: right;
   font-family: var(--font-mono);
-  font-size: 11.5px;
+  font-size: 9.5px;
   color: var(--ink-3);
 }
 .ctr-size-slider {
@@ -9284,7 +9280,7 @@ input, textarea { font: inherit; color: inherit; }
 .verse-picker-label { flex: none; }
 .verse-picker-head {
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 11px;
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--ink-3);
@@ -9315,7 +9311,7 @@ input, textarea { font: inherit; color: inherit; }
 }
 .verse-picker-go {
   font-family: var(--font-sans);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--bg);
   background: var(--ink);
@@ -9327,7 +9323,7 @@ input, textarea { font: inherit; color: inherit; }
 .verse-picker-go:active { transform: scale(0.96); }
 .verse-picker-label {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 10px;
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--ink-4);
@@ -9346,7 +9342,7 @@ input, textarea { font: inherit; color: inherit; }
 }
 .verse-picker-chip {
   font-family: var(--font-mono);
-  font-size: 13px;
+  font-size: 12px;
   color: var(--ink-2);
   padding: 5px 10px;
   border: 1px solid var(--line);
@@ -9393,7 +9389,7 @@ input, textarea { font: inherit; color: inherit; }
 }
 .whiteboard-hint-body code {
   font-family: var(--font-mono);
-  font-size: 14px;
+  font-size: 13px;
   background: var(--panel);
   padding: 1px 6px;
   border-radius: 5px;
@@ -9423,7 +9419,7 @@ input, textarea { font: inherit; color: inherit; }
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 14.5px;
+  font-size: 13.5px;
   color: var(--ink-2);
   padding: 5px 8px;
   border-radius: 7px;
@@ -9458,7 +9454,7 @@ input, textarea { font: inherit; color: inherit; }
 /* ── Boards workspace home (kind: boards) ────────────────────────────────── */
 .ws-home-kind-badge {
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -9470,7 +9466,7 @@ input, textarea { font: inherit; color: inherit; }
   margin-left: 8px;
 }
 .boards-new-row { margin: 24px 0 20px; }
-.boards-new-btn { font-size: 15px; }
+.boards-new-btn { font-size: 14px; }
 .boards-new-form { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .boards-new-input {
   flex: 1 1 320px;
@@ -9490,7 +9486,7 @@ input, textarea { font: inherit; color: inherit; }
   text-align: center;
 }
 .boards-empty-title { font-family: var(--font-serif); font-size: 20px; font-weight: 600; color: var(--ink-2); margin: 0 0 8px; }
-.boards-empty-body  { font-size: 15px; color: var(--ink-3); margin: 0 auto; max-width: 420px; line-height: 1.6; }
+.boards-empty-body  { font-size: 14px; color: var(--ink-3); margin: 0 auto; max-width: 420px; line-height: 1.6; }
 .boards-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
@@ -9510,7 +9506,7 @@ input, textarea { font: inherit; color: inherit; }
 .board-card:hover { border-color: var(--accent); box-shadow: var(--shadow-md); transform: translateY(-2px); }
 .board-card-icon  { font-size: 22px; color: var(--accent-ink); }
 .board-card-title { font-family: var(--font-serif); font-size: 19px; font-weight: 600; color: var(--ink); margin-top: auto; }
-.board-card-date  { font-family: var(--font-mono); font-size: 12.5px; color: var(--ink-4); letter-spacing: 0.03em; }
+.board-card-date  { font-family: var(--font-mono); font-size: 11.5px; color: var(--ink-4); letter-spacing: 0.03em; }
 
 /* ── Login: hidden demo-code row (revealed by tapping the logo) ──────────── */
 .login-demo-row {
@@ -9523,7 +9519,7 @@ input, textarea { font: inherit; color: inherit; }
   flex: 1;
   min-width: 0;
   font-family: var(--font-mono);
-  font-size: 15px;
+  font-size: 14px;
   letter-spacing: 0.2em;
   padding: 10px 14px;
   border: 1.5px solid var(--line-2);
@@ -9534,7 +9530,7 @@ input, textarea { font: inherit; color: inherit; }
 }
 .login-demo-input:focus { border-color: var(--accent); }
 .login-demo-go {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--bg);
   background: var(--ink);
@@ -9549,7 +9545,7 @@ input, textarea { font: inherit; color: inherit; }
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 14px;
+  font-size: 13px;
   color: var(--ink-2);
   border: 1px solid var(--line);
   border-radius: 9px;
@@ -9569,11 +9565,11 @@ input, textarea { font: inherit; color: inherit; }
   border: none;
   background: transparent;
   color: var(--ink);
-  font-size: 14px;
+  font-size: 13px;
   outline: none;
   cursor: pointer;
 }
-.lang-switcher--compact { padding: 4px 8px; font-size: 13px; }
+.lang-switcher--compact { padding: 4px 8px; font-size: 12px; }
 
 /* ── RTL guards ──────────────────────────────────────────────────────────────
    Arabic/Urdu UI flips document direction, but surfaces whose layout is
@@ -9641,10 +9637,10 @@ input, textarea { font: inherit; color: inherit; }
 
 .pdf-pages-loading,
 .pdf-pages-error {
-  padding: 44px 60px; color: var(--ink-4); font-size: 15px;
+  padding: 44px 60px; color: var(--ink-4); font-size: 14px;
   display: flex; flex-direction: column; gap: 6px;
 }
-.pdf-pages-error-detail { font-family: var(--font-mono); font-size: 12px; color: var(--ink-4); max-width: 520px; word-break: break-word; }
+.pdf-pages-error-detail { font-family: var(--font-mono); font-size: 11px; color: var(--ink-4); max-width: 520px; word-break: break-word; }
 
 /* Uploaded PDF not present on this device */
 .book-missing {
@@ -9652,15 +9648,15 @@ input, textarea { font: inherit; color: inherit; }
   gap: 10px; text-align: center; padding: 40px;
 }
 .book-missing-title { font-size: 18px; font-weight: 700; color: var(--ink); }
-.book-missing-body { font-size: 15px; color: var(--ink-3); max-width: 440px; line-height: 1.6; margin-bottom: 6px; }
+.book-missing-body { font-size: 14px; color: var(--ink-3); max-width: 440px; line-height: 1.6; margin-bottom: 6px; }
 
 /* ── Font size control ─────────────────────────────────────────────────── */
 .et-size { display: inline-flex; align-items: center; gap: 1px; }
-.et-size-step { font-size: 14px; line-height: 1; }
+.et-size-step { font-size: 13px; line-height: 1; }
 .et-size-value {
   min-width: 26px; height: 26px; padding: 0 4px;
   border: 0; background: none; border-radius: var(--radius-sm);
-  font-family: var(--font-mono); font-size: 12.5px; color: var(--ink-2);
+  font-family: var(--font-mono); font-size: 11.5px; color: var(--ink-2);
   cursor: pointer;
   transition: background var(--dur-fast) ease, color var(--dur-fast) ease;
 }
@@ -9673,7 +9669,7 @@ input, textarea { font: inherit; color: inherit; }
 .et-size-item {
   appearance: none; border: 0; background: none; cursor: pointer;
   text-align: left; padding: 5px 10px; border-radius: var(--radius-sm);
-  font-size: 13.5px; color: var(--ink);
+  font-size: 12.5px; color: var(--ink);
   transition: background var(--dur-fast) ease;
 }
 .et-size-item:hover { background: var(--hover); }
@@ -9681,11 +9677,11 @@ input, textarea { font: inherit; color: inherit; }
 .et-size-item--reset { color: var(--ink-3); border-top: 1px solid var(--line); border-radius: 0; margin-top: 2px; }
 
 /* ── Text colour ───────────────────────────────────────────────────────── */
-.et-color-glyph { font-size: 13px; font-weight: 600; line-height: 1; }
+.et-color-glyph { font-size: 12px; font-weight: 600; line-height: 1; }
 .et-color-panel { display: flex; flex-direction: column; gap: 8px; min-width: 148px; }
 .et-color-custom {
   display: flex; align-items: center; gap: 8px;
-  font-size: 13px; color: var(--ink-2); cursor: pointer;
+  font-size: 12px; color: var(--ink-2); cursor: pointer;
   padding: 2px 0;
 }
 .et-color-custom input[type="color"] {
@@ -9697,7 +9693,7 @@ input, textarea { font: inherit; color: inherit; }
   appearance: none; border: 0; background: none; cursor: pointer;
   text-align: left; padding: 5px 0 0;
   border-top: 1px solid var(--line);
-  font-size: 13px; color: var(--ink-3);
+  font-size: 12px; color: var(--ink-3);
   transition: color var(--dur-fast) ease;
 }
 .et-color-reset:hover { color: var(--ink); }
@@ -9714,12 +9710,12 @@ input, textarea { font: inherit; color: inherit; }
   transition: background var(--dur-fast) ease, border-color var(--dur-fast) ease;
 }
 .et-table-cellpick[data-on="true"] { background: var(--accent-soft); border-color: var(--accent); }
-.et-table-hint { font-size: 12px; color: var(--ink-3); text-align: center; }
+.et-table-hint { font-size: 11px; color: var(--ink-3); text-align: center; }
 .et-table-actions { display: flex; flex-direction: column; gap: 1px; min-width: 152px; }
 .et-table-actions button {
   appearance: none; border: 0; background: none; cursor: pointer;
   text-align: left; padding: 6px 8px; border-radius: var(--radius-sm);
-  font-size: 13.5px; color: var(--ink);
+  font-size: 12.5px; color: var(--ink);
   transition: background var(--dur-fast) ease;
 }
 .et-table-actions button:hover { background: var(--hover); }
@@ -9781,11 +9777,11 @@ input, textarea { font: inherit; color: inherit; }
   display: flex; align-items: baseline; gap: var(--sp-3); flex-wrap: wrap;
 }
 .surah-info-num {
-  font-size: 12.5px; font-weight: 400; color: var(--ink-3);
+  font-size: 11.5px; font-weight: 400; color: var(--ink-3);
   font-family: var(--font-sans);
 }
 .surah-info-source {
-  font-size: 12.5px; color: var(--ink-3);
+  font-size: 11.5px; color: var(--ink-3);
   margin: var(--sp-1) 0 0;
 }
 /* Reuses .commentary-body typography for headings, lists and paragraphs, so
@@ -9824,13 +9820,13 @@ input, textarea { font: inherit; color: inherit; }
   font-family: var(--font-serif);
   font-size: 15px; font-weight: 600; color: var(--ink); margin: 0;
 }
-.slashhelp-count { font-size: 12.5px; color: var(--ink-4); }
+.slashhelp-count { font-size: 11.5px; color: var(--ink-4); }
 .slashhelp-search {
   margin: 0 var(--sp-4) var(--sp-2);
   padding: 6px 0;
   border: 0; border-bottom: 1px solid var(--line);
   background: none; outline: none;
-  font-size: 14px; color: var(--ink);
+  font-size: 13px; color: var(--ink);
 }
 .slashhelp-search::placeholder { color: var(--ink-4); }
 .slashhelp-search:focus { border-bottom-color: var(--accent); }
@@ -9843,20 +9839,20 @@ input, textarea { font: inherit; color: inherit; }
 }
 .slashhelp-item[data-sel="true"] { background: var(--hover); }
 .slashhelp-item:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-.slashhelp-icon { font-size: 14px; line-height: 1.5; flex-shrink: 0; }
+.slashhelp-icon { font-size: 13px; line-height: 1.5; flex-shrink: 0; }
 .slashhelp-text { min-width: 0; display: flex; flex-direction: column; }
 .slashhelp-name {
-  font-family: var(--font-mono); font-size: 13px; color: var(--ink); font-weight: 500;
+  font-family: var(--font-mono); font-size: 12px; color: var(--ink); font-weight: 500;
 }
 .slashhelp-desc {
-  font-size: 12.5px; color: var(--ink-3); line-height: 1.45; margin-top: 1px;
+  font-size: 11.5px; color: var(--ink-3); line-height: 1.45; margin-top: 1px;
 }
-.slashhelp-empty { padding: var(--sp-5); text-align: center; font-size: 13.5px; color: var(--ink-3); }
+.slashhelp-empty { padding: var(--sp-5); text-align: center; font-size: 12.5px; color: var(--ink-3); }
 .slashhelp-foot {
   display: flex; gap: var(--sp-4);
   padding: var(--sp-2) var(--sp-4);
   border-top: 1px solid var(--line);
-  font-size: 12px; color: var(--ink-4);
+  font-size: 11px; color: var(--ink-4);
 }
 
 /* ── Mutūn shelf ───────────────────────────────────────────────────────────
@@ -9920,13 +9916,13 @@ input, textarea { font: inherit; color: inherit; }
 }
 .book-obj-en {
   font-family: var(--font-serif);
-  font-size: 13.5px; font-weight: 600; line-height: 1.35;
+  font-size: 12.5px; font-weight: 600; line-height: 1.35;
   color: var(--ink-2);
 }
 .book-obj-meta {
   margin-top: auto;
   display: flex; flex-direction: column; gap: 1px;
-  font-size: 11.5px; line-height: 1.35;
+  font-size: 10.5px; line-height: 1.35;
 }
 .book-obj-subject { color: var(--book-tone, var(--accent-ink)); font-weight: 500; }
 .book-obj-author  { color: var(--ink-4); }
@@ -10032,14 +10028,14 @@ input, textarea { font: inherit; color: inherit; }
 }
 .tafsir-embed-btn {
   appearance: none; border: 0; background: none; cursor: pointer;
-  padding: 3px 0; font-size: 12.5px; color: var(--accent-ink);
+  padding: 3px 0; font-size: 11.5px; color: var(--accent-ink);
   border-bottom: 1px solid transparent;
   transition: border-color var(--dur-fast) ease, color var(--dur-fast) ease;
 }
 .tafsir-embed-btn:hover:not(:disabled) { border-bottom-color: var(--accent); }
 .tafsir-embed-btn:disabled { color: var(--ink-4); cursor: default; }
 .tafsir-embed-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.tafsir-embed-hint { font-size: 12px; color: var(--ink-4); }
+.tafsir-embed-hint { font-size: 11px; color: var(--ink-4); }
 /* An embedded excerpt says so next to its source. */
 .tafsir-block-partial { color: var(--ink-4); font-weight: 400; }
 
@@ -10051,7 +10047,7 @@ input, textarea { font: inherit; color: inherit; }
   border: 1px solid var(--line-strong);
   border-radius: var(--radius-sm);
   background: none;
-  font-size: 13px; color: var(--ink-2);
+  font-size: 12px; color: var(--ink-2);
   transition: border-color var(--dur-fast) ease, color var(--dur-fast) ease;
 }
 .cxcat-new:hover { border-color: var(--accent); color: var(--ink); }
@@ -10061,17 +10057,17 @@ input, textarea { font: inherit; color: inherit; }
   display: flex; align-items: baseline; gap: var(--sp-3);
   margin-bottom: var(--sp-2);
 }
-.cxcat-make-step { font-size: 12.5px; color: var(--ink-3); }
+.cxcat-make-step { font-size: 11.5px; color: var(--ink-3); }
 /* The already-chosen end stays visible while picking the second, so the pair
    being built is never in doubt. */
-.cxcat-make-chosen { font-size: 13px; color: var(--accent-ink); }
-.cxcat-make-err { margin: var(--sp-2) 0 0; font-size: 13px; color: var(--danger); }
+.cxcat-make-chosen { font-size: 12px; color: var(--accent-ink); }
+.cxcat-make-err { margin: var(--sp-2) 0 0; font-size: 12px; color: var(--danger); }
 
 /* A page that exists locally but not yet on the server. Inert by design. */
 .tree-row--pending {
   display: flex; align-items: center; gap: 6px;
   min-height: var(--row-h); padding: 4px 10px;
-  color: var(--ink-3); font-size: 14.5px;
+  color: var(--ink-3); font-size: 13.5px;
   cursor: default;
 }
 .tree-row-pending-dot {
@@ -10095,7 +10091,7 @@ input, textarea { font: inherit; color: inherit; }
 .doc-zoom button {
   appearance: none; border: 0; background: none; cursor: pointer;
   min-width: 24px; height: 22px; padding: 0 5px;
-  font-family: var(--font-mono); font-size: 12px; color: var(--ink-3);
+  font-family: var(--font-mono); font-size: 11px; color: var(--ink-3);
   border-radius: 3px;
   transition: background var(--dur-fast) ease, color var(--dur-fast) ease;
 }
@@ -10114,20 +10110,20 @@ input, textarea { font: inherit; color: inherit; }
 }
 .tafsir-choice-q {
   margin: 0 0 var(--sp-1); padding: 0 6px;
-  font-size: 12px; color: var(--ink-3); line-height: 1.4;
+  font-size: 11px; color: var(--ink-3); line-height: 1.4;
 }
 .tafsir-choice-btn, .tafsir-choice-cancel {
   appearance: none; border: 0; background: none; cursor: pointer;
   text-align: left; padding: 6px 8px; border-radius: var(--radius-sm);
-  font-size: 13.5px; color: var(--ink);
+  font-size: 12.5px; color: var(--ink);
   transition: background var(--dur-fast) ease;
 }
 .tafsir-choice-btn:hover, .tafsir-choice-cancel:hover { background: var(--hover); }
-.tafsir-choice-cancel { color: var(--ink-4); font-size: 12.5px; }
+.tafsir-choice-cancel { color: var(--ink-4); font-size: 11.5px; }
 
 /* Focused surah: what it joins, split by where the links go. */
-.cxmap-focus { display: inline-flex; align-items: baseline; gap: var(--sp-2); font-size: 13px; color: var(--ink); }
-.cxmap-focus-detail { font-size: 12px; color: var(--ink-3); }
+.cxmap-focus { display: inline-flex; align-items: baseline; gap: var(--sp-2); font-size: 12px; color: var(--ink); }
+.cxmap-focus-detail { font-size: 11px; color: var(--ink-3); }
 /* An in-surah link is a loop rather than a chord; it reads as quieter because
    it spans no distance. */
 .cxmap-edge[data-self="true"] { opacity: 0.8; }
@@ -10269,7 +10265,7 @@ input, textarea { font: inherit; color: inherit; }
 .ws-icon-opt:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 /* The "use initials" option shows the actual initials, so the choice is
    between two things you can see rather than a glyph and an abstraction. */
-.ws-icon-opt--initials { font-size: 12px; font-weight: 600; letter-spacing: 0.02em; }
+.ws-icon-opt--initials { font-size: 11px; font-weight: 600; letter-spacing: 0.02em; }
 
 
 /* ─────────────── SQUIRCLES ───────────────
