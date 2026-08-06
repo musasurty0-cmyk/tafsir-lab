@@ -1,4 +1,16 @@
 {
   "buildCommand": "prisma generate && next build",
-  "framework": "nextjs"
+  "framework": "nextjs",
+
+  "//": [
+    "regions: run the functions in Dublin, the same AWS region (eu-west-1) as",
+    "the Supabase instance. Vercel otherwise defaults to iad1 (Washington DC),",
+    "so every query went London edge -> Washington -> Ireland -> Washington ->",
+    "London. The notes route makes three sequential queries, which meant six",
+    "transatlantic crossings to list one page's notes: 1.35s to return an empty",
+    "array, which reads as 'my notes might not be there'. Same region turns each",
+    "round trip from ~100ms into ~1ms. Most users are UK/Europe, so this",
+    "shortens the user leg too."
+  ],
+  "regions": ["dub1"]
 }
