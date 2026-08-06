@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { X, Copy, RefreshCw, Check } from "lucide-react";
 import type { MemberRole } from "@/lib/services/workspaces.service";
 import { WORKSPACE_ICONS, workspaceInitials } from "@/lib/workspace-icon";
+import { useDismissable } from "@/lib/use-dismissable";
 
 interface Member {
   workspaceId: string;
@@ -45,6 +46,7 @@ export default function WorkspaceSettings({
   onIconChanged,
   onDeleted,
 }: Props) {
+  useDismissable(onClose);
   const isAdminOrOwner = currentUserRole === "owner" || currentUserRole === "admin";
   const isOwner = currentUserRole === "owner";
 
@@ -243,11 +245,17 @@ export default function WorkspaceSettings({
 
   return (
     <div className="ws-settings-overlay" onClick={onClose}>
-      <div className="ws-settings-modal" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="ws-settings-modal"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="ws-settings-title"
+      >
 
         {/* Header */}
         <div className="ws-settings-header">
-          <span style={{ fontWeight: 600, fontSize: 15 }}>Workspace Settings</span>
+          <span id="ws-settings-title" style={{ fontWeight: 600, fontSize: 15 }}>Workspace Settings</span>
           <button
             onClick={onClose}
             style={{ background: "none", border: "none", cursor: "pointer", color: "var(--ink-3)", display: "flex", alignItems: "center" }}

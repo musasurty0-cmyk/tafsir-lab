@@ -44,11 +44,13 @@ export function apiError(err: unknown): NextResponse {
     return NextResponse.json({ error: message }, { status: STATUS[code] });
   }
 
-  // "Not authenticated" / "Invalid or expired session" from the session layer.
-  const msg = (err as CodedError)?.message;
-  if (typeof msg === "string" && /not authenticated|expired session|invalid/i.test(msg)) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  }
+  /* No message sniffing. Session failures now carry code UNAUTHORIZED and are
+     handled by the map above. The heuristic this replaces tested the message
+     against /not authenticated|expired session|invalid/i, and that bare
+     `invalid` caught every Prisma error — they read "Invalid
+     `prisma.user.create()` invocation" — so a database outage returned 401
+     "Not authenticated" and, because that branch did not log, left no trace at
+     all. Matching on prose is guesswork; a code is a fact. */
 
   // Anything else is unexpected: log it, tell the client nothing specific.
   console.error("[api] unhandled error:", err);

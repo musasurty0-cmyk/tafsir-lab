@@ -6,6 +6,7 @@ import { TAFSIR_LANGUAGE_NAMES } from "@/lib/tafsir/spa5k-catalog";
 import { useT } from "@/lib/i18n/LocaleProvider";
 import { sanitizeTafsirHtml } from "@/lib/sanitize-html";
 import { formatPlainTafsir } from "@/lib/tafsir/format-content";
+import { useDismissable } from "@/lib/use-dismissable";
 import type { Verse } from "@/lib/types";
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -59,6 +60,9 @@ type LangFilter = string;
 
 export default function TafsirDrawer({ open, verseKey, verses, onClose }: Props) {
   const t = useT();
+  /* Gated on `open` — the drawer stays mounted while closed, so an ungated
+     listener would swallow every Escape in the app. */
+  useDismissable(onClose, open);
 
   // ── Core state ──────────────────────────────────────────────────────────
   const [tab,         setTab]       = useState<Tab>("commentary");

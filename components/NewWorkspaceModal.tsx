@@ -12,6 +12,7 @@ import { pushWithSplash } from "@/lib/nav-splash";
 import { useT } from "@/lib/i18n/LocaleProvider";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useDismissable } from "@/lib/use-dismissable";
 
 interface Props {
   onClose: () => void;
@@ -44,14 +45,10 @@ export default function NewWorkspaceModal({ onClose, originPoint }: Props) {
     return () => window.clearTimeout(t);
   }, []);
 
-  // Escape closes.
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  /* Escape closes, and focus returns to whatever opened this. Shared so the
+     two workspace dialogs behave identically — this one used to close on
+     Escape and the Join dialog beside it did not. */
+  useDismissable(onClose);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

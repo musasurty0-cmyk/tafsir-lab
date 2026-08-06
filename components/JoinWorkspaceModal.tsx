@@ -4,12 +4,14 @@ import { pushWithSplash } from "@/lib/nav-splash";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
+import { useDismissable } from "@/lib/use-dismissable";
 
 interface Props {
   onClose: () => void;
 }
 
 export default function JoinWorkspaceModal({ onClose }: Props) {
+  useDismissable(onClose);
   const router = useRouter();
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
@@ -46,9 +48,15 @@ export default function JoinWorkspaceModal({ onClose }: Props) {
 
   return (
     <div className="join-modal-overlay" onClick={onClose}>
-      <div className="join-modal" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="join-modal"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="join-modal-title"
+      >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-          <h2 className="join-modal-title">Join a workspace</h2>
+          <h2 className="join-modal-title" id="join-modal-title">Join a workspace</h2>
           <button
             onClick={onClose}
             style={{ background: "none", border: "none", cursor: "pointer", color: "var(--ink-3)", display: "flex", alignItems: "center" }}

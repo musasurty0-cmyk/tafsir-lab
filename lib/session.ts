@@ -24,20 +24,46 @@ export interface Session {
   userId: string;
 }
 
+/**
+ * A real "you are not signed in", carrying a code rather than a message.
+ *
+ * apiError used to recognise these by matching the message against
+ * /not authenticated|expired session|invalid/i. That bare `invalid` also
+ * matched Prisma, whose errors read "Invalid `prisma.user.create()`
+ * invocation" — so ANY database failure came back as 401 "Not authenticated",
+ * on the one branch of apiError that does not log. A broken database looked
+ * exactly like a signed-out user, and left no trace to say otherwise.
+ * "Malformed session token" meanwhile matched nothing and 500'd.
+ */
+export class SessionError extends Error {
+  readonly code = "UNAUTHORIZED";
+  constructor(message: string) {
+    super(message);
+    this.name = "SessionError";
+  }
+}
+
 // ── Read ──────────────────────────────────────────────────────────────────
 
 export async function getSession(): Promise<Session> {
   const jar   = await cookies();
   const token = jar.get(COOKIE)?.value;
-  if (!token) throw new Error("Not authenticated");
+  if (!token) throw new SessionError("Not authenticated");
+
+  /* Resolved BEFORE the try. Inside it, an unset SESSION_SECRET was caught by
+     the catch below and rethrown as "Invalid or expired session" — so a
+     missing env var in a fresh deploy presented as every user being signed
+     out, with the actual cause nowhere on screen or in the log. */
+  const key = secret();
 
   try {
-    const { payload } = await jwtVerify(token, secret());
+    const { payload } = await jwtVerify(token, key);
     const userId = payload.uid as string | undefined;
-    if (!userId) throw new Error("Malformed session token");
+    if (!userId) throw new SessionError("Malformed session token");
     return { userId };
-  } catch {
-    throw new Error("Invalid or expired session");
+  } catch (err) {
+    if (err instanceof SessionError) throw err;
+    throw new SessionError("Invalid or expired session");
   }
 }
 

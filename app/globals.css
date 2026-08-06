@@ -9184,6 +9184,21 @@ input, textarea { font: inherit; color: inherit; }
   outline: none;
   cursor: pointer;
 }
+/* Keyboard focus. A range input has no caret, so `appearance: none` plus the
+   removed outline left it with NO focus indication at all — tab onto it and
+   nothing changes, even though the arrow keys then resize the container.
+   The ring goes on the thumb rather than the 3px track, where it reads as the
+   handle you are about to move. Vendor pseudo-elements get their own rules:
+   a comma-separated list containing ::-moz-range-thumb is discarded whole by
+   every other engine, which is how an earlier sweep silently lost all 64 of
+   its selectors. */
+.ctr-size-slider:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 3px var(--accent), 0 1px 3px oklch(0 0 0 / 0.25);
+}
+.ctr-size-slider:focus-visible::-moz-range-thumb {
+  box-shadow: 0 0 0 3px var(--accent), 0 1px 3px oklch(0 0 0 / 0.25);
+}
+
 .ctr-size-slider::-webkit-slider-thumb {
   appearance: none;
   -webkit-appearance: none;
@@ -9527,6 +9542,14 @@ input, textarea { font: inherit; color: inherit; }
   padding: 5px 10px;
   background: var(--bg-elev);
   cursor: pointer;
+}
+/* A <select> has no caret either, so this was the other control you could tab
+   onto with nothing at all happening. .drawer-source-select already rings on
+   focus; this one was simply missed. */
+.lang-switcher select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
 }
 .lang-switcher select {
   border: none;
