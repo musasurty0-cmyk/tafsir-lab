@@ -12,47 +12,31 @@
 import { memoryLimit, clientIp } from "@/lib/rate-limit";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { sendTeamMail } from "@/lib/team-mail";
 
 export const runtime = "nodejs";
-
-const TEAM_INBOX = "salaam@tafsir-lab.com";
 
 /** Deliberately permissive but real: one @, a dot in the domain, no spaces. */
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
-async function notify(entry: {
+function notify(entry: {
   email: string; name?: string | null; context?: string | null; source?: string | null;
 }): Promise<boolean> {
-  const key = process.env.RESEND_API_KEY;
-  if (!key) return false;
-  // Resend requires a verified sender; fall back to their shared onboarding
-  // domain so this works before a custom domain is set up.
-  const from = process.env.WAITLIST_FROM || "TafsirLab <onboarding@resend.dev>";
-  try {
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        from,
-        to: [TEAM_INBOX],
-        reply_to: entry.email,
-        subject: `Waitlist: ${entry.email}`,
-        text: [
-          `New TafsirLab waitlist signup`,
-          ``,
-          `Email:   ${entry.email}`,
-          `Name:    ${entry.name || "—"}`,
-          `Source:  ${entry.source || "—"}`,
-          ``,
-          `How they study today:`,
-          entry.context || "—",
-        ].join("\n"),
-      }),
-    });
-    return res.ok;
-  } catch {
-    return false; // never let a mail failure fail the signup
-  }
+  return sendTeamMail({
+    label: "waitlist",
+    replyTo: entry.email,
+    subject: `Waitlist: ${entry.email}`,
+    text: [
+      `New TafsirLab waitlist signup`,
+      ``,
+      `Email:   ${entry.email}`,
+      `Name:    ${entry.name || "—"}`,
+      `Source:  ${entry.source || "—"}`,
+      ``,
+      `How they study today:`,
+      entry.context || "—",
+    ].join("\n"),
+  });
 }
 
 export async function POST(req: NextRequest) {

@@ -17,10 +17,9 @@ import { memoryLimit, clientIp } from "@/lib/rate-limit";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { STUDY_BUCKETS, AGE_MIN, AGE_MAX, type StudyBucket } from "@/lib/beta";
+import { sendTeamMail } from "@/lib/team-mail";
 
 export const runtime = "nodejs";
-
-const TEAM_INBOX = "salaam@tafsir-lab.com";
 
 /** Deliberately permissive but real: one @, a dot in the domain, no spaces. */
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -35,44 +34,31 @@ interface Answers {
   source: string;
 }
 
-async function notify(a: Answers): Promise<boolean> {
-  const key = process.env.RESEND_API_KEY;
-  if (!key) return false;
-  const from = process.env.WAITLIST_FROM || "TafsirLab <onboarding@resend.dev>";
-  try {
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        from,
-        to: [TEAM_INBOX],
-        /* reply_to is the applicant, so answering is one click from the
-           notification rather than a copy-paste of their address. */
-        reply_to: a.email,
-        subject: `Closed beta request: ${a.name} <${a.email}>`,
-        text: [
-          `Closed beta request`,
-          ``,
-          `Name:    ${a.name}`,
-          `Email:   ${a.email}`,
-          `Age:     ${a.age ?? "—"}`,
-          `Source:  ${a.source}`,
-          ``,
-          `Studies daily:`,
-          `  ${a.studyDaily}`,
-          ``,
-          `What they study with today:`,
-          a.studyTools,
-          ``,
-          `How TafsirLab would help them:`,
-          a.benefit,
-        ].join("\n"),
-      }),
-    });
-    return res.ok;
-  } catch {
-    return false;
-  }
+function notify(a: Answers): Promise<boolean> {
+  return sendTeamMail({
+    label: "beta-request",
+    /* reply_to is the applicant, so answering is one click from the
+       notification rather than a copy-paste of their address. */
+    replyTo: a.email,
+    subject: `Closed beta request: ${a.name} <${a.email}>`,
+    text: [
+      `Closed beta request`,
+      ``,
+      `Name:    ${a.name}`,
+      `Email:   ${a.email}`,
+      `Age:     ${a.age ?? "—"}`,
+      `Source:  ${a.source}`,
+      ``,
+      `Studies daily:`,
+      `  ${a.studyDaily}`,
+      ``,
+      `What they study with today:`,
+      a.studyTools,
+      ``,
+      `How TafsirLab would help them:`,
+      a.benefit,
+    ].join("\n"),
+  });
 }
 
 export async function POST(req: NextRequest) {

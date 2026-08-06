@@ -7,6 +7,7 @@
     "postinstall": "node scripts/copy-mupdf-wasm.mjs && node scripts/write-build-id.mjs",
     "build": "prisma generate && node scripts/copy-mupdf-wasm.mjs && node scripts/write-build-id.mjs && next build",
     "start": "next start",
+    "check:email": "node scripts/check-email.mjs",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "typecheck": "tsc --noEmit",
