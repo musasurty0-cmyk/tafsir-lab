@@ -24,8 +24,40 @@ import { PrismaClient } from "@prisma/client";
 
 const db = new PrismaClient();
 
+/**
+ * Refuse to wipe a database that is not obviously a local scratch one.
+ *
+ * Everything below is an unfiltered deleteMany({}) — it removes EVERY note,
+ * drawing and page in whatever database DATABASE_URL happens to point at, with
+ * no undo. The only thing standing between `npm run db:reset-product` and the
+ * production data was remembering which .env was loaded. A one-character
+ * mistake there is unrecoverable, so it now has to be stated out loud.
+ */
+function assertSafeTarget() {
+  const url = process.env.DATABASE_URL ?? "";
+  const host = url.replace(/^[a-z]+:\/\/[^@]*@/i, "").split(/[:/?]/)[0] || "(unknown)";
+  const isLocal = /^(localhost|127\.0\.0\.1|\[::1\]|host\.docker\.internal)$/i.test(host);
+
+  if (isLocal || process.env.I_UNDERSTAND_THIS_DELETES_EVERYTHING === "yes") return host;
+
+  console.error(
+    `\n  Refusing to run against "${host}".\n\n` +
+    `  This deletes EVERY note, drawing, page and surah session in that\n` +
+    `  database. It is meant for a local scratch database.\n\n` +
+    `  If you really mean it:\n` +
+    `    I_UNDERSTAND_THIS_DELETES_EVERYTHING=yes npm run db:reset-product\n`,
+  );
+  process.exit(1);
+}
+
 async function main() {
-  console.log("🧹 Starting product reset...\n");
+  const host = assertSafeTarget();
+  console.log("🧹 Starting product reset...");
+  console.log(`   target: ${host}\n`);
+
+  /* Say the cost before paying it, not after. */
+  const doomed = await db.structuredNote.count();
+  console.log(`   this will delete ${doomed} note${doomed === 1 ? "" : "s"}\n`);
 
   // ── Resolve default workspace (the one we keep) ───────────────────────
   const defaultWorkspace = await db.workspace.findFirst({

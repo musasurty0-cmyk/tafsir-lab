@@ -71,6 +71,9 @@ interface PageSummary {
   createdAt:       Date;
   publishedAt:     Date | null;
   createdBy:       { id: string; name: string; avatarUrl: string | null };
+  /** Notes that would be destroyed with this page. Absent on an optimistic
+   *  row that the server has not confirmed yet. */
+  _count?:         { notes: number };
 }
 
 interface Props {
@@ -207,7 +210,17 @@ function PageRow({
           </button>
           <button
             className={`tree-row-action-btn${confirmDelete ? " tree-row-action-btn--danger" : ""}`}
-            title={confirmDelete ? "Click again to confirm delete" : "Delete"}
+            /* Name what goes with it. Deleting a page cascades to every note
+               on it, and the confirmation used to say only "click again" — so
+               the one irreversible action in the sidebar was also the least
+               informative. Selections already warn with real numbers. */
+            title={
+              confirmDelete
+                ? page._count?.notes
+                  ? `Click again to delete this page and its ${page._count.notes} note${page._count.notes === 1 ? "" : "s"}`
+                  : "Click again to confirm delete"
+                : "Delete"
+            }
             onClick={confirmAndDelete}
             disabled={deleting}
             onBlur={() => setConfirmDelete(false)}

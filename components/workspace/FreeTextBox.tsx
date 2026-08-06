@@ -266,6 +266,20 @@ function RichBody({
   const paletteOpenRef = useRef(false);
   const saveTimer      = useRef<ReturnType<typeof setTimeout> | null>(null);
   const persistedRef   = useRef(false);
+  /**
+   * Content typed but not yet CONFIRMED saved. Cleared only on a 2xx.
+   *
+   * Autosave used to be a bare debounced fetch whose failure was swallowed and
+   * whose pending timer was cleared on unmount — so text typed in the 900ms
+   * before navigating to another surah, closing the panel or switching mode
+   * was discarded before it was ever sent. Destroying a TipTap editor emits
+   * "destroy" and then removeAllListeners(); it never emits "blur", so the
+   * commit-on-blur path could not cover it either.
+   *
+   * Holding the content here instead of relying on the editor means the flush
+   * still works after the editor is gone.
+   */
+  const pendingRef     = useRef<object | null>(null);
 
   // Surah being studied + verses on this page — for the tafsir verse picker
   // (same context the main editor reads; falls back to surah 1 on boards).
@@ -288,6 +302,54 @@ function RichBody({
   const cbRef = useRef({ onFocusChange, onEmptyChange, onUpdated, onDelete, onPersistTemp });
   cbRef.current = { onFocusChange, onEmptyChange, onUpdated, onDelete, onPersistTemp };
 
+  /**
+   * Send whatever is pending. Survives the page being torn down.
+   *
+   * `keepalive` is what lets the request outlive the document, so a flush
+   * fired from pagehide or from unmount-during-navigation still arrives.
+   * A failure keeps pendingRef set and retries once, matching what the drawing
+   * layer already does — before, one dropped request meant the edit was gone
+   * with nothing on screen to say so.
+   */
+  const flush = useCallback((opts: { keepalive?: boolean; retry?: boolean } = {}) => {
+    const { keepalive = false, retry = true } = opts;
+    const json = pendingRef.current;
+    const cur  = noteRef.current;
+    if (!json) return;
+
+    /* A container that has never reached the server is CREATED, not patched.
+       Without this branch, typing a new note and navigating away before
+       blurring lost it outright — it existed only in React state. The
+       create-once guard is the same one commit() uses, so a blur followed by
+       an unmount cannot POST twice. */
+    if (cur.id.startsWith("temp-")) {
+      if (persistedRef.current) return;
+      persistedRef.current = true;
+      cbRef.current.onPersistTemp?.(cur.id, json, { x: posRef.current.x, y: posRef.current.y });
+      return;
+    }
+
+    if (saveTimer.current) { clearTimeout(saveTimer.current); saveTimer.current = null; }
+
+    fetch(`/api/notes/${cur.id}`, {
+      method:  "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ content: json }),
+      keepalive,
+    })
+      .then((r) => {
+        if (!r.ok) throw new Error(String(r.status));
+        /* Only clear if nothing newer arrived while this was in flight —
+           otherwise a slow success would mark later keystrokes as saved. */
+        if (pendingRef.current === json) pendingRef.current = null;
+      })
+      .catch(() => {
+        if (retry && pendingRef.current === json) {
+          saveTimer.current = setTimeout(() => flush({ retry: false }), 3000);
+        }
+      });
+  }, []);
+
   const commit = useCallback((ed: Editor) => {
     const cur  = noteRef.current;
     const temp = cur.id.startsWith("temp-");
@@ -304,16 +366,28 @@ function RichBody({
       return;
     }
 
-    if (saveTimer.current) clearTimeout(saveTimer.current); // final content flushes now
+    if (saveTimer.current) { clearTimeout(saveTimer.current); saveTimer.current = null; }
+    pendingRef.current = json;   // stays set until the server confirms
     fetch(`/api/notes/${cur.id}`, {
       method:  "PATCH",
       headers: { "Content-Type": "application/json" },
       body:    JSON.stringify({ content: json }),
     })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d: { note?: NoteData } | null) => { if (d?.note) cbRef.current.onUpdated?.(d.note); })
-      .catch(() => {});
-  }, [posRef]);
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+      .then((d: { note?: NoteData } | null) => {
+        if (pendingRef.current === json) pendingRef.current = null;
+        if (d?.note) cbRef.current.onUpdated?.(d.note);
+      })
+      /* Leave pendingRef set on failure so the unmount / pagehide flush and
+         the retry below still have the text. Losing a blur-save used to be
+         silent AND permanent: the poll would then overwrite the editor with
+         the older server copy. */
+      .catch(() => {
+        if (pendingRef.current === json) {
+          saveTimer.current = setTimeout(() => flush({ retry: false }), 3000);
+        }
+      });
+  }, [posRef, flush]);
 
   const editor = useEditor({
     extensions: [
@@ -393,17 +467,15 @@ function RichBody({
          rather than tracked by hand, so deleting the last character hides the
          chrome again exactly as typing the first character showed it. */
       cbRef.current.onEmptyChange(editor.isEmpty);
-      // Debounced autosave while typing (server containers only —
-      // temps persist once on blur via onPersistTemp)
+      /* Recorded BEFORE the debounce, and for temps too, so an unmount or a
+         tab close inside the 900ms window still has something to save. A
+         brand-new container is the most valuable thing here — it exists only
+         in memory until its first POST lands. */
+      pendingRef.current = editor.isEmpty ? null : editor.getJSON();
+      // Temps are created, not patched: they persist via onPersistTemp.
       if (noteRef.current.id.startsWith("temp-")) return;
       if (saveTimer.current) clearTimeout(saveTimer.current);
-      saveTimer.current = setTimeout(() => {
-        fetch(`/api/notes/${noteRef.current.id}`, {
-          method:  "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body:    JSON.stringify({ content: editor.getJSON() }),
-        }).catch(() => {});
-      }, 900);
+      saveTimer.current = setTimeout(() => flush(), 900);
     },
 
     onFocus() { cbRef.current.onFocusChange(true); },
@@ -430,7 +502,27 @@ function RichBody({
     },
   });
 
-  useEffect(() => () => { if (saveTimer.current) clearTimeout(saveTimer.current); }, []);
+  /* Unmount FLUSHES rather than discarding. This cleanup used to be a bare
+     clearTimeout, which is what made "typed, navigated, lost it" possible:
+     the pending PATCH was cancelled and, because destroying the editor never
+     emits blur, commit() never ran either. */
+  useEffect(() => () => { flush({ keepalive: true }); }, [flush]);
+
+  /* …and the browser going away is the same event as far as the note is
+     concerned. pagehide covers closing the tab and the iOS back-forward
+     cache; visibilitychange covers switching app or tab, which on mobile is
+     usually the last callback that runs before the page is frozen. The main
+     editor and the drawing layer already do this; notes did not. */
+  useEffect(() => {
+    const onHide = () => flush({ keepalive: true });
+    const onVis  = () => { if (document.visibilityState === "hidden") onHide(); };
+    window.addEventListener("pagehide", onHide);
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      window.removeEventListener("pagehide", onHide);
+      document.removeEventListener("visibilitychange", onVis);
+    };
+  }, [flush]);
 
   // Remote content sync — skip while typing; never let an empty incoming doc
   // wipe non-empty local content (happens during the temp→server swap)

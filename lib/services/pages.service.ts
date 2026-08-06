@@ -170,6 +170,11 @@ export async function listPages(
       createdAt:      true,
       publishedAt:    true,
       createdBy:      { select: { id: true, name: true, avatarUrl: true } },
+      /* Deleting a page cascades to its notes (schema: StructuredNote.page
+         onDelete: Cascade), so the confirmation needs to be able to say how
+         many. Selections already warn with real numbers via selectionImpact();
+         pages destroyed their notes silently. */
+      _count:         { select: { notes: true } },
     },
   });
 
