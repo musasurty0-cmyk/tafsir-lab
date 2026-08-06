@@ -1,0 +1,57 @@
+# Refuse work that does not typecheck, lint or pass its tests.
+#
+# This exists because `npm run lint` sat broken for weeks after the Next 16
+# upgrade — the command it called had been removed, and nothing was watching.
+# A check nobody runs is not a check. Running it on every push is the only
+# version of this that survives a busy week.
+#
+# No database and no secrets: the suite is deliberately made of pure logic, so
+# CI never needs production credentials to be useful.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# A new push supersedes an in-flight run on the same branch.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # Matches the engines field in package.json.
+          node-version: 20
+          cache: npm
+
+      # `npm ci` runs postinstall, which copies the MuPDF WASM and writes the
+      # build id — both are needed before anything typechecks.
+      - name: Install
+        run: npm ci
+
+      # The Prisma client is generated, not committed, so nothing that imports
+      # `db` will typecheck until this has run. No connection is opened.
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      # Zero errors is the bar. The remaining warnings are React Compiler
+      # advisories about working code; failing on those would make the gate
+      # noise rather than signal.
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test
