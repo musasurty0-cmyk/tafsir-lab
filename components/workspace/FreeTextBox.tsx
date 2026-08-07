@@ -52,6 +52,7 @@ import SelectionToolbar from "./editor/SelectionToolbar";
 import TafsirVersePicker from "./editor/TafsirVersePicker";
 import { useEditorCtxOptional } from "./editor/EditorContext";
 import type { NoteData } from "./NoteCard";
+import { StaticDoc, docIsEmpty } from "@/lib/prosemirror-static";
 
 /** Default width for a freshly placed container — wide enough that the slash
  *  palette, ayah/tafsir search results and toolbars are comfortable without
@@ -648,8 +649,25 @@ function RichBody({
       });
   }, [editor]);
 
+  /* Until TipTap has mounted, paint the stored document statically in the same
+     typography classes the editor uses. `immediatelyRender` has to stay false
+     (notes are seeded from server-rendered page data, so TipTap's own DOM would
+     not match on hydration) — which otherwise leaves every box EMPTY while
+     fifteen extensions build a schema. On a canvas of notes that is several
+     ProseMirror instances in series, and a box that sits blank then pops reads
+     as "my note is gone", not "my note is loading".
+
+     Both layers are the same text in the same place, so the handover has
+     nothing to see. */
+  const showStatic = !editor && !docIsEmpty(note.content);
+
   return (
     <>
+      {showStatic && (
+        <div className="page-editor-content free-textbox-richbody" aria-hidden>
+          <StaticDoc content={note.content} />
+        </div>
+      )}
       <EditorContent editor={editor} />
 
       {/* Same floating formatting toolbar as the main editor */}
