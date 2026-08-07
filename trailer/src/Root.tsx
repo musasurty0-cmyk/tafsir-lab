@@ -10,6 +10,7 @@ import { StrokeReel, STROKE_FRAMES } from "./reel/StrokeReel";
 import { SearchReel, SEARCH_FRAMES } from "./reel/SearchReel";
 import { DosariReel, REEL_FRAMES as DOSARI_FRAMES } from "./reel/DosariReel";
 import { LectureClip } from "./reel/LectureClip";
+import { WordsNotNumber, WORDS_FRAMES } from "./reel/WordsNotNumber";
 import CLIP1 from "./reel/tafsir-clip1.json";
 import CLIP2 from "./reel/tafsir-clip2.json";
 
@@ -58,6 +59,18 @@ export const RemotionRoot: React.FC = () => {
         width={1080}
         height={1920}
         defaultProps={CLIP2}
+      />
+
+      {/* Reel 08 — you remember the wording, never the reference. Built on
+          the app's own .qs-panel metrics and .qs-mark highlight. */}
+      <Composition
+        id="WordsNotNumber"
+        component={WordsNotNumber}
+        durationInFrames={WORDS_FRAMES}
+        fps={60}
+        width={1080}
+        height={1920}
+        defaultProps={{}}
       />
 
       {/* Instagram Reel — 9:16, the /link feature end to end. */}
