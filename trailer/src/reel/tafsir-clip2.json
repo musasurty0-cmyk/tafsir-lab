@@ -1,0 +1,18 @@
+{
+  "src": "tafsir-clip2.mp4",
+  "clipSeconds": 23,
+  "outroSeconds": 5,
+  "closing": "Without tafsīr, it is only words.",
+  "captions": [
+    { "s": 0.0,  "e": 5.3,  "en": "The wisdom of why the Qur'ān was sent down is for you to contemplate it." },
+    { "s": 5.5,  "e": 8.2,  "en": "That is the wisdom behind why it was sent down." },
+
+    { "s": 8.4,  "e": 9.0,  "ar": "لِلتَّدَبُّرِ", "en": "For contemplation." },
+
+    { "s": 9.1,  "e": 13.7, "en": "If you are not pondering the Qur'ān, that wisdom is lost." },
+
+    { "s": 15.2, "e": 19.6, "ar": "وَصَارَ مُجَرَّدَ أَلْفَاظٍ لَا تَأْثِيرَ لَهَا",
+                            "en": "And it became merely words with no effect." },
+    { "s": 19.7, "e": 22.9, "en": "It just becomes words that have no effect." }
+  ]
+}

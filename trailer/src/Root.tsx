@@ -8,6 +8,10 @@ import { SurahStudy, STUDY_FRAMES } from "./reel/SurahStudy";
 import { ToolsReel, TOOLS_FRAMES } from "./reel/ToolsReel";
 import { StrokeReel, STROKE_FRAMES } from "./reel/StrokeReel";
 import { SearchReel, SEARCH_FRAMES } from "./reel/SearchReel";
+import { DosariReel, REEL_FRAMES as DOSARI_FRAMES } from "./reel/DosariReel";
+import { LectureClip } from "./reel/LectureClip";
+import CLIP1 from "./reel/tafsir-clip1.json";
+import CLIP2 from "./reel/tafsir-clip2.json";
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -20,6 +24,40 @@ export const RemotionRoot: React.FC = () => {
         width={1920}
         height={1080}
         defaultProps={{}}
+      />
+
+      {/* Reel — a subtitled clip of Shaykh Yasser al-Dosari, closing on the
+          argument he is already making. 30fps to match the source footage. */}
+      <Composition
+        id="DosariReel"
+        component={DosariReel}
+        durationInFrames={DOSARI_FRAMES}
+        fps={30}
+        width={1080}
+        height={1920}
+        defaultProps={{}}
+      />
+
+      {/* Two cuts from Ustadh AbdulRahman Hassan on what tafsir is and why
+          learning it is obligatory. Same card geometry as DosariReel, no
+          nasheed — these are continuous speech with no silence to fill. */}
+      <Composition
+        id="TafsirWhatItIs"
+        component={LectureClip}
+        durationInFrames={Math.round((CLIP1.clipSeconds + CLIP1.outroSeconds) * 25)}
+        fps={25}
+        width={1080}
+        height={1920}
+        defaultProps={CLIP1}
+      />
+      <Composition
+        id="TafsirJustWords"
+        component={LectureClip}
+        durationInFrames={Math.round((CLIP2.clipSeconds + CLIP2.outroSeconds) * 25)}
+        fps={25}
+        width={1080}
+        height={1920}
+        defaultProps={CLIP2}
       />
 
       {/* Instagram Reel — 9:16, the /link feature end to end. */}

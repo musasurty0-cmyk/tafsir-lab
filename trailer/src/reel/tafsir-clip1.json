@@ -1,0 +1,31 @@
+{
+  "src": "tafsir-clip1.mp4",
+  "clipSeconds": 63,
+  "outroSeconds": 5,
+  "closing": "Tafsīr is how the Qur'ān stops being words you pass over.",
+  "captions": [
+    { "s": 0.0,  "e": 3.2,  "en": "The Shaykh, may Allah have mercy on him, now mentions tafsīr." },
+    { "s": 3.3,  "e": 7.4,  "en": "Tafsīr, linguistically, comes from al-fasr — which means what?" },
+
+    { "s": 7.5,  "e": 9.6,  "ar": "وَهُوَ الْكَشْفُ عَنِ الْمُغَطَّى",
+                            "en": "It is the uncovering of what is covered." },
+    { "s": 9.7,  "e": 17.0, "en": "To remove the veil from something — to make it clear, open and apparent." },
+
+    { "s": 18.2, "e": 21.6, "ar": "وَفِي الاِصْطِلَاحِ: بَيَانُ مَعَانِي الْقُرْآنِ الْكَرِيمِ",
+                            "en": "And in terminology: clarifying the meanings of the Noble Qur'ān." },
+    { "s": 21.7, "e": 26.5, "en": "It is to clarify the meaning of the Qur'ān." },
+
+    { "s": 37.3, "e": 41.2, "ar": "وَتَعَلُّمُ التَّفْسِيرِ وَاجِبٌ",
+                            "en": "And learning tafsīr is obligatory." },
+    { "s": 41.3, "e": 44.4, "en": "Learning tafsīr is wājib — as Allah, the Most High, said:" },
+
+    { "s": 45.0, "e": 49.6, "ar": "كِتَابٌ أَنْزَلْنَاهُ إِلَيْكَ مُبَارَكٌ",
+                            "en": "“A blessed Book We have sent down to you…”" },
+    { "s": 49.9, "e": 54.6, "en": "A book We sent down, mubārak — full of barakah. Why did We send it down?" },
+
+    { "s": 55.5, "e": 58.7, "ar": "لِيَدَّبَّرُوا آيَاتِهِ",
+                            "en": "“…that they may ponder its verses”" },
+    { "s": 59.2, "e": 62.9, "ar": "وَلِيَتَذَكَّرَ أُولُو الْأَلْبَابِ",
+                            "en": "“and that those of understanding may remember.”" }
+  ]
+}
