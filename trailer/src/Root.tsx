@@ -11,6 +11,7 @@ import { SearchReel, SEARCH_FRAMES } from "./reel/SearchReel";
 import { DosariReel, REEL_FRAMES as DOSARI_FRAMES } from "./reel/DosariReel";
 import { LectureClip } from "./reel/LectureClip";
 import { WordsNotNumber, WORDS_FRAMES } from "./reel/WordsNotNumber";
+import { ReturnToTheAyah, RETURN_FRAMES } from "./reel/ReturnToTheAyah";
 import CLIP1 from "./reel/tafsir-clip1.json";
 import CLIP2 from "./reel/tafsir-clip2.json";
 
@@ -59,6 +60,18 @@ export const RemotionRoot: React.FC = () => {
         width={1080}
         height={1920}
         defaultProps={CLIP2}
+      />
+
+      {/* One container, seven surfaces, and it comes back to the geometry it
+          started in — the loop closes rather than replaying. */}
+      <Composition
+        id="ReturnToTheAyah"
+        component={ReturnToTheAyah}
+        durationInFrames={RETURN_FRAMES}
+        fps={60}
+        width={1080}
+        height={1920}
+        defaultProps={{}}
       />
 
       {/* Reel 08 — you remember the wording, never the reference. Built on
