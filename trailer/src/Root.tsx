@@ -12,6 +12,7 @@ import { DosariReel, REEL_FRAMES as DOSARI_FRAMES } from "./reel/DosariReel";
 import { LectureClip } from "./reel/LectureClip";
 import { WordsNotNumber, WORDS_FRAMES } from "./reel/WordsNotNumber";
 import { ReturnToTheAyah, RETURN_FRAMES } from "./reel/ReturnToTheAyah";
+import { NoEffect, NOEFFECT_FRAMES } from "./reel/NoEffect";
 import CLIP1 from "./reel/tafsir-clip1.json";
 import CLIP2 from "./reel/tafsir-clip2.json";
 
@@ -60,6 +61,18 @@ export const RemotionRoot: React.FC = () => {
         width={1080}
         height={1920}
         defaultProps={CLIP2}
+      />
+
+      {/* Flagship v2 — physics, not states. Every flying object runs the
+          tracked arc from searchCurves. */}
+      <Composition
+        id="NoEffect"
+        component={NoEffect}
+        durationInFrames={NOEFFECT_FRAMES}
+        fps={60}
+        width={1080}
+        height={1920}
+        defaultProps={{}}
       />
 
       {/* One container, seven surfaces, and it comes back to the geometry it
