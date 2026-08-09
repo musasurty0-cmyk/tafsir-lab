@@ -23,6 +23,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useEditor, EditorContent, type Editor } from "@tiptap/react";
+import { StaticDoc, docIsEmpty } from "@/lib/prosemirror-static";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import Underline from "@tiptap/extension-underline";
@@ -297,6 +298,9 @@ export default function PageEditor({
   // keyed by pageId in ModeAPage, so one instance = one room for its
   // whole lifetime.
   const collabRef  = useRef<{ ydoc: Y.Doc; provider: YPartyKitProvider } | null>(null);
+  /* False until Yjs holds the real document. Until then the stored snapshot is
+     painted underneath, so the page is never blank while the socket connects. */
+  const [collabSynced, setCollabSynced] = useState(false);
   const mountedRef = useRef(false);
 
   if (!collabRef.current) {
@@ -565,6 +569,11 @@ export default function PageEditor({
       if (fragment.length === 0 && initialContent) {
         editor.commands.setContent(initialContent as object);
       }
+      /* Drop the pre-paint only once the real document is in hand — whether it
+         came over the wire or was just seeded from the snapshot. Keying this
+         off the same signal that already gates seeding means the two can never
+         disagree about when the editor is authoritative. */
+      setCollabSynced(true);
     }
 
     if (provider.synced) seed();
@@ -930,6 +939,24 @@ export default function PageEditor({
           <span className="free-textbox-gripdots" aria-hidden>⋯⋯</span>
         </div>
         <EditorContent editor={editor} />
+
+        {/* The page's stored text, painted while Yjs is still catching up.
+            Content in this editor does NOT come from initialContent — it
+            arrives over the websocket, behind a collab-token fetch, a socket
+            handshake and a sync. Three sequential network steps, on every page
+            change, because the component is keyed by pageId and builds a fresh
+            room each time. Until they finish the document is genuinely empty,
+            which is the several seconds of blank page.
+
+            The text was in initialContent the whole time. This shows it, in the
+            same typography, and gets out of the way the moment Yjs has the
+            real document. Never interactive: the editor underneath owns every
+            click, so a caret placed before sync still lands in the real doc. */}
+        {!collabSynced && !docIsEmpty(initialContent) && (
+          <div className="page-editor-content page-editor-prepaint" aria-hidden>
+            <StaticDoc content={initialContent} />
+          </div>
+        )}
       </div>
       <SelectionToolbar editor={editor} />
       {/* The ⋮⋮ grip that appears beside whichever block the mouse is near. */}

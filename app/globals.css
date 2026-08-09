@@ -10357,3 +10357,14 @@ input, textarea { font: inherit; color: inherit; }
 
 .ctr-size-slider::-webkit-slider-thumb { corner-shape: round; }
 .ctr-size-slider::-moz-range-thumb { corner-shape: round; }
+
+/* Pre-paint: the page's stored text, shown while Yjs connects and syncs.
+   Overlays the editor exactly and is never interactive — the real editor
+   underneath keeps every click, so a caret placed before sync lands in the
+   real document. Removed the instant the collab provider reports synced. */
+.page-editor-prepaint {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
