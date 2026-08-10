@@ -29,7 +29,7 @@ import Placeholder from "@tiptap/extension-placeholder";
 import Underline from "@tiptap/extension-underline";
 import Highlight from "@tiptap/extension-highlight";
 import Color from "@tiptap/extension-color";
-import { TextStyle, FontFamily } from "@tiptap/extension-text-style";
+import { TextStyle, FontFamily, FontSize } from "@tiptap/extension-text-style";
 import Link from "@tiptap/extension-link";
 import TaskList from "@tiptap/extension-task-list";
 import TaskItem from "@tiptap/extension-task-item";
@@ -434,6 +434,10 @@ function RichBody({
       Highlight.configure({ multicolor: true }),
       TextStyle,
       FontFamily,
+      /* Without this the toolbar's size control has nothing to act on — the
+         canvas box loaded TextStyle and FontFamily but never FontSize, so
+         changing size in a note silently did nothing. */
+      FontSize,
       Color,
       Subscript,
       Superscript,

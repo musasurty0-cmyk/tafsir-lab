@@ -233,7 +233,7 @@ input, textarea { font: inherit; color: inherit; }
 .app {
   display: grid;
   grid-template-columns: var(--rail) var(--sidebar) minmax(0, 1fr);
-  height: 100vh;
+  height: 100vh; height: 100dvh;
   width: 100vw;
   overflow: hidden;
   background: var(--bg);
@@ -1205,7 +1205,7 @@ input, textarea { font: inherit; color: inherit; }
 .autosave-badge[data-saving="true"] { color: var(--accent); }
 
 /* ── Surah grid (homepage) ── */
-.surah-grid-page { height: 100vh; overflow-y: auto; background: var(--bg); padding: 40px; }
+.surah-grid-page { height: 100vh; height: 100dvh; overflow-y: auto; background: var(--bg); padding: 40px; }
 .surah-grid-header { margin-bottom: 32px; }
 .surah-grid-header h1 { font-family: var(--font-serif); font-size: 32px; font-weight: 600; letter-spacing: -0.02em; color: var(--ink); }
 .surah-grid-header p { color: var(--ink-3); margin-top: 6px; }
@@ -1234,7 +1234,7 @@ input, textarea { font: inherit; color: inherit; }
 
 /* ── Login page ── */
 .login-page {
-  min-height: 100vh; display: grid; place-items: center;
+  min-height: 100vh; min-height: 100dvh; display: grid; place-items: center;
   background: var(--bg); padding: 40px 20px;
 }
 .login-card {
@@ -1314,7 +1314,7 @@ input, textarea { font: inherit; color: inherit; }
 
 /* ── Setup / picker screens ── */
 .setup-screen {
-  min-height: 100vh; display: grid; place-items: center;
+  min-height: 100vh; min-height: 100dvh; display: grid; place-items: center;
   background: var(--bg); padding: 40px 20px;
 }
 .setup-card, .picker-card {
@@ -1458,7 +1458,7 @@ input, textarea { font: inherit; color: inherit; }
 
 /* ── /home — personal study dashboard ── */
 .home-page {
-  min-height: 100vh; background: var(--bg);
+  min-height: 100vh; min-height: 100dvh; background: var(--bg);
   display: flex; flex-direction: column;
 }
 
@@ -1799,7 +1799,7 @@ input, textarea { font: inherit; color: inherit; }
 .workspace-home {
   display: grid;
   grid-template-columns: var(--rail) 1fr;
-  height: 100vh; width: 100vw; overflow: hidden;
+  height: 100vh; height: 100dvh; width: 100vw; overflow: hidden;
   background: var(--bg);
 }
 .workspace-home-content {
@@ -1989,7 +1989,7 @@ input, textarea { font: inherit; color: inherit; }
 .workspace-page {
   display: grid;
   grid-template-columns: var(--rail) var(--sidebar) minmax(0, 1fr);
-  height: 100vh; width: 100vw; overflow: hidden;
+  height: 100vh; height: 100dvh; width: 100vw; overflow: hidden;
   background: var(--bg);
   transition: grid-template-columns 0.2s ease;
 }
@@ -6590,7 +6590,7 @@ input, textarea { font: inherit; color: inherit; }
   --bt-body:    "Sora", system-ui, sans-serif;
   --bt-arabic:  "Scheherazade New", "Amiri Quran", "Amiri", serif;
 
-  height: 100vh;
+  height: 100vh; height: 100dvh;
   display: flex;
   flex-direction: column;
   background: var(--bt-bg);
@@ -8145,7 +8145,7 @@ input, textarea { font: inherit; color: inherit; }
 
 /* ── Responsive ── */
 @media (max-width: 768px) {
-  .bt { height: auto; min-height: 100vh; overflow: auto; }
+  .bt { height: auto; min-height: 100vh; min-height: 100dvh; overflow: auto; }
   .bt-body { overflow: visible; }
   .bt-shell {
     grid-template-columns: 1fr;
@@ -8192,7 +8192,7 @@ input, textarea { font: inherit; color: inherit; }
   --lp-display:   "Spectral", Georgia, serif;
   --lp-body:      "Sora", system-ui, sans-serif;
 
-  min-height: 100vh;
+  min-height: 100vh; min-height: 100dvh;
   background: var(--lp-bg);
   color: var(--lp-ink);
   font-family: var(--lp-body);
@@ -8535,7 +8535,7 @@ input, textarea { font: inherit; color: inherit; }
 .wls-root {
   display: grid;
   grid-template-columns: var(--rail) var(--sidebar) minmax(0, 1fr);
-  height: 100vh; width: 100vw; overflow: hidden;
+  height: 100vh; height: 100dvh; width: 100vw; overflow: hidden;
   background: var(--bg);
 }
 .wls-rail {
@@ -8814,7 +8814,7 @@ input, textarea { font: inherit; color: inherit; }
 
 .notes-review-page {
   display: flex;
-  height: 100vh;
+  height: 100vh; height: 100dvh;
   background: var(--bg);
 }
 .notes-review-main {
@@ -10374,3 +10374,26 @@ input, textarea { font: inherit; color: inherit; }
    and menus, but it left a global "Reading size" control doing nothing on the
    dashboard, which is where people look first. A sūrah's name and its Arabic
    are content, not chrome. The card's number stays fixed: that is a label. */
+
+/* iOS Safari: 100vh is the LARGEST viewport — measured with the browser chrome
+   hidden — so a full-height shell is taller than what is actually on screen and
+   the bottom of it (the canvas zoom control) sits below the fold. Every
+   full-height rule above is paired with 100dvh, which tracks the visible
+   viewport as the chrome shows and hides. The vh line stays first as the
+   fallback for browsers without dvh. */
+
+/* Text inside a canvas note must be selectable. The canvas wrapper sets
+   user-select: none so dragging the surface never smears a selection across
+   the page — but that cascades into the boxes, so drag-selecting a word inside
+   one did nothing and the gesture fell through to panning instead. */
+.free-textbox,
+.free-textbox * {
+  user-select: text;
+  -webkit-user-select: text;
+}
+.free-textbox .free-textbox-chrome,
+.free-textbox .free-textbox-gripdots,
+.free-textbox .free-textbox-delete {
+  user-select: none;
+  -webkit-user-select: none;
+}

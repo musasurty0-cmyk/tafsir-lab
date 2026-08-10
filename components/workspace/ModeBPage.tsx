@@ -1227,8 +1227,13 @@ export default function ModeBPage({
     // call preventDefault or setPointerCapture. preventDefault on pen events
     // prevents the browser from generating click events, so tool-rail buttons
     // would never fire their onClick and the tool change would be lost.
+    /* .free-textbox and .anc-note included, matching the TOUCH guard above.
+       Without them a pointer drag starting inside a note was treated as a
+       canvas pan, so dragging across a word moved the surface instead of
+       selecting the text. The two guards must list the same things or the
+       gesture behaves differently depending on the input device. */
     const isInteractiveTarget = !!(e.target as HTMLElement).closest(
-      'button, a, input, select, textarea, [role="button"]',
+      'button, a, input, select, textarea, [role="button"], .free-textbox, .anc-note',
     );
     if (isInteractiveTarget) return;
 
@@ -1257,8 +1262,13 @@ export default function ModeBPage({
     // links) — that would kill click synthesis and break onClick handlers.
     // Belt-and-suspenders: CanvasToolRail already stops pointer-up propagation,
     // but guard here too in case any interactive child bubbles through.
+    /* .free-textbox and .anc-note included, matching the TOUCH guard above.
+       Without them a pointer drag starting inside a note was treated as a
+       canvas pan, so dragging across a word moved the surface instead of
+       selecting the text. The two guards must list the same things or the
+       gesture behaves differently depending on the input device. */
     const isInteractiveTarget = !!(e.target as HTMLElement).closest(
-      'button, a, input, select, textarea, [role="button"]',
+      'button, a, input, select, textarea, [role="button"], .free-textbox, .anc-note',
     );
     // Prevent mouseup / click compat events after each pen stroke,
     // but only when the pointer-up is on the canvas surface itself.
