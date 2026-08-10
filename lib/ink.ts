@@ -43,6 +43,42 @@ export function normPts(raw: unknown[]): Pt[] {
   return (raw as { x: number; y: number }[]).map((p) => [p.x, p.y, 0.5]);
 }
 
+/* ── Storage form ──────────────────────────────────────────────────────────
+   A point was being stored as {"x":574.2222290039062,"y":81.33333206176758}:
+   float64 precision, with the keys repeated once per point. At 34 points a
+   stroke and 548 strokes a drawing that came to 0.71 MB per ayah on disk —
+   about 4.3 GB for one person annotating the whole Qur'an.
+
+   Rounding to 0.1px and storing bare tuples measured 10.3x smaller on the real
+   strokes in the database, with EVERY point kept. Nothing is simplified away:
+   Douglas-Peucker was tried and bought only 19% more while discarding 96% of
+   the points, which flattens handwriting into polylines. 0.1px is below what
+   any display can resolve, so this cannot change the shape of a stroke.
+
+   normPts above already reads both shapes, so old drawings keep working and
+   are re-encoded the next time they are saved.                              */
+
+/** Round to a tenth of a pixel. Sub-0.1px precision is unrenderable. */
+const q = (n: number) => Math.round(n * 10) / 10;
+
+/**
+ * Put one stroke into its storage form. Idempotent — a stroke already packed
+ * passes through unchanged, so it is safe to run on merged old-and-new data.
+ */
+export function packStroke<T extends { points?: unknown }>(s: T): T {
+  const raw = Array.isArray(s.points) ? s.points : [];
+  if (!raw.length) return s;
+  const pts = normPts(raw as unknown[]).map(
+    (p) => [q(p[0]), q(p[1]), p[2] ?? 0.5] as Pt,
+  );
+  return { ...s, points: pts };
+}
+
+/** Every stroke in a drawing, in storage form. */
+export function packStrokes<T extends { points?: unknown }>(strokes: T[]): T[] {
+  return strokes.map(packStroke);
+}
+
 // ── Geometry ───────────────────────────────────────────────────────────────
 
 export function distToSeg(
