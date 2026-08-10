@@ -50,6 +50,8 @@ import {
 import CommandList, { type CommandListHandle } from "./editor/CommandList";
 import SelectionToolbar from "./editor/SelectionToolbar";
 import TafsirVersePicker from "./editor/TafsirVersePicker";
+import QuranSearch from "./editor/QuranSearch";
+import type { SearchTarget } from "@/lib/quran-search";
 import { useEditorCtxOptional } from "./editor/EditorContext";
 import type { NoteData } from "./NoteCard";
 import { StaticDoc, docIsEmpty } from "@/lib/prosemirror-static";
@@ -292,6 +294,13 @@ function RichBody({
   // /ayah command — is chosen WITHOUT a verse key, so the user picks the āyah
   // within the surah they're studying. `kind` decides what gets inserted on
   // confirm: a tafsir block, or the verse's plain Arabic + translation text.
+  /* /ayah opens the SAME whole-Qur'an search the main editor uses. It used to
+     open TafsirVersePicker, which only lists ayat of the surah being studied —
+     so on the canvas you could not reach a verse outside it. The two surfaces
+     are the same command and must reach the same place. */
+  const [ayahSearch, setAyahSearch] = useState<{
+    range: { from: number; to: number }; rect: DOMRect;
+  } | null>(null);
   const [versePicker, setVersePicker] = useState<{
     kind: "tafsir" | "ayah";
     slug: string; sourceName: string; range: { from: number; to: number }; rect: DOMRect;
@@ -581,7 +590,7 @@ function RichBody({
         paletteOpenRef.current = false;
         setPalette(null);
         if (keyMatch) insertAyahInline(keyMatch[0], range);
-        else setVersePicker({ kind: "ayah", slug: "", sourceName: "Āyah", range, rect: palette.rect });
+        else setAyahSearch({ range, rect: palette.rect });
         return;
       }
 
@@ -703,6 +712,35 @@ function RichBody({
 
       {/* Verse picker — surah fixed to what's being studied, pick the āyah.
           Confirms into a tafsir block or inline āyah text per picker.kind. */}
+      {ayahSearch && typeof document !== "undefined" &&
+        createPortal(
+          (() => {
+            const W = 380, MAX_H = 400;
+            const left = Math.max(8, Math.min(ayahSearch.rect.left, window.innerWidth - W - 12));
+            const below = window.innerHeight - ayahSearch.rect.bottom;
+            const openUp = below < MAX_H + 12 && ayahSearch.rect.top > below;
+            const pos: React.CSSProperties = openUp
+              ? { position: "fixed", bottom: window.innerHeight - ayahSearch.rect.top + 6, left, zIndex: 9999 }
+              : { position: "fixed", top: ayahSearch.rect.bottom + 6, left, zIndex: 9999 };
+            return (
+              <div style={pos}>
+                <QuranSearch
+                  kinds={["ayah"]}
+                  onSelect={(t: SearchTarget) => {
+                    const { range } = ayahSearch;
+                    setAyahSearch(null);
+                    if (t.surah != null && t.ayah != null) {
+                      insertAyahInline(`${t.surah}:${t.ayah}`, range);
+                    }
+                  }}
+                  onCancel={() => setAyahSearch(null)}
+                />
+              </div>
+            );
+          })(),
+          document.body,
+        )}
+
       {versePicker && (
         <TafsirVersePicker
           surah={studySurah}
