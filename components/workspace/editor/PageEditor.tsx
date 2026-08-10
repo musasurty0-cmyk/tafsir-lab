@@ -24,6 +24,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useEditor, EditorContent, type Editor } from "@tiptap/react";
 import { baseExtensions } from "./sharedExtensions";
+import { useConnectionLink } from "./useConnectionLink";
 import { StaticDoc, docIsEmpty } from "@/lib/prosemirror-static";
 import Table from "@tiptap/extension-table";
 import TableRow from "@tiptap/extension-table-row";
@@ -54,8 +55,6 @@ import SlashHelp from "./SlashHelp";
 import { useEditorCtxOptional } from "./EditorContext";
 import TafsirVersePicker from "./TafsirVersePicker";
 import QuranSearch from "./QuranSearch";
-import ConnectionForm, { type Endpoint } from "./ConnectionForm";
-import { ayahKey, surahKey, selectionKey } from "@/lib/quran-objects";
 import { parseReference, type SearchTarget } from "@/lib/quran-search";
 
 // ── Constants ──────────────────────────────────────────────────────────────
@@ -123,29 +122,6 @@ export default function PageEditor({
     range: { from: number; to: number };
     rect:  DOMRect;
   } | null>(null);
-
-  /* /link runs in two stages and keeps its OWN state throughout. It never
-     touches ayahSearch: the two commands share a search component but not a
-     single byte of state, so cancelling one cannot leave the other half-open. */
-  const [linkStage, setLinkStage] = useState<
-    /* "pick" fills ONE end and remembers the other, so either side can be
-       chosen or changed. Previously only the target was selectable and the
-       source was silently the current surah — which meant the user controlled
-       half of their own Connection. */
-    | {
-        step: "pick"; which: "source" | "target";
-        range: { from: number; to: number }; rect: DOMRect;
-        source?: Endpoint; target?: Endpoint;
-      }
-    | { step: "form"; range: { from: number; to: number }; rect: DOMRect; source: Endpoint; target: Endpoint }
-    | null
-  >(null);
-  const [linkBusy,  setLinkBusy]  = useState(false);
-  const [linkError, setLinkError] = useState<string | null>(null);
-  const [linkDupe,  setLinkDupe]  = useState<{ id: string; name: string } | null>(null);
-  /** Saved Selections offered as /link targets. Loaded lazily — only /link
-   *  needs them, so /ayah never pays for the request. */
-  const [selectionTargets, setSelectionTargets] = useState<import("@/lib/quran-search").SearchTarget[]>([]);
 
   const [tafsirChoice, setTafsirChoice] = useState<{
     verseKey: string;
@@ -502,6 +478,12 @@ export default function PageEditor({
     },
   });
 
+  /* /link, from the shared hook. Both surfaces run the same four-step flow and
+     the same rules — self-connection refused at choose time, a 409 offering the
+     existing Connection, a card that fails to insert never losing the saved
+     work. Two copies of that meant two copies of every rule inside it. */
+  const { openLink, linkUI } = useConnectionLink({ editor, workspaceId, currentSurah: studySurah });
+
   // ── One-time content seeding ──────────────────────────────────────────
   // After the provider completes its first sync: if the shared Yjs doc is
   // still empty but the DB has content (pages created before live collab,
@@ -605,9 +587,7 @@ export default function PageEditor({
            asserted. The picker searches āyāt, Selections and Surahs, and
            carries the current Surah, so typing a bare number resolves inside
            it; picking the whole Surah is still one keystroke away. */
-        setLinkStage({
-          step: "pick", which: "source", range, rect: palette.rect,
-        });
+        openLink(range, palette.rect);
         setPalette(null);
         return;
       }
@@ -655,139 +635,10 @@ export default function PageEditor({
    
   }, [editor, ayahSearch]);
 
-  /* Load the workspace Selections once /link opens, so they can be offered as
-     targets alongside ayat and Surahs. */
-  useEffect(() => {
-    if (!linkStage) return;
-    fetch(`/api/workspaces/${workspaceId}/segments`)
-      .then((r) => (r.ok ? r.json() : { segments: [] }))
-      .then((d) => setSelectionTargets(
-        (d.segments ?? []).map((sg: { id: string; name: string; surahNumber: number; startAyah: number; endAyah: number }) => ({
-          kind: "selection" as const,
-          id: sg.id,
-          label: sg.name || `Selection ${sg.startAyah}–${sg.endAyah}`,
-          preview: `${sg.startAyah}–${sg.endAyah}`,
-        })),
-      ))
-      .catch(() => setSelectionTargets([]));
-  }, [linkStage, workspaceId]);
-
-  /** Close /link and put the caret back where the command was typed, with the
-   *  "/link" text removed so no orphan command survives a cancel. */
-  const closeLink = useCallback((removeCommand = true) => {
-    const st = linkStage;
-    setLinkStage(null);
-    setLinkBusy(false);
-    setLinkError(null);
-    setLinkDupe(null);
-    if (removeCommand && editor && st) {
-      editor.chain().focus().deleteRange(st.range).run();
-    }
-  }, [editor, linkStage]);
-
-  const chooseLinkTarget = useCallback((t: import("@/lib/quran-search").SearchTarget) => {
-    if (!linkStage || linkStage.step !== "pick") return;
-
-    const picked: Endpoint =
-      t.kind === "ayah"
-        ? { type: "ayah", key: ayahKey(t.surah ?? 1, t.ayah ?? 1), label: t.label, arabic: t.arabic }
-        : t.kind === "selection"
-        ? { type: "selection", key: selectionKey(t.id), label: t.label }
-        // A Surah label carries its ayah count for search; drop that here,
-        // where it is an endpoint rather than a result.
-        : { type: "surah", key: surahKey(t.surah ?? Number(t.id)), label: t.label.split(" · ")[0] };
-
-    const source = linkStage.which === "source" ? picked : linkStage.source;
-    const target = linkStage.which === "target" ? picked : linkStage.target;
-
-    if (source && target && source.key === target.key) {
-      /* Refused here as well as on the server, so the user is told at the
-         moment of choosing rather than after a round trip. The picker stays
-         open so they can choose again without starting over. */
-      setLinkError("An object cannot be connected to itself");
-      return;
-    }
-    setLinkError(null);
-
-    // Both ends known → name the relationship. Otherwise keep picking.
-    if (source && target) {
-      setLinkStage({ step: "form", range: linkStage.range, rect: linkStage.rect, source, target });
-    } else {
-      setLinkStage({ ...linkStage, source, target, which: source ? "target" : "source" });
-    }
-  }, [linkStage]);
-
-  /** Reopen the picker for one end of a Connection being composed. */
-  const repickEndpoint = useCallback((which: "source" | "target") => {
-    if (!linkStage || linkStage.step !== "form") return;
-    setLinkError(null);
-    setLinkStage({
-      step: "pick", which,
-      range: linkStage.range, rect: linkStage.rect,
-      // Keep the OTHER end, so changing one side never discards the other.
-      source: which === "source" ? undefined : linkStage.source,
-      target: which === "target" ? undefined : linkStage.target,
-    });
-  }, [linkStage]);
-
-  const submitConnection = useCallback((v: {
-    name: string; commentary?: string; category?: string; tags: string[];
-  }) => {
-    if (!linkStage || linkStage.step !== "form" || !editor) return;
-    const { source, target, range } = linkStage;
-    setLinkBusy(true);
-    setLinkError(null);
-
-    fetch(`/api/workspaces/${workspaceId}/connections`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        sourceType: source.type, sourceKey: source.key,
-        targetType: target.type, targetKey: target.key,
-        ...v,
-      }),
-    })
-      .then(async (r) => {
-        const d = await r.json().catch(() => ({}));
-        if (r.status === 409 && d.existing) {
-          // Already connected: offer the existing Connection instead of
-          // reporting a failure, keeping what was typed in the meantime.
-          setLinkDupe({ id: d.existing.id, name: d.existing.name });
-          return null;
-        }
-        if (!r.ok) throw new Error(d.error ?? String(r.status));
-        return d.connection;
-      })
-      .then((conn) => {
-        if (!conn) return;
-        /* Insert a card that REFERENCES the record by id. The Connection is
-           already saved, so a failure here loses a card, never the work. */
-        try {
-          editor.chain().focus()
-            .deleteRange(range)
-            .insertContent([
-              { type: "connectionBlock", attrs: { connectionId: conn.id } },
-              { type: "paragraph" },
-            ])
-            .focus()
-            .scrollIntoView()
-            .run();
-        } catch {
-          setLinkError("Connection saved, but the card could not be inserted.");
-          return;
-        }
-        setLinkStage(null);
-        setLinkDupe(null);
-      })
-      .catch((e) => setLinkError(String(e.message ?? e)))
-      .finally(() => setLinkBusy(false));
-  }, [linkStage, editor, workspaceId]);
-
-  /* The panel is a portal, so nothing unmounts it implicitly. These close it
-     for the cases the search itself cannot see: the editor going away, the
-     page changing, or the block it was anchored to being edited out. */
-  useEffect(() => () => { setAyahSearch(null); setLinkStage(null); }, []);
-  useEffect(() => { setAyahSearch(null); setLinkStage(null); }, [pageId]);
+  /* The āyah panel is a portal, so nothing unmounts it implicitly. /link's
+     equivalent now lives inside useConnectionLink, with the state it resets. */
+  useEffect(() => () => setAyahSearch(null), []);
+  useEffect(() => { setAyahSearch(null); }, [pageId]);
   useEffect(() => {
     if (!editor || !ayahSearch) return;
     const close = () => setAyahSearch(null);
@@ -993,71 +844,7 @@ export default function PageEditor({
       {/* /link stage 1 — pick the other end. Same search component as /ayah,
           but accepting Selections and Surahs as final answers, and with its
           own state so neither command can strand the other. */}
-      {linkStage?.step === "pick" && typeof document !== "undefined" &&
-        createPortal(
-          (() => {
-            const W = 380, MAX_H = 400;
-            const left = Math.max(8, Math.min(linkStage.rect.left, window.innerWidth - W - 12));
-            const below = window.innerHeight - linkStage.rect.bottom;
-            const openUp = below < MAX_H + 12 && linkStage.rect.top > below;
-            const pos: React.CSSProperties = openUp
-              ? { position: "fixed", bottom: window.innerHeight - linkStage.rect.top + 6, left, zIndex: 9999 }
-              : { position: "fixed", top: linkStage.rect.bottom + 6, left, zIndex: 9999 };
-            return (
-              <div style={pos}>
-                <QuranSearch
-                  /* Remount when the end being chosen changes. QuranSearch
-                     holds its own query AND a surah->ayah drill-down stage;
-                     without a new key, picking the source left the panel
-                     exactly as it was — same query, still inside a surah's
-                     ayah list — so the only thing that changed was the
-                     placeholder, hidden behind the text already typed. It
-                     read as the click doing nothing. A fresh mount returns to
-                     surah selection with an empty field, which is what
-                     choosing the other end actually needs. */
-                  key={linkStage.which}
-                  kinds={["ayah", "selection", "surah"]}
-                  currentSurah={studySurah}
-                  selections={selectionTargets}
-                  placeholder={linkStage.which === "source"
-                    ? "Linking FROM — choose an āyah, Selection or Surah…"
-                    : "Linking TO — choose an āyah, Selection or Surah…"}
-                  onSelect={chooseLinkTarget}
-                  onCancel={() => closeLink()}
-                />
-              </div>
-            );
-          })(),
-          document.body,
-        )}
-
-      {/* /link stage 2 — name the relationship. */}
-      {linkStage?.step === "form" && (
-        <ConnectionForm
-          source={linkStage.source}
-          target={linkStage.target}
-          busy={linkBusy}
-          error={linkError}
-          duplicateOf={linkDupe}
-          onCancel={() => closeLink()}
-          onChangeEndpoint={repickEndpoint}
-          onOpenExisting={(id) => {
-            // The pair is already connected: drop a card for the EXISTING
-            // Connection rather than creating a second one.
-            if (editor) {
-              editor.chain().focus()
-                .deleteRange(linkStage.range)
-                .insertContent([
-                  { type: "connectionBlock", attrs: { connectionId: id } },
-                  { type: "paragraph" },
-                ])
-                .focus().run();
-            }
-            closeLink(false);
-          }}
-          onSubmit={submitConnection}
-        />
-      )}
+      {linkUI}
 
       {/* Tafsir verse picker — surah fixed to what's being studied, pick the āyah */}
       {tafsirChoice && typeof document !== "undefined" &&
