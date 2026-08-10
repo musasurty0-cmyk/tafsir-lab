@@ -2,18 +2,47 @@
   "src": "tafsir-clip2.mp4",
   "clipSeconds": 23,
   "outroSeconds": 5,
-  "closing": "Without tafsīr, it is only words.",
+  "closing": "Do not let the opportunity to understand your Lord pass you.",
   "captions": [
-    { "s": 0.0,  "e": 5.4,  "en": "If the Qur'ān was sent down, the wisdom of why it was sent down is for you to contemplate on it." },
-    { "s": 5.6,  "e": 8.2,  "en": "And that's the wisdom behind why it was sent down." },
-
-    { "s": 8.5,  "e": 8.9,  "ar": "لِلتَّدَبُّرِ", "en": "For contemplation." },
-
-    { "s": 8.9,  "e": 13.7, "en": "If you're not pondering on the Qur'ān, then the wisdom of why it was sent down goes." },
-
-    { "s": 15.3, "e": 17.1, "ar": "وَصَارَ", "en": "It becomes the Qur'ān —" },
-    { "s": 17.2, "e": 19.6, "ar": "مُجَرَّدُ أَلْفَاظٍ لَا تَأْثِيرَ لَهَا",
-                            "en": "— mere utterances with no effect." },
-    { "s": 19.7, "e": 22.9, "en": "It just becomes mere letters that have no effect." }
-  ]
+    {
+      "s": 0.0,
+      "e": 5.4,
+      "en": "If the Qur'ān was sent down, the wisdom of why it was sent down is for you to contemplate on it."
+    },
+    {
+      "s": 5.6,
+      "e": 8.2,
+      "en": "And that's the wisdom behind why it was sent down."
+    },
+    {
+      "s": 8.5,
+      "e": 8.9,
+      "ar": "لِلتَّدَبُّرِ",
+      "en": "For contemplation."
+    },
+    {
+      "s": 8.9,
+      "e": 13.7,
+      "en": "If you're not pondering on the Qur'ān, then the wisdom of why it was sent down goes."
+    },
+    {
+      "s": 15.3,
+      "e": 17.1,
+      "ar": "وَصَارَ",
+      "en": "It becomes the Qur'ān —"
+    },
+    {
+      "s": 17.2,
+      "e": 19.6,
+      "ar": "مُجَرَّدُ أَلْفَاظٍ لَا تَأْثِيرَ لَهَا",
+      "en": "— mere utterances with no effect."
+    },
+    {
+      "s": 19.7,
+      "e": 22.9,
+      "en": "It just becomes mere letters that have no effect."
+    }
+  ],
+  "fps": 25,
+  "credit": "Ustadh AbdulRahman Hassan"
 }

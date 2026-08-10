@@ -20,7 +20,6 @@ import { R } from "../reelTokens";
    25 FPS, matching the source. The lecture is 25fps and resampling a talking
    head to 30 or 60 invents frames on a face for nothing.                */
 
-const FPS = 25;
 const W = 1080, H = 1920;
 
 const GROUND = "#0E0E0D";
@@ -56,6 +55,18 @@ export interface LectureClipProps {
   outroSeconds: number;
   /** The line the closing card leaves them on. */
   closing: string;
+  /** Must match the SOURCE's own rate — resampling a face invents frames. */
+  fps: number;
+  /** Attribution, carried under the card and again on the close. */
+  credit: string;
+  /** A bed, ducked hard under speech and lifted once the picture leaves.
+   *  Omit for continuous speech: a bed under words you can already follow is
+   *  just one more thing to duck. */
+  nasheed?: string;
+  /** CSS filter for the footage. A white backdrop and a bright thawb need
+   *  pulling down or cream captions have nothing to sit on; a warm, already
+   *  low-contrast set does not. */
+  grade?: string;
   /* Remotion types a Composition's props as Record<string, unknown>, so the
      props interface has to be assignable to it. */
   [key: string]: unknown;
@@ -63,9 +74,10 @@ export interface LectureClipProps {
 
 // ── The clip ───────────────────────────────────────────────────────────────
 
-const Clip: React.FC<{ src: string; captions: Caption[] }> = ({ src, captions }) => {
+const Clip: React.FC<{ src: string; captions: Caption[]; fps: number; credit: string; grade: string }> =
+  ({ src, captions, fps, credit, grade }) => {
   const f = useCurrentFrame();
-  const sec = f / FPS;
+  const sec = f / fps;
   const i = captions.findIndex((c) => sec >= c.s && sec < c.e);
   const cur = i >= 0 ? captions[i] : null;
 
@@ -93,7 +105,7 @@ const Clip: React.FC<{ src: string; captions: Caption[] }> = ({ src, captions })
                Dosari clip needed pulling down because a white backdrop and a
                bright thawb gave cream captions nothing to sit on. This does
                not have that problem. */
-            filter: "brightness(0.94) saturate(0.97) contrast(1.02)",
+            filter: grade,
           }}
         />
 
@@ -162,7 +174,7 @@ const Clip: React.FC<{ src: string; captions: Caption[] }> = ({ src, captions })
         textAlign: "center", fontFamily: R.fontSans, fontSize: 30, color: MUTED,
         letterSpacing: "0.01em",
       }}>
-        Ustadh AbdulRahman Hassan
+        {credit}
       </div>
     </AbsoluteFill>
   );
@@ -170,7 +182,7 @@ const Clip: React.FC<{ src: string; captions: Caption[] }> = ({ src, captions })
 
 // ── The close ──────────────────────────────────────────────────────────────
 
-const Outro: React.FC<{ closing: string }> = ({ closing }) => {
+const Outro: React.FC<{ closing: string; credit: string }> = ({ closing, credit }) => {
   const f = useCurrentFrame();
   const line = (at: number) => {
     const t = interpolate(f, [at, at + 8], [0, 1], clamp);
@@ -218,7 +230,7 @@ const Outro: React.FC<{ closing: string }> = ({ closing }) => {
         position: "absolute", bottom: 150, left: 0, right: 0, textAlign: "center",
         fontFamily: R.fontSans, fontSize: 25, color: MUTED,
       }}>
-        Ustadh AbdulRahman Hassan
+        {credit}
       </div>
     </AbsoluteFill>
   );
@@ -227,27 +239,41 @@ const Outro: React.FC<{ closing: string }> = ({ closing }) => {
 // ── Assembly ───────────────────────────────────────────────────────────────
 
 export const LectureClip: React.FC<LectureClipProps> = ({
-  src, captions, clipSeconds, outroSeconds, closing,
+  src, captions, clipSeconds, outroSeconds, closing, fps, credit,
+  nasheed, grade = "brightness(0.94) saturate(0.97) contrast(1.02)",
 }) => {
   const f = useCurrentFrame();
-  const clipFrames  = Math.round(clipSeconds * FPS);
-  const outroFrames = Math.round(outroSeconds * FPS);
+  const clipFrames  = Math.round(clipSeconds * fps);
+  const outroFrames = Math.round(outroSeconds * fps);
 
   /* Faded rather than cut at the boundary, so the handover has no edge. */
   const speech = interpolate(f, [clipFrames - 20, clipFrames], [1, 0], clamp);
+  const total = clipFrames + outroFrames;
+  const bed = interpolate(
+    f,
+    [0, 40, clipFrames - 40, clipFrames + 20, total - 45, total],
+    [0, 0.032, 0.032, 0.22, 0.22, 0], clamp,
+  );
 
   return (
     <AbsoluteFill style={{ background: GROUND }}>
       <Sequence durationInFrames={clipFrames}>
-        <Clip src={src} captions={captions} />
+        <Clip src={src} captions={captions} fps={fps} credit={credit} grade={grade} />
       </Sequence>
       <Sequence from={clipFrames} durationInFrames={outroFrames}>
-        <Outro closing={closing} />
+        <Outro closing={closing} credit={credit} />
       </Sequence>
 
       <Sequence durationInFrames={clipFrames}>
         <Audio src={staticFile(src)} volume={() => speech} />
       </Sequence>
+
+      {/* Ducked to 0.032 under speech — measured, not reasoned: at 0.20 the bed
+          sat 1.6dB under his voice and fought every word. Lifts once the
+          picture leaves so the close arrives rather than interrupts. */}
+      {nasheed && (
+        <Audio src={staticFile(nasheed)} volume={() => bed} />
+      )}
     </AbsoluteFill>
   );
 };

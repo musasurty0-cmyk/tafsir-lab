@@ -15,6 +15,7 @@ import { ReturnToTheAyah, RETURN_FRAMES } from "./reel/ReturnToTheAyah";
 import { NoEffect, NOEFFECT_FRAMES } from "./reel/NoEffect";
 import CLIP1 from "./reel/tafsir-clip1.json";
 import CLIP2 from "./reel/tafsir-clip2.json";
+import DGLAD from "./reel/dosari-glad.json";
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -97,6 +98,18 @@ export const RemotionRoot: React.FC = () => {
         width={1080}
         height={1920}
         defaultProps={{}}
+      />
+
+      {/* Dosari 24:54-25:29 — the first glad tiding. Same bed as the first
+          Dosari reel; 30fps to match the lecture. */}
+      <Composition
+        id="DosariGladTiding"
+        component={LectureClip}
+        durationInFrames={Math.round((DGLAD.clipSeconds + DGLAD.outroSeconds) * 30)}
+        fps={30}
+        width={1080}
+        height={1920}
+        defaultProps={DGLAD}
       />
 
       {/* Instagram Reel — 9:16, the /link feature end to end. */}

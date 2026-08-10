@@ -1,0 +1,35 @@
+{
+  "src": "dosari-clip2.mp4",
+  "clipSeconds": 35,
+  "outroSeconds": 6,
+  "fps": 30,
+  "credit": "الشيخ الدكتور ياسر الدوسري",
+  "nasheed": "nasheed.mp3",
+  "grade": "brightness(0.82) saturate(0.88) contrast(1.04)",
+  "closing": "Understand what He promised you.",
+  "captions": [
+    { "s": 0.0,   "e": 2.62,  "ar": "الدُّنْيَا، مَا هِيَ أَوَّلُ بِشَارَةٍ تَأْتِيهِ؟",
+                              "en": "In this world — what is the first glad tiding that reaches him?" },
+
+    { "s": 2.66,  "e": 8.90,  "ar": "إِنَّ الَّذِينَ قَالُوا رَبُّنَا اللَّهُ ثُمَّ اسْتَقَامُوا تَتَنَزَّلُ عَلَيْهِمُ الْمَلَائِكَةُ",
+                              "en": "“Those who say: our Lord is Allah — then stand firm — the angels descend upon them”" },
+
+    { "s": 8.98,  "e": 14.40, "ar": "أَلَّا تَخَافُوا وَلَا تَحْزَنُوا",
+                              "en": "“Do not fear, and do not grieve”" },
+
+    { "s": 14.64, "e": 18.66, "ar": "وَأَبْشِرُوا بِالْجَنَّةِ الَّتِي كُنْتُمْ تُوعَدُونَ",
+                              "en": "“and receive glad tidings of the Garden you were promised”" },
+
+    { "s": 18.72, "e": 23.60, "ar": "لَا تَحْزَنْ عَلَى مَاضٍ وَلَا تَخَفْ مِنْ مُسْتَقْبَلٍ",
+                              "en": "Do not grieve over a past, nor fear a future." },
+
+    { "s": 23.76, "e": 25.80, "ar": "وَأَبْشِرْ بِالْجَنَّةِ",
+                              "en": "And receive glad tidings of the Garden." },
+
+    { "s": 27.32, "e": 30.70, "ar": "وَكَثِيرًا مَا يَأْتِي فِي الْقُرْآنِ عَنِ الْمُؤْمِنِينَ",
+                              "en": "And often it comes in the Qur'ān, concerning the believers:" },
+
+    { "s": 30.82, "e": 35.0,  "ar": "لَا خَوْفٌ عَلَيْهِمْ وَلَا هُمْ يَحْزَنُونَ",
+                              "en": "“No fear shall be upon them, nor shall they grieve.”" }
+  ]
+}
