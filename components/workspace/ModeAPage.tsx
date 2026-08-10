@@ -127,6 +127,7 @@ export default function ModeAPage({
   // render (e.g. presence updates) — only when the actual data changes.
   const editorContextValue = useMemo(() => ({
     pageId,
+    workspaceId,
     surahNumber,
     verses,
     notes,

@@ -135,11 +135,11 @@ export default function BookShell({
   );
 
   const ctx = useMemo<EditorContextValue>(() => ({
-    pageId, surahNumber: 0, verses: [], notes, role,
+    pageId, workspaceId, surahNumber: 0, verses: [], notes, role,
     personalProgress: {}, groupProgress: {},
     onNoteCreated: handleNoteCreated, onNoteUpdated: handleNoteUpdated, onNoteDeleted: handleNoteDeleted,
     onProgressChange: async () => {}, onOpenTafsir: openTafsir,
-  }), [pageId, notes, role, handleNoteCreated, handleNoteUpdated, handleNoteDeleted, openTafsir]);
+  }), [pageId, workspaceId, notes, role, handleNoteCreated, handleNoteUpdated, handleNoteDeleted, openTafsir]);
 
   return (
     <div className="whiteboard-shell">

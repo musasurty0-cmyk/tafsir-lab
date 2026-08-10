@@ -526,12 +526,12 @@ export default function WorkspacePageView({
     [notes],
   );
   const editorCtx = useMemo(() => ({
-    pageId: activePageId, surahNumber, verses, notes, role,
+    pageId: activePageId, workspaceId, surahNumber, verses, notes, role,
     personalProgress, groupProgress,
     onNoteCreated: handleNoteCreated, onNoteUpdated: handleNoteUpdated, onNoteDeleted: handleNoteDeleted,
     onProgressChange: handleProgressChange, onOpenTafsir: openTafsir,
   }), [
-    activePageId, surahNumber, verses, notes, role, personalProgress, groupProgress,
+    activePageId, workspaceId, surahNumber, verses, notes, role, personalProgress, groupProgress,
     handleNoteCreated, handleNoteUpdated, handleNoteDeleted, handleProgressChange, openTafsir,
   ]);
 

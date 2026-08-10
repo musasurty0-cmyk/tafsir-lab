@@ -1058,6 +1058,16 @@ export default function PageEditor({
             return (
               <div style={pos}>
                 <QuranSearch
+                  /* Remount when the end being chosen changes. QuranSearch
+                     holds its own query AND a surah->ayah drill-down stage;
+                     without a new key, picking the source left the panel
+                     exactly as it was — same query, still inside a surah's
+                     ayah list — so the only thing that changed was the
+                     placeholder, hidden behind the text already typed. It
+                     read as the click doing nothing. A fresh mount returns to
+                     surah selection with an empty field, which is what
+                     choosing the other end actually needs. */
+                  key={linkStage.which}
                   kinds={["ayah", "selection", "surah"]}
                   currentSurah={studySurah}
                   selections={selectionTargets}

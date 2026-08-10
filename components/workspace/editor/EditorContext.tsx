@@ -16,6 +16,9 @@ import type { MemberRole } from "@/lib/services/workspaces.service";
 
 export interface EditorContextValue {
   pageId:           string;
+  /** Needed by anything that writes workspace-scoped records — /link creates a
+   *  Connection, and the canvas boxes live outside PageEditor's props. */
+  workspaceId:      string;
   surahNumber:      number;
   verses:           Verse[];
   notes:            NoteData[];

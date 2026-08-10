@@ -104,7 +104,7 @@ export default function WhiteboardShell({
   // Minimal editor context — verses empty (ayah blocks fetch by key), tafsir
   // button opens the drawer.
   const ctx = useMemo<EditorContextValue>(() => ({
-    pageId, surahNumber: 0, verses: [], notes, role,
+    pageId, workspaceId, surahNumber: 0, verses: [], notes, role,
     personalProgress: {}, groupProgress: {},
     onNoteCreated: handleNoteCreated, onNoteUpdated: handleNoteUpdated, onNoteDeleted: handleNoteDeleted,
     onProgressChange: async () => {}, onOpenTafsir: openTafsir,

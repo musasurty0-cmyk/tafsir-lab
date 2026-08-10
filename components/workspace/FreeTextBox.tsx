@@ -51,6 +51,8 @@ import CommandList, { type CommandListHandle } from "./editor/CommandList";
 import SelectionToolbar from "./editor/SelectionToolbar";
 import TafsirVersePicker from "./editor/TafsirVersePicker";
 import QuranSearch from "./editor/QuranSearch";
+import ConnectionForm, { type Endpoint } from "./editor/ConnectionForm";
+import { ayahKey, surahKey, selectionKey } from "@/lib/quran-objects";
 import type { SearchTarget } from "@/lib/quran-search";
 import { useEditorCtxOptional } from "./editor/EditorContext";
 import type { NoteData } from "./NoteCard";
@@ -288,6 +290,7 @@ function RichBody({
   // (same context the main editor reads; falls back to surah 1 on boards).
   const ectx       = useEditorCtxOptional();
   const studySurah = ectx?.surahNumber || 1;
+  const workspaceId = ectx?.workspaceId ?? "";
   const pageVerses = ectx?.verses ?? [];
 
   // Verse picker: opened when a tafsir command — or, in ayahInline mode, the
@@ -301,6 +304,23 @@ function RichBody({
   const [ayahSearch, setAyahSearch] = useState<{
     range: { from: number; to: number }; rect: DOMRect;
   } | null>(null);
+
+  /* /link, ported from PageEditor. Its execute() is deliberately inert — the
+     command needs the editor's source context and an async target search, so
+     whichever surface hosts the editor has to intercept it. This one never
+     did, so on the canvas the command fired, did nothing and closed. */
+  const [linkStage, setLinkStage] = useState<
+    | { step: "pick"; which: "source" | "target";
+        range: { from: number; to: number }; rect: DOMRect;
+        source?: Endpoint; target?: Endpoint }
+    | { step: "form"; range: { from: number; to: number }; rect: DOMRect;
+        source: Endpoint; target: Endpoint }
+    | null
+  >(null);
+  const [linkBusy,  setLinkBusy]  = useState(false);
+  const [linkError, setLinkError] = useState<string | null>(null);
+  const [linkDupe,  setLinkDupe]  = useState<{ id: string; name: string } | null>(null);
+  const [selectionTargets, setSelectionTargets] = useState<SearchTarget[]>([]);
   const [versePicker, setVersePicker] = useState<{
     kind: "tafsir" | "ayah";
     slug: string; sourceName: string; range: { from: number; to: number }; rect: DOMRect;
@@ -609,6 +629,17 @@ function RichBody({
         return;
       }
 
+      /* /link is intercepted, never executed — its execute() is deliberately
+         empty because the command needs the editor's source context and an
+         async target search. Asking for the SOURCE first: a Connection whose
+         origin nobody chose is not a munasaba anyone asserted. */
+      if (item.id === "link") {
+        setLinkStage({ step: "pick", which: "source", range, rect: palette.rect });
+        paletteOpenRef.current = false;
+        setPalette(null);
+        return;
+      }
+
       (item as SlashCommandItem & { _query: string })._query = q;
       palette.props.command({ ...(item as object) });
       paletteOpenRef.current = false;
@@ -633,6 +664,105 @@ function RichBody({
   // Insert the verse's Arabic + translation as PLAIN inline text at a slash
   // range (classic canvas /ayah). Fetches the verse; shows a loading marker
   // meanwhile; replaces it (or restores the command on failure).
+  /* Selections load only once /link opens — /ayah never pays for the request. */
+  useEffect(() => {
+    if (!linkStage || !workspaceId) return;
+    fetch(`/api/workspaces/${workspaceId}/segments`)
+      .then((r) => (r.ok ? r.json() : { segments: [] }))
+      .then((d) => setSelectionTargets(
+        (d.segments ?? []).map((sg: { id: string; name: string; startAyah: number; endAyah: number }) => ({
+          kind: "selection" as const,
+          id: sg.id,
+          label: sg.name || `Selection ${sg.startAyah}–${sg.endAyah}`,
+          preview: `${sg.startAyah}–${sg.endAyah}`,
+        })),
+      ))
+      .catch(() => setSelectionTargets([]));
+  }, [linkStage, workspaceId]);
+
+  /** Close /link, removing the "/link" text so no orphan command survives. */
+  const closeLink = useCallback((removeCommand = true) => {
+    const st = linkStage;
+    setLinkStage(null); setLinkBusy(false); setLinkError(null); setLinkDupe(null);
+    if (removeCommand && editor && st) editor.chain().focus().deleteRange(st.range).run();
+  }, [editor, linkStage]);
+
+  const chooseLinkTarget = useCallback((t: SearchTarget) => {
+    if (!linkStage || linkStage.step !== "pick") return;
+    const picked: Endpoint =
+      t.kind === "ayah"
+        ? { type: "ayah", key: ayahKey(t.surah ?? 1, t.ayah ?? 1), label: t.label, arabic: t.arabic }
+        : t.kind === "selection"
+        ? { type: "selection", key: selectionKey(t.id), label: t.label }
+        : { type: "surah", key: surahKey(t.surah ?? Number(t.id)), label: t.label.split(" · ")[0] };
+
+    const source = linkStage.which === "source" ? picked : linkStage.source;
+    const target = linkStage.which === "target" ? picked : linkStage.target;
+
+    /* Refused here as well as on the server, so it is caught at the moment of
+       choosing rather than after a round trip. */
+    if (source && target && source.key === target.key) {
+      setLinkError("An object cannot be connected to itself");
+      return;
+    }
+    setLinkError(null);
+    if (source && target) {
+      setLinkStage({ step: "form", range: linkStage.range, rect: linkStage.rect, source, target });
+    } else {
+      setLinkStage({ ...linkStage, source, target, which: source ? "target" : "source" });
+    }
+  }, [linkStage]);
+
+  const repickEndpoint = useCallback((which: "source" | "target") => {
+    if (!linkStage || linkStage.step !== "form") return;
+    setLinkError(null);
+    setLinkStage({
+      step: "pick", which, range: linkStage.range, rect: linkStage.rect,
+      // Keep the OTHER end, so changing one side never discards the other.
+      source: which === "source" ? undefined : linkStage.source,
+      target: which === "target" ? undefined : linkStage.target,
+    });
+  }, [linkStage]);
+
+  const submitConnection = useCallback((v: {
+    name: string; commentary?: string; category?: string; tags: string[];
+  }) => {
+    if (!linkStage || linkStage.step !== "form" || !editor) return;
+    const { source, target, range } = linkStage;
+    setLinkBusy(true); setLinkError(null);
+    fetch(`/api/workspaces/${workspaceId}/connections`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sourceType: source.type, sourceKey: source.key,
+        targetType: target.type, targetKey: target.key, ...v,
+      }),
+    })
+      .then(async (r) => {
+        const d = await r.json().catch(() => ({}));
+        if (r.status === 409 && d.existing) { setLinkDupe({ id: d.existing.id, name: d.existing.name }); return null; }
+        if (!r.ok) throw new Error(d.error ?? String(r.status));
+        return d.connection;
+      })
+      .then((conn) => {
+        if (!conn) return;
+        /* The Connection is already saved, so a failure here loses a card,
+           never the work. */
+        try {
+          editor.chain().focus().deleteRange(range).insertContent([
+            { type: "connectionBlock", attrs: { connectionId: conn.id } },
+            { type: "paragraph" },
+          ]).focus().scrollIntoView().run();
+        } catch {
+          setLinkError("Connection saved, but the card could not be inserted.");
+          return;
+        }
+        setLinkStage(null); setLinkDupe(null);
+      })
+      .catch((e) => setLinkError(String(e.message ?? e)))
+      .finally(() => setLinkBusy(false));
+  }, [linkStage, editor, workspaceId]);
+
   const insertAyahInline = useCallback((verseKey: string, range: { from: number; to: number }) => {
     if (!editor) return;
     const placeholder = `⏳ ${verseKey}…`;
@@ -740,6 +870,68 @@ function RichBody({
           })(),
           document.body,
         )}
+
+      {linkStage?.step === "pick" && typeof document !== "undefined" &&
+        createPortal(
+          (() => {
+            const W = 380, MAX_H = 400;
+            const left = Math.max(8, Math.min(linkStage.rect.left, window.innerWidth - W - 12));
+            const below = window.innerHeight - linkStage.rect.bottom;
+            const openUp = below < MAX_H + 12 && linkStage.rect.top > below;
+            const pos: React.CSSProperties = openUp
+              ? { position: "fixed", bottom: window.innerHeight - linkStage.rect.top + 6, left, zIndex: 9999 }
+              : { position: "fixed", top: linkStage.rect.bottom + 6, left, zIndex: 9999 };
+            return (
+              <div style={pos}>
+                <QuranSearch
+                  /* Remount when the end being chosen changes. QuranSearch
+                     holds its own query AND a surah->ayah drill-down stage;
+                     without a new key, picking the source left the panel
+                     exactly as it was — same query, still inside a surah's
+                     ayah list — so the only thing that changed was the
+                     placeholder, hidden behind the text already typed. It
+                     read as the click doing nothing. A fresh mount returns to
+                     surah selection with an empty field, which is what
+                     choosing the other end actually needs. */
+                  key={linkStage.which}
+                  kinds={["ayah", "selection", "surah"]}
+                  currentSurah={studySurah}
+                  selections={selectionTargets}
+                  placeholder={linkStage.which === "source"
+                    ? "Linking FROM — choose an āyah, Selection or Surah…"
+                    : "Linking TO — choose an āyah, Selection or Surah…"}
+                  onSelect={chooseLinkTarget}
+                  onCancel={() => closeLink()}
+                />
+              </div>
+            );
+          })(),
+          document.body,
+        )}
+
+      {linkStage?.step === "form" && (
+        <ConnectionForm
+          source={linkStage.source}
+          target={linkStage.target}
+          busy={linkBusy}
+          error={linkError}
+          duplicateOf={linkDupe}
+          onCancel={() => closeLink()}
+          onChangeEndpoint={repickEndpoint}
+          onOpenExisting={(id) => {
+            /* Already connected: drop a card for the EXISTING Connection
+               rather than creating a second one. */
+            if (editor) {
+              editor.chain().focus().deleteRange(linkStage.range).insertContent([
+                { type: "connectionBlock", attrs: { connectionId: id } },
+                { type: "paragraph" },
+              ]).focus().run();
+            }
+            closeLink(false);
+          }}
+          onSubmit={submitConnection}
+        />
+      )}
 
       {versePicker && (
         <TafsirVersePicker
