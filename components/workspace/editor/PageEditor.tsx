@@ -23,22 +23,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useEditor, EditorContent, type Editor } from "@tiptap/react";
+import { baseExtensions } from "./sharedExtensions";
 import { StaticDoc, docIsEmpty } from "@/lib/prosemirror-static";
-import StarterKit from "@tiptap/starter-kit";
-import Placeholder from "@tiptap/extension-placeholder";
-import Underline from "@tiptap/extension-underline";
-import Highlight from "@tiptap/extension-highlight";
-import Color from "@tiptap/extension-color";
-import { TextStyle, FontFamily, FontSize } from "@tiptap/extension-text-style";
 import Table from "@tiptap/extension-table";
 import TableRow from "@tiptap/extension-table-row";
 import TableCell from "@tiptap/extension-table-cell";
 import TableHeader from "@tiptap/extension-table-header";
-import Link from "@tiptap/extension-link";
-import TaskList from "@tiptap/extension-task-list";
-import TaskItem from "@tiptap/extension-task-item";
-import Subscript from "@tiptap/extension-subscript";
-import Superscript from "@tiptap/extension-superscript";
 import Collaboration from "@tiptap/extension-collaboration";
 import CollaborationCursor from "@tiptap/extension-collaboration-cursor";
 import * as Y from "yjs";
@@ -46,13 +36,8 @@ import YPartyKitProvider from "y-partykit/provider";
 import type { SuggestionProps, SuggestionKeyDownProps } from "@tiptap/suggestion";
 
 import { PARTYKIT_HOST } from "@/lib/collab/config";
-import { AyahBlockExtension } from "./AyahBlockExtension";
-import { TafsirBlockExtension } from "./TafsirBlockExtension";
-import { ToggleListExtension } from "./ToggleListExtension";
-import { TextDirection } from "./TextDirection";
 import { BlockMove } from "./BlockMove";
 import BlockHandle from "./BlockHandle";
-import { ConnectionBlockExtension } from "./ConnectionBlockExtension";
 import EditorInkLayer from "./EditorInkLayer";
 import FreeTextBox, { TEXTBOX_DEFAULT_WIDTH } from "../FreeTextBox";
 import type { NoteData } from "../NoteCard";
@@ -409,63 +394,26 @@ export default function PageEditor({
 
   const editor = useEditor({
     extensions: [
-      StarterKit.configure({
-        // Disable StarterKit's built-in history — Collaboration provides Yjs undo
-        history:        false,
-        heading:        { levels: [1, 2, 3] },
-        horizontalRule: {},
-        // The line shown while dragging a block: accent, not the default
-        // black, so the drop target reads as part of the app.
-        dropcursor:     { color: "var(--accent)", width: 2 },
+      /* The shared set. history OFF — Collaboration brings Yjs undo, and two
+         undo stacks mean one command can be applied twice. */
+      ...baseExtensions({
+        history:     false,
+        dropcursor:  true,
+        workspaceId,
+        placeholder: ({ node }: { node: { type: { name: string } } }) =>
+          node.type.name === "heading" ? "Heading…" : "Type '/' for commands, or start writing…",
       }),
 
-      Placeholder.configure({
-        placeholder: ({ node }) => {
-          if (node.type.name === "heading") return "Heading…";
-          return "Type '/' for commands, or start writing…";
-        },
-        // includeChildren stacked a placeholder on the list, the list item,
-        // AND the inner paragraph at once — rendering doubled ghost text.
-        includeChildren: false,
-      }),
-
-      Underline,
-      Highlight.configure({ multicolor: true }),
-      TextStyle,
-      FontFamily,
-      /* Font size rides the same textStyle mark as colour and family, so a run
-         can carry all three and they round-trip through the stored HTML
-         together. */
-      FontSize,
-      Color,
-      Subscript,
-      Superscript,
-      Link.configure({
-        openOnClick:   false,   // click edits; Ctrl/Cmd-click opens
-        autolink:      true,    // typed/pasted URLs become links
-        linkOnPaste:   true,
-        HTMLAttributes: { rel: "noopener noreferrer", target: "_blank" },
-      }),
-      TaskList,
-      TaskItem.configure({ nested: true }),
-
-      /* Note-taking tables: resizable columns, and cells that accept every
-         mark the rest of the document does (colour, size, direction), so an
-         Arabic cell can sit beside an English one. */
+      /* Main-editor only, each for a reason. Tables are a document affordance
+         a floating box does not need; block-drag needs a document to reorder
+         within; Yjs is the page's own realtime session. */
       Table.configure({ resizable: true, lastColumnResizable: true, allowTableNodeSelection: true }),
       TableRow,
       TableHeader,
       TableCell,
 
-      AyahBlockExtension,
-      TafsirBlockExtension,
-      ToggleListExtension,
-      TextDirection,
       // Alt+↑/↓ walks the current block up or down the page.
       BlockMove,
-      // workspaceId lets the card fetch its Connection; the node itself only
-      // ever stores an id.
-      ConnectionBlockExtension.configure({ workspaceId }),
 
       // ── Collaboration (Yjs CRDT) ──────────────────────────────────────
       Collaboration.configure({

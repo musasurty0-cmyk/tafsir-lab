@@ -24,23 +24,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useEditor, EditorContent, type Editor } from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
-import Placeholder from "@tiptap/extension-placeholder";
-import Underline from "@tiptap/extension-underline";
-import Highlight from "@tiptap/extension-highlight";
-import Color from "@tiptap/extension-color";
-import { TextStyle, FontFamily, FontSize } from "@tiptap/extension-text-style";
-import Link from "@tiptap/extension-link";
-import TaskList from "@tiptap/extension-task-list";
-import TaskItem from "@tiptap/extension-task-item";
-import Subscript from "@tiptap/extension-subscript";
-import Superscript from "@tiptap/extension-superscript";
+import { baseExtensions } from "./editor/sharedExtensions";
 import type { SuggestionProps, SuggestionKeyDownProps } from "@tiptap/suggestion";
 
-import { AyahBlockExtension } from "./editor/AyahBlockExtension";
-import { TafsirBlockExtension } from "./editor/TafsirBlockExtension";
-import { ToggleListExtension } from "./editor/ToggleListExtension";
-import { TextDirection } from "./editor/TextDirection";
 import {
   SlashCommandExtension,
   buildCommands,
@@ -421,39 +407,13 @@ function RichBody({
 
   const editor = useEditor({
     extensions: [
-      // History stays ON — standalone editor, no Yjs/Collaboration here.
-      StarterKit.configure({
-        heading:        { levels: [1, 2, 3] },
-        horizontalRule: {},
+      /* The shared set. History stays ON here — these boxes are standalone,
+         with no Yjs to own undo. */
+      ...baseExtensions({
+        history: true,
+        placeholder: "Type '/' for commands…",
+        workspaceId,
       }),
-      Placeholder.configure({
-        placeholder:     "Type '/' for commands…",
-        includeChildren: false,
-      }),
-      Underline,
-      Highlight.configure({ multicolor: true }),
-      TextStyle,
-      FontFamily,
-      /* Without this the toolbar's size control has nothing to act on — the
-         canvas box loaded TextStyle and FontFamily but never FontSize, so
-         changing size in a note silently did nothing. */
-      FontSize,
-      Color,
-      Subscript,
-      Superscript,
-      Link.configure({
-        openOnClick:    false,
-        autolink:       true,
-        linkOnPaste:    true,
-        HTMLAttributes: { rel: "noopener noreferrer", target: "_blank" },
-      }),
-      TaskList,
-      TaskItem.configure({ nested: true }),
-
-      AyahBlockExtension,
-      TafsirBlockExtension,
-      ToggleListExtension,
-      TextDirection,
 
       SlashCommandExtension.configure({
         suggestion: {
