@@ -1213,8 +1213,8 @@ input, textarea { font: inherit; color: inherit; }
 .surah-card { background: var(--bg-elev); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 14px 16px; cursor: pointer; transition: box-shadow var(--dur-mid) var(--ease-out), border-color var(--dur-mid) ease; text-decoration: none; display: block; }
 .surah-card:hover { box-shadow: var(--shadow-sm); border-color: var(--line-strong); }
 .surah-card-num { font-family: var(--font-mono); font-size: 10.5px; color: var(--accent-ink); margin-bottom: 6px; letter-spacing: 0.03em; }
-.surah-card-name { font-size: 14px; font-weight: 600; color: var(--ink); }
-.surah-card-arabic { font-family: var(--font-arabic); font-size: 20px; direction: rtl; text-align: right; color: var(--ink-2); margin-top: 8px; margin-bottom: 4px; }
+.surah-card-name { font-size: calc(14px * var(--fs-reading)); font-weight: 600; color: var(--ink); }
+.surah-card-arabic { font-family: var(--font-arabic); font-size: calc(20px * var(--fs-arabic)); direction: rtl; text-align: right; color: var(--ink-2); margin-top: 8px; margin-bottom: 4px; }
 .surah-card-meta { font-size: 12px; color: var(--ink-3); }
 
 /* ── Spatial canvas panel (Mode B mushaf overlay) ── */
@@ -10368,3 +10368,9 @@ input, textarea { font: inherit; color: inherit; }
   pointer-events: none;
   overflow: hidden;
 }
+
+/* Reading size reaches the sūrah list too.
+   The scale was scoped to "reading text, never chrome" — correct for toolbars
+   and menus, but it left a global "Reading size" control doing nothing on the
+   dashboard, which is where people look first. A sūrah's name and its Arabic
+   are content, not chrome. The card's number stays fixed: that is a label. */
