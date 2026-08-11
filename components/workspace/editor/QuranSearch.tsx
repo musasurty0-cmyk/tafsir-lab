@@ -210,9 +210,6 @@ export default function QuranSearch({
 
   // Keep the highlighted row valid as results change under the cursor.
   useEffect(() => { setActive(0); }, [q]);
-  useEffect(() => {
-    if (active >= flat.length) setActive(Math.max(0, flat.length - 1));
-  }, [flat.length, active]);
 
   // Stage two data. Cleared whenever the stage changes so a previous surah's
   // list can never be shown under a new heading.
@@ -276,10 +273,22 @@ export default function QuranSearch({
   const back = useCallback(() => { setStage(null); setQ(""); setActive(0);
     requestAnimationFrame(() => inputRef.current?.focus()); }, []);
 
+  /* Against the list ACTUALLY on screen. This clamped to flat.length only,
+     which is the SEARCH results — empty while stage two is showing a surah's
+     ayat. So hovering the tenth ayah set active=10, the clamp saw 10 >= 0 and
+     reset it to 0, and the scroll effect below yanked the list back to the
+     first verse. Scrolling past about ten rows was impossible, because that is
+     how far you get before the pointer crosses a row. onKeyDown already had
+     this right; only the clamp was measuring the wrong list. */
+  const listLen = stage ? filteredRows.length : flat.length;
+  useEffect(() => {
+    if (active >= listLen) setActive(Math.max(0, listLen - 1));
+  }, [listLen, active]);
+
   const onKeyDown = (e: React.KeyboardEvent) => {
     const len = stage ? filteredRows.length : flat.length;
-    if (e.key === "ArrowDown")      { e.preventDefault(); setActive((i) => Math.min(i + 1, len - 1)); }
-    else if (e.key === "ArrowUp")   { e.preventDefault(); setActive((i) => Math.max(i - 1, 0)); }
+    if (e.key === "ArrowDown")      { e.preventDefault(); byKeyboard.current = true; setActive((i) => Math.min(i + 1, len - 1)); }
+    else if (e.key === "ArrowUp")   { e.preventDefault(); byKeyboard.current = true; setActive((i) => Math.max(i - 1, 0)); }
     else if (e.key === "Enter") {
       e.preventDefault();
       if (stage) { const r = filteredRows[active]; if (r) chooseAyah(r.ayah); }
@@ -297,8 +306,13 @@ export default function QuranSearch({
     }
   };
 
-  // Keep the active row in view during keyboard navigation.
+  /* Keep the active row in view during KEYBOARD navigation only. Firing this
+     on hover too meant any pointer movement over the list could scroll it,
+     which fights the user while they are scrolling by hand. */
+  const byKeyboard = useRef(false);
   useEffect(() => {
+    if (!byKeyboard.current) return;
+    byKeyboard.current = false;
     const el = listRef.current?.querySelector<HTMLElement>(`[data-idx="${active}"]`);
     el?.scrollIntoView({ block: "nearest" });
   }, [active]);

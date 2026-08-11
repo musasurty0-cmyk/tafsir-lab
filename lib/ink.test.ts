@@ -37,7 +37,7 @@ describe("packStroke — the thing that must not lose ink", () => {
 
   it("never moves a point by more than 0.05px", () => {
     const src = objPts(200);
-    const out = packStroke({ id: "a", points: src }).points as number[][];
+    const out = packStroke({ id: "a", points: src }).points as unknown as number[][];
     src.forEach((p, i) => {
       expect(Math.abs(out[i][0] - p.x)).toBeLessThanOrEqual(0.05 + 1e-9);
       expect(Math.abs(out[i][1] - p.y)).toBeLessThanOrEqual(0.05 + 1e-9);
@@ -63,8 +63,8 @@ describe("packStroke — the thing that must not lose ink", () => {
   });
 
   it("leaves an empty or missing points array alone", () => {
-    expect(packStroke({ id: "a", points: [] }).points).toEqual([]);
-    expect(packStroke({ id: "a" })).toEqual({ id: "a" });
+    expect(packStroke({ id: "a", points: [] as unknown[] }).points).toEqual([]);
+    expect(packStroke({} as { points?: unknown })).toEqual({});
   });
 });
 
