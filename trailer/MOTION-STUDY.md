@@ -671,6 +671,34 @@ A morph between two unrelated screens is a very smooth way of changing the
 subject. Continuity of the container bought nothing because the thing the viewer
 is actually tracking — the document — was replaced each time.
 
+### 13d. "True to product" is about WHAT is shown, not HOW MUCH
+
+The note on cut 1 was: *the effects are good, it does not feel true to product.*
+I read that as a density problem, measured density, found the original trailer
+carried 2.3x the ink, and spent three cuts chasing it — fill the frame, lengthen
+the page, put a camera in it. Each cut fixed a real defect and none of them
+fixed the reported one, because the report was never about quantity.
+
+Cut 1's surfaces were rows with coloured dots, four bare command names, and
+scholar name/date pairs. Every one of those could belong to any note app. What
+makes a surface THIS product costs almost no pixels:
+
+    verse keys              2:255 · AL-BAQARAH
+    Arabic surah names      البقرة  beside Al-Baqarah, with its note count
+    note-type labels        LINGUISTIC in amber, THEMATIC in green
+    what a scholar SAID     not "Ibn Kathīr · 774 AH" but one line of his words
+    the Connection marks    2:255 ↔ 3:2, tagged munāsabāt
+    what a command DOES     "/ayah — Embed a verse", not "/ayah"
+
+Same container, same sizes, same beats, same seventeen seconds. The reel became
+product-true by replacing generic content with specific content, not by showing
+more of it.
+
+**The rule:** when a report names a QUALITY ("doesn't feel true to product",
+"feels cheap", "looks unfinished"), resist converting it into the nearest
+QUANTITY you know how to measure. Measurement is how you verify a hypothesis,
+not how you form one. §13a's numbers were all correct and all beside the point.
+
 ### 13c. Neither float it nor squash it — put a camera in it
 
 Three cuts swung between two wrong answers for showing a desktop-shaped product
