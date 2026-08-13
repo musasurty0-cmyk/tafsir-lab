@@ -1,5 +1,6 @@
 import React from "react";
 import { Composition } from "remotion";
+import { OneDesk, DESK_FRAMES } from "./reel/OneDesk";
 import { TafsirTrailer } from "./TafsirTrailer";
 import { LinkReel, REEL_FRAMES } from "./reel/LinkReel";
 import { TestReel, TEST_FRAMES } from "./reel/TestReel";
@@ -20,6 +21,19 @@ import DGLAD from "./reel/dosari-glad.json";
 export const RemotionRoot: React.FC = () => {
   return (
     <>
+      {/* One Desk — the original 70s landscape tour, rebuilt as a reel:
+          one container start to finish, no cut anywhere, and every beat
+          performing a different verb. See the header of OneDesk.tsx. */}
+      <Composition
+        id="OneDesk"
+        component={OneDesk}
+        durationInFrames={DESK_FRAMES}
+        fps={60}
+        width={1080}
+        height={1920}
+        defaultProps={{}}
+      />
+
       <Composition
         id="TafsirTrailer"
         component={TafsirTrailer}

@@ -490,6 +490,38 @@ everything around it eases.
 progress, and anything else that reads a continuous value as a boolean. Crossfade
 them. They are cheap to fix and they are usually what you were actually seeing.
 
+### 11.13 A whole-frame mean hides a small object entirely
+
+Building `OneDesk` I measured per-frame motion energy across the frame and the
+opening beat read **63 of 64 frames dead** — apparently a static title card,
+the worst possible open. It was not static. Cropped to the 360×360 the mark
+actually occupies, the same frames measure mean 0.616 with ink coverage going
+388px → 1466px: the mark demonstrably builds.
+
+A 76px glyph fading in inside a 1080×1920 frame moves ~400 of 129,600 sampled
+pixels. Its contribution to a whole-frame mean is ~0.02, under any threshold you
+would set for "something happened".
+
+**Do instead:** scale the measurement window to the object, not the format. A
+frame-wide mean answers "did the composition change", never "is this element
+alive". Both readings were correct; only one was about the thing being asked.
+This is §11.7's binning problem in space rather than in value.
+
+### 11.14 Give each object a destination, not just a departure
+
+Four collaborator chips flew in from four different directions and landed in one
+illegible pile. Each had its own entry vector and they all shared `left: 50%;
+top: 40%` — so the animation was correct and the layout was not. Every one
+converged on the same pixel the moment it arrived.
+
+The bug is invisible at both ends of the timeline you tend to check: at p=0 they
+are off-screen and separate, and in code each row plainly differs. It only
+exists at p=1.
+
+**Do instead:** when several objects animate to a shared surface, write the
+FINAL positions first and derive the entry offsets from them. And check a frame
+after the move settles, not only during it.
+
 ## 12. Sound — what survives measurement and what does not
 
 The source's hits sit under a **128 BPM** bed, so nothing about them can be read
