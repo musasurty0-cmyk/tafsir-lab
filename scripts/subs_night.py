@@ -11,10 +11,32 @@ per-lecture decision made while someone is looking.
 
 Two things here are scar tissue, and both cost hours the last time:
 
-  IT MUST SURVIVE THE SESSION. `nohup bash chain.sh &` died with its parent and
-  only the first of three jobs ran overnight. This is meant to be launched with
-  PowerShell Start-Process -WindowStyle Hidden, which detaches properly on
-  Windows. Nothing here assumes a terminal.
+  IT MUST SURVIVE THE SESSION -- AND ONLY THE TASK SCHEDULER MANAGES THAT.
+  Three launchers have now been tried and two of them lost a night:
+
+    nohup bash chain.sh &                  died with its parent; 1 of 3 jobs ran
+    Start-Process -WindowStyle Hidden      died with its parent; 8 min in
+    schtasks                               survives
+
+  Start-Process is the one that looks right and is not. It detaches from the
+  *shell*, but the shell was a child of the agent process, and on Windows that
+  whole tree sits in a Job Object which is killed when the agent exits. The
+  giveaway is an EMPTY stderr next to a truncated log: a tree kill leaves no
+  error because nothing failed. A scheduled task's parent is the Task Scheduler
+  service, so it is outside that job entirely.
+
+  Two further things bite when you move to schtasks, and both did:
+    * `schtasks /create` defaults DisallowStartIfOnBatteries to TRUE. On a
+      laptop on battery the task goes to Queued and silently never starts.
+      Register-ScheduledTask with -AllowStartIfOnBatteries
+      -DontStopIfGoingOnBatteries -ExecutionTimeLimit 0.
+    * Task Scheduler hands the process a MINIMAL environment. python, yt-dlp
+      and ffmpeg are all absent from its PATH. Set PATH explicitly in the .cmd
+      and capture the .cmd's own output -- a "not recognized" goes to cmd's
+      stderr, and if only the inner commands are redirected you get exit 1 and
+      an empty error file.
+
+  See tafsir-source/night.cmd, which carries all three fixes.
 
   GATE ON THE ARTEFACT, NOT ON THE PROCESS. A previous supervisor waited for
   "no python running" before starting the next job, and zombie ctranslate2
