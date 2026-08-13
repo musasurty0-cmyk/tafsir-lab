@@ -671,6 +671,31 @@ A morph between two unrelated screens is a very smooth way of changing the
 subject. Continuity of the container bought nothing because the thing the viewer
 is actually tracking — the document — was replaced each time.
 
+### 13b. Motion energy does not predict quality for a reading tool
+
+Chasing dead-frame counts through three cuts of `OneDesk`, I finally measured
+the thing I was trying to beat:
+
+| | original (preferred) | cut 3 |
+|---|---:|---:|
+| dead frames | **76%** | 73% |
+| longest freeze | **4.90s** | 3.12s |
+
+The piece that reads better is **stiller than mine**. Every cycle spent making
+the rebuild busier was spent on a metric that does not separate good from bad
+in this genre — and I had already written §11.6 about exactly this failure.
+
+The measure that DID separate them was density × dwell: ink on screen, and how
+long it stays there. Cut 2 had 9,527 ink pixels at 3.3s per screen; the
+original had 22,108 at 10.0s. Cut 3 reaches 1.24% mean ink against the
+original's 1.07%, with the āyah on screen for thirty-five continuous seconds.
+
+**The rule:** pick the metric from the failure mode, not from the toolbox.
+"Feels dead" and "shows nothing" both look like low numbers, and motion energy
+only answers the first. A reading tool holds still because the viewer is
+reading; a slideshow holds still because there is nothing to look at. The
+difference is on the screen, not in the derivative.
+
 ## 13. Two things that are just true about this work
 
 **A passing test is not evidence against a report.** At the centring point I had
