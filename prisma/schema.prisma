@@ -292,6 +292,13 @@ model StructuredNote {
   // Set only when anchorType = 'segment'. Nullable and additive, so every
   // existing note row remains valid and the other anchor types are untouched.
   segmentId    String?  @db.Uuid
+  // Which Mushaf page a canvas text box was placed on. anchorType 'page' means
+  // "anchored to this Page row" — a whole surah — not to a sheet of the Mushaf,
+  // so without this a box written on one page reappeared on every other page of
+  // the surah. Drawings already scope this way by tagging each stroke.
+  // Nullable: rows created before this column stay valid (see the filter in
+  // ModeBPage for how they are treated).
+  mushafPage   Int?
   content      Json     // TipTap JSON — rich text, full-text searchable
   // 'amber' | 'emerald' | 'sky' | 'rose' | null
   color        String?

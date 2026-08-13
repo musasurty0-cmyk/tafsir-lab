@@ -1,0 +1,13 @@
+-- Scope canvas text boxes to the Mushaf page they were written on.
+--
+-- anchorType 'page' means "anchored to this Page row", and a Page row is a
+-- whole surah. Nothing recorded WHICH sheet of the Mushaf a box was placed on,
+-- so a box written on one page reappeared on every other page of that surah —
+-- it looked like the text was following the reader around. Drawings never had
+-- this problem because each stroke carries its own mushafPage inside the
+-- strokes JSON; text boxes are rows, and had nowhere to put it.
+--
+-- Nullable on purpose. Existing rows keep NULL and the client shows those on
+-- the first page of the surah (the rule page-anchored note cards already use),
+-- so nothing is orphaned and nothing keeps duplicating.
+ALTER TABLE "StructuredNote" ADD COLUMN IF NOT EXISTS "mushafPage" INTEGER;

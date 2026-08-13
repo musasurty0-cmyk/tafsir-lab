@@ -30,6 +30,8 @@ export interface CreateNoteInput {
   wordPosition?: number;
   /** Required when anchorType = "segment". */
   segmentId?: string;
+  /** Mushaf page a canvas text box was placed on; scopes it to that page. */
+  mushafPage?: number;
   content: unknown; // TipTap JSON
   color?: string;
   offsetX?: number;
@@ -183,6 +185,7 @@ export async function createNote(
       ayahNumber: input.ayahNumber ?? null,
       wordPosition: input.wordPosition ?? null,
       segmentId: input.segmentId ?? null,
+      mushafPage: input.mushafPage ?? null,
       content: input.content as never,
       color: input.color ?? null,
       offsetX: input.offsetX ?? 40,

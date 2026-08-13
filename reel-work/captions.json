@@ -1,0 +1,18 @@
+[
+  { "s": 0.00,  "e": 1.76,  "ar": "ولذلك يقول ابن القيّم",                    "en": "And because of that, Ibn al-Qayyim says" },
+  { "s": 1.76,  "e": 4.32,  "ar": "كل ما في القرآن",                          "en": "everything in the Qurʾān" },
+  { "s": 4.32,  "e": 6.10,  "ar": "جاء في سورة الفاتحة",                      "en": "is gathered in Sūrat al-Fātiḥah" },
+
+  { "s": 7.46,  "e": 9.76,  "ar": "وكل ما جاء في سورة الفاتحة",               "en": "and all of Sūrat al-Fātiḥah" },
+  { "s": 9.76,  "e": 11.14, "ar": "جاء في قوله تعالى",                        "en": "is gathered in His words" },
+  { "s": 11.14, "e": 14.10, "ar": "إِيَّاكَ نَعْبُدُ وَإِيَّاكَ نَسْتَعِينُ", "en": "“You alone we worship, and You alone we ask for help”" },
+
+  { "s": 15.12, "e": 16.62, "ar": "ما قامت السماوات والأرض",                  "en": "The heavens and the earth were not established" },
+  { "s": 16.62, "e": 19.10, "ar": "إلا لأجل تحقيق لا إله إلا الله",           "en": "except for the realising of lā ilāha illa Allāh" },
+
+  { "s": 23.56, "e": 26.24, "ar": "لو وُضِعت السماوات والأرض",                "en": "If the heavens and the earth were set" },
+  { "s": 26.24, "e": 27.60, "ar": "في الكفّة",                                "en": "in one pan of the scale" },
+  { "s": 27.60, "e": 29.50, "ar": "ووُضِعت لا إله إلا الله",                  "en": "and lā ilāha illa Allāh" },
+  { "s": 29.50, "e": 31.04, "ar": "في الكفّة",                                "en": "in the other" },
+  { "s": 31.04, "e": 33.60, "ar": "لرجحت بها لا إله إلا الله",                "en": "lā ilāha illa Allāh would outweigh them" }
+]

@@ -82,6 +82,8 @@ export interface NoteData {
   wordPosition: number | null;
   /** Set when anchorType = "segment". */
   segmentId?: string | null;
+  /** Mushaf page a canvas text box belongs to. null on rows predating the column. */
+  mushafPage?: number | null;
   content: unknown;
   color: string | null;
   offsetX: number;

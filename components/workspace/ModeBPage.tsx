@@ -32,6 +32,7 @@ import { OpenSelectionPrompt, NameSelectionPrompt } from "./SelectionDialogs";
 import SelectionList from "./SelectionList";
 import ConnectionsPanel from "./ConnectionsPanel";
 import { ayahKey, surahKey, selectionKey } from "@/lib/quran-objects";
+import { textBoxOnPage } from "@/lib/canvas-scope";
 export type Range = { start: number; end: number };
 import DrawingCanvas, { type DrawTool, type DrawingCanvasHandle } from "./DrawingCanvas";
 import CanvasToolRail, {
@@ -398,8 +399,9 @@ export default function ModeBPage({
     [pageVerses],
   );
 
-  // Free text boxes live in canvas space — visible on every Mushaf page.
-  // anchorType "editor" boxes belong to the Mode A freeform layer.
+  // Free text boxes live in canvas space, scoped to the Mushaf page they were
+  // written on (see the render filter). anchorType "editor" boxes belong to the
+  // Mode A freeform layer.
   // EXCLUSIVE layers: normal mode shows only page-level boxes; word/ayah
   // mode shows only that anchor's boxes (see textBoxVisible below).
   const canvasTextBoxes = useMemo(
@@ -731,7 +733,11 @@ export default function ModeBPage({
         : anchor.wordPos != null
         ? { anchorType: "word", surahNumber: Number(surahStr), ayahNumber: Number(ayahStr), wordPosition: anchor.wordPos }
         : { anchorType: "ayah", surahNumber: Number(surahStr), ayahNumber: Number(ayahStr) }
-      : { anchorType: "page" };
+      /* A page-anchored box is anchored to the Page ROW — the whole surah — so
+         it needs the Mushaf page recorded separately, or it shows up again on
+         every other page of that surah. Anchored boxes (ayah/word/segment) are
+         already scoped by their anchor, which lives on one page. */
+      : { anchorType: "page", mushafPage: currentMushafahPage };
 
     const tempId = `temp-${crypto.randomUUID()}`;
     tempAnchorsRef.current.set(tempId, anchorFields);
@@ -747,6 +753,9 @@ export default function ModeBPage({
          one was filtered out the instant it was created — the box was placed
          and then immediately hidden, which read as nothing happening. */
       segmentId: (anchorFields as { segmentId?: string }).segmentId ?? null,
+      /* Same reason as segmentId above: the render filter matches on
+         mushafPage, so a temp without one is hidden the moment it appears. */
+      mushafPage: (anchorFields as { mushafPage?: number }).mushafPage ?? null,
       content: { type: "doc", content: [{ type: "paragraph" }] },
       color: null,
       offsetX: Math.round(wx), offsetY: Math.round(wy),
@@ -1390,7 +1399,10 @@ export default function ModeBPage({
             boxes; word/ayah mode shows only the active layer's boxes */}
         {canvasTextBoxes
           .filter((n) => {
-            if (!focusAnchor) return n.anchorType === "page";
+            /* Scope to the Mushaf page it was written on — see canvas-scope.ts
+               for why page-anchored is not the same as on-this-page. */
+            if (!focusAnchor)
+              return textBoxOnPage(n, currentMushafahPage, availablePages[0]);
             // A segment layer shows exactly its own notes.
             if (focusAnchor.segmentId) {
               return n.anchorType === "segment" && n.segmentId === focusAnchor.segmentId;
