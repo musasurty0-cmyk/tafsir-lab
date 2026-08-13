@@ -968,3 +968,58 @@ Before the first delivery of any cut, in one pass:
 
 Four of the five are text output and cost seconds. The renders are the expensive part,
 and this is how you stop needing four of them.
+
+### 13e. A transition needs a CAUSE, and the outgoing frame has to actually leave
+
+Two reports on One Desk, one sentence: *"some screens just come out of nowhere and
+sound effects feel randomly placed."* Both were measurable and both were mine.
+
+**The sound was not badly judged, it was uncorrelated.** The beat table, the cursor
+route and the audio cues were three hand-typed timelines. Measured against each other:
+
+| click sound | screen it was meant to cause | gap |
+|---|---|---|
+| f146 | f232 | 86f — 1.43s |
+| f296 | f384 | 88f — 1.47s |
+| f616 | f704 | 88f — 1.47s |
+| f920 | f1008 | 88f — 1.47s |
+
+Six clicks averaging 84 frames ahead of their consequence. Worse, each sat 4 frames
+before the cursor *departed* — the sound said press and the pointer flew away. The
+thrown card had drifted the same way: it landed at f304 and the muṣḥaf it delivered
+opened at f384, so the delivery finished 1.3s before the delivery arrived.
+
+Separate timelines drift. There is now one table — where the cursor presses, when,
+and which beat the press produces — and the route, the click audio and the visible
+ring are all derived from it. `pressAt()` is called by the picture and by the sound.
+
+**The rule that came out of it:** press → 8 frames → the screen answers. Instant
+reads as a cut; past ~15 frames reads as lag.
+
+**And the second half, which was worse.** `contentBlur` is a two-part curve — old
+content smears out, void, new content smears in. But the surface router took its
+index from `phase()`, which flips on the boundary frame, where the curve still says
+*fully opaque, no blur*. So the blur-out half never had anything to play on. Frame
+232 shows it: the surah list is gone and the page list is at full opacity, one frame
+after the boundary, inside a container still mid-resize. A hard cut — on all seven
+transitions, in a file whose opening comment is "there is no cut anywhere in this
+file."
+
+The new surface then arrived at its own p≈0, which for a card whose contents are
+gated on p is an empty rectangle. **A cut to a blank card is the literal definition
+of a screen coming out of nowhere.**
+
+Fix is two lines: hold the *previous* beat's surface, at its settled state, while
+`m < 0.42`, and cross only where the curve has taken opacity to zero.
+
+**A corollary worth its own line.** Once the hand-off worked, the incoming surface
+was still revealing nothing, because its own reveal ramps started after the blur had
+already cleared — two reveals in a row, the first of them empty. Content must be
+*underway* by the time the blur lifts. Anything gated to begin at p=0.1 or later
+begins after the transition that was supposed to introduce it.
+
+**What generalises.** Every check here was arithmetic on numbers already in the file
+— press frames against beat starts, throw landing against beat start — and none of
+it needed a render. A contact sheet finds a composition problem. It does not find a
+timeline that disagrees with itself, because each frame in it looks fine alone. Print
+the schedule before printing the frames.

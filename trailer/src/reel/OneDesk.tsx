@@ -78,6 +78,58 @@ const BEATS: Beat[] = [
 
 const MORPH = 20;   // §2: a big size delta buys ~20 frames; small ones take 12
 
+// ── Cause and effect (§13e) ────────────────────────────────────────────────
+// The beat table above says WHEN each screen arrives. This table says WHY.
+//
+// The first cut kept three timelines — beats, cursor route, sound cues — each
+// written by hand, and they drifted apart exactly as separate timelines do:
+// the six click sounds landed an average of 84 frames (1.4s) BEFORE the screen
+// each was meant to cause, and the thrown card touched down 80 frames before
+// the mushaf it delivered. Nothing was out of place by taste; the sound was
+// uncorrelated with the picture and the screens had no visible cause. Reported
+// as "some screens just come out of nowhere and sound effects feel randomly
+// placed", which is a precise description of that measurement.
+//
+// So there is now ONE table. The cursor's route, the click sounds and the
+// visible press are all derived from it below — they cannot drift again
+// because there is nothing left to drift against.
+
+const THROW_LEN = 60;
+
+interface Act {
+  beat: number;        // the beat this press produces
+  x: number; y: number;// where the press lands — on a real element of the
+                       // surface that is still on screen when it happens
+  grab?: boolean;      // beat 3 is picked up and thrown, not clicked
+}
+
+const ACTS: Act[] = [
+  { beat: 1, x: CX +  10, y: CY +  46 },              // the mark itself
+  { beat: 2, x: CX - 168, y: CY -   8 },              // the Al-Baqarah row
+  { beat: 3, x: CX - 196, y: CY -  50, grab: true },  // picks up Āyat al-Kursī
+  /* measured off the rendered frame, not guessed from the CSS: at CY−6 the
+     pointer sat ON the glyphs of ٱلْقَيُّومُ and neither could be read. It now
+     tucks under the word's left edge and points up into it. */
+  { beat: 4, x: CX -  70, y: CY +  30 },              // the word al-Qayyūm
+  { beat: 5, x: CX - 206, y: CY + 120 },              // into the note
+  { beat: 6, x: CX -  86, y: CY +  26 },              // /tafsir
+  { beat: 7, x: CX + 232, y: CY -  54 },              // a commentary
+  { beat: 8, x: CX + 273, y: CY - 175 },              // the 🔗 on the Connection
+];
+
+const TRAVEL   = 46;  // frames spent crossing to a target
+const SETTLE   = 10;  // parked before it presses — it never presses on the move
+const RESPONSE =  8;  // press → the screen answers. 133ms: instant reads as a
+                      // cut, anything past ~15 frames reads as lag.
+
+/** The frame a press happens. A grab presses at launch, so the hand is still
+ *  on the card when it leaves. */
+const pressAt = (a: Act) =>
+  a.grab ? BEATS[a.beat].at - THROW_LEN : BEATS[a.beat].at - RESPONSE;
+const arriveAt = (a: Act) => pressAt(a) - SETTLE;
+
+const THROW_AT = pressAt(ACTS[2]);   // 324 — so the card lands ON BEATS[3].at
+
 /** Which beat index is live at frame f, and how far into its morph. */
 const phase = (f: number) => {
   let i = 0;
@@ -155,17 +207,39 @@ const Caption: React.FC<{ text: string; at: number; side: "above" | "below"; h: 
 // on and lingers after, and its smear scales with speed. This one detail does
 // more than anything else to make a frame read as filmed.
 
+/* Where the cursor rests at both ends, so frame 1319's cursor is frame 0's and
+   the loop closes on it too (§7). The old exit landed 80px away from the open,
+   which put a visible jump on the seam. */
+const REST = { x: 700, y: 1360 };
+
+/* Each leg departs early enough to ARRIVE before the press it serves — that is
+   the whole schedule, and it is arithmetic rather than eight typed numbers. */
 const LEGS: { at: number; x: number; y: number }[] = [
-  { at:   0, x: 700, y: 1360 },
-  { at: 150, x: CX + 150, y: CY + 55 },
-  { at: 300, x: CX - 190, y: CY - 40 },
-  { at: 452, x: CX + 40,  y: CY - 320 },
-  { at: 620, x: CX - 130, y: CY + 110 },
-  { at: 772, x: CX - 200, y: CY - 60 },
-  { at: 924, x: CX + 240, y: CY + 30 },
-  { at: 1076, x: CX - 60,  y: CY + 200 },
-  { at: 1210, x: 780, y: 1330 },
+  { at: arriveAt(ACTS[0]) - TRAVEL, x: REST.x, y: REST.y },
+  ...ACTS.slice(1).map((a, k) => ({
+    at: arriveAt(a) - TRAVEL, x: ACTS[k].x, y: ACTS[k].y,
+  })),
+  { at: pressAt(ACTS[7]) + 26, x: ACTS[7].x, y: ACTS[7].y },
+  { at: DESK_FRAMES,           x: REST.x,    y: REST.y },
 ];
+
+/* On the grab the hand goes WITH the card for its first frames and then lets
+   go. A throw with no thrower is just an object that left. */
+const flick = (f: number) => {
+  const p = (f - THROW_AT) / THROW_LEN;
+  if (p < 0 || p > 0.15) return 0;
+  return track(p, ARC.S, ARC.Y) * interpolate(p, [0.08, 0.15], [1, 0], clamp);
+};
+
+/** 1 on the frame of a press, back to 0 seven frames later. */
+const pressure = (f: number) => {
+  let v = 0;
+  for (const a of ACTS) {
+    const d = f - pressAt(a);
+    if (d >= 0 && d < 7) v = Math.max(v, 1 - d / 7);
+  }
+  return v;
+};
 
 const cursorAt = (f: number) => {
   let a = LEGS[0], b = LEGS[0];
@@ -173,25 +247,54 @@ const cursorAt = (f: number) => {
     if (f >= LEGS[k].at) { a = LEGS[k]; b = LEGS[Math.min(k + 1, LEGS.length - 1)]; }
   }
   const span = Math.max(1, b.at - a.at);
-  /* Travel occupies the first 46 frames of a leg; the rest is idle drift, so
-     the cursor is parked well before the container starts its next move. */
-  const p = ease(Math.min(1, (f - a.at) / Math.min(46, span)));
-  const idle = Math.max(0, f - a.at - 46);
+  /* Travel occupies the first TRAVEL frames of a leg; the rest is idle drift.
+     Clamped low as well as high — the first leg no longer starts at frame 0,
+     and an unclamped cubic run backwards throws the cursor off the stage. */
+  const p = ease(Math.max(0, Math.min(1, (f - a.at) / Math.min(TRAVEL, span))));
+  const idle = Math.max(0, f - a.at - TRAVEL);
   return {
     x: a.x + (b.x - a.x) * p + Math.sin(idle / 37) * 5.5 + Math.sin(idle / 13) * 1.6,
-    y: a.y + (b.y - a.y) * p + Math.cos(idle / 29) * 4.2 + Math.cos(idle / 17) * 1.2,
+    y: a.y + (b.y - a.y) * p + Math.cos(idle / 29) * 4.2 + Math.cos(idle / 17) * 1.2
+       + flick(f),
     v: Math.abs(b.x - a.x + b.y - a.y) * (p < 1 ? (1 - p) : 0) / 40,
   };
+};
+
+/* A press you can SEE. This is the other half of "randomly placed": a click
+   sound with no picture has nothing to be placed ON, so the ear files it as
+   ambience and ambience arriving in bursts sounds arbitrary. The ring is
+   drawn at pressAt() — the same call the audio uses. */
+const ClickFX: React.FC = () => {
+  const f = useCurrentFrame();
+  return (<>
+    {ACTS.filter((a) => !a.grab).map((a) => {
+      const t = (f - pressAt(a)) / 17;
+      if (t < 0 || t > 1) return null;
+      const e = ease(t), rad = 52 * e;
+      return (
+        <div key={a.beat} style={{
+          position: "absolute", left: a.x - rad, top: a.y - rad,
+          width: rad * 2, height: rad * 2, borderRadius: "50%",
+          border: `${1 + 3 * (1 - e)}px solid ${R.accent}`,
+          opacity: (1 - e) * 0.5, zIndex: 39,
+        }} />
+      );
+    })}
+  </>);
 };
 
 const Cursor: React.FC = () => {
   const f = useCurrentFrame();
   const { x, y, v } = cursorAt(f);
+  const pr = pressure(f);
   return (
     <div style={{
       position: "absolute", left: x, top: y, width: 26, height: 34,
       filter: `blur(${Math.min(7, v * 1.7)}px)`, zIndex: 40,
-      transform: "translate(-3px,-2px)",
+      /* the tip stays put; the body dips and shrinks, which is what a real
+         pointer does under a mouse-down */
+      transformOrigin: "2px 1px",
+      transform: `translate(-3px,-2px) translateY(${pr * 2.5}px) scale(${1 - pr * 0.12})`,
     }}>
       <svg viewBox="0 0 26 34" width="26" height="34">
         <path d="M2 1 L2 26 L8.5 20 L12.5 30 L17 28 L13 18.5 L21 18 Z"
@@ -316,7 +419,7 @@ const InkSurface: React.FC<{ p: number }> = ({ p }) => {
 };
 
 /** Beat 5 — the slash menu grows DOWNWARD out of the line being typed. */
-const SlashSurface: React.FC<{ p: number }> = ({ p }) => {
+const SlashSurface: React.FC<{ p: number; sel: number }> = ({ p, sel }) => {
   const items: [string, string][] = [
     ["/ayah",   "Embed a verse — Al-Baqarah 2:255"],
     ["/tafsir", "Pull commentary into the note"],
@@ -324,6 +427,11 @@ const SlashSurface: React.FC<{ p: number }> = ({ p }) => {
     ["/word",   "Anchor a note to one word"],
   ];
   const n = interpolate(p, [0.2, 1], [0, items.length], clamp);
+  /* `sel` comes from the cursor's own arrival frame rather than from p, which
+     tops out five frames too early to line up with it. The highlight follows
+     the cursor down to /tafsir because /tafsir is what gets pressed and what
+     the next beat opens; left on /ayah, the press landed on an inert row and
+     the panel that followed had no source. */
   return (
     <div style={{ padding: "30px 28px" }}>
       <div style={{ fontFamily: R.fontSans, fontSize: 30, color: R.ink }}>
@@ -339,11 +447,11 @@ const SlashSurface: React.FC<{ p: number }> = ({ p }) => {
             <div key={cmd} style={{
               display: "flex", alignItems: "baseline", gap: 14,
               padding: "12px 12px", borderRadius: 8,
-              background: k === 0 ? R.accentSoft : "transparent",
+              background: k === sel ? R.accentSoft : "transparent",
               opacity: o, transform: `translateY(${(1 - o) * 12}px)`,
             }}>
               <span style={{ fontFamily: R.fontMono, fontSize: 24,
-                             color: k === 0 ? R.accentInk : R.ink2 }}>{cmd}</span>
+                             color: k === sel ? R.accentInk : R.ink2 }}>{cmd}</span>
               <span style={{ fontFamily: R.fontSans, fontSize: 19, color: R.ink3 }}>{desc}</span>
             </div>
           );
@@ -454,7 +562,12 @@ const HalaqaSurface: React.FC<{ p: number }> = ({ p }) => {
 
 const Surface: React.FC<{ i: number; f: number }> = ({ i, f }) => {
   const since = f - BEATS[i].at;
-  const p = Math.min(1, Math.max(0, (since - 8) / 128));
+  /* Counted from the boundary, not from boundary+8. The blur-through hands the
+     card over around since=10–17, and with the old lead the incoming surface
+     was still at p≈0.02 there — so the blur cleared to reveal almost nothing
+     and the content then faded up on its own afterwards. Two reveals in a row,
+     the first of them empty. */
+  const p = Math.min(1, Math.max(0, since / 128));
   switch (i) {
     /* Beat 0 builds the mark over its own 64 frames; beat 8 is the same mark
        already assembled, so the last frame matches the first and the loop
@@ -478,7 +591,11 @@ const Surface: React.FC<{ i: number; f: number }> = ({ i, f }) => {
             one and holding it for two seconds (§5 — rack focus as a pointer) */}
         {[["Overview", "surah map · 6 notes"], ["Āyat al-Kursī (2:255)", "word notes · 11"],
           ["Verses 256–286", "linguistic · 2"], ["Munāsabāt", "connections · 6"]].map(([a, b], k) => {
-          const focusIdx = interpolate(p, [0.30, 1], [0, 3], clamp);
+          /* Down the list, then back to the one being taken. It used to walk
+             0→3 and finish on Munāsabāt while the cursor was picking up Āyat
+             al-Kursī — the focus pointing at one row and the hand at another.
+             It now settles on row 1 exactly as the grab happens. */
+          const focusIdx = interpolate(p, [0.12, 0.46, 0.72], [0, 3, 1], clamp);
           const near = Math.max(0, 1 - Math.abs(focusIdx - k));
           return (
             <Row key={a} label={a} sub={b} on={near > 0.55}
@@ -499,7 +616,11 @@ const Surface: React.FC<{ i: number; f: number }> = ({ i, f }) => {
             "لَا تَأْخُذُهُۥ سِنَةٌ وَلَا نَوْمٌ"].map((line, k) => (
             <div key={k} style={{
               fontFamily: R.fontSerif, fontSize: 46, color: R.ink, lineHeight: 2.0,
-              opacity: interpolate(p, [0.1 + k * 0.16, 0.4 + k * 0.16], [0, 1], clamp),
+              /* starts at p=0, not p=0.1. This is the one surface whose every
+                 element was gated late, so it was the one the blur-through
+                 revealed as a blank card — the first line now arrives WITH the
+                 blur clearing rather than a third of a second after it. */
+              opacity: interpolate(p, [k * 0.13, 0.22 + k * 0.13], [0, 1], clamp),
             }}>{line}</div>
           ))}
         </div>
@@ -511,7 +632,7 @@ const Surface: React.FC<{ i: number; f: number }> = ({ i, f }) => {
       </div>
     );
     case 4: return <InkSurface p={p} />;
-    case 5: return <SlashSurface p={p} />;
+    case 5: return <SlashSurface p={p} sel={f >= arriveAt(ACTS[5]) - 4 ? 1 : 0} />;
     case 6: return <TafsirSurface p={p} />;
     case 7: return <HalaqaSurface p={p} />;
     default: return null;
@@ -522,8 +643,11 @@ const Surface: React.FC<{ i: number; f: number }> = ({ i, f }) => {
 // Beat 3 does not morph into place — a row is THROWN out of beat 2 and the
 // container catches it. The arc is the tracked one: slingshot, nine-frame
 // hang, fall twice as fast as the rise.
-
-const THROW_AT = 244, THROW_LEN = 60;   // lands exactly at BEATS[3].at = 304
+//
+// THROW_AT is derived from BEATS[3] now, not typed. Typed, it was 244: the
+// card landed at 304 and the mushaf opened at 384, so the delivery finished a
+// second and a third BEFORE the thing it delivered. It now touches down on the
+// exact frame beat 3 begins, and dissolves into it.
 
 const Thrown: React.FC = () => {
   const f = useCurrentFrame();
@@ -534,7 +658,9 @@ const Thrown: React.FC = () => {
   const fade = interpolate(p, [0.86, 1], [1, 0], clamp);
   return (
     <div style={{
-      position: "absolute", left: CX - 150, top: CY + 40 + dy, width: 300,
+      /* leaves from under the cursor — ACTS[2] sits inside this box, so the
+         hand is holding the card rather than standing next to it */
+      position: "absolute", left: CX - 240, top: CY - 82 + dy, width: 300,
       opacity: fade, zIndex: 30,
       filter: `blur(${Math.min(9, v / 90)}px)`,
       background: R.bgElev, borderRadius: 12, padding: "16px 20px",
@@ -551,6 +677,25 @@ export const OneDesk: React.FC = () => {
   const g = geom(f);
   const cb = contentBlur(g.m);
   const beat = BEATS[g.i];
+
+  /* THE OUTGOING CONTENT HAS TO ACTUALLY GO OUT.
+     contentBlur is a curve in two halves — old content smears away, void, new
+     content smears in — but the router below took its index from phase(), which
+     flips to the new beat on the boundary frame, where the curve is still
+     saying "fully opaque, no blur". So the blur-out half never had anything to
+     play on: the old surface was replaced by a HARD CUT on frame BEATS[i].at,
+     and the new one arrived at its own p≈0, which for a card whose contents are
+     gated on p draws an empty rectangle. Measured on frame 232: the surah list
+     is gone and the page list is at full opacity, one frame after the boundary,
+     inside a container that has not finished resizing.
+     A cut to a blank card is exactly, literally, a screen coming out of
+     nowhere. Everything else in this file was designed to avoid a cut and this
+     put one on all seven transitions.
+     So during the first half we hold the PREVIOUS beat at its settled state and
+     cross only where the curve has taken opacity to zero. */
+  const out = g.m < 0.42;
+  const si  = out ? Math.max(0, g.i - 1) : g.i;
+  const sf  = out ? BEATS[si].at + 140 : f;
 
   /* The stage warms very slightly across the run and returns — a global tone
      change, so smoothstep, whose peak rate matches the linear ramp it replaces
@@ -574,41 +719,55 @@ export const OneDesk: React.FC = () => {
           filter: `blur(${cb.blur}px)`,
           transform: `translateX(${cb.dx}px)`,
         }}>
-          <div style={{ width: "100%" }}><Surface i={g.i} f={f} /></div>
+          <div style={{ width: "100%" }}><Surface i={si} f={sf} /></div>
         </div>
       </div>
 
       <Thrown />
       {beat.cap && beat.side &&
         <Caption text={beat.cap} at={beat.at + MORPH} side={beat.side} h={g.h} />}
+      <ClickFX />
       <Cursor />
 
       {/* ── Sound ──────────────────────────────────────────────────────────
-          §12.6: no one family carries a section — the first five seconds used
-          to run four whooshes and read hotter than the following forty-five.
-          Whoosh appears twice in the whole reel, on the throw and the slide.
-          §12.1: the loudest moments are the LANDING and the COLLAPSE, not the
-          launch. §12.3: every cue is inside its own Sequence with room after
-          it, so no decaying tail is chopped mid-sample.                    */}
+          Not a timeline. Every cue below is pinned to a frame the picture
+          already computes — the clicks ARE pressAt(), the throw cues are the
+          throw's own constants — so a retimed beat drags its audio with it and
+          the two cannot come apart again. Hand-typed, they had: six clicks
+          averaging 84 frames ahead of the screens they were meant to cause.
+          §12.1: the loudest moments are the CATCH and the COLLAPSE, never a
+          launch. §12.6: no one family carries a section — whoosh twice in
+          twenty-two seconds. §12.3: each cue has room after it for its tail. */}
       <Audio src={staticFile("bg.mp3")} volume={0.15} />
 
-      {/* one click per cursor action — the spine */}
-      <Sequence from={76}   durationInFrames={80}><Audio src={staticFile("sfx/granular.mp3")} volume={0.26} /></Sequence>
-      <Sequence from={146}  durationInFrames={44}><Audio src={staticFile("sfx/click.mp3")} volume={0.42} /></Sequence>
-      <Sequence from={228}  durationInFrames={80}><Audio src={staticFile("sfx/granular-select.mp3")} volume={0.30} /></Sequence>
-      <Sequence from={296}  durationInFrames={44}><Audio src={staticFile("sfx/click.mp3")} volume={0.38} /></Sequence>
-      <Sequence from={THROW_AT - 4} durationInFrames={70}><Audio src={staticFile("sfx/whoosh.mp3")} volume={0.30} /></Sequence>
-      {/* the catch is the loud one, not the launch (§12.1) */}
-      <Sequence from={THROW_AT + 54} durationInFrames={80}><Audio src={staticFile("sfx/land.mp3")} volume={0.54} /></Sequence>
-      <Sequence from={548}  durationInFrames={90}><Audio src={staticFile("sfx/granular-select.mp3")} volume={0.28} /></Sequence>
-      <Sequence from={616}  durationInFrames={44}><Audio src={staticFile("sfx/click.mp3")} volume={0.40} /></Sequence>
-      <Sequence from={712}  durationInFrames={96}><Audio src={staticFile("sfx/typing.mp3")} volume={0.36} /></Sequence>
-      <Sequence from={800}  durationInFrames={44}><Audio src={staticFile("sfx/click.mp3")} volume={0.44} /></Sequence>
-      <Sequence from={852}  durationInFrames={70}><Audio src={staticFile("sfx/whoosh.mp3")} volume={0.24} /></Sequence>
-      <Sequence from={920}  durationInFrames={44}><Audio src={staticFile("sfx/click.mp3")} volume={0.36} /></Sequence>
-      <Sequence from={1004} durationInFrames={44}><Audio src={staticFile("sfx/click.mp3")} volume={0.42} /></Sequence>
-      <Sequence from={1060} durationInFrames={80}><Audio src={staticFile("sfx/magnetic.mp3")} volume={0.36} /></Sequence>
-      <Sequence from={1156} durationInFrames={110}><Audio src={staticFile("sfx/land.mp3")} volume={0.56} /></Sequence>
+      {/* the spine: one click per press, on the press */}
+      {ACTS.filter((a) => !a.grab).map((a, k) => (
+        <Sequence key={a.beat} from={pressAt(a)} durationInFrames={40}>
+          <Audio src={staticFile("sfx/click.mp3")}
+                 volume={[0.40, 0.36, 0.42, 0.34, 0.38, 0.36, 0.44][k]} />
+        </Sequence>
+      ))}
+
+      {/* the grab, the flight, the catch */}
+      <Sequence from={arriveAt(ACTS[2])} durationInFrames={40}>
+        <Audio src={staticFile("sfx/granular-select.mp3")} volume={0.26} /></Sequence>
+      <Sequence from={THROW_AT} durationInFrames={64}>
+        <Audio src={staticFile("sfx/whoosh.mp3")} volume={0.30} /></Sequence>
+      <Sequence from={THROW_AT + THROW_LEN - 6} durationInFrames={80}>
+        <Audio src={staticFile("sfx/land.mp3")} volume={0.54} /></Sequence>
+
+      {/* and one per thing the screen does on its own: the ink drawing, the
+          /ayah typing itself out, the panel sliding in, the group arriving */}
+      <Sequence from={BEATS[4].at + 16}  durationInFrames={80}>
+        <Audio src={staticFile("sfx/granular.mp3")} volume={0.22} /></Sequence>
+      <Sequence from={BEATS[5].at + 18}  durationInFrames={96}>
+        <Audio src={staticFile("sfx/typing.mp3")} volume={0.36} /></Sequence>
+      <Sequence from={BEATS[6].at + 6}   durationInFrames={64}>
+        <Audio src={staticFile("sfx/whoosh.mp3")} volume={0.22} /></Sequence>
+      <Sequence from={BEATS[7].at + 14}  durationInFrames={80}>
+        <Audio src={staticFile("sfx/magnetic.mp3")} volume={0.34} /></Sequence>
+      <Sequence from={BEATS[8].at}       durationInFrames={110}>
+        <Audio src={staticFile("sfx/land.mp3")} volume={0.52} /></Sequence>
     </AbsoluteFill>
   );
 };
