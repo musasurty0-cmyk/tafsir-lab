@@ -615,6 +615,62 @@ Cut per-cue, not in the file, when the same sample is used correctly elsewhere. 
 note what the cut *promotes*: leaving the transients untouched while the wind drops
 6 dB means the intro now arrives on the object landing rather than on air moving.
 
+## 13a. Why the polished rebuild is worse than the crude original
+
+`OneDesk` has everything the original 70s trailer lacks — a morph instead of a
+cut, a tracked throw, rack focus, per-word catch-up, a live cursor, a designed
+sound bed. It is still the weaker piece. Measured against `TafsirTrailer`:
+
+| | original | OneDesk |
+|---|---:|---:|
+| product area of frame | **100%** | 39% |
+| ink density INSIDE the product | 1.07% | 1.17% |
+| ink pixels on screen | **22,108** | 9,527 |
+| informational elements | **~294** | ~128 |
+| dwell per screen | **10.0s** | 3.3s |
+
+The surfaces are not sparse — internal density is identical, marginally higher
+in the rebuild. They are **small**, and they are **brief**. Content × time, the
+original delivers roughly **seven times** the information.
+
+### The cause: a reference whose subject was a different kind of object
+
+§1 says the app never fills the frame; it floats at a quarter to a half of frame
+area with real stage around it. That was measured from iMessage, Mail, ClickUp
+and Notion — reels whose subject is **a pill, a chip, a button**, holding one or
+two words. Floating a two-word pill in dead space works because there is nothing
+in it to read.
+
+TafsirLab's subject is a page of Arabic with a translation and two scholars'
+notes. It is a **reading tool**. At 39% of a 1080-wide frame its own text has to
+shrink until the thing that proves the product exists — a linguistic note citing
+Ibn Taymiyyah — no longer fits on screen at all.
+
+**The rule to carry:** before importing a compositional constant from a
+reference, check that the reference's SUBJECT is the same kind of object as
+yours. Stage-to-object ratio is a function of how much the object has to say.
+This is the Part I / Part III category error committed *inside* Part I.
+
+### Two more, both structural rather than visual
+
+**Caption and evidence must be simultaneous.** The original captions a frame
+that already proves the claim: "Anchor notes directly to verses — linguistic,
+thematic, or cross-references" sits under an actual linguistic note and an
+actual thematic note, both with real content. The rebuild says "See how the
+scholars read it" over four names and four dates. When the caption outruns what
+is on screen the line stops being a description and becomes an advertisement.
+
+**Continuity belongs to the SUBJECT, not the frame.** The rebuild's headline
+achievement is one container with no cut in thirty seconds. But its *contents*
+reset every beat — nine unrelated screens inside one rectangle. The original
+cuts freely and still feels more continuous, because all seven scenes are the
+same study page: same āyah, same workspace, same sidebar, progressively worked
+on. It has narrative continuity without a single narrative caption.
+
+A morph between two unrelated screens is a very smooth way of changing the
+subject. Continuity of the container bought nothing because the thing the viewer
+is actually tracking — the document — was replaced each time.
+
 ## 13. Two things that are just true about this work
 
 **A passing test is not evidence against a report.** At the centring point I had
