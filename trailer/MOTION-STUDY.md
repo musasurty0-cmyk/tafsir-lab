@@ -671,6 +671,40 @@ A morph between two unrelated screens is a very smooth way of changing the
 subject. Continuity of the container bought nothing because the thing the viewer
 is actually tracking — the document — was replaced each time.
 
+### 13c. Neither float it nor squash it — put a camera in it
+
+Three cuts swung between two wrong answers for showing a desktop-shaped product
+in a 9:16 frame:
+
+| | cut 2 | cut 3 | cut 4 |
+|---|---|---|---|
+| approach | float the app on a stage | fit the whole app to the frame | camera into the app |
+| product area | 39% | 100% | 100% |
+| vertical fill | — | **49%** | 100% |
+| 20px body text renders at | small | **14px** | **34px** |
+| mean ink | 0.47% | 1.24% | 2.24% |
+
+Cut 3 was a correction of cut 2 that reproduced its defect in a new place.
+"The original fills the frame" is a fact about a **landscape** piece whose
+layout already matched its aspect ratio. Carried into portrait it means
+scaling a 1500×1300 desktop layout down by 0.72 — which leaves half the frame
+empty and renders body copy at 14px, unreadable on the device it is made for.
+
+The answer is neither. Render the app at its own proportions and make the frame
+a WINDOW onto it. At 1.7× the frame shows a 635×1129 column — one column of the
+page, or the page and a note, or the drawer. Nothing is shrunk, the frame is
+always full, and moving between regions is itself the motion.
+
+**Enforce the bounds in code.** For the window to stay inside the app,
+`x ∈ [W/2z, APPW−W/2z]` and `y ∈ [H/2z, APPH−H/2z]`. My first camera sat at
+y=250 with z=1.72, which needs y≥558, so the top-left corner of every early
+frame was bare stage. That is arithmetic, not taste — it belongs in a clamp,
+not in an eye.
+
+And the canvas has to hold as much content as the pan crosses. Raising APPH to
+2100 without lengthening the page just moved the emptiness from the frame into
+the app; the fix was more āyāt, not more canvas.
+
 ### 13b. Motion energy does not predict quality for a reading tool
 
 Chasing dead-frame counts through three cuts of `OneDesk`, I finally measured

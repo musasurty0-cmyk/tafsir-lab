@@ -70,6 +70,66 @@ const T = {
   mark:   2360,
 };
 
+/* ── The camera ───────────────────────────────────────────────────────────
+   Cut 3 shrank a desktop layout to fit a 9:16 frame: 49% vertical fill, 20px
+   body text rendering at 14px, and the bottom half of every frame empty. "The
+   original fills the frame" was a conclusion drawn from a LANDSCAPE piece
+   whose layout already matched its aspect ratio. Copying the conclusion
+   without the layout is what produced a screen recording with a void under it.
+
+   So the app is rendered at its own desktop proportions and the frame is a
+   WINDOW onto it. At 1.7x the frame shows a 635x1129 column of a 1500-wide
+   app — one column of the page, or the page and a note, or the drawer. Text
+   reads at 34px instead of 14px and the frame is full at every moment.
+
+   The camera pans hard and then stops dead (§9.2): each move is over inside
+   ~50 frames and then holds, so the movement reads as a decision rather than
+   a drift. The one pull-back is the last beat, where seeing the whole page at
+   once IS the payoff.                                                       */
+
+const APPW = 1500, APPH = 2100;
+
+interface Cam { at: number; x: number; y: number; z: number }
+const CAM: Cam[] = [
+  { at: 0,          x: 800,  y: 600,  z: 1.70 },   // the empty page, being named
+  { at: T.ayah,     x: 820,  y: 660,  z: 1.58 },   // the ayah lands
+  { at: T.ink,      x: 790,  y: 560,  z: 2.00 },   // push into the word being marked
+  { at: T.ling,     x: 1060, y: 620,  z: 1.74 },   // pan right to the note it opens
+  { at: T.tafsir,   x: 1150, y: 660,  z: 1.56 },   // further right, the drawer
+  { at: T.them,     x: 1030, y: 820,  z: 1.66 },   // back left and down
+  { at: T.conn,     x: 860,  y: 980,  z: 1.70 },   // the Connection
+  { at: T.people,   x: 800,  y: 1160, z: 1.62 },   // presence, bottom of the page
+  { at: T.back,     x: 780,  y: 900,  z: 1.32 },   // pull back as far as coverage allows
+];
+
+/* Keep the window INSIDE the app. Cut 4's first camera sat at y=250 with a
+   zoom of 1.72, which needs y>=558 — so the top-left of every early frame was
+   bare stage. This is arithmetic, not judgement, so it is enforced rather than
+   eyeballed. */
+const clampCam = (x: number, y: number, z: number) => {
+  const hx = W / (2 * z), hy = H / (2 * z);
+  return {
+    x: Math.min(Math.max(x, hx), APPW - hx),
+    y: Math.min(Math.max(y, hy), APPH - hy),
+    z,
+  };
+};
+
+const camAt = (f: number) => {
+  let a = CAM[0], b = CAM[0];
+  for (let k = 0; k < CAM.length; k++)
+    if (f >= CAM[k].at) { a = CAM[k]; b = CAM[Math.min(k + 1, CAM.length - 1)]; }
+  /* the move is over in 50 frames and then the camera is STOPPED — an even
+     drift through the hold is what §9.2 measured the source NOT doing */
+  const p = ease(Math.min(1, Math.max(0, (f - a.at) / 50)));
+  const nb = CAM[Math.min(CAM.indexOf(a) + 1, CAM.length - 1)];
+  return clampCam(
+    a.x + (nb.x - a.x) * p,
+    a.y + (nb.y - a.y) * p,
+    a.z + (nb.z - a.z) * p,
+  );
+};
+
 // ── Chrome ─────────────────────────────────────────────────────────────────
 // Full-bleed. This is the app, not a picture of the app.
 
@@ -243,7 +303,9 @@ const Page: React.FC<{ f: number }> = ({ f }) => {
                             direction: "rtl", textAlign: "right", lineHeight: 2.0 }}>
                 ٱللَّهُ لَآ إِلَـٰهَ إِلَّا هُوَ ٱلْحَىُّ ٱلْقَيُّومُ ۚ لَا تَأْخُذُهُۥ سِنَةٌ وَلَا نَوْمٌ ۚ
                 لَّهُۥ مَا فِى ٱلسَّمَـٰوَٰتِ وَمَا فِى ٱلْأَرْضِ ۗ مَن ذَا ٱلَّذِى يَشْفَعُ عِندَهُۥٓ
-                إِلَّا بِإِذْنِهِۦ ۚ يَعْلَمُ مَا بَيْنَ أَيْدِيهِمْ وَمَا خَلْفَهُمْ
+                إِلَّا بِإِذْنِهِۦ ۚ يَعْلَمُ مَا بَيْنَ أَيْدِيهِمْ وَمَا خَلْفَهُمْ ۖ وَلَا يُحِيطُونَ
+                بِشَىْءٍ مِّنْ عِلْمِهِۦٓ إِلَّا بِمَا شَآءَ ۚ وَسِعَ كُرْسِيُّهُ ٱلسَّمَـٰوَٰتِ
+                وَٱلْأَرْضَ ۖ وَلَا يَـُٔودُهُۥ حِفْظُهُمَا ۚ وَهُوَ ٱلْعَلِىُّ ٱلْعَظِيمُ
               </div>
               {/* ink drawn ON the word, not faded in */}
               {f >= T.ink && (
@@ -269,7 +331,10 @@ const Page: React.FC<{ f: number }> = ({ f }) => {
                     existence. Neither drowsiness overtakes Him nor sleep. To Him belongs
                     whatever is in the heavens and whatever is on the earth. Who is it that
                     can intercede with Him except by His permission? He knows what is
-                    before them and what will be after them…
+                    before them and what will be after them, and they encompass not a thing
+                    of His knowledge except for what He wills. His Kursī extends over the
+                    heavens and the earth, and their preservation tires Him not. And He is
+                    the Most High, the Most Great.
                   </div>
                 </>
               );
@@ -318,7 +383,20 @@ const Page: React.FC<{ f: number }> = ({ f }) => {
           <div style={{ fontFamily: R.fontSans, fontSize: 19, color: R.ink2, marginTop: 10,
                         lineHeight: 1.5 }}>
             There shall be no compulsion in religion. The right course has become clear
-            from error…
+            from error. So whoever disbelieves in ṭāghūt and believes in Allah has grasped
+            the most trustworthy handhold, with no break in it.
+          </div>
+          <div style={{ fontFamily: R.fontMono, fontSize: 14, color: R.ink3, marginTop: 26 }}>
+            ● 2:257 · AL-BAQARAH
+          </div>
+          <div style={{ fontFamily: R.fontSerif, fontSize: 30, color: R.ink, direction: "rtl",
+                        textAlign: "right", lineHeight: 1.9, marginTop: 8 }}>
+            ٱللَّهُ وَلِىُّ ٱلَّذِينَ ءَامَنُوا۟ يُخْرِجُهُم مِّنَ ٱلظُّلُمَـٰتِ إِلَى ٱلنُّورِ
+          </div>
+          <div style={{ fontFamily: R.fontSans, fontSize: 19, color: R.ink2, marginTop: 10,
+                        lineHeight: 1.5 }}>
+            Allah is the ally of those who believe. He brings them out of darkness into
+            the light…
           </div>
         </div>
       )}
@@ -327,6 +405,8 @@ const Page: React.FC<{ f: number }> = ({ f }) => {
       <Note f={f} born={T.ling} top={300} kind="Linguistic Note"
             tint="#FEF6E7" ink="#92400E"
             body="'Al-Ḥayy' and 'Al-Qayyūm' form a pair — the Living and the Self-Subsisting. Ibn Taymiyyah considered this the greatest name of Allah." />
+      <Note f={f} born={T.them + 200} top={1060} kind="Cross-reference" tint="#EEF2FB" ink="#3a5fa0"
+            body="Al-ʿAlī and al-ʿAẓīm close this āyah and open al-Shūrā 42:4 — the same seal on the same claim." />
       <Note f={f} born={T.them} top={690} kind="Thematic" tint={R.accentSoft} ink={R.accentInk}
             body="This verse encapsulates divine attributes: Ḥayy (alive), Qayyūm (sustaining), omniscience, and absolute sovereignty." />
     </div>
@@ -479,9 +559,14 @@ const Cursor: React.FC = () => {
   const x = a.x + (b.x - a.x) * p + Math.sin(idle / 37) * 5 + Math.sin(idle / 13) * 1.5;
   const y = a.y + (b.y - a.y) * p + Math.cos(idle / 29) * 4 + Math.cos(idle / 17) * 1.2;
   const v = Math.abs(b.x - a.x + b.y - a.y) * (p < 1 ? 1 - p : 0) / 42;
+  const c = camAt(f);
   return (
-    <div style={{ position: "absolute", left: x, top: y, zIndex: 70,
-                  filter: `blur(${Math.min(6, v * 1.5)}px)` }}>
+    <div style={{
+      position: "absolute",
+      left: W / 2 + (x - c.x) * c.z, top: H / 2 + (y - c.y) * c.z,
+      zIndex: 70, transform: `scale(${c.z})`, transformOrigin: "0 0",
+      filter: `blur(${Math.min(6, v * 1.5)}px)`,
+    }}>
       <svg viewBox="0 0 26 34" width="26" height="34">
         <path d="M2 1 L2 26 L8.5 20 L12.5 30 L17 28 L13 18.5 L21 18 Z"
               fill="#1e1a14" stroke="#fff" strokeWidth="1.6" strokeLinejoin="round" />
@@ -498,8 +583,7 @@ export const OneDesk: React.FC = () => {
   /* The ONE camera move in the piece, and it is at the end: the frame pulls
      back to show the whole page at once — everything that was built, still
      there. Smoothstep because it repaints the entire frame (§11.11). */
-  const pull = smoothstep(interpolate(f, [T.back, T.back + 90], [0, 1], clamp));
-  const scale = 1 - 0.14 * pull;
+  const cam = camAt(f);
 
   /* Rack focus (§5): while the drawer is open the page behind it softens, so
      the blur says "read this" rather than covering a cut. */
@@ -512,15 +596,18 @@ export const OneDesk: React.FC = () => {
 
   return (
     <AbsoluteFill style={{ background: "#dedce3" }}>
-      <div style={{
-        position: "absolute", inset: 0, transform: `scale(${scale})`,
-        transformOrigin: "50% 46%",
-      }}>
-        {/* full bleed: the app IS the frame */}
-        <div style={{ position: "absolute", inset: 0, background: R.bg,
-                      display: "flex", flexDirection: "column", overflow: "hidden" }}>
+      <div style={{ position: "absolute", inset: 0, overflow: "hidden" }}>
+        {/* the app at its own desktop proportions; the frame is a window */}
+        <div style={{
+          position: "absolute",
+          left: W / 2 - cam.x * cam.z, top: H / 2 - cam.y * cam.z,
+          width: APPW, height: APPH, transformOrigin: "0 0",
+          transform: `scale(${cam.z})`,
+          background: R.bg, display: "flex", flexDirection: "column",
+          boxShadow: R.shadowLg,
+        }}>
           <TopBar f={f} />
-          <div style={{ flex: 1, display: "flex", minHeight: 0, position: "relative" }}>
+          <div style={{ flex: 1, display: "flex", minHeight: 0, position: "relative", overflow: "hidden" }}>
             <div style={{ display: "flex", flex: 1, minWidth: 0,
                           filter: rack ? `blur(${rack}px)` : undefined }}>
               <SideRail f={f} />
