@@ -42,7 +42,7 @@ import { buildArc, track, clamp, smoothstep } from "./searchCurves";
    IT LOOPS (§7). Frame 1199 is compositionally frame 0.                    */
 
 const FPS = 60;
-export const DESK_FRAMES = 17 * FPS;          // 1020 — see the beat table
+export const DESK_FRAMES = 22 * FPS;          // 1320 — beats of 152f (2.5s) — see the beat table
 
 const W = 1080, H = 1920;
 const CX = W / 2, CY = H / 2;
@@ -66,14 +66,14 @@ interface Beat {
 
 const BEATS: Beat[] = [
   { at:    0, w: 360, h: 360, r: 180 },
-  { at:   64, w: 900, h: 330, r:  24, cap: "Every sūrah, its own desk.",       side: "below" },
-  { at:  184, w: 820, h: 700, r:  24, cap: "Pages you keep, not tabs you lose.", side: "above" },
-  { at:  304, w: 700, h:1120, r:  20, cap: "The muṣḥaf, exactly as it is.",    side: "below" },
-  { at:  438, w: 900, h: 640, r:  20, cap: "Mark it in ink that stays put.",   side: "above" },
-  { at:  562, w: 760, h: 920, r:  22, cap: "Type / and the āyah arrives.",     side: "below" },
-  { at:  686, w: 900, h: 560, r:  22, cap: "Sixty-seven tafāsīr in the margin.", side: "above" },
-  { at:  808, w: 660, h: 820, r:  24, cap: "Or read it with your ḥalaqa.",     side: "below" },
-  { at:  936, w: 360, h: 360, r: 180 },
+  { at:   80, w: 900, h: 360, r:  24, cap: "Start with one sūrah.",              side: "below" },
+  { at:  232, w: 820, h: 700, r:  24, cap: "Its pages stay yours.",              side: "above" },
+  { at:  384, w: 700, h:1120, r:  20, cap: "The muṣḥaf, exactly as it is.",      side: "below" },
+  { at:  552, w: 900, h: 660, r:  20, cap: "Mark the word that stopped you.",    side: "above" },
+  { at:  704, w: 760, h: 920, r:  22, cap: "Write it down — the āyah comes too.", side: "below" },
+  { at:  856, w: 900, h: 620, r:  22, cap: "See how the scholars read it.",      side: "above" },
+  { at: 1008, w: 660, h: 840, r:  24, cap: "Keep what you found. Share it.",     side: "below" },
+  { at: 1160, w: 360, h: 360, r: 180 },
 ];
 
 const MORPH = 20;   // §2: a big size delta buys ~20 frames; small ones take 12
@@ -123,7 +123,7 @@ const Caption: React.FC<{ text: string; at: number; side: "above" | "below"; h: 
 ({ text, at, side, h }) => {
   const f = useCurrentFrame();
   const words = text.split(" ");
-  const gone = interpolate(f, [at + 96, at + 118], [1, 0], clamp);
+  const gone = interpolate(f, [at + 108, at + 128], [1, 0], clamp);
   if (f < at || gone <= 0) return null;
   return (
     <div style={{
@@ -156,15 +156,15 @@ const Caption: React.FC<{ text: string; at: number; side: "above" | "below"; h: 
 // more than anything else to make a frame read as filmed.
 
 const LEGS: { at: number; x: number; y: number }[] = [
-  { at:   0, x: 700, y: 1300 },
-  { at: 118, x: CX + 150, y: CY + 55 },
-  { at: 238, x: CX - 190, y: CY - 40 },
-  { at: 356, x: CX + 40,  y: CY - 320 },
-  { at: 492, x: CX - 130, y: CY + 110 },
-  { at: 616, x: CX - 200, y: CY - 60 },
-  { at: 742, x: CX + 240, y: CY + 30 },
-  { at: 862, x: CX - 60,  y: CY + 200 },
-  { at: 972, x: 780, y: 1330 },
+  { at:   0, x: 700, y: 1360 },
+  { at: 150, x: CX + 150, y: CY + 55 },
+  { at: 300, x: CX - 190, y: CY - 40 },
+  { at: 452, x: CX + 40,  y: CY - 320 },
+  { at: 620, x: CX - 130, y: CY + 110 },
+  { at: 772, x: CX - 200, y: CY - 60 },
+  { at: 924, x: CX + 240, y: CY + 30 },
+  { at: 1076, x: CX - 60,  y: CY + 200 },
+  { at: 1210, x: 780, y: 1330 },
 ];
 
 const cursorAt = (f: number) => {
@@ -288,7 +288,7 @@ const InkSurface: React.FC<{ p: number }> = ({ p }) => {
               opacity={0.55}
               strokeDasharray={len} strokeDashoffset={len * (1 - p)} />
       </svg>
-      <div style={{ marginTop: 88, opacity: interpolate(p, [0.55, 0.95], [0, 1], clamp) }}>
+      <div style={{ marginTop: 78, opacity: interpolate(p, [0.30, 0.62], [0, 1], clamp) }}>
         <div style={{ fontFamily: R.fontMono, fontSize: 17, color: R.ink3,
                       letterSpacing: "0.05em" }}>WORD 5 · 2:255 · AL-QAYYŪM</div>
         <div style={{ marginTop: 14, background: "#FEF6E7", borderRadius: 10,
@@ -299,6 +299,16 @@ const InkSurface: React.FC<{ p: number }> = ({ p }) => {
                         lineHeight: 1.5 }}>
             From <i>qāma</i> — to stand. Ibn Taymiyyah held this the greatest name.
           </div>
+        </div>
+        <div style={{ display: "flex", gap: 10, marginTop: 16,
+                      opacity: interpolate(p, [0.62, 0.9], [0, 1], clamp) }}>
+          {["Linguistic", "Thematic", "Cross-ref"].map((t, k) => (
+            <div key={t} style={{
+              fontFamily: R.fontMono, fontSize: 16, padding: "7px 13px", borderRadius: 20,
+              background: k === 0 ? "#FEF6E7" : R.panel,
+              color: k === 0 ? "#92400E" : R.ink4,
+            }}>{t}</div>
+          ))}
         </div>
       </div>
     </div>
@@ -444,7 +454,7 @@ const HalaqaSurface: React.FC<{ p: number }> = ({ p }) => {
 
 const Surface: React.FC<{ i: number; f: number }> = ({ i, f }) => {
   const since = f - BEATS[i].at;
-  const p = Math.min(1, Math.max(0, (since - 8) / 104));
+  const p = Math.min(1, Math.max(0, (since - 8) / 128));
   switch (i) {
     /* Beat 0 builds the mark over its own 64 frames; beat 8 is the same mark
        already assembled, so the last frame matches the first and the loop
@@ -453,8 +463,13 @@ const Surface: React.FC<{ i: number; f: number }> = ({ i, f }) => {
     case 8: return <Wordmark p={1} />;
     case 1: return (
       <div style={{ padding: "26px 24px" }}>
-        <Row label="Al-Fātiḥah" sub="7 āyāt · complete"    ar="الفاتحة" n={4} />
+        <div style={{ fontFamily: R.fontMono, fontSize: 17, color: R.ink4,
+                      letterSpacing: "0.09em", padding: "0 26px 10px" }}>
+          TAFSIR STUDY GROUP · 5 MEMBERS
+        </div>
+        <Row label="Al-Fātiḥah" sub="7 āyāt · complete"     ar="الفاتحة" n={4} />
         <Row label="Al-Baqarah" sub="286 āyāt · in progress" ar="البقرة"  n={12} on />
+        <Row label="Āl ʿImrān"  sub="200 āyāt · not started" ar="آل عمران" n={0} />
       </div>
     );
     case 2: return (
@@ -575,19 +590,25 @@ export const OneDesk: React.FC = () => {
           §12.1: the loudest moments are the LANDING and the COLLAPSE, not the
           launch. §12.3: every cue is inside its own Sequence with room after
           it, so no decaying tail is chopped mid-sample.                    */}
-      <Audio src={staticFile("bg.mp3")} volume={0.16} />
+      <Audio src={staticFile("bg.mp3")} volume={0.15} />
 
-      <Sequence from={60}  durationInFrames={70}><Audio src={staticFile("sfx/granular.mp3")} volume={0.30} /></Sequence>
-      <Sequence from={180} durationInFrames={70}><Audio src={staticFile("sfx/granular-select.mp3")} volume={0.34} /></Sequence>
-      <Sequence from={THROW_AT - 4} durationInFrames={70}><Audio src={staticFile("sfx/whoosh.mp3")} volume={0.34} /></Sequence>
-      {/* the catch, not the launch, is the loud one */}
-      <Sequence from={THROW_AT + 54} durationInFrames={80}><Audio src={staticFile("sfx/land.mp3")} volume={0.58} /></Sequence>
-      <Sequence from={444} durationInFrames={90}><Audio src={staticFile("sfx/granular.mp3")} volume={0.26} /></Sequence>
-      <Sequence from={568} durationInFrames={90}><Audio src={staticFile("sfx/typing.mp3")} volume={0.40} /></Sequence>
-      <Sequence from={632} durationInFrames={60}><Audio src={staticFile("sfx/click.mp3")} volume={0.34} /></Sequence>
-      <Sequence from={682} durationInFrames={80}><Audio src={staticFile("sfx/whoosh.mp3")} volume={0.28} /></Sequence>
-      <Sequence from={812} durationInFrames={80}><Audio src={staticFile("sfx/magnetic.mp3")} volume={0.40} /></Sequence>
-      <Sequence from={932} durationInFrames={84}><Audio src={staticFile("sfx/land.mp3")} volume={0.62} /></Sequence>
+      {/* one click per cursor action — the spine */}
+      <Sequence from={76}   durationInFrames={80}><Audio src={staticFile("sfx/granular.mp3")} volume={0.26} /></Sequence>
+      <Sequence from={146}  durationInFrames={44}><Audio src={staticFile("sfx/click.mp3")} volume={0.42} /></Sequence>
+      <Sequence from={228}  durationInFrames={80}><Audio src={staticFile("sfx/granular-select.mp3")} volume={0.30} /></Sequence>
+      <Sequence from={296}  durationInFrames={44}><Audio src={staticFile("sfx/click.mp3")} volume={0.38} /></Sequence>
+      <Sequence from={THROW_AT - 4} durationInFrames={70}><Audio src={staticFile("sfx/whoosh.mp3")} volume={0.30} /></Sequence>
+      {/* the catch is the loud one, not the launch (§12.1) */}
+      <Sequence from={THROW_AT + 54} durationInFrames={80}><Audio src={staticFile("sfx/land.mp3")} volume={0.54} /></Sequence>
+      <Sequence from={548}  durationInFrames={90}><Audio src={staticFile("sfx/granular-select.mp3")} volume={0.28} /></Sequence>
+      <Sequence from={616}  durationInFrames={44}><Audio src={staticFile("sfx/click.mp3")} volume={0.40} /></Sequence>
+      <Sequence from={712}  durationInFrames={96}><Audio src={staticFile("sfx/typing.mp3")} volume={0.36} /></Sequence>
+      <Sequence from={800}  durationInFrames={44}><Audio src={staticFile("sfx/click.mp3")} volume={0.44} /></Sequence>
+      <Sequence from={852}  durationInFrames={70}><Audio src={staticFile("sfx/whoosh.mp3")} volume={0.24} /></Sequence>
+      <Sequence from={920}  durationInFrames={44}><Audio src={staticFile("sfx/click.mp3")} volume={0.36} /></Sequence>
+      <Sequence from={1004} durationInFrames={44}><Audio src={staticFile("sfx/click.mp3")} volume={0.42} /></Sequence>
+      <Sequence from={1060} durationInFrames={80}><Audio src={staticFile("sfx/magnetic.mp3")} volume={0.36} /></Sequence>
+      <Sequence from={1156} durationInFrames={110}><Audio src={staticFile("sfx/land.mp3")} volume={0.56} /></Sequence>
     </AbsoluteFill>
   );
 };
