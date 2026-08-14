@@ -103,7 +103,14 @@ def twin_verse(m, j):
         vw = VERSE_BY_KEY[key]
         for st in range(0, len(vw) - len(span) + 1):
             if all(n == j or w == vw[st + n] for n, w in enumerate(span)):
-                return key
+                # The rival must DISAGREE here, or this word is not the
+                # discriminator and there is nothing to protect. 20:10 and
+                # 28:29 are the two fire-on-the-mountain passages and they part
+                # company at قبس / خبر, not at لعلي -- which both read. Without
+                # this test the guard fired on لعلي and kept Whisper's لألي,
+                # protecting a mistranscription in the name of his own words.
+                if vw[st + j] != span[j]:
+                    return key
     return None
 SPOKEN = {}
 for s in stream:
