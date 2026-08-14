@@ -77,6 +77,33 @@ from ytpl import index, have_ids, free_gb, DEFAULT_DEST, yt  # noqa: E402
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
+
+def keep_awake():
+    """Tell Windows this machine is working, so idle-sleep leaves it alone.
+
+    An overnight run was lost to exactly this and it did not look like a
+    failure. The transcriber was never killed -- sleep SUSPENDS a process --
+    so the log showed one continuous run whose elapsed clock had jumped from
+    3,382s to 36,243s while the cue count moved by 25. Wall time advanced,
+    the CPU did not. Nine hours, no error anywhere, four lectures not made.
+
+    This is the same request a video player or an installer makes while it is
+    busy. It is not a change to the machine's power settings: it lasts only as
+    long as this process, and it does NOT override closing the lid or sleeping
+    the machine by hand -- those still stop the run, and nothing here can or
+    should prevent that.
+    """
+    if not sys.platform.startswith("win"):
+        return False
+    try:
+        import ctypes
+        ES_CONTINUOUS, ES_SYSTEM_REQUIRED = 0x80000000, 0x00000001
+        ok = ctypes.windll.kernel32.SetThreadExecutionState(
+            ES_CONTINUOUS | ES_SYSTEM_REQUIRED)
+        return bool(ok)
+    except Exception:
+        return False
+
 # (script, output it must produce). Order is the dependency chain.
 STAGES = [
     ("transcribe.py",   "ar.json"),
@@ -159,6 +186,8 @@ def main():
     log(dest, "=" * 64)
     log(dest, "night run: %d lectures queued from #%d, %.1f GB free"
         % (len(queue), a.start, free_gb(dest)))
+    log(dest, "idle-sleep held off: %s (closing the lid still stops it)"
+        % ("yes" if keep_awake() else "NO -- this run can be slept"))
     log(dest, "stops at cues.json -- English and burning are not automated")
 
     passes = 0
