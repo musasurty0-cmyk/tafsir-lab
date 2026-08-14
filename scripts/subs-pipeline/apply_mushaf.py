@@ -173,7 +173,18 @@ for m in matches:
 
             # TWIN VERSE. See twin_verse() above -- this is the guard that stops
             # a match rewriting the one word that was holding it up.
-            if skeleton(h) != skeleton(g):
+            #
+            # `plausible(h)` is load-bearing. Ambiguity between twin verses is
+            # only a reason to keep his word if his word could BE one of them.
+            # Re-checked against the four lectures already delivered, the guard
+            # without it also caught 3:44's يوقون -- which is not an Arabic word,
+            # so whichever verse he was reciting, that is the recogniser and not
+            # him, and keeping it would preserve a defect in the name of
+            # faithfulness. With it: إدريس is kept (it is 19:56's actual word),
+            # bare اتقوا is kept (the twins 15:69/11:78 differ only in وَ vs فَ,
+            # and correcting it would invent a connective he did not say), and
+            # يوقون is still repaired to يُلْقُونَ.
+            if skeleton(h) != skeleton(g) and plausible(h):
                 rival = twin_verse(m, j)
                 if rival:
                     log.append((stream[idx]["s"], m["key"], h, g,
