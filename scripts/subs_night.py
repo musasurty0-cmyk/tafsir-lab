@@ -203,11 +203,12 @@ def main():
                     break
             else:
                 log(dest, "  #%02d READY FOR ENGLISH" % idx)
-                # the WAV is 115 MB/hour and nothing after segment.py reads it
-                try:
-                    os.remove(os.path.join(job, "audio.wav"))
-                except OSError:
-                    pass
+                # The WAV used to be deleted here to save 115 MB/hour. That was
+                # optimising the wrong thing: a rule change in apply_mushaf.py
+                # means re-running segment.py, and segment.py reads the WAV for
+                # its RMS envelope -- so the deletion turned every downstream
+                # fix into a re-download and re-decode. All 41 WAVs are 2.6 GB
+                # against 41 GB free. Keep them until the ASS is burned.
 
         done = sum(1 for _, e in queue
                    if os.path.exists(os.path.join(dest, "v_%s" % e.get("id"), "cues.json")))
