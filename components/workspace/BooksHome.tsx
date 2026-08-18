@@ -19,6 +19,7 @@ import { putBookPdf } from "@/lib/books/pdf-store";
 import WorkspaceSettings from "./WorkspaceSettings";
 import Rail from "./Rail";
 import NewWorkspaceModal from "@/components/NewWorkspaceModal";
+import Toast from "@/components/Toast";
 
 interface Book {
   id: string; title: string; pdfUrl: string; pdfName: string | null; createdAt: Date | string;
@@ -61,6 +62,9 @@ export default function BooksHome({ workspaceId, workspace, role, books: initial
   const [libraryOpen, setLibraryOpen]   = useState(false);
   const [busy, setBusy]                 = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  /* Anything this screen needs to tell the user. Was window.alert(), which
+     blocks the page and cannot be styled. */
+  const [notice, setNotice] = useState<string | null>(null);
 
   // Rename workspace (owner)
   const [wsName, setWsName]     = useState(workspace.name);
@@ -92,13 +96,13 @@ export default function BooksHome({ workspaceId, workspace, role, books: initial
     e.target.value = ""; // allow re-selecting the same file later
     if (!file || busy) return;
     if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
-      alert("Please choose a PDF file."); return;
+      setNotice("That file isn’t a PDF. Choose a .pdf to add it as a book."); return;
     }
     setBusy(true);
     try {
       const title = file.name.replace(/\.pdf$/i, "");
       const book = await createBook({ title, pdfUrl: "local", pdfName: file.name });
-      if (!book) { alert("Couldn't add the book. Please try again."); return; }
+      if (!book) { setNotice("Couldn’t add the book. Please try again."); return; }
       await putBookPdf(book.id, file); // keep the bytes on this device
       pushWithSplash(router, `/workspaces/${workspaceId}/books/${book.id}`);
     } finally { setBusy(false); }
@@ -112,12 +116,18 @@ export default function BooksHome({ workspaceId, workspace, role, books: initial
         method: "PATCH", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: trimmed }),
       });
-    } catch { setWsName(workspace.name); }
+    } catch {
+      /* Reverting alone looked like the rename had simply not taken. */
+      setWsName(workspace.name);
+      setNotice("Couldn’t rename the workspace. Please try again.");
+    }
     setRenaming(false);
   }
 
   return (
     <div className="workspace-home">
+      <Toast message={notice} onDismiss={() => setNotice(null)} />
+
       {/* .workspace-home is a grid of [rail | content] — the Rail must be the
           first child or the content collapses into the rail column. */}
       <Rail activeWorkspaceId={workspaceId} />

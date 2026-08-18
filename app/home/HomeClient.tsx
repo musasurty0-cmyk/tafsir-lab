@@ -15,6 +15,7 @@ import { useRef, useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { getFirebaseAuth } from "@/lib/firebase/client";
 import NewWorkspaceModal from "@/components/NewWorkspaceModal";
+import Toast from "@/components/Toast";
 import SettingsMenu from "@/components/SettingsMenu";
 import JoinWorkspaceModal from "@/components/JoinWorkspaceModal";
 import TutorialOverlay from "@/components/TutorialOverlay";
@@ -475,18 +476,7 @@ export default function HomeClient({
       )}
 
       {/* ── Error toast ── */}
-      {navError && (
-        <div className="hw-nav-toast" role="alert">
-          <span>{navError}</span>
-          <button
-            className="hw-nav-toast-close"
-            onClick={() => setNavError(null)}
-            aria-label="Dismiss"
-          >
-            ×
-          </button>
-        </div>
-      )}
+      <Toast message={navError} onDismiss={() => setNavError(null)} />
 
       {/* Top bar */}
       <header className="home-topbar">

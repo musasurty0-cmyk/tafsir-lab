@@ -1906,7 +1906,17 @@ input, textarea { font: inherit; color: inherit; }
   to   { opacity: 1; transform: translateX(0); }
 }
 
-/* (removed prefers-reduced-motion rules) */
+@media (prefers-reduced-motion: reduce) {
+  /* Fade, not nothing — the same call the drawer above makes. What is worth
+     suppressing here is the 14px horizontal travel, which is directional
+     motion across the whole grid every time the page changes; cutting the
+     animation outright made the grid snap and read as a repaint. */
+  .ws-surah-grid[data-anim-direction="left"],
+  .ws-surah-grid[data-anim-direction="right"] {
+    animation: surah-grid-fade 180ms var(--ease-out) both;
+  }
+  @keyframes surah-grid-fade { from { opacity: 0; } to { opacity: 1; } }
+}
 
 /* Workspace surah grid */
 .ws-surah-grid {
