@@ -233,6 +233,16 @@
            playsinline
            preload="auto"
            poster=""></video>
+
+    <!-- The bed and the cues only reach anyone if they can turn them on:
+         browsers refuse autoplay with sound, so the video stays muted to keep
+         auto-previewing and this offers the sound rather than assuming it.
+         The styles and the handler for it already existed; only the button
+         was missing. -->
+    <button class="showcase-unmute" type="button" aria-label="Play the tour with sound">
+      <span class="unmute-icon" aria-hidden="true">&#9654;</span>
+      Play with sound
+    </button>
   </div>
 
   <p class="showcase-cap">A guided tour of the whole app — read, annotate, write, and study together.</p>

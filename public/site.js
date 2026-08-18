@@ -162,10 +162,15 @@
 
   btn.addEventListener('click', start);
 
-  vid.addEventListener('play', () => {
-    btn.classList.add('is-hidden');
-  });
-  vid.addEventListener('pause', () => {
-    if (vid.currentTime === 0) btn.classList.remove('is-hidden');
-  });
+  /* Track MUTE, not play/pause. This was written for a click-to-play poster,
+     but the video carries `autoplay muted` — so hiding on 'play' hid the
+     button on page load, before anyone could reach it, and the sound could
+     never be turned on at all. What the button offers is sound, so it is
+     visible exactly while there is none: it comes back if the viewer re-mutes
+     from the native controls. */
+  const syncButton = () => {
+    btn.classList.toggle('is-hidden', !vid.muted);
+  };
+  vid.addEventListener('volumechange', syncButton);
+  syncButton();
 })();
