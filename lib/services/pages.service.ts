@@ -405,12 +405,14 @@ export async function createWorkspaceBoard(workspaceId: string, userId: string, 
   return page;
 }
 
-/** Validate that a board page belongs to this workspace, returning its title. */
+/** Validate that a board page belongs to this workspace, returning its title.
+ *  `tiptapContent` comes along because a board carries a document as well as a
+ *  canvas — the notes view edits it, and it is null until first written. */
 export async function getWorkspaceBoard(workspaceId: string, boardId: string, userId: string) {
   await getWorkspaceWithRole(workspaceId, userId);
   const page = await db.page.findFirst({
     where:  { id: boardId, workspaceSurah: { workspaceId, surahNumber: WHITEBOARD_SURAH } },
-    select: { id: true, title: true },
+    select: { id: true, title: true, tiptapContent: true },
   });
   return page; // null when not found / not a board of this workspace
 }

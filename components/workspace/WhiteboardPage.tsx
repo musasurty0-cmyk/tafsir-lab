@@ -409,6 +409,13 @@ export default function WhiteboardPage({
             <code> /ayah 2:255</code> or <code> /tabari</code> to pull in verses &amp; tafsīr.
             Use the <strong>pen</strong> to annotate around them.
           </p>
+          {/* The canvas is not the only way to write here. Said plainly because
+              the instruction above reads as the whole story otherwise, and the
+              document surface is a click away in the bar above. */}
+          <p className="whiteboard-hint-body">
+            Writing prose instead? Switch to <strong>notes</strong> in the bar above
+            for a plain document — same slash commands, no surah required.
+          </p>
         </div>
       )}
     </div>

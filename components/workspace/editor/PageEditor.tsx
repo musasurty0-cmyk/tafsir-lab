@@ -109,8 +109,12 @@ export default function PageEditor({
   const saveTimer             = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Surah being studied + verses on this page (for the tafsir verse picker)
+  /* `||`, not `??`: a blank board studies no surah and reports the sentinel 0,
+     which is not a surah the picker can offer āyāt from — it would build keys
+     like "0:5". Falling back to 1 there matches what FreeTextBox already does
+     on the same board. */
   const ectx        = useEditorCtxOptional();
-  const studySurah  = ectx?.surahNumber ?? 1;
+  const studySurah  = ectx?.surahNumber || 1;
   const pageVerses  = ectx?.verses ?? [];
 
   // Tafsir verse picker: opened when a tafsir command is chosen WITHOUT a

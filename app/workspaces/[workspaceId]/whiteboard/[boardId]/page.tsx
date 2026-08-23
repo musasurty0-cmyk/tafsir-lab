@@ -33,6 +33,7 @@ export default async function BoardRoute({
       workspaceName={workspace.name}
       pageId={board.id}
       boardTitle={board.title}
+      boardContent={board.tiptapContent}
       role={role}
       currentUserId={userId}
       currentUserName={currentUser?.name ?? "Anonymous"}

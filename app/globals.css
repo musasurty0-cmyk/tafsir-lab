@@ -9397,6 +9397,13 @@ input, textarea { font: inherit; color: inherit; }
   line-height: 1.65;
   margin: 0;
 }
+/* The second paragraph is a different suggestion, not a continuation — without
+   a gap the two run together as one long block of prose. */
+.whiteboard-hint-body + .whiteboard-hint-body {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid color-mix(in oklch, var(--line) 70%, transparent);
+}
 .whiteboard-hint-body code {
   font-family: var(--font-mono);
   font-size: 13px;
@@ -9447,6 +9454,26 @@ input, textarea { font: inherit; color: inherit; }
   display: flex;
   align-items: center;
 }
+/* The view switcher takes the free space instead, pushing itself and the pips
+   to the right together. Presence keeps its own `margin-left: auto` for
+   BookShell, which has no tools group — two auto margins in one row would
+   SPLIT the gap and strand the pips mid-bar, so it is cancelled only when the
+   tools are actually there. */
+.whiteboard-shell-tools {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.whiteboard-shell-tools + .whiteboard-shell-presence { margin-left: 12px; }
+.whiteboard-shell-format {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+/* The document surface on a board. `min-width: 0` because .doc-wrap is a flex
+   child here (the shell body is a row) and would otherwise refuse to shrink
+   below the width of a wide table, pushing the whole bar off-screen. */
+.board-doc-wrap { min-width: 0; }
 .whiteboard-shell-pip {
   width: 18px;
   height: 18px;
