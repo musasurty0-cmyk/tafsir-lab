@@ -45,6 +45,20 @@ const MAX_QUESTION = 500;
 /** Passages translated per answer. Each is a Space round trip. */
 const TRANSLATE_LIMIT = 3;
 
+/* What reaches the MODEL is bounded; what reaches the reader is not.
+
+   Groq's free tier allows 8,000 tokens a minute, and a dozen passages of
+   commentary is comfortably 6,000 of them — so the second question asked
+   inside a minute came back 429 and silently dropped to quoting. Fewer,
+   tighter passages also produce better answers: the model is weighing six
+   things rather than skimming twelve.
+
+   Notes keep a reserved share, so a full slate of tafsīr hits cannot crowd
+   out the reader's own writing on their own page. */
+const LLM_MAX_PASSAGES  = 6;
+const LLM_NOTE_SLOTS    = 2;
+const LLM_MAX_CHARS_EACH = 900;
+
 export async function POST(req: NextRequest) {
   let userId: string;
   try {
@@ -234,22 +248,26 @@ export async function POST(req: NextRequest) {
 
           // Numbered so the model can cite them and the numbers mean something
           // to the reader, who sees the same list.
+          const noteQuota   = Math.min(notes.length, LLM_NOTE_SLOTS);
+          const chosenHits  = hits.slice(0, LLM_MAX_PASSAGES - noteQuota);
+          const chosenNotes = notes.slice(0, noteQuota);
+
           const numbered: LLM.Passage[] = [
-            ...hits.map((h, i) => ({
+            ...chosenHits.map((h, i) => ({
               n: i + 1,
               sourceName: h.sourceName,
               verseKey: h.verseKey,
               language: h.language,
-              content: h.content,
+              content: h.content.slice(0, LLM_MAX_CHARS_EACH),
             })),
-            ...notes.map((nt, i) => ({
-              n: hits.length + i + 1,
+            ...chosenNotes.map((nt, i) => ({
+              n: chosenHits.length + i + 1,
               // Named so neither the model nor the reader can mistake the
               // reader's own note for a scholar's view.
               sourceName: `Your note — ${nt.title}`,
               verseKey: nt.verseKey ?? "",
               language: "en",
-              content: nt.content,
+              content: nt.content.slice(0, LLM_MAX_CHARS_EACH),
             })),
           ];
 
