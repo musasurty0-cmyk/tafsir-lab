@@ -193,17 +193,18 @@ export async function lexicalSearch(
     await tx.$executeRawUnsafe(`SET LOCAL statement_timeout = '7s'`);
     return tx.$queryRawUnsafe<RawHit[]>(`
     WITH candidates AS (
-      /* Only entries that HAVE chunks. Without this the candidate set is drawn
-         from the whole corpus, most of which is ingested but not yet embedded,
-         and the join below then discards nearly all of it — the search returns
-         nothing while looking like it worked. It is also much faster, because
-         the indexed subset is a fraction of the table. */
+      /* Deliberately NOT restricted to entries that have chunk rows.
+         Chunks carry embeddings and name the span worth quoting — but an entry
+         that has not been embedded yet is still an entry, and still the right
+         answer to a keyword question. Requiring a chunk here meant that the
+         moment the chunk table was empty the entire lexical path returned
+         nothing, for every query, while reporting "no matches" as though the
+         corpus simply had none: a total failure wearing the face of an
+         ordinary empty result. */
       SELECT e."sourceId", e."verseKey", e.content
       FROM "TafsirEntry" e
       JOIN "TafsirSource" s ON s.id = e."sourceId"
       WHERE $1 <% e.content
-        AND EXISTS (SELECT 1 FROM "TafsirChunk" ch
-                    WHERE ch."sourceId" = e."sourceId" AND ch."verseKey" = e."verseKey")
         ${entryWhere}
       LIMIT 300
     ), matches AS (
@@ -213,22 +214,35 @@ export async function lexicalSearch(
       ORDER BY $1 <<-> content
       LIMIT 60
     )
-    SELECT DISTINCT ON (c."sourceId", c."verseKey")
-           c.id         AS "chunkId",
+    SELECT DISTINCT ON (m."sourceId", m."verseKey")
+           /* A real chunk id when one exists, otherwise a stable synthetic one:
+              de-duplication and citation both key off this downstream, and two
+              passages must never collide on it. */
+           COALESCE(c.id::text, m."sourceId"::text || '#' || m."verseKey") AS "chunkId",
            s.slug       AS "sourceSlug",
            s.name       AS "sourceName",
            s.language   AS "language",
-           c."verseKey" AS "verseKey",
-           c.surah, c.ayah,
-           substr(m.content, c."startChar" + 1, c."endChar" - c."startChar") AS content
+           m."verseKey" AS "verseKey",
+           split_part(m."verseKey", ':', 1)::int AS surah,
+           split_part(m."verseKey", ':', 2)::int AS ayah,
+           COALESCE(
+             substr(m.content, c."startChar" + 1, c."endChar" - c."startChar"),
+             /* No chunk to name a span, so quote a window around the hit. Not
+                the whole entry: commentary runs to thousands of characters and
+                one such passage would crowd every other source out of the
+                model's context. */
+             substr(m.content, GREATEST(1, m.hit_at - 200), 1400)
+           ) AS content
     FROM matches m
-    JOIN "TafsirChunk" c
-      ON c."sourceId" = m."sourceId" AND c."verseKey" = m."verseKey"
-    JOIN "TafsirSource" s ON s.id = c."sourceId"
-    ORDER BY c."sourceId", c."verseKey",
-             -- the span containing the exact hit first, then the earliest span
-             (m.hit_at > 0 AND m.hit_at BETWEEN c."startChar" + 1 AND c."endChar") DESC,
-             c."chunkIndex" ASC
+    LEFT JOIN "TafsirChunk" c
+      ON  c."sourceId" = m."sourceId"
+      AND c."verseKey" = m."verseKey"
+      AND (m.hit_at = 0 OR m.hit_at BETWEEN c."startChar" + 1 AND c."endChar")
+    JOIN "TafsirSource" s ON s.id = m."sourceId"
+    ORDER BY m."sourceId", m."verseKey",
+             -- prefer a real chunk span; fall back to the computed window
+             (c.id IS NOT NULL) DESC,
+             c."chunkIndex" ASC NULLS LAST
     LIMIT $${params.length}::int
     `, ...params);
   }).catch(() => [] as RawHit[]);   // a timed-out probe contributes nothing
