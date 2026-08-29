@@ -27,6 +27,7 @@ import { ChevronRight } from "lucide-react";
 import WorkspaceSidebar from "./WorkspaceSidebar";
 import TopBar from "./TopBar";
 import ScriptView from "./ScriptView";
+import AiPanel from "./AiPanel";
 import ModeAPage from "./ModeAPage";
 import EditorToolbar from "./editor/EditorToolbar";
 import type { Editor } from "@tiptap/core";
@@ -111,6 +112,7 @@ export default function WorkspacePageView({
   const [tweaks, setTweaks]               = useState<TweaksState>(TWEAKS_DEFAULTS);
   const [showTweaks, setShowTweaks]       = useState(false);
   const [mode, setMode]                   = useState<ViewMode>("editor");
+  const [aiOpen, setAiOpen]               = useState(false);
   // Deep-link: ?mode=board (from the surah grid's Blank board button) opens
   // this page straight into the whiteboard.
   useEffect(() => {
@@ -622,6 +624,8 @@ export default function WorkspacePageView({
           chapter={chapter}
           activePageTitle={page?.title ?? null}
           activePageId={page ? activePageId : null}
+          aiOpen={aiOpen}
+          onToggleAi={() => setAiOpen((v) => !v)}
           mode={mode}
           onSetMode={setMode}
           progressLoading={progressLoading}
@@ -672,6 +676,19 @@ export default function WorkspacePageView({
                 {renderModeB()}
               </div>
             </>
+          )}
+
+          {/* The assistant, docked beside whatever mode is showing. Inside the
+              layout rather than over it, so it takes width from the content
+              instead of covering the passage you are asking about. */}
+          {aiOpen && (
+            <AiPanel
+              workspaceId={workspaceId}
+              pageId={page ? activePageId : null}
+              surahNumber={surahNumber}
+              surahName={chapter.name_simple}
+              onClose={() => setAiOpen(false)}
+            />
           )}
 
           {/* Tafsir drawer — available in all modes */}
