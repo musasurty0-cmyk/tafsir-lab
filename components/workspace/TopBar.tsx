@@ -12,6 +12,7 @@ import Link from "next/link";
 import type { Chapter } from "@/lib/types";
 import PresenceBar from "./PresenceBar";
 import BookmarkButton from "@/components/BookmarkButton";
+import Recitation from "./Recitation";
 import type { PresenceData } from "@/lib/collab/usePresence";
 import { useT } from "@/lib/i18n/LocaleProvider";
 
@@ -234,6 +235,8 @@ export default function TopBar({
         >
           <BookOpenIcon /> {t("topbar.tafsir")}
         </button>
+
+        <Recitation surah={surahNumber} surahName={chapter.name_simple} />
 
         {activePageId && (
           <BookmarkButton
