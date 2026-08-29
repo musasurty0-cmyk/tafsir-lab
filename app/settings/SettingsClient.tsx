@@ -14,6 +14,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import AppShell, { type ShellStreak } from "@/components/AppShell";
 import Toast from "@/components/Toast";
+import Onboarding, { clearOnboarded } from "@/components/Onboarding";
 import {
   FONT_STEPS, DEFAULT_TYPO, applyAppearance, readTheme, readTypo, writeAppearance,
   type Theme, type FontStep, type Typo,
@@ -37,6 +38,7 @@ const TABS: { key: Tab; label: string }[] = [
 export default function SettingsClient({ user, streak }: Props) {
   const [tab, setTab] = useState<Tab>("theme");
   const [toast, setToast] = useState<string | null>(null);
+  const [replayOb, setReplayOb] = useState(false);
 
   // ── Appearance ──────────────────────────────────────────────────────────
   const [theme, setTheme] = useState<Theme>("light");
@@ -201,6 +203,19 @@ export default function SettingsClient({ user, streak }: Props) {
           </section>
 
           <section className="an-card">
+            <h2 className="an-card-title">Getting started</h2>
+            <p className="an-muted">
+              The three-screen introduction you saw on your first visit.
+            </p>
+            <button
+              className="an-btn an-btn--ghost"
+              onClick={() => { clearOnboarded(); setReplayOb(true); }}
+            >
+              Show it again
+            </button>
+          </section>
+
+          <section className="an-card">
             <h2 className="an-card-title">Your data</h2>
             <p className="an-muted">
               Every annotation you have written, as a Markdown file you can keep.
@@ -241,6 +256,8 @@ export default function SettingsClient({ user, streak }: Props) {
           </section>
         </div>
       )}
+
+      {replayOb && <Onboarding open onClose={() => setReplayOb(false)} />}
 
       <Toast message={toast} onDismiss={() => setToast(null)} autoDismissMs={3000} />
     </AppShell>

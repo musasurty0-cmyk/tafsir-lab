@@ -27,6 +27,7 @@ import AppSidebar from "@/components/AppSidebar";
 import HomeRail from "@/components/HomeRail";
 import StudyWithAI from "@/components/StudyWithAI";
 import Announcement from "@/components/Announcement";
+import Onboarding from "@/components/Onboarding";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -579,6 +580,10 @@ export default function HomeClient({
       </div>
 
       <HomeRail recent={recent} bookmarks={bookmarks} />
+
+      {/* First-run explainer. Sits above the tour, which teaches the editor —
+          this one explains the shape of the app before you are in it. */}
+      <Onboarding />
 
       <TutorialOverlay key={tutKey} />
       <TourBubble />

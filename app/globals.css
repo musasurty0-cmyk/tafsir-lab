@@ -11623,3 +11623,152 @@ input, textarea { font: inherit; color: inherit; }
   }
   .hw-ws-new-btn:hover, .home-join-btn:hover, .hw-cta-btn:hover { transform: none; }
 }
+
+/* ── Onboarding carousel ──────────────────────────────────────────────────── */
+
+.ob {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sp-7) var(--sp-5) var(--sp-6);
+  animation: overlay-in var(--dur-slow) var(--ease-soft) both;
+}
+
+.ob-progress {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 4px;
+  background: var(--panel-2);
+}
+.ob-progress-fill {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transition: width var(--dur-enter) var(--ease-flow);
+}
+
+.ob-nav {
+  position: absolute;
+  top: 50%;
+  width: 44px; height: 44px;
+  margin-top: -22px;
+  display: grid; place-items: center;
+  border-radius: 999px;
+  color: var(--ink-3);
+  transition: background var(--dur-hover) var(--ease-flow),
+              color var(--dur-hover) var(--ease-flow),
+              opacity var(--dur-hover) var(--ease-flow);
+}
+.ob-nav:hover:not(:disabled) { background: var(--hover); color: var(--ink); }
+.ob-nav:disabled { opacity: 0.25; cursor: default; }
+.ob-nav--prev { left: var(--sp-4); }
+.ob-nav--next { right: var(--sp-4); }
+
+.ob-skip {
+  position: absolute;
+  top: var(--sp-5); right: var(--sp-5);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 13px;
+  border-radius: 999px;
+  font-size: 13.5px;
+  color: var(--ink-4);
+  transition: background var(--dur-hover) var(--ease-flow), color var(--dur-hover) var(--ease-flow);
+}
+.ob-skip:hover { background: var(--hover); color: var(--ink-2); }
+
+.ob-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-3);
+  max-width: 920px;
+  width: 100%;
+  text-align: center;
+  animation: ob-in var(--dur-enter) var(--ease-flow) both;
+}
+@keyframes ob-in {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.ob-title {
+  font-family: var(--font-serif);
+  font-size: clamp(34px, 5.4vw, 62px);
+  font-weight: 800;
+  line-height: 1.02;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  text-wrap: balance;
+}
+.ob-sub {
+  font-size: clamp(15px, 1.7vw, 19px);
+  color: var(--ink-3);
+  max-width: 46ch;
+  text-wrap: balance;
+}
+
+.ob-figure {
+  width: 100%;
+  margin: var(--sp-4) 0 var(--sp-3);
+  /* The callout labels sit outside the device frame, so the SVG needs room
+     around it — the viewBox is the frame, not the drawing. */
+  padding: 0 clamp(0px, 9vw, 110px);
+}
+.ob-svg { width: 100%; height: auto; overflow: visible; }
+.ob-tag-text {
+  font-family: var(--font-sans);
+  font-size: 15px;
+  font-weight: 600;
+  fill: var(--ink-2);
+}
+/* Callouts arrive after the device, so the eye reads the screen first and the
+   labels second — which is the order the sentence is in. */
+.ob-tag { animation: tag-in 420ms var(--ease-flow) both; }
+.ob-tag:nth-of-type(1) { animation-delay: 260ms; }
+.ob-tag:nth-of-type(2) { animation-delay: 360ms; }
+.ob-tag:nth-of-type(3) { animation-delay: 460ms; }
+.ob-tag:nth-of-type(4) { animation-delay: 560ms; }
+@keyframes tag-in { from { opacity: 0; } to { opacity: 1; } }
+
+.ob-cta {
+  padding: 14px 30px;
+  border-radius: var(--radius-md);
+  background: var(--accent);
+  color: #fff;
+  font-size: 17px;
+  font-weight: 650;
+  transition: filter var(--dur-hover) var(--ease-flow),
+              transform var(--dur-hover) var(--ease-flow);
+}
+.ob-cta:hover  { filter: brightness(1.07); transform: translateY(-1px); }
+.ob-cta:active { transform: translateY(0); }
+
+.ob-dots { display: flex; gap: var(--sp-2); margin-top: var(--sp-5); }
+.ob-dot {
+  width: 9px; height: 9px;
+  border-radius: 999px;
+  background: var(--line-strong);
+  transition: background var(--dur-hover) var(--ease-flow), width var(--dur-hover) var(--ease-flow);
+}
+.ob-dot[data-active="true"] { background: var(--accent); width: 26px; }
+
+@media (max-width: 720px) {
+  .ob { padding: var(--sp-6) var(--sp-3) var(--sp-5); }
+  .ob-figure { padding: 0; }
+  .ob-tag-text { font-size: 19px; }
+  .ob-nav--prev { left: 2px; }
+  .ob-nav--next { right: 2px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ob, .ob-screen, .ob-tag { animation: none !important; }
+  .ob-progress-fill { transition: none; }
+  .ob-cta:hover { transform: none; }
+}
