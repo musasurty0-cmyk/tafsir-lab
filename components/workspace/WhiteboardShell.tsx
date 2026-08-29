@@ -33,6 +33,8 @@ import PageEditor from "./editor/PageEditor";
 import EditorToolbar from "./editor/EditorToolbar";
 import TafsirDrawer from "./TafsirDrawer";
 import BookmarkButton from "@/components/BookmarkButton";
+import ImportDialog from "./ImportDialog";
+import BoardBackdrop from "./BoardBackdrop";
 
 /** Which surface the board is showing. Remembered per board. */
 type BoardView = "canvas" | "notes";
@@ -53,6 +55,14 @@ const NotesIcon = ({ size = 17 }: { size?: number }) => (
        strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
     <path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5z" />
     <path d="M8 7h8M8 11h8M8 15h5" />
+  </svg>
+);
+
+const ImportIcon = ({ size = 17 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+       strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+    <path d="M12 3v13M7 8l5-5 5 5" />
   </svg>
 );
 
@@ -101,6 +111,12 @@ export default function WhiteboardShell({
   // Formatting ribbon — only meaningful in the notes view.
   const [editor, setEditor]                 = useState<Editor | null>(null);
   const [formattingOpen, setFormattingOpen] = useState(false);
+
+  /* Imported backdrop. `backdropVersion` is bumped after an import so the
+     backdrop re-reads IndexedDB — the file is not in React state, so nothing
+     else would tell it something changed. */
+  const [importOpen, setImportOpen]           = useState(false);
+  const [backdropVersion, setBackdropVersion] = useState(0);
 
   const room = useRoom(pageId);
   const { others } = usePresence({
@@ -215,6 +231,15 @@ export default function WhiteboardShell({
             </button>
           </div>
 
+          <button
+            className="mode-btn whiteboard-shell-format"
+            onClick={() => setImportOpen(true)}
+            title="Import a PDF or image"
+            aria-label="Import a PDF or image"
+          >
+            <ImportIcon />
+          </button>
+
           <BookmarkButton
             pageId={pageId}
             label={boardTitle ?? "Board"}
@@ -256,6 +281,7 @@ export default function WhiteboardShell({
               onNoteCreated={handleNoteCreated}
               onNoteUpdated={handleNoteUpdated}
               onNoteDeleted={handleNoteDeleted}
+              background={<BoardBackdrop pageId={pageId} version={backdropVersion} />}
             />
           ) : (
             <div className="doc-wrap board-doc-wrap">
@@ -279,6 +305,14 @@ export default function WhiteboardShell({
           )}
         </EditorContextProvider>
       </div>
+
+      {importOpen && (
+        <ImportDialog
+          pageId={pageId}
+          onClose={() => setImportOpen(false)}
+          onImported={() => { setBackdropVersion((v) => v + 1); chooseView("canvas"); }}
+        />
+      )}
 
       <TafsirDrawer open={tafsirOpen} verseKey={tafsirVerse} verses={[]} onClose={() => setTafsirOpen(false)} />
     </div>
