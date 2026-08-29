@@ -31,6 +31,19 @@ export interface ITafsirSource {
    * Throws if the source is unreachable or the verse is not found.
    */
   fetchVerse(surahNumber: number, ayahNumber: number): Promise<FetchedEntry>;
+
+  /**
+   * Fetch a whole surah in one request, when the provider can serve it.
+   *
+   * Optional because only some providers expose it. Where they do it is not a
+   * micro-optimisation: ingesting fourteen editions verse by verse is ~87,000
+   * requests against someone else's CDN, and the same data is available in
+   * ~1,600. A provider without this simply keeps the per-verse path.
+   *
+   * Returns entries in ayah order; a missing verse is omitted rather than
+   * throwing, so one gap does not cost the surah.
+   */
+  fetchSurah?(surahNumber: number): Promise<FetchedEntry[]>;
 }
 
 // ── Source config shapes (stored in TafsirSource.config JSON column) ──────

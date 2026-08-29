@@ -12308,3 +12308,247 @@ input, textarea { font: inherit; color: inherit; }
 
 @media (max-width: 860px) { .bs { display: none; } .bs-reopen { display: none; } }
 @media (prefers-reduced-motion: reduce) { .bs { animation: none; } }
+
+/* ── Assistant ────────────────────────────────────────────────────────────── */
+
+.as-head { display: flex; flex-direction: column; gap: var(--sp-2); }
+.as-title {
+  display: flex; align-items: center; gap: var(--sp-2);
+  font-family: var(--font-serif);
+  font-size: clamp(24px, 3vw, 32px);
+  font-weight: 700;
+  color: var(--ink);
+}
+.as-title svg { color: var(--accent-ink); }
+
+.as-pin { display: flex; align-items: center; gap: var(--sp-3); margin-top: var(--sp-2); }
+.as-pin .an-btn { align-self: auto; }
+
+.as-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--sp-2);
+  padding: var(--sp-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--bg-elev);
+  animation: pane-in var(--dur-mid) var(--ease-flow) both;
+}
+.as-src {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: var(--bg);
+  text-align: left;
+  transition: border-color var(--dur-hover) var(--ease-flow),
+              background var(--dur-hover) var(--ease-flow);
+}
+.as-src:hover { background: var(--hover); }
+.as-src[data-on="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.as-src-name { font-size: 14px; font-weight: 600; color: var(--ink); }
+.as-src-meta { font-size: 12px; color: var(--ink-4); font-variant-numeric: tabular-nums; }
+
+.as-thread {
+  display: flex; flex-direction: column; gap: var(--sp-5);
+  flex: 1; min-height: 0;
+}
+.as-turn {
+  display: flex; flex-direction: column; gap: var(--sp-3);
+  animation: pane-in var(--dur-slow) var(--ease-flow) both;
+}
+.as-q {
+  font-size: 19px;
+  font-weight: 600;
+  color: var(--ink);
+  padding-left: 12px;
+  border-left: 3px solid var(--accent);
+}
+.as-q-pin { font-size: 12.5px; color: var(--ink-4); padding-left: 15px; }
+
+/* ── The visible thinking ─────────────────────────────────────────────────
+   Collapsed once the answer arrives: the work should be inspectable, not
+   competing with the thing you asked for. */
+.as-trace {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--panel);
+  overflow: hidden;
+}
+.as-trace-head {
+  width: 100%;
+  display: flex; align-items: center; gap: var(--sp-2);
+  padding: 9px 13px;
+  font-size: 13.5px;
+  color: var(--ink-3);
+  text-align: left;
+  transition: background var(--dur-hover) var(--ease-flow);
+}
+.as-trace-head:hover { background: var(--hover); color: var(--ink-2); }
+.as-trace-chev { transition: transform var(--dur-mid) var(--ease-flow); }
+.as-trace[data-open="true"] .as-trace-chev { transform: rotate(180deg); }
+.as-trace-count {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--ink-4);
+  font-variant-numeric: tabular-nums;
+}
+.as-trace-body {
+  padding: 4px 13px 13px;
+  display: flex; flex-direction: column; gap: var(--sp-3);
+  animation: anno-open var(--dur-mid) var(--ease-flow) both;
+}
+
+.as-steps { display: flex; flex-direction: column; gap: 5px; }
+.as-steps li {
+  display: flex; align-items: flex-start; gap: var(--sp-2);
+  font-size: 13px;
+  color: var(--ink-3);
+  animation: row-in 260ms var(--ease-flow) both;
+}
+.as-steps li svg { flex: none; margin-top: 2px; color: var(--ink-4); }
+/* A degraded step must look different, or the trace quietly implies everything
+   worked. */
+.as-steps li[data-state="degraded"] { color: oklch(0.55 0.13 60); }
+.as-steps li[data-state="degraded"] svg { color: oklch(0.6 0.14 60); }
+.as-steps li[data-state="empty"] { color: var(--ink-4); }
+
+.as-trace-label {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--ink-4);
+}
+.as-hits { display: flex; flex-direction: column; gap: 2px; }
+.as-hits li {
+  display: flex; align-items: center; gap: var(--sp-2);
+  font-size: 12.5px;
+  padding: 4px 6px;
+  border-radius: var(--radius-sm);
+}
+.as-hits li:hover { background: var(--hover); }
+.as-hit-rank {
+  min-width: 18px; text-align: center;
+  color: var(--ink-4); font-variant-numeric: tabular-nums;
+}
+.as-hit-src   { flex: 1; min-width: 0; color: var(--ink-2); }
+.as-hit-verse { color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.as-hit-via {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 2px 6px; border-radius: 999px;
+  background: var(--panel-2); color: var(--ink-4);
+}
+.as-hit-via[data-via="semantic"] { background: color-mix(in oklch, oklch(0.58 0.11 260) 18%, var(--panel)); color: oklch(0.45 0.11 260); }
+.as-hit-via[data-via="lexical"]  { background: color-mix(in oklch, oklch(0.6 0.12 60) 20%, var(--panel));  color: oklch(0.44 0.12 60); }
+.as-hit-via[data-via="both"]     { background: color-mix(in oklch, var(--accent) 22%, var(--panel));       color: var(--accent-ink); }
+
+/* ── The answer ───────────────────────────────────────────────────────────
+   Quotations, so they are typeset as quotations. Nothing here is paraphrase,
+   and the citation is not a nicety — it is the thing that makes the sentence
+   trustworthy. */
+.as-answer { display: flex; flex-direction: column; gap: var(--sp-3); }
+.as-quote {
+  padding: var(--sp-4);
+  border-radius: var(--radius-md);
+  background: var(--bg-elev);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+}
+.as-quote p {
+  font-size: 16px;
+  line-height: 1.75;
+  color: var(--ink);
+}
+.as-quote[dir="rtl"] p,
+.as-quote p[dir="rtl"] { font-family: var(--font-arabic); font-size: 21px; line-height: 2.1; }
+.as-quote cite {
+  display: block;
+  margin-top: var(--sp-2);
+  font-size: 12.5px;
+  font-style: normal;
+  color: var(--ink-4);
+}
+
+.as-passages {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--bg-elev);
+  overflow: hidden;
+}
+.as-passages > summary {
+  padding: 10px 14px;
+  font-size: 13.5px;
+  color: var(--ink-3);
+  cursor: pointer;
+  transition: background var(--dur-hover) var(--ease-flow);
+}
+.as-passages > summary:hover { background: var(--hover); color: var(--ink-2); }
+.as-passage {
+  padding: var(--sp-4);
+  border-top: 1px solid var(--line);
+  display: flex; flex-direction: column; gap: var(--sp-2);
+}
+.as-passage-head {
+  display: flex; align-items: center; gap: var(--sp-2);
+  font-size: 13px; color: var(--ink-3);
+}
+.as-passage-text { font-size: 15px; line-height: 1.8; color: var(--ink); }
+.as-passage-text[dir="rtl"] {
+  font-family: var(--font-arabic);
+  font-size: 20px;
+  line-height: 2.15;
+}
+.as-passage-tr {
+  display: flex; align-items: flex-start; gap: 7px;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  background: var(--panel);
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--ink-2);
+}
+.as-passage-tr svg { flex: none; margin-top: 3px; color: var(--ink-4); }
+.as-passage-tr--none { color: var(--ink-4); font-style: italic; }
+
+.as-note {
+  font-size: 13px;
+  color: var(--ink-4);
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  background: var(--panel);
+}
+.as-error {
+  display: flex; align-items: flex-start; gap: var(--sp-2);
+  padding: 11px 14px;
+  border-radius: var(--radius-md);
+  background: color-mix(in oklch, var(--danger) 10%, var(--bg-elev));
+  border: 1px solid color-mix(in oklch, var(--danger) 26%, transparent);
+  font-size: 14px;
+  color: var(--ink-2);
+}
+.as-error svg { flex: none; margin-top: 1px; color: var(--danger); }
+
+.as-composer {
+  position: sticky;
+  bottom: 0;
+  display: flex; gap: var(--sp-3);
+  padding: var(--sp-4) 0;
+  background: linear-gradient(to top, var(--bg) 72%, transparent);
+}
+.as-input {
+  flex: 1; min-width: 0;
+  padding: 13px 16px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-md);
+  background: var(--bg-elev);
+  color: var(--ink);
+  font-size: 15.5px;
+  transition: border-color var(--dur-hover) var(--ease-flow);
+}
+.as-input:focus { border-color: var(--accent); outline: none; }
+.as-input:disabled { background: var(--panel); color: var(--ink-4); }
+.as-composer .an-btn { align-self: auto; }
+
+@media (prefers-reduced-motion: reduce) {
+  .as-turn, .as-picker, .as-trace-body, .as-steps li { animation: none !important; }
+  .as-trace-chev { transition: none; }
+}

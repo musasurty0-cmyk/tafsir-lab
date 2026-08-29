@@ -1,0 +1,329 @@
+/**
+ * Tafsir retrieval — the part that makes citation possible and invention not.
+ *
+ * Every passage this returns is a row a human wrote, fetched from the corpus.
+ * Nothing here generates prose, and the answer layer above is only allowed to
+ * arrange what comes back from here. That is the whole architecture: the
+ * assistant cannot claim al-Ṭabarī said something unless al-Ṭabarī's text is
+ * sitting in the result set with its verse key attached.
+ *
+ * Two retrieval paths, deliberately both:
+ *
+ *   semantic — the question is embedded and matched against chunk vectors.
+ *              Finds passages that are ABOUT the question even when they share
+ *              no words with it, and works across languages: an English
+ *              question can land on an Arabic passage because both live in one
+ *              embedding space.
+ *
+ *   lexical  — trigram similarity on the raw text. Finds exact phrases and
+ *              proper nouns ("Nawf al-Bikālī", "الصراط المستقيم"), which is
+ *              precisely what semantic search is worst at and precisely what a
+ *              citation-first assistant gets asked for.
+ *
+ * The chunk table stores SPANS, not text, so both queries slice the passage
+ * back out of TafsirEntry. That keeps a second copy of the corpus out of the
+ * database, and it means the text returned here is byte-for-byte what was
+ * embedded — a quotation cannot drift from what the vector described.
+ *
+ * They are merged by reciprocal rank fusion rather than by comparing scores.
+ * A cosine distance and a trigram similarity are not on the same scale, and
+ * blending them numerically produces a ranking that looks principled and is
+ * arbitrary. RRF only uses each list's ORDER, which is the part that means
+ * something in both.
+ */
+
+import { db } from "@/lib/db";
+
+export interface SearchHit {
+  chunkId:    string;
+  sourceSlug: string;
+  sourceName: string;
+  language:   string;
+  verseKey:   string;
+  surah:      number;
+  ayah:       number;
+  content:    string;
+  /** Where it came from, so the trace can say so honestly. */
+  via:        "semantic" | "lexical" | "both";
+  rank:       number;
+}
+
+export interface SearchOptions {
+  /** Restrict to these source slugs. Empty/undefined = every active source. */
+  sources?:   string[];
+  /** Restrict to one verse, e.g. "2:255". */
+  verseKey?:  string;
+  /** Restrict to one sūrah. */
+  surah?:     number;
+  limit?:     number;
+}
+
+const DEFAULT_LIMIT = 12;
+/** Per-path candidate depth before fusion. */
+const CANDIDATES = 30;
+/**
+ * RRF's smoothing constant. 60 is the value from the original paper and the
+ * one every implementation uses; it flattens the difference between ranks 1
+ * and 2 enough that a single path cannot dominate the fused list.
+ */
+const RRF_K = 60;
+
+/** Rows the SQL below returns, before fusion. */
+interface RawHit {
+  chunkId: string; sourceSlug: string; sourceName: string; language: string;
+  verseKey: string; surah: number; ayah: number; content: string;
+}
+
+function filterSql(opts: SearchOptions, params: unknown[]): string {
+  const parts: string[] = [];
+  if (opts.sources?.length) {
+    params.push(opts.sources);
+    parts.push(`s.slug = ANY($${params.length}::text[])`);
+  }
+  if (opts.verseKey) {
+    params.push(opts.verseKey);
+    parts.push(`c."verseKey" = $${params.length}`);
+  }
+  if (opts.surah) {
+    params.push(opts.surah);
+    parts.push(`c.surah = $${params.length}::int`);
+  }
+  return parts.length ? `AND ${parts.join(" AND ")}` : "";
+}
+
+/** Nearest chunks to a query vector. */
+export async function semanticSearch(
+  embedding: number[], opts: SearchOptions = {},
+): Promise<RawHit[]> {
+  // pgvector takes the literal as text and casts; building it here rather than
+  // passing an array avoids a driver that would send it as a Postgres array.
+  const literal = `[${embedding.map((x) => x.toFixed(6)).join(",")}]`;
+  const params: unknown[] = [literal];
+  const where = filterSql(opts, params);
+  params.push(opts.limit ?? CANDIDATES);
+
+  return db.$queryRawUnsafe<RawHit[]>(`
+    SELECT c.id         AS "chunkId",
+           s.slug       AS "sourceSlug",
+           s.name       AS "sourceName",
+           s.language   AS "language",
+           c."verseKey" AS "verseKey",
+           c.surah, c.ayah,
+           substr(e.content, c."startChar" + 1, c."endChar" - c."startChar") AS content
+    FROM "TafsirChunk" c
+    JOIN "TafsirSource" s ON s.id = c."sourceId"
+    JOIN "TafsirEntry"  e ON e."sourceId" = c."sourceId" AND e."verseKey" = c."verseKey"
+    WHERE c.embedding IS NOT NULL ${where}
+    ORDER BY c.embedding <=> $1::halfvec
+    LIMIT $${params.length}::int
+  `, ...params);
+}
+
+/**
+ * Trigram search, over the ENTRY text.
+ *
+ * The chunk table holds spans rather than text, so there is nothing on it to
+ * trigram-match. Matching the whole entry and then mapping back to the chunk
+ * that contains the hit is not a workaround — it is better: trigram similarity
+ * over a 1,200-char slice is noisier than over the whole passage, and one
+ * index on TafsirEntry replaces one per chunk.
+ *
+ * Uses `<%` (word similarity), NOT `%` (string similarity). `%` compares two
+ * strings as wholes, so a five-character query against an eight-thousand
+ * character commentary scores near zero and matches nothing — which is what it
+ * did, silently returning no lexical hits at all. `<%` asks the question that
+ * was actually meant: is the query similar to some SUBSTRING of the document.
+ * `<<->` is its distance counterpart, for ranking.
+ *
+ * Candidates are capped BEFORE they are ranked. Ordering by `<<->` across the
+ * whole table computes a word distance for every row of every commentary —
+ * tens of thousands of multi-kilobyte documents — which took long enough to
+ * hang the request. Filtering first and ranking within a bounded candidate set
+ * costs some ranking quality in the tail and makes the query bounded, which is
+ * the right trade when this path exists as the exact-phrase fallback and the
+ * semantic path is the primary ranker.
+ *
+ * DISTINCT ON keeps one chunk per entry — whichever span contains the match,
+ * falling back to the first chunk when the match is fuzzy and `strpos` finds
+ * no exact offset.
+ */
+export async function lexicalSearch(
+  query: string, opts: SearchOptions = {},
+): Promise<RawHit[]> {
+  const q = query.trim();
+  // Below three characters every trigram matches, which is a slow scan for a
+  // useless result.
+  if (q.length < 3) return [];
+
+  /* Two filter sets, because the CTE and the outer query select from different
+     tables. TafsirEntry has a verseKey and no surah column, so the surah and
+     verse filters belong on the chunk side where those columns exist — pushing
+     them into the CTE by string-replacing the alias would generate SQL
+     referencing a column that does not exist. */
+  const params: unknown[] = [q];
+
+  const entryFilters: string[] = [];
+  if (opts.sources?.length) {
+    params.push(opts.sources);
+    entryFilters.push(`s.slug = ANY($${params.length}::text[])`);
+  }
+  if (opts.verseKey) {
+    params.push(opts.verseKey);
+    entryFilters.push(`e."verseKey" = $${params.length}`);
+  }
+  if (opts.surah) {
+    params.push(opts.surah);
+    entryFilters.push(`split_part(e."verseKey", ':', 1)::int = $${params.length}::int`);
+  }
+  const entryWhere = entryFilters.length ? `AND ${entryFilters.join(" AND ")}` : "";
+
+  params.push(opts.limit ?? CANDIDATES);
+
+  return db.$queryRawUnsafe<RawHit[]>(`
+    WITH candidates AS (
+      /* Only entries that HAVE chunks. Without this the candidate set is drawn
+         from the whole corpus, most of which is ingested but not yet embedded,
+         and the join below then discards nearly all of it — the search returns
+         nothing while looking like it worked. It is also much faster, because
+         the indexed subset is a fraction of the table. */
+      SELECT e."sourceId", e."verseKey", e.content
+      FROM "TafsirEntry" e
+      JOIN "TafsirSource" s ON s.id = e."sourceId"
+      WHERE $1 <% e.content
+        AND EXISTS (SELECT 1 FROM "TafsirChunk" ch
+                    WHERE ch."sourceId" = e."sourceId" AND ch."verseKey" = e."verseKey")
+        ${entryWhere}
+      LIMIT 300
+    ), matches AS (
+      SELECT "sourceId", "verseKey", content,
+             strpos(content, $1) AS hit_at
+      FROM candidates
+      ORDER BY $1 <<-> content
+      LIMIT 60
+    )
+    SELECT DISTINCT ON (c."sourceId", c."verseKey")
+           c.id         AS "chunkId",
+           s.slug       AS "sourceSlug",
+           s.name       AS "sourceName",
+           s.language   AS "language",
+           c."verseKey" AS "verseKey",
+           c.surah, c.ayah,
+           substr(m.content, c."startChar" + 1, c."endChar" - c."startChar") AS content
+    FROM matches m
+    JOIN "TafsirChunk" c
+      ON c."sourceId" = m."sourceId" AND c."verseKey" = m."verseKey"
+    JOIN "TafsirSource" s ON s.id = c."sourceId"
+    ORDER BY c."sourceId", c."verseKey",
+             -- the span containing the exact hit first, then the earliest span
+             (m.hit_at > 0 AND m.hit_at BETWEEN c."startChar" + 1 AND c."endChar") DESC,
+             c."chunkIndex" ASC
+    LIMIT $${params.length}::int
+  `, ...params);
+}
+
+/**
+ * Merge two ranked lists by reciprocal rank fusion.
+ *
+ * Exported because it is pure and worth testing on its own: it decides what the
+ * assistant quotes, and a fusion bug would show up as "the answers are a bit
+ * off" rather than as an error.
+ */
+export function fuse(
+  semantic: RawHit[], lexical: RawHit[], limit: number,
+): SearchHit[] {
+  const score = new Map<string, number>();
+  const seen  = new Map<string, RawHit>();
+  const from  = new Map<string, Set<"semantic" | "lexical">>();
+
+  const add = (rows: RawHit[], via: "semantic" | "lexical") => {
+    rows.forEach((row, i) => {
+      const k = row.chunkId;
+      score.set(k, (score.get(k) ?? 0) + 1 / (RRF_K + i + 1));
+      if (!seen.has(k)) seen.set(k, row);
+      if (!from.has(k)) from.set(k, new Set());
+      from.get(k)!.add(via);
+    });
+  };
+
+  add(semantic, "semantic");
+  add(lexical, "lexical");
+
+  return [...score.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, limit)
+    .map(([chunkId], i) => {
+      const row  = seen.get(chunkId)!;
+      const vias = from.get(chunkId)!;
+      return {
+        ...row,
+        via: vias.size === 2 ? "both" : [...vias][0],
+        rank: i + 1,
+      };
+    });
+}
+
+export interface SearchResult {
+  hits: SearchHit[];
+  /** What actually happened, for the visible trace. Never decorative. */
+  trace: {
+    semanticUsed: boolean;
+    semanticCount: number;
+    lexicalCount: number;
+    /** Set when the embedding service was unreachable and we fell back. */
+    degraded?: string;
+    sourcesSearched: string[];
+  };
+}
+
+/**
+ * The retrieval the assistant runs.
+ *
+ * `embedding` may be null — the Space sleeps on the free tier and can be slow
+ * to wake. When it is null this still answers, from lexical search alone, and
+ * says so in the trace. A degraded answer that admits it is degraded is worth
+ * more than an error, and far more than a confident answer built on nothing.
+ */
+export async function search(
+  query: string, embedding: number[] | null, opts: SearchOptions = {},
+): Promise<SearchResult> {
+  const limit = opts.limit ?? DEFAULT_LIMIT;
+
+  const [semantic, lexical] = await Promise.all([
+    embedding ? semanticSearch(embedding, { ...opts, limit: CANDIDATES }) : Promise.resolve([]),
+    lexicalSearch(query, { ...opts, limit: CANDIDATES }),
+  ]);
+
+  const hits = fuse(semantic, lexical, limit);
+
+  return {
+    hits,
+    trace: {
+      semanticUsed:  embedding !== null,
+      semanticCount: semantic.length,
+      lexicalCount:  lexical.length,
+      degraded: embedding === null
+        ? "The embedding service did not respond, so this used keyword search only."
+        : undefined,
+      sourcesSearched: [...new Set(hits.map((h) => h.sourceName))],
+    },
+  };
+}
+
+/** Every source that actually has embedded content, for the source picker. */
+export async function availableSources() {
+  const rows = await db.$queryRawUnsafe<{
+    slug: string; name: string; language: string; chunks: bigint; verses: bigint;
+  }[]>(`
+    SELECT s.slug, s.name, s.language,
+           count(*)                    AS chunks,
+           count(DISTINCT c."verseKey") AS verses
+    FROM "TafsirChunk" c
+    JOIN "TafsirSource" s ON s.id = c."sourceId"
+    GROUP BY s.slug, s.name, s.language
+    ORDER BY count(DISTINCT c."verseKey") DESC
+  `);
+  // bigint from count() does not survive JSON.
+  return rows.map((r) => ({
+    ...r, chunks: Number(r.chunks), verses: Number(r.verses),
+  }));
+}

@@ -17,7 +17,9 @@
 import { db } from "@/lib/db";
 import { QuranApiTafsirSource, RATE_LIMIT_MS as API_RATE_LIMIT } from "./sources/quran-api.source";
 import { TafsirAppSource, RATE_LIMIT_MS as SCRAPE_RATE_LIMIT } from "./sources/tafsir-app.source";
+import { Spa5kTafsirSource, RATE_LIMIT_MS as CDN_RATE_LIMIT } from "./sources/spa5k.source";
 import type {
+  Spa5kSourceConfig,
   ITafsirSource,
   IngestResult,
   QuranApiSourceConfig,
@@ -67,6 +69,17 @@ function buildSource(type: string, config: unknown): { source: ITafsirSource; ra
       rateLimitMs: SCRAPE_RATE_LIMIT,
     };
   }
+  /* "cdn" was declared in the schema and used by 118 seeded sources, but never
+     reached this dispatcher — so every one of them threw "Unknown source type"
+     the moment anyone tried to ingest it. That is why the corpus was empty:
+     not a fetch failure, a missing branch. */
+  if (type === "cdn") {
+    const cfg = config as Spa5kSourceConfig;
+    return {
+      source: new Spa5kTafsirSource(cfg),
+      rateLimitMs: CDN_RATE_LIMIT,
+    };
+  }
   throw new Error(`Unknown source type: ${type}`);
 }
 
@@ -110,20 +123,64 @@ export async function ingestSurah(
   let skipped  = 0;
   let errors   = 0;
 
+  /* Which verses are already here, in ONE query.
+     The per-verse findUnique below costs a round trip per ayah — 6,236 per
+     edition, most of them answering "yes, still there" on a re-run. One
+     findMany answers the same question for the whole surah. */
+  const present = new Set<string>();
+  if (!force) {
+    const rows = await db.tafsirEntry.findMany({
+      where:  { sourceId: sourceRow.id, verseKey: { startsWith: `${surahNumber}:` }, isStale: false },
+      select: { verseKey: true },
+    });
+    // startsWith is a prefix match, so "1:" also catches "10:1" — keep only
+    // the verses whose surah part is actually this surah.
+    for (const r of rows) {
+      if (r.verseKey.split(":")[0] === String(surahNumber)) present.add(r.verseKey);
+    }
+  }
+
+  /* Fast path: one request for the whole surah, where the provider offers it.
+     Falls back to the per-verse loop for providers that do not. */
+  if (source.fetchSurah) {
+    let batch: Awaited<ReturnType<NonNullable<typeof source.fetchSurah>>> = [];
+    try {
+      batch = await source.fetchSurah(surahNumber);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`  ✗  surah ${surahNumber}: ${msg}`);
+      errors++;
+    }
+
+    for (const entry of batch) {
+      if (present.has(entry.verseKey)) { skipped++; continue; }
+      try {
+        await db.tafsirEntry.upsert({
+          where:  { sourceId_verseKey: { sourceId: sourceRow.id, verseKey: entry.verseKey } },
+          update: { content: entry.content, contentHtml: entry.contentHtml ?? null,
+                    fetchedAt: new Date(), isStale: false },
+          create: { sourceId: sourceRow.id, verseKey: entry.verseKey,
+                    content: entry.content, contentHtml: entry.contentHtml ?? null },
+        });
+        inserted++;
+        log(`  ✓  ${entry.verseKey}`);
+      } catch (err) {
+        errors++;
+        console.error(`  ✗  ${entry.verseKey}: ${err instanceof Error ? err.message : String(err)}`);
+      }
+    }
+
+    return finish();
+  }
+
   for (let ayah = 1; ayah <= ayahCount; ayah++) {
     const verseKey = `${surahNumber}:${ayah}`;
 
-    // Skip if already have a fresh entry (unless force)
-    if (!force) {
-      const existing = await db.tafsirEntry.findUnique({
-        where: { sourceId_verseKey: { sourceId: sourceRow.id, verseKey } },
-        select: { id: true, isStale: true },
-      });
-      if (existing && !existing.isStale) {
-        log(`  skip  ${verseKey} (already ingested)`);
-        skipped++;
-        continue;
-      }
+    // Already here and fresh? The set above answered that for the whole surah.
+    if (present.has(verseKey)) {
+      log(`  skip  ${verseKey} (already ingested)`);
+      skipped++;
+      continue;
     }
 
     try {
@@ -159,33 +216,39 @@ export async function ingestSurah(
     }
   }
 
-  // ── Update job record ──────────────────────────────────────────────────
-  const status: string = errors > 0 && inserted === 0 ? "failed" : "done";
-  await db.tafsirFetchJob.update({
-    where:  { id: job.id },
-    data:   {
-      status,
-      completedAt:     new Date(),
-      recordsInserted: inserted,
-      error: errors > 0 ? `${errors} verse(s) failed` : null,
-    },
-  });
+  return finish();
 
-  const result: IngestResult = {
-    sourceSlug,
-    surahNumber,
-    inserted,
-    skipped,
-    errors,
-    durationMs: Date.now() - t0,
-  };
+  /** Close the job row and build the result. Both paths end here, so the
+   *  job record and the returned counts can never disagree. */
+  async function finish(): Promise<IngestResult> {
+    // ── Update job record ──────────────────────────────────────────────────
+    const status: string = errors > 0 && inserted === 0 ? "failed" : "done";
+    await db.tafsirFetchJob.update({
+      where:  { id: job.id },
+      data:   {
+        status,
+        completedAt:     new Date(),
+        recordsInserted: inserted,
+        error: errors > 0 ? `${errors} verse(s) failed` : null,
+      },
+    });
 
-  log(
-    `\n  Done: ${inserted} inserted, ${skipped} skipped, ${errors} errors` +
-    ` in ${(result.durationMs / 1000).toFixed(1)}s\n`
-  );
+    const result: IngestResult = {
+      sourceSlug,
+      surahNumber,
+      inserted,
+      skipped,
+      errors,
+      durationMs: Date.now() - t0,
+    };
 
-  return result;
+    log(
+      `\n  Done: ${inserted} inserted, ${skipped} skipped, ${errors} errors` +
+      ` in ${(result.durationMs / 1000).toFixed(1)}s\n`
+    );
+
+    return result;
+  }
 }
 
 // ── Ingest all 114 surahs ─────────────────────────────────────────────────

@@ -55,3 +55,10 @@ marketing/reels/_stills/
 # Large source clips for the lecture reels — rebuilt from the original on demand
 trailer/public/tafsir-clip*.mp4
 trailer/public/dosari-clip2.mp4
+
+# Python bytecode from the ml/ scripts
+__pycache__/
+*.pyc
+
+# Corpus ingestion log (local, regenerated on every run)
+tafsir-ingest.log

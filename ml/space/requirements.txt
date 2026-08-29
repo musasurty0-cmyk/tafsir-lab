@@ -1,0 +1,9 @@
+# Pinned to majors, not exact versions: a free Space rebuilds from scratch on
+# every push, and an exact pin that yanks upstream turns into a Space that will
+# not start with no change on our side.
+gradio>=4.44,<6
+sentence-transformers>=3.0,<4
+transformers>=4.44,<5
+torch>=2.2,<3
+sentencepiece>=0.2,<1
+sacremoses>=0.1,<1
