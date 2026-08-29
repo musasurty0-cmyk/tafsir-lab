@@ -28,7 +28,7 @@ export interface PresenceData {
   name:      string;
   color:     string;
   /** Which view mode the user is in */
-  mode:      "editor" | "canvas" | "split" | "board";
+  mode:      "editor" | "canvas" | "split" | "board" | "read";
   /** TipTap cursor position (editor mode only) */
   cursor:    { from: number; to: number } | null;
   /** Mushaf page number (canvas mode only) */

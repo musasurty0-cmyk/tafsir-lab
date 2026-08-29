@@ -37,7 +37,7 @@ interface UsePresenceOptions {
   socket:     PartySocket | null;
   userId:     string;
   name:       string;
-  mode:       "editor" | "canvas" | "split" | "board";
+  mode:       "editor" | "canvas" | "split" | "board" | "read";
   mushafPage?: number | null;
 }
 

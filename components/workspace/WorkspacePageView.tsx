@@ -26,6 +26,7 @@ import Rail from "./Rail";
 import { ChevronRight } from "lucide-react";
 import WorkspaceSidebar from "./WorkspaceSidebar";
 import TopBar from "./TopBar";
+import ScriptView from "./ScriptView";
 import ModeAPage from "./ModeAPage";
 import EditorToolbar from "./editor/EditorToolbar";
 import type { Editor } from "@tiptap/core";
@@ -115,7 +116,8 @@ export default function WorkspacePageView({
   useEffect(() => {
     try {
       const m = new URLSearchParams(window.location.search).get("mode");
-      if (m === "board" || m === "canvas" || m === "split" || m === "editor") setMode(m as ViewMode);
+      if (m === "board" || m === "canvas" || m === "split" || m === "editor" || m === "read")
+        setMode(m as ViewMode);
     } catch { /* ignore */ }
   }, []);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -644,6 +646,16 @@ export default function WorkspacePageView({
           {mode === "canvas" && renderModeB()}
 
           {mode === "board" && renderWhiteboard()}
+
+          {/* Read — the sūrah in whichever hand the reader prefers. Separate
+              from canvas because that one reproduces the Madīnah page line for
+              line, which is what page-anchored annotation depends on; here the
+              line breaks are not load-bearing. */}
+          {mode === "read" && (
+            <div className="doc-wrap">
+              <ScriptView surah={surahNumber} onVerseClick={openTafsir} />
+            </div>
+          )}
 
           {mode === "split" && (
             <>
