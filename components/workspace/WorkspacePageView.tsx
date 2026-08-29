@@ -619,6 +619,7 @@ export default function WorkspacePageView({
           workspaceName={workspace.name}
           chapter={chapter}
           activePageTitle={page?.title ?? null}
+          activePageId={page ? activePageId : null}
           mode={mode}
           onSetMode={setMode}
           progressLoading={progressLoading}

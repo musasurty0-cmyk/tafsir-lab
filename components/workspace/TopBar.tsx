@@ -11,6 +11,7 @@
 import Link from "next/link";
 import type { Chapter } from "@/lib/types";
 import PresenceBar from "./PresenceBar";
+import BookmarkButton from "@/components/BookmarkButton";
 import type { PresenceData } from "@/lib/collab/usePresence";
 import { useT } from "@/lib/i18n/LocaleProvider";
 
@@ -87,6 +88,9 @@ interface Props {
   presenceOthers?:    PresenceData[];
   /** Realtime room connection state — drives the Live indicator */
   liveStatus?:        "connecting" | "connected" | "disconnected";
+  /** The page being viewed, so it can be bookmarked. Absent = no page open,
+   *  and the control is not rendered rather than rendered inert. */
+  activePageId?:      string | null;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────
@@ -97,6 +101,7 @@ export default function TopBar({
   workspaceName,
   chapter,
   activePageTitle,
+  activePageId,
   mode,
   onSetMode,
   progressLoading,
@@ -229,6 +234,14 @@ export default function TopBar({
         >
           <BookOpenIcon /> {t("topbar.tafsir")}
         </button>
+
+        {activePageId && (
+          <BookmarkButton
+            pageId={activePageId}
+            label={activePageTitle ?? chapter.name_simple}
+            surahNumber={surahNumber}
+          />
+        )}
 
         {/* Tweaks, Export and the language switcher used to sit here. They
             crowded the bar with things that are not per-page actions; language

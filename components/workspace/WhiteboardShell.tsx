@@ -32,6 +32,7 @@ import WhiteboardPage from "./WhiteboardPage";
 import PageEditor from "./editor/PageEditor";
 import EditorToolbar from "./editor/EditorToolbar";
 import TafsirDrawer from "./TafsirDrawer";
+import BookmarkButton from "@/components/BookmarkButton";
 
 /** Which surface the board is showing. Remembered per board. */
 type BoardView = "canvas" | "notes";
@@ -213,6 +214,13 @@ export default function WhiteboardShell({
               <NotesIcon />
             </button>
           </div>
+
+          <BookmarkButton
+            pageId={pageId}
+            label={boardTitle ?? "Board"}
+            className="mode-btn whiteboard-shell-format"
+            withLabel={false}
+          />
 
           {view === "notes" && (
             <button
