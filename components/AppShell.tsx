@@ -12,6 +12,8 @@
  */
 
 import type { ReactNode } from "react";
+import Link from "next/link";
+import { Search } from "lucide-react";
 import AppSidebar, { type SidebarUser } from "./AppSidebar";
 
 export interface ShellStreak { current: number; today: number; goal: number }
@@ -67,7 +69,12 @@ export default function AppShell({ user, streak, action, children }: Props) {
               )}
             </p>
           </div>
-          {action}
+          {action ?? (
+            <Link href="/explore" className="app-shell-search" title="Explore the Qur'an"
+                  aria-label="Explore the Qur'an">
+              <Search size={20} aria-hidden />
+            </Link>
+          )}
         </header>
 
         <div className="app-shell-body">{children}</div>

@@ -30,3 +30,26 @@ export function ayahCount(surahNumber: number): number {
 
 /** Total āyāt in the muṣḥaf — used as a sanity check on the table above. */
 export const TOTAL_AYAT = 6236;
+
+/**
+ * Where each juzʾ begins, as [surah, ayah].
+ *
+ * The standard Ḥafṣ division. Held as start points rather than ranges because
+ * a juzʾ ends exactly where the next one begins, and storing both invites the
+ * two to disagree — juzEnd() derives the end from the following entry, and the
+ * last one ends at the end of the muṣḥaf.
+ */
+export const JUZ_STARTS: readonly (readonly [number, number])[] = [
+  [1, 1],   [2, 142], [2, 253], [3, 93],  [4, 24],  [4, 148], [5, 82],  [6, 111],
+  [7, 88],  [8, 41],  [9, 93],  [11, 6],  [12, 53], [15, 1],  [17, 1],  [18, 75],
+  [21, 1],  [23, 1],  [25, 21], [27, 56], [29, 46], [33, 31], [36, 28], [39, 32],
+  [41, 47], [46, 1],  [51, 31], [58, 1],  [67, 1],  [78, 1],
+];
+
+/** Inclusive end of a juzʾ (1-based), as [surah, ayah]. */
+export function juzEnd(juz: number): readonly [number, number] {
+  const next = JUZ_STARTS[juz];                  // JUZ_STARTS[juz] is juz+1's start
+  if (!next) return [114, ayahCount(114)];       // the last juzʾ runs to the end
+  const [s, a] = next;
+  return a > 1 ? [s, a - 1] : [s - 1, ayahCount(s - 1)];
+}

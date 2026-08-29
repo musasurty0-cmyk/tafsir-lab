@@ -27,7 +27,7 @@ export async function proxy(req: NextRequest) {
 
   const AUTH_PATHS = [
     "/home", "/workspaces", "/workspace",
-    "/analytics", "/leaderboard", "/friends", "/settings", "/contact",
+    "/analytics", "/leaderboard", "/friends", "/settings", "/contact", "/explore",
   ];
   const needsAuth  = AUTH_PATHS.some(
     (p) => pathname === p || pathname.startsWith(p + "/"),
@@ -55,6 +55,6 @@ export const config = {
   matcher: [
     "/home/:path*", "/workspaces/:path*", "/workspace/:path*",
     "/analytics/:path*", "/leaderboard/:path*", "/friends/:path*",
-    "/settings/:path*", "/contact/:path*",
+    "/settings/:path*", "/contact/:path*", "/explore/:path*",
   ],
 };

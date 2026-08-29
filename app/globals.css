@@ -11772,3 +11772,166 @@ input, textarea { font: inherit; color: inherit; }
   .ob-progress-fill { transition: none; }
   .ob-cta:hover { transform: none; }
 }
+
+/* ── Explore the Qur'an ───────────────────────────────────────────────────── */
+
+.ex-heading {
+  font-family: var(--font-serif);
+  font-size: clamp(26px, 3vw, 36px);
+  font-weight: 700;
+  color: var(--ink);
+}
+.ex-search { padding: 14px 18px; }
+.ex-search .fr-input { font-size: 16px; }
+
+.ex-ws { display: flex; align-items: center; gap: var(--sp-3); }
+
+.ex-ref {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: 14px 18px;
+  border-radius: var(--radius-md);
+  background: var(--accent-soft);
+  border: 1px solid color-mix(in oklch, var(--accent) 32%, transparent);
+  text-align: left;
+  animation: pane-in var(--dur-mid) var(--ease-flow) both;
+  transition: filter var(--dur-hover) var(--ease-flow);
+}
+.ex-ref:hover:not(:disabled) { filter: brightness(0.98); }
+.ex-ref:disabled { opacity: 0.55; cursor: default; }
+.ex-ref-key {
+  font-size: 17px; font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent-ink);
+}
+.ex-ref-name { flex: 1; font-size: 15px; color: var(--ink-2); }
+.ex-ref-go   { font-size: 14px; font-weight: 650; color: var(--accent-ink); }
+
+.ex-hits { display: flex; flex-direction: column; gap: var(--sp-2); }
+.ex-hit {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background: var(--panel);
+  text-align: left;
+  animation: row-in 300ms var(--ease-flow) both;
+  transition: background var(--dur-hover) var(--ease-flow);
+}
+.ex-hit:hover:not(:disabled) { background: var(--panel-2); }
+.ex-hit:disabled { opacity: 0.55; cursor: default; }
+.ex-hit-key {
+  font-size: 12px; font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent-ink);
+}
+.ex-hit-ar {
+  font-family: var(--font-arabic);
+  font-size: 21px;
+  line-height: 1.9;
+  color: var(--ink);
+}
+.ex-hit-tr { font-size: 13.5px; color: var(--ink-3); line-height: 1.5; }
+
+.ex-tab { display: inline-flex; align-items: center; gap: 7px; }
+
+.ex-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 560px;
+  overflow-y: auto;
+}
+.ex-list--grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--sp-2);
+  max-height: none;
+}
+.ex-list > li { animation: row-in 300ms var(--ease-flow) both; }
+
+.ex-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  text-align: left;
+  transition: background var(--dur-hover) var(--ease-flow);
+}
+.ex-row:hover:not(:disabled) { background: var(--hover); }
+.ex-row:disabled { opacity: 0.5; cursor: default; }
+.ex-num {
+  flex: none;
+  width: 34px; height: 34px;
+  display: grid; place-items: center;
+  border-radius: var(--radius);
+  font-size: 13px; font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+  background: var(--ink-4);
+}
+/* Nine hues cycled by number, so the list has landmarks to scan by rather than
+   604 identical rows. */
+.ex-num[data-n="0"] { background: oklch(0.55 0.10 210); }
+.ex-num[data-n="1"] { background: oklch(0.62 0.11 130); }
+.ex-num[data-n="2"] { background: oklch(0.64 0.12 350); }
+.ex-num[data-n="3"] { background: oklch(0.58 0.11 260); }
+.ex-num[data-n="4"] { background: oklch(0.62 0.12 60); }
+.ex-num[data-n="5"] { background: oklch(0.58 0.11 170); }
+.ex-num[data-n="6"] { background: oklch(0.56 0.12 300); }
+.ex-num[data-n="7"] { background: oklch(0.60 0.12 25); }
+.ex-num[data-n="8"] { background: oklch(0.56 0.09 190); }
+
+.ex-row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.ex-row-title { font-size: 15px; font-weight: 600; color: var(--ink); }
+.ex-row-sub   { font-size: 12.5px; color: var(--ink-4); font-variant-numeric: tabular-nums; }
+.ex-row-ar {
+  font-family: var(--font-arabic);
+  font-size: 19px;
+  color: var(--ink-3);
+}
+
+.ex-pages {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
+  gap: 6px;
+  max-height: 460px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.ex-page {
+  aspect-ratio: 1;
+  display: grid; place-items: center;
+  border-radius: var(--radius);
+  background: var(--panel);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-3);
+  transition: background var(--dur-hover) var(--ease-flow),
+              color var(--dur-hover) var(--ease-flow);
+}
+.ex-page:hover:not(:disabled) { background: var(--accent); color: #fff; }
+.ex-page:disabled { opacity: 0.45; cursor: default; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ex-ref, .ex-hit, .ex-list > li { animation: none !important; }
+}
+
+.app-shell-search {
+  margin-left: auto;
+  flex: none;
+  width: 46px; height: 46px;
+  display: grid; place-items: center;
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+  color: var(--ink-2);
+  transition: background var(--dur-hover) var(--ease-flow),
+              color var(--dur-hover) var(--ease-flow),
+              transform var(--dur-hover) var(--ease-flow);
+}
+.app-shell-search:hover { background: var(--panel-2); color: var(--ink); transform: scale(1.04); }
+@media (prefers-reduced-motion: reduce) { .app-shell-search:hover { transform: none; } }
