@@ -1,3 +1,4 @@
+import { ayahCount } from "./quran-meta";
 /**
  * Shared Qurʾān target search.
  *
@@ -216,4 +217,35 @@ export function findMatchRange(
   const start = map[at];
   const endIdx = Math.min(at + q.length - 1, map.length - 1);
   return { start, end: map[endIdx] + 1 };
+}
+
+/**
+ * Find a verse reference ANYWHERE in a sentence.
+ *
+ * `parseReference` deliberately requires the whole string to be a reference —
+ * right for a search box where "18" means sūrah 18. But a question is a
+ * sentence: "what does it say about 18:65?" contains a reference and is not
+ * one, so that parser returns null and the reference is lost. Asking about a
+ * specific verse is the commonest thing anyone does, and it was silently
+ * finding nothing.
+ *
+ * Only surah:ayah is matched, never a bare number — "the 7 heavens" must not
+ * become sūrah 7.
+ */
+export function findReference(text: string): ParsedRef | null {
+  const q = normalizeDigits(text);
+  // A clock time is the one common false positive: "12:30pm" and "meet at
+  // 9:15" are not verses. Excluded by an am/pm suffix, and by a preceding
+  // time word — 12:30 IS a valid verse reference, so it cannot be rejected on
+  // its numbers alone.
+  if (/\d{1,2}\s*:\s*\d{2}\s*(?:am|pm)/i.test(q)) return null;
+  if (/(?:at|by|until|till|around|before|after)\s+\d{1,2}\s*:\s*\d{2}/i.test(q)) return null;
+
+  const m = q.match(/(?:^|[^\d])(\d{1,3})\s*:\s*(\d{1,3})(?![\d:])/);
+  if (!m) return null;
+
+  const surah = Number(m[1]), ayah = Number(m[2]);
+  if (surah < 1 || surah > 114) return null;
+  if (ayah < 1 || ayah > ayahCount(surah)) return null;   // 2:900 is not a verse
+  return { surah, ayah };
 }

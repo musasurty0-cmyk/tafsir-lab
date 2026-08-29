@@ -9,9 +9,12 @@
  * the same stream the answer is, so it cannot describe work that did not
  * happen — which is the only way a trace is worth showing.
  *
- * Every sentence in an answer is a quotation. There is no paraphrase anywhere
- * in this component, and the citation beside a sentence is the source it was
- * literally taken from.
+ * Two answer shapes, because the server has two modes. With a model configured
+ * the answer streams in as prose carrying [n] citations, which render as chips
+ * linked to the passage list below. With no model it falls back to verbatim
+ * quotations. The mode is always shown — a paraphrase and a quotation deserve
+ * different amounts of trust, and the reader should not have to guess which
+ * they are reading.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -45,6 +48,8 @@ interface PassageOut {
   verseKey: string; content: string; translation: string | null; via: string; rank: number;
 }
 
+interface CiteRef { n: number; sourceName: string; verseKey: string }
+
 interface Turn {
   id:        string;
   question:  string;
@@ -52,6 +57,12 @@ interface Turn {
   steps:     Step[];
   searched:  string[];
   hits:      HitRef[];
+  /** Generated prose, streamed. Empty in extractive mode. */
+  text:      string;
+  mode?:     string;
+  cites:     CiteRef[];
+  warning?:  string;
+  /** Verbatim quotations. Empty in generated mode. */
   sentences: Sentence[];
   passages:  PassageOut[];
   note?:     string;
@@ -68,6 +79,35 @@ const STEP_ICON: Record<string, typeof BookOpen> = {
   translate:  Languages,
   answer:     BookOpen,
 };
+
+/**
+ * Turn "[1]" into a chip that names its source.
+ *
+ * A bare number tells the reader nothing; hovering a chip that says
+ * "Ibn Kathīr — 18:66" is the difference between a citation they can use and
+ * one they have to go and decode. A number with no matching passage is left as
+ * plain text and flagged separately, never dressed up as a real citation.
+ */
+function renderWithCitations(text: string, cites: CiteRef[]) {
+  const by = new Map(cites.map((c) => [c.n, c]));
+  const out: React.ReactNode[] = [];
+  let last = 0, key = 0;
+
+  for (const m of text.matchAll(/\[(\d{1,2})\]/g)) {
+    const at = m.index ?? 0;
+    if (at > last) out.push(text.slice(last, at));
+    const n = Number(m[1]);
+    const c = by.get(n);
+    out.push(
+      c
+        ? <a key={key++} href={`#p-${n}`} className="as-cite" title={`${c.sourceName} — ${c.verseKey}`}>{n}</a>
+        : <span key={key++} className="as-cite as-cite--bad" title="No such passage was retrieved">{m[0]}</span>,
+    );
+    last = at + m[0].length;
+  }
+  if (last < text.length) out.push(text.slice(last));
+  return out;
+}
 
 export default function AssistantClient({ user, sources, streak }: Props) {
   const [turns, setTurns] = useState<Turn[]>([]);
@@ -88,9 +128,19 @@ export default function AssistantClient({ user, sources, streak }: Props) {
     if (!question || busy) return;
 
     const id = crypto.randomUUID();
+    /* The conversation so far, so a follow-up has something to refer to. Built
+       from what is on screen, so what the model sees is what the user sees. */
+    const history = turns.flatMap((t) => {
+      const a = t.text || t.sentences.map((s) => s.text).join(" ");
+      return a
+        ? [{ role: "user" as const, content: t.question },
+           { role: "assistant" as const, content: a }]
+        : [{ role: "user" as const, content: t.question }];
+    }).slice(-8);
+
     setTurns((ts) => [...ts, {
       id, question, pinned: [...pinned], steps: [], searched: [], hits: [],
-      sentences: [], passages: [], running: true,
+      text: "", cites: [], sentences: [], passages: [], running: true,
       // Open while it works, so you can watch; collapsed once the answer is
       // there, so the answer is what you read.
       openTrace: true,
@@ -99,7 +149,11 @@ export default function AssistantClient({ user, sources, streak }: Props) {
 
     const res = await fetch("/api/assistant", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ question, sources: pinned.length ? pinned : undefined }),
+      body: JSON.stringify({
+        question,
+        sources: pinned.length ? pinned : undefined,
+        history,
+      }),
     }).catch(() => null);
 
     if (!res?.ok || !res.body) {
@@ -135,7 +189,19 @@ export default function AssistantClient({ user, sources, streak }: Props) {
             next.searched = s.searched; next.hits = s.hits;
           }
           if (ev.answer) {
-            next.sentences = (ev.answer as { sentences: Sentence[] }).sentences;
+            const a = ev.answer as { sentences: Sentence[]; mode?: string };
+            next.sentences = a.sentences;
+            next.mode = a.mode ?? "extractive";
+          }
+          if (ev.answerStart) {
+            const a = ev.answerStart as { mode: string; cites: CiteRef[] };
+            next.mode = a.mode; next.cites = a.cites; next.text = "";
+          }
+          // Concatenated rather than replaced: this is a token, not a snapshot.
+          if (typeof ev.token === "string") next.text = next.text + ev.token;
+          if (ev.answerEnd) {
+            const a = ev.answerEnd as { warning?: string };
+            if (a.warning) next.warning = a.warning;
           }
           // Array.isArray, not truthiness: a scalar under this key must never
           // be able to replace the list.
@@ -152,7 +218,7 @@ export default function AssistantClient({ user, sources, streak }: Props) {
     }
 
     patch(id, (t) => (t.running ? { ...t, running: false, openTrace: false } : t));
-  }, [q, busy, pinned, patch]);
+  }, [q, busy, pinned, patch, turns]);
 
   const togglePin = (slug: string) =>
     setPinned((p) => (p.includes(slug) ? p.filter((x) => x !== slug) : [...p, slug]));
@@ -275,7 +341,25 @@ export default function AssistantClient({ user, sources, streak }: Props) {
               <p className="as-error"><AlertCircle size={16} aria-hidden /> {t.error}</p>
             )}
 
-            {/* ── The answer: quotations, never paraphrase ────────────── */}
+            {/* ── Generated answer, with its citations ────────────────── */}
+            {t.text && (
+              <div className="as-answer">
+                <div className="as-prose">
+                  {renderWithCitations(t.text, t.cites)}
+                  {t.running && <span className="as-caret" aria-hidden />}
+                </div>
+                {t.warning && (
+                  <p className="as-warn">
+                    <AlertCircle size={15} aria-hidden /> {t.warning}
+                  </p>
+                )}
+                <p className="as-mode">
+                  Written by a model from the passages below — check anything that matters against them.
+                </p>
+              </div>
+            )}
+
+            {/* ── Fallback: verbatim quotations, when no model is set ───── */}
             {t.sentences.length > 0 && (
               <div className="as-answer">
                 {t.sentences.map((s, i) => (
@@ -284,6 +368,9 @@ export default function AssistantClient({ user, sources, streak }: Props) {
                     <cite>{s.sourceName} · {s.verseKey}</cite>
                   </blockquote>
                 ))}
+                <p className="as-mode">
+                  Quoted word for word. No model is configured, so nothing here is paraphrased.
+                </p>
               </div>
             )}
 
@@ -291,9 +378,10 @@ export default function AssistantClient({ user, sources, streak }: Props) {
             {t.passages.length > 0 && (
               <details className="as-passages">
                 <summary>Full passages ({t.passages.length})</summary>
-                {t.passages.map((p) => (
-                  <div key={p.chunkId} className="as-passage">
+                {t.passages.map((p, i) => (
+                  <div key={p.chunkId} id={`p-${i + 1}`} className="as-passage">
                     <p className="as-passage-head">
+                      <span className="as-passage-n">{i + 1}</span>
                       <strong>{p.sourceName}</strong> · {p.verseKey}
                       <span className="as-hit-via" data-via={p.via}>{p.via}</span>
                     </p>

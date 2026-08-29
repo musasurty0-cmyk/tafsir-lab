@@ -64,6 +64,14 @@ const FormattingIcon = ({ size = 13 }: { size?: number }) => (
 
 export type ViewMode = "editor" | "canvas" | "split" | "board" | "read";
 
+const SparkleIcon = ({ size = 16 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+       strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 3l1.9 4.6L18.5 9.5l-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9z" />
+    <path d="M18 15l.8 2L21 17.8l-2.2.8L18 21l-.8-2.4L15 17.8l2.2-.8z" />
+  </svg>
+);
+
 const ScriptIcon = ({ size = 17 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
        strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
@@ -101,6 +109,8 @@ interface Props {
   /** The page being viewed, so it can be bookmarked. Absent = no page open,
    *  and the control is not rendered rather than rendered inert. */
   activePageId?:      string | null;
+  aiOpen?:            boolean;
+  onToggleAi?:        () => void;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────
@@ -112,6 +122,8 @@ export default function TopBar({
   chapter,
   activePageTitle,
   activePageId,
+  aiOpen,
+  onToggleAi,
   mode,
   onSetMode,
   progressLoading,
@@ -253,6 +265,18 @@ export default function TopBar({
         >
           <BookOpenIcon /> {t("topbar.tafsir")}
         </button>
+
+        {onToggleAi && (
+          <button
+            className="tb-btn"
+            data-active={aiOpen ? "true" : "false"}
+            onClick={onToggleAi}
+            title="AI study assistant"
+            aria-label="AI study assistant"
+          >
+            <SparkleIcon /> Ask
+          </button>
+        )}
 
         <Recitation surah={surahNumber} surahName={chapter.name_simple} />
 

@@ -33,6 +33,7 @@
  */
 
 import { db } from "@/lib/db";
+import { terms } from "@/lib/tafsir/answer";
 
 export interface SearchHit {
   chunkId:    string;
@@ -179,7 +180,18 @@ export async function lexicalSearch(
 
   params.push(opts.limit ?? CANDIDATES);
 
-  return db.$queryRawUnsafe<RawHit[]>(`
+  /* Two settings, applied for this statement only.
+     The threshold is counter-intuitive and was measured, not guessed: a HIGHER
+     word_similarity_threshold returns MORE results and is faster. At the 0.6
+     default a common word matches a large slice of a 78k-row corpus, the scan
+     runs past the timeout and yields nothing; at 0.85 the same word answers in
+     about two seconds. Loosening it to "find more" is what actually finds less.
+     The timeout is the backstop: one slow probe contributes nothing and the
+     others still answer, rather than hanging the whole question. */
+  const rows = await db.$transaction(async (tx) => {
+    await tx.$executeRawUnsafe(`SET LOCAL pg_trgm.word_similarity_threshold = 0.85`);
+    await tx.$executeRawUnsafe(`SET LOCAL statement_timeout = '7s'`);
+    return tx.$queryRawUnsafe<RawHit[]>(`
     WITH candidates AS (
       /* Only entries that HAVE chunks. Without this the candidate set is drawn
          from the whole corpus, most of which is ingested but not yet embedded,
@@ -218,7 +230,10 @@ export async function lexicalSearch(
              (m.hit_at > 0 AND m.hit_at BETWEEN c."startChar" + 1 AND c."endChar") DESC,
              c."chunkIndex" ASC
     LIMIT $${params.length}::int
-  `, ...params);
+    `, ...params);
+  }).catch(() => [] as RawHit[]);   // a timed-out probe contributes nothing
+
+  return rows;
 }
 
 /**
@@ -288,10 +303,30 @@ export async function search(
 ): Promise<SearchResult> {
   const limit = opts.limit ?? DEFAULT_LIMIT;
 
-  const [semantic, lexical] = await Promise.all([
+  /* Lexical search gets CONTENT WORDS, not the sentence.
+     `<%` measures similarity between the query and a substring of the
+     document, so a forty-character question resembles nothing and returns
+     empty — which is what "Who was al-Khidr and what did Musa learn?" did.
+     Searching the two or three strongest words instead is what a person would
+     do, and it is the difference between the keyword fallback working and not.
+     Longest-first as a crude proxy for specificity: "al-Khidr" beats "learn".
+     Two probes rather than three — they run in parallel but contend for the
+     same index, and the third rarely changes the top of the list. */
+  const probes = terms(query)
+    .sort((a, b) => b.length - a.length)
+    .slice(0, 2);
+  const lexicalQueries = probes.length ? probes : [query];
+
+  const [semantic, ...lexicalLists] = await Promise.all([
     embedding ? semanticSearch(embedding, { ...opts, limit: CANDIDATES }) : Promise.resolve([]),
-    lexicalSearch(query, { ...opts, limit: CANDIDATES }),
+    ...lexicalQueries.map((p) => lexicalSearch(p, { ...opts, limit: CANDIDATES })),
   ]);
+
+  // Each probe is its own ranked list, fused like any other — a passage found
+  // by two of them should outrank one found by a single word.
+  const lexical = lexicalLists.length > 1
+    ? fuse(lexicalLists[0], lexicalLists.slice(1).flat(), CANDIDATES)
+    : (lexicalLists[0] ?? []);
 
   const hits = fuse(semantic, lexical, limit);
 
@@ -326,4 +361,91 @@ export async function availableSources() {
   return rows.map((r) => ({
     ...r, chunks: Number(r.chunks), verses: Number(r.verses),
   }));
+}
+
+// ── The reader's own notes ─────────────────────────────────────────────────
+
+/**
+ * Search the notes this user has written.
+ *
+ * Kept separate from tafsir retrieval rather than merged into it, because the
+ * two are not the same kind of evidence. A passage from al-Qurtubi is a claim
+ * about the text; a note is the reader's own thinking, which may be a question,
+ * a half-formed idea, or simply wrong. Labelling a note as "Your note" and
+ * never as a source means the assistant can quote it back without it acquiring
+ * the authority of a commentary.
+ *
+ * Lexical only. Note bodies are TipTap JSON, so there is no embedding column
+ * to search, and trigram over the extracted text is both adequate and cheap at
+ * the scale one person writes.
+ */
+export interface NoteHit {
+  noteId:   string;
+  title:    string;      // where it was written, for the citation
+  verseKey: string | null;
+  content:  string;
+  workspace: string;
+}
+
+/** TipTap JSON to plain text, for matching and for quoting back. */
+function noteText(node: unknown): string {
+  if (!node || typeof node !== "object") return "";
+  const n = node as { type?: string; text?: string; content?: unknown[] };
+  if (n.type === "text") return n.text ?? "";
+  const inner = (n.content ?? []).map(noteText).join("");
+  return n.type === "paragraph" || n.type === "heading" ? inner + "\n" : inner;
+}
+
+export async function searchNotes(
+  userId: string, query: string,
+  opts: { surah?: number; verseKey?: string; pageId?: string; limit?: number } = {},
+): Promise<NoteHit[]> {
+  const q = query.trim();
+  if (q.length < 3) return [];
+
+  /* Pulled and filtered in JS rather than in SQL. The searchable text lives
+     inside a JSON column, so Postgres cannot trigram-match it without a
+     generated column; one person's notes are in the hundreds, not millions, so
+     reading them is cheaper than the migration would be. */
+  const rows = await db.structuredNote.findMany({
+    where: {
+      authorId: userId,
+      ...(opts.pageId  ? { pageId: opts.pageId } : {}),
+      ...(opts.verseKey
+        ? { surahNumber: Number(opts.verseKey.split(":")[0]),
+            ayahNumber:  Number(opts.verseKey.split(":")[1]) }
+        : opts.surah ? { surahNumber: opts.surah } : {}),
+    },
+    orderBy: { updatedAt: "desc" },
+    take: 400,
+    select: {
+      id: true, content: true, surahNumber: true, ayahNumber: true,
+      page: { select: { title: true, workspaceSurah: { select: { workspace: { select: { name: true } } } } } },
+    },
+  });
+
+  const terms = q.toLowerCase().split(/\s+/).filter((t) => t.length > 2);
+  const scored: (NoteHit & { score: number })[] = [];
+
+  for (const r of rows) {
+    const text = noteText(r.content).replace(/\n{2,}/g, "\n").trim();
+    if (text.length < 10) continue;
+    const hay = text.toLowerCase();
+    const score = terms.reduce((a, t) => a + (hay.includes(t) ? 1 : 0), 0);
+    if (score === 0) continue;
+    scored.push({
+      noteId: r.id,
+      title: r.page?.title ?? "Note",
+      verseKey: r.surahNumber != null && r.ayahNumber != null
+        ? `${r.surahNumber}:${r.ayahNumber}` : null,
+      content: text.slice(0, 1200),
+      workspace: r.page?.workspaceSurah?.workspace?.name ?? "",
+      score,
+    });
+  }
+
+  return scored
+    .sort((a, b) => b.score - a.score)
+    .slice(0, opts.limit ?? 4)
+    .map(({ score: _score, ...n }) => n);
 }
