@@ -12734,8 +12734,38 @@ input, textarea { font: inherit; color: inherit; }
   font-size: 14.5px;
   line-height: 1.7;
   color: var(--ink);
-  white-space: pre-wrap;
+  /* No pre-wrap. The model's markdown is parsed into real blocks now, so
+     preserving the source newlines on top of that doubles every gap. */
 }
+.aip-answer > * + * { margin-top: .62em; }
+
+.aip-answer h3,
+.aip-answer h4,
+.aip-answer h5 {
+  font-size: 13px;
+  font-weight: 650;
+  letter-spacing: .012em;
+  color: var(--ink);
+  margin-top: 1.15em;
+}
+.aip-answer h3:first-child,
+.aip-answer h4:first-child,
+.aip-answer h5:first-child { margin-top: 0; }
+
+.aip-answer strong { font-weight: 650; color: var(--ink); }
+.aip-answer em     { font-style: italic; }
+.aip-answer code {
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: .9em;
+  padding: .08em .34em;
+  border-radius: 4px;
+  background: color-mix(in oklab, var(--ink) 9%, transparent);
+}
+
+.aip-answer ul,
+.aip-answer ol { padding-left: 1.3em; }
+.aip-answer li { margin-top: .32em; }
+.aip-answer li::marker { color: var(--ink-4); }
 .aip-note { font-size: 12px; color: var(--ink-4); }
 
 .aip-composer {

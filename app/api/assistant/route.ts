@@ -72,6 +72,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({})) as {
     question?: unknown; sources?: unknown; verseKey?: unknown; history?: unknown;
     surah?: unknown; pageId?: unknown; includeNotes?: unknown; selection?: unknown;
+    surahName?: unknown;
   };
 
   /* Prior turns, so a follow-up ("what about the second view?") has something
@@ -190,6 +191,44 @@ export async function POST(req: NextRequest) {
         });
 
         if (hits.length === 0) {
+          /* Retrieving nothing is the right answer to some questions and a
+             broken one to "hello". An assistant that meets a greeting with
+             "nothing in the corpus matched that" is not being careful; it has
+             simply mistaken every message for a lookup. So hand it to the
+             model in conversational mode, which may talk but may not teach:
+             it has no passages here, so it is forbidden to explain a verse or
+             report what a scholar held. */
+          const chatMode = LLM.provider();
+          if (chatMode !== "none") {
+            send({ step: "answer", detail: "Nothing matched — replying directly" });
+            send({ answerStart: { mode: chatMode, cites: [] } });
+
+            let spoke = false;
+            try {
+              for await (const piece of LLM.converse(q, history, {
+                surahName: typeof body.surahName === "string" ? body.surahName : undefined,
+                verseKey,
+              })) {
+                spoke = true;
+                send({ token: piece });
+              }
+            } catch (err) {
+              /* Fall through to the plain notice below rather than showing a
+                 half-written greeting. */
+              send({
+                step: "answer", state: "degraded",
+                detail: "The model did not answer",
+                reason: err instanceof Error ? err.message : String(err),
+              });
+            }
+
+            if (spoke) {
+              send({ answerEnd: {} });
+              send({ done: true, quoted: 0, passageCount: 0 });
+              return;   // `finally` closes the controller; closing twice throws
+            }
+          }
+
           send({
             step: "answer", state: "empty",
             detail: "Nothing in the corpus matched that.",

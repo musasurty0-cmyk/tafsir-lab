@@ -54,22 +54,106 @@ interface Props {
   onClose:     () => void;
 }
 
-/** Turn "[1]" into a chip naming its source. A bare number tells you nothing. */
-function withCitations(text: string, cites: CiteRef[]) {
-  const by = new Map(cites.map((c) => [c.n, c]));
+/**
+ * Render the model's markdown, with citations as chips.
+ *
+ * The model writes markdown — headings, bold, bullet lists — and without this
+ * the reader just sees the asterisks. Hand-written rather than a markdown
+ * library for one reason: the output has to interleave with citation chips,
+ * so a renderer that returns opaque HTML would have to be post-processed to
+ * put them back. The accepted subset is small and entirely known, because we
+ * write the prompt that produces it.
+ */
+type CiteMap = Map<number, CiteRef>;
+
+/** Bold, italic, inline code, and citation chips. */
+function inline(text: string, by: CiteMap, k: { i: number }): React.ReactNode[] {
   const out: React.ReactNode[] = [];
-  let last = 0, key = 0;
-  for (const m of text.matchAll(/\[(\d{1,2})\]/g)) {
-    const at = m.index ?? 0;
-    if (at > last) out.push(text.slice(last, at));
-    const c = by.get(Number(m[1]));
-    out.push(c
-      ? <span key={key++} className="as-cite" title={`${c.sourceName}${c.verseKey ? " — " + c.verseKey : ""}`}>{m[1]}</span>
-      : <span key={key++} className="as-cite as-cite--bad" title="No such passage was retrieved">{m[0]}</span>);
-    last = at + m[0].length;
+  // Bold is matched before italic so `**x**` is never read as an empty pair
+  // of italics wrapped around nothing.
+  const re = /\*\*([^*]+?)\*\*|\*([^*\n]+?)\*|`([^`]+?)`|\[(\d{1,2})\]/g;
+  let last = 0;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    if (m.index > last) out.push(text.slice(last, m.index));
+    if (m[1] !== undefined) {
+      out.push(<strong key={k.i++}>{m[1]}</strong>);
+    } else if (m[2] !== undefined) {
+      out.push(<em key={k.i++}>{m[2]}</em>);
+    } else if (m[3] !== undefined) {
+      out.push(<code key={k.i++}>{m[3]}</code>);
+    } else {
+      const n = Number(m[4]);
+      const c = by.get(n);
+      out.push(c
+        ? <span key={k.i++} className="as-cite"
+                title={`${c.sourceName}${c.verseKey ? " — " + c.verseKey : ""}`}>{n}</span>
+        : <span key={k.i++} className="as-cite as-cite--bad"
+                title="No such passage was retrieved">{m[0]}</span>);
+    }
+    last = m.index + m[0].length;
   }
   if (last < text.length) out.push(text.slice(last));
   return out;
+}
+
+function renderMarkdown(text: string, cites: CiteRef[]): React.ReactNode[] {
+  const by: CiteMap = new Map(cites.map((c) => [c.n, c]));
+  const k = { i: 0 };
+  const blocks: React.ReactNode[] = [];
+  let para: string[] = [];
+  let list: { ordered: boolean; items: string[] } | null = null;
+
+  const flushPara = () => {
+    if (!para.length) return;
+    blocks.push(<p key={k.i++}>{inline(para.join(" "), by, k)}</p>);
+    para = [];
+  };
+  const flushList = () => {
+    if (!list) return;
+    const items = list.items.map((t) => <li key={k.i++}>{inline(t, by, k)}</li>);
+    blocks.push(list.ordered
+      ? <ol key={k.i++}>{items}</ol>
+      : <ul key={k.i++}>{items}</ul>);
+    list = null;
+  };
+
+  for (const raw of text.split("\n")) {
+    const line = raw.trimEnd();
+    if (!line.trim()) { flushPara(); flushList(); continue; }
+
+    const heading = /^(#{1,6})\s+(.*)$/.exec(line);
+    if (heading) {
+      flushPara(); flushList();
+      /* Clamped to h3–h5. This is a sidebar beside a page that has its own
+         title; an h1 in here would out-shout the thing being studied. */
+      const level = Math.min(5, heading[1].length + 2);
+      const Tag = (`h${level}`) as "h3" | "h4" | "h5";
+      blocks.push(<Tag key={k.i++}>{inline(heading[2], by, k)}</Tag>);
+      continue;
+    }
+
+    // The space after the marker is what separates a bullet from *italics*
+    // opening a line, and `**Bold:**` from either.
+    const bullet  = /^\s*[*-]\s+(.*)$/.exec(line);
+    const ordered = /^\s*\d+[.)]\s+(.*)$/.exec(line);
+    if (bullet || ordered) {
+      flushPara();
+      const isOrdered = ordered !== null;
+      if (!list || list.ordered !== isOrdered) {
+        flushList();
+        list = { ordered: isOrdered, items: [] };
+      }
+      list.items.push((bullet ? bullet[1] : ordered![1]).trim());
+      continue;
+    }
+
+    flushList();
+    para.push(line.trim());
+  }
+  flushPara();
+  flushList();
+  return blocks;
 }
 
 export default function AiPanel({ pageId, surahNumber, surahName, onClose }: Props) {
@@ -112,6 +196,8 @@ export default function AiPanel({ pageId, surahNumber, surahName, onClose }: Pro
         // What you have open. The server treats this as a default a reference
         // in the question can override.
         surah: surahNumber,
+        // So a greeting can name what you have open instead of answering blind.
+        surahName,
         pageId,
         includeNotes: true,
       }),
@@ -246,7 +332,7 @@ export default function AiPanel({ pageId, surahNumber, surahName, onClose }: Pro
 
             {t.text && (
               <div className="aip-answer">
-                {withCitations(t.text, t.cites)}
+                {renderMarkdown(t.text, t.cites)}
                 {t.running && <span className="as-caret" aria-hidden />}
               </div>
             )}

@@ -221,11 +221,33 @@ async function chatViaSpace(messages: { role: string; content: string }[]): Prom
 
 // ── Public ─────────────────────────────────────────────────────────────────
 
-/** Streams the answer. Yields text pieces as they arrive. */
-export async function* answer(
-  question: string, passages: Passage[], history: ChatTurn[] = [],
+/**
+ * The conversational instruction, used when retrieval returned nothing.
+ *
+ * A study assistant that answers "hello" with "nothing in the corpus matched
+ * that" is not careful, it is broken. But the reason the grounded prompt is
+ * strict still holds here — there are no passages at all in this mode, so the
+ * model has nothing to be right from. The resolution is to let it talk while
+ * forbidding it to teach: greet, orient, offer, ask. Never explain a verse or
+ * report what a scholar held, because here that could only come from memory.
+ */
+const CHAT_SYSTEM = `You are the study assistant inside Tafsir Lab, talking with a reader who has the Qur'an open in front of them.
+
+No tafsīr passages were retrieved for this message. Either it is conversational — a greeting, a thank-you, a question about you — or the library genuinely had no match.
+
+Reply briefly and warmly, and keep the conversation on the Qur'an:
+- A greeting: greet back, mention what they have open, offer to look at it with them.
+- A question about what you are or can do: you read the classical tafsīr in this library and quote it, and you do not answer from anywhere else.
+- A real question that found nothing: say plainly that nothing in the library matched it, and suggest a specific verse or a narrower question.
+
+HARD RULE: you have no passages in front of you, so make no factual claim about what any scholar said and do not explain what a verse means. If they want that, ask them to name the verse and you will look it up.
+
+Two or three sentences. No headings, no bullet lists, no citations.`;
+
+/** Route a finished message list to whichever provider is configured. */
+async function* dispatch(
+  messages: { role: string; content: string }[],
 ): AsyncGenerator<string> {
-  const messages = buildPrompt(question, passages, history);
   const p = provider();
 
   if (p === "groq") {
@@ -258,6 +280,46 @@ export async function* answer(
     return;
   }
   throw new Error("no generation provider configured");
+}
+
+/** Streams the answer. Yields text pieces as they arrive. */
+export async function* answer(
+  question: string, passages: Passage[], history: ChatTurn[] = [],
+): AsyncGenerator<string> {
+  yield* dispatch(buildPrompt(question, passages, history));
+}
+
+/** What the reader has open, so a greeting can name it. */
+export interface OpenPlace {
+  surahName?: string;
+  verseKey?:  string;
+}
+
+/**
+ * Streams a conversational reply, for when no passage was retrieved.
+ *
+ * Separate from `answer` rather than a flag on it, because the two have
+ * opposite obligations: that one must not exceed its passages, this one has
+ * none and must not pretend otherwise.
+ */
+export async function* converse(
+  question: string, history: ChatTurn[] = [], place: OpenPlace = {},
+): AsyncGenerator<string> {
+  const where = place.verseKey
+    ? `The reader is on ${place.surahName ?? "the Qur'an"}, verse ${place.verseKey}.`
+    : place.surahName
+      ? `The reader has ${place.surahName} open.`
+      : `You do not know which page the reader has open.`;
+
+  const messages: { role: string; content: string }[] = [
+    { role: "system", content: `${CHAT_SYSTEM}\n\n${where}` },
+  ];
+  for (const t of history.slice(-6)) {
+    messages.push({ role: t.role, content: t.content.slice(0, 1000) });
+  }
+  messages.push({ role: "user", content: question });
+
+  yield* dispatch(messages);
 }
 
 /**
