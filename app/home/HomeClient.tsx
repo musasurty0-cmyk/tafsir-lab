@@ -22,6 +22,11 @@ import TutorialOverlay from "@/components/TutorialOverlay";
 import TourBubble      from "@/components/TourBubble";
 import { startTour }   from "@/lib/tour";
 import type { MemberRole } from "@/lib/services/workspaces.service";
+import type { RailItem } from "@/lib/services/bookmarks.service";
+import AppSidebar from "@/components/AppSidebar";
+import HomeRail from "@/components/HomeRail";
+import StudyWithAI from "@/components/StudyWithAI";
+import Announcement from "@/components/Announcement";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -55,6 +60,9 @@ interface Props {
   user:        UserInfo | null;
   surahNames:  Record<number, SurahName>;
   totalSurahs: number;
+  recent:      RailItem[];
+  bookmarks:   RailItem[];
+  streak:      { current: number; today: number; goal: number } | null;
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -398,6 +406,9 @@ export default function HomeClient({
   user,
   surahNames,
   totalSurahs,
+  recent,
+  bookmarks,
+  streak,
 }: Props) {
   const router = useRouter();
   const [workspaces,   setWorkspaces]   = useState(initial);
@@ -444,10 +455,6 @@ export default function HomeClient({
     }
   }, [router, isNavigating]);
 
-  const userInitials = user?.name
-    ? user.name.split(" ").map((p) => p[0]).join("").slice(0, 2).toUpperCase()
-    : "U";
-
   function handleRenamed(id: string, name: string) {
     setWorkspaces((prev) => prev.map((ws) => ws.id === id ? { ...ws, name } : ws));
   }
@@ -464,7 +471,9 @@ export default function HomeClient({
   }
 
   return (
-    <div className="home-page">
+    <div className="home-page home-page--shell">
+      <AppSidebar user={user} />
+
       {/* ── Navigation overlay — shown immediately on click ── */}
       {isNavigating && (
         <div className="hw-nav-overlay" role="status" aria-live="polite">
@@ -478,27 +487,28 @@ export default function HomeClient({
       {/* ── Error toast ── */}
       <Toast message={navError} onDismiss={() => setNavError(null)} />
 
-      {/* Top bar */}
-      <header className="home-topbar">
-        <div className="home-brand">
-          <div className="home-brand-logo">T</div>
-          <span className="home-brand-name">TafsirLab</span>
-        </div>
+      {/* The brand block and the duplicate avatar that used to sit here are
+          now the sidebar's job. What is left is the streak line and the
+          per-page settings menu, which the sidebar does not carry. */}
+      <header className="home-topbar home-topbar--shell">
+        {streak && (
+          <p className="home-streak">
+            <span aria-hidden>🔥</span> {streak.current} day{streak.current === 1 ? "" : "s"}
+            {" · "}
+            <span title="Annotations today, against your daily goal">
+              {streak.today}/{streak.goal} today
+            </span>
+          </p>
+        )}
         <div className="home-header-right">
-          {/* Sign out moved into the settings menu — the avatar was a
-              one-click sign-out with no confirmation, which is easy to hit
-              by accident when reaching for account settings. */}
-          <div className="home-user-avatar home-user-avatar--static" title={user?.name ?? "User"}>
-            {user?.avatarUrl
-              ? <img src={user.avatarUrl} alt={user.name} />
-              : userInitials}
-          </div>
           <SettingsMenu user={user} onSignOut={handleSignOut} />
         </div>
       </header>
 
       {/* Content */}
       <div className="home-content">
+
+        <StudyWithAI />
 
         {/* Welcome + resume */}
         <WelcomeHero
@@ -554,6 +564,8 @@ export default function HomeClient({
           )}
         </section>
 
+        <Announcement />
+
         {/* Join + replay */}
         <div className="home-join-row">
           <button className="home-join-btn" onClick={() => setJoinOpen(true)}>
@@ -565,6 +577,8 @@ export default function HomeClient({
         </div>
 
       </div>
+
+      <HomeRail recent={recent} bookmarks={bookmarks} />
 
       <TutorialOverlay key={tutKey} />
       <TourBubble />

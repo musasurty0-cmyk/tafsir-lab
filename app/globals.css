@@ -11183,3 +11183,443 @@ input, textarea { font: inherit; color: inherit; }
   }
   .an-bar-fill { transition: none; }
 }
+
+/* ════════════════════════════════════════════════════════════════════════════
+   DASHBOARD SHELL — sidebar | content | rail
+   ════════════════════════════════════════════════════════════════════════════ */
+
+.home-page--shell {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) 320px;
+  grid-template-rows: auto 1fr;
+  align-items: start;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+/* The sidebar spans both rows so the header sits beside it, not under it. */
+.home-page--shell > .app-sidebar { grid-row: 1 / -1; grid-column: 1; }
+.home-topbar--shell {
+  grid-column: 2 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  padding: var(--sp-4) var(--sp-6) 0;
+  border-bottom: 0;
+  background: transparent;
+}
+.home-page--shell > .home-content { grid-column: 2; }
+.home-page--shell > .home-rail    { grid-column: 3; grid-row: 2; }
+
+.home-streak {
+  font-size: 13.5px;
+  color: var(--ink-4);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Right rail ────────────────────────────────────────────────────────── */
+
+.home-rail {
+  position: sticky;
+  top: 0;
+  align-self: start;
+  padding: var(--sp-5) var(--sp-5) var(--sp-6) 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-6);
+  max-height: 100vh;
+  max-height: 100dvh;
+  overflow-y: auto;
+}
+.hr-section { display: flex; flex-direction: column; gap: var(--sp-3); }
+.hr-title {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-family: var(--font-serif);
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.hr-title svg { color: var(--ink-4); }
+.hr-empty { font-size: 13.5px; color: var(--ink-4); line-height: 1.55; }
+.hr-list { display: flex; flex-direction: column; gap: var(--sp-2); }
+.hr-list > li { animation: row-in 320ms var(--ease-flow) both; }
+
+.hr-item {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px var(--sp-3);
+  padding: 11px 14px;
+  border-radius: var(--radius-md);
+  border-left: 3px solid var(--accent);
+  background: var(--panel);
+  text-align: left;
+  transition: background var(--dur-hover) var(--ease-flow),
+              transform var(--dur-hover) var(--ease-flow);
+}
+.hr-item:hover { background: var(--panel-2); transform: translateX(2px); }
+.hr-item-title {
+  font-size: 14.5px;
+  font-weight: 650;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hr-item-sub  { font-size: 13px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.hr-item-at   { grid-row: 1 / span 2; align-self: center; font-size: 11.5px; color: var(--ink-4); }
+
+/* ── Study with AI ─────────────────────────────────────────────────────── */
+
+.ai-banner {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: 14px 18px;
+  margin-bottom: var(--sp-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--bg-elev);
+  text-align: left;
+  transition: border-color var(--dur-hover) var(--ease-flow),
+              background var(--dur-hover) var(--ease-flow),
+              transform var(--dur-hover) var(--ease-flow);
+}
+.ai-banner:hover {
+  border-color: color-mix(in oklch, var(--accent) 40%, var(--line));
+  background: color-mix(in oklch, var(--accent) 4%, var(--bg-elev));
+  transform: translateY(-1px);
+}
+.ai-banner:hover .ai-banner-chev { transform: translateX(3px); }
+.ai-banner-icon {
+  flex: none;
+  width: 38px; height: 38px;
+  display: grid; place-items: center;
+  border-radius: var(--radius-md);
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+}
+.ai-banner-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.ai-banner-text strong { font-size: 15px; color: var(--ink); }
+.ai-banner-text span   { font-size: 13px; color: var(--ink-4); }
+.ai-banner-chev {
+  flex: none;
+  color: var(--ink-4);
+  transition: transform var(--dur-hover) var(--ease-flow);
+}
+
+.ai-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: var(--sp-4);
+  background: oklch(0.22 0.012 80 / 0.42);
+  backdrop-filter: blur(3px);
+  animation: overlay-in var(--dur-mid) var(--ease-soft) both;
+}
+@keyframes overlay-in { from { opacity: 0; } to { opacity: 1; } }
+
+.ai-panel {
+  width: min(620px, 100%);
+  max-height: min(760px, 90dvh);
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius-xl);
+  background: var(--bg-elev);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  animation: panel-in var(--dur-slow) var(--ease-flow) both;
+}
+@keyframes panel-in {
+  from { opacity: 0; transform: translateY(14px) scale(0.985); }
+  to   { opacity: 1; transform: none; }
+}
+.ai-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--sp-4) var(--sp-5);
+  border-bottom: 1px solid var(--line);
+}
+.ai-panel-head h2 {
+  display: flex; align-items: center; gap: var(--sp-2);
+  font-size: 17px; font-weight: 650;
+}
+.ai-panel-head button {
+  width: 32px; height: 32px;
+  display: grid; place-items: center;
+  border-radius: var(--radius);
+  color: var(--ink-4);
+  transition: background var(--dur-hover) var(--ease-flow);
+}
+.ai-panel-head button:hover { background: var(--hover); color: var(--ink); }
+
+.ai-panel-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--sp-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+.ai-status {
+  padding: var(--sp-4);
+  border-radius: var(--radius-md);
+  background: color-mix(in oklch, oklch(0.62 0.13 65) 10%, var(--bg-elev));
+  border: 1px solid color-mix(in oklch, oklch(0.62 0.13 65) 26%, transparent);
+}
+.ai-status strong { display: block; font-size: 15px; margin-bottom: 3px; }
+.ai-status p { font-size: 13.5px; color: var(--ink-3); line-height: 1.6; }
+
+.ai-asked {
+  padding: var(--sp-4);
+  border-radius: var(--radius-md);
+  background: var(--panel);
+  animation: pane-in var(--dur-slow) var(--ease-flow) both;
+}
+.ai-asked-label {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--ink-4);
+}
+.ai-asked p { font-size: 15px; margin-top: 4px; }
+.ai-asked-note { font-size: 13px !important; color: var(--ink-4); margin-top: var(--sp-2) !important; }
+
+.ai-caps { display: flex; flex-direction: column; gap: var(--sp-2); }
+.ai-caps li {
+  display: flex; gap: var(--sp-2);
+  font-size: 14px; color: var(--ink-2);
+  padding-left: 2px;
+}
+.ai-caps li::before { content: "→"; color: var(--accent-ink); flex: none; }
+
+.ai-examples { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.ai-example {
+  padding: 7px 13px;
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--ink-3);
+  font-size: 13px;
+  transition: background var(--dur-hover) var(--ease-flow), color var(--dur-hover) var(--ease-flow);
+}
+.ai-example:hover { background: var(--accent-soft); color: var(--accent-ink); }
+
+.ai-panel-foot {
+  display: flex;
+  gap: var(--sp-3);
+  padding: var(--sp-4) var(--sp-5);
+  border-top: 1px solid var(--line);
+}
+.ai-input {
+  flex: 1;
+  min-width: 0;
+  padding: 11px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-md);
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 15px;
+  transition: border-color var(--dur-hover) var(--ease-flow);
+}
+.ai-input:focus { border-color: var(--accent); outline: none; }
+.ai-panel-foot .an-btn { align-self: auto; }
+
+/* ── Announcement ──────────────────────────────────────────────────────── */
+
+.anno {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+  overflow: hidden;
+  margin-top: var(--sp-4);
+}
+.anno-head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: 14px 18px;
+  text-align: left;
+  transition: background var(--dur-hover) var(--ease-flow);
+}
+.anno-head:hover { background: var(--hover); }
+.anno-icon {
+  flex: none;
+  width: 34px; height: 34px;
+  display: grid; place-items: center;
+  border-radius: var(--radius);
+  background: var(--bg-elev);
+  color: var(--ink-2);
+}
+.anno-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.anno-text strong { font-size: 15px; }
+.anno-text span   { font-size: 13px; color: var(--ink-4); }
+.anno-chev {
+  flex: none;
+  color: var(--ink-4);
+  transition: transform var(--dur-slow) var(--ease-flow);
+}
+.anno[data-open="true"] .anno-chev { transform: rotate(-90deg); }
+
+.anno-body {
+  padding: 0 18px 16px 66px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  animation: anno-open var(--dur-slow) var(--ease-flow) both;
+}
+.anno-body[hidden] { display: none; }
+@keyframes anno-open {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: none; }
+}
+.anno-body-label {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--ink-4);
+}
+.anno-body ul { display: flex; flex-direction: column; gap: 5px; }
+.anno-body li { font-size: 14px; color: var(--ink-2); }
+.anno-body li::before { content: "· "; color: var(--ink-4); }
+
+/* ── Narrow screens ────────────────────────────────────────────────────── */
+
+@media (max-width: 1100px) {
+  .home-page--shell { grid-template-columns: auto minmax(0, 1fr); }
+  .home-page--shell > .home-rail {
+    grid-column: 2;
+    grid-row: 3;
+    position: static;
+    max-height: none;
+    padding: 0 var(--sp-6) var(--sp-6);
+  }
+}
+@media (max-width: 720px) {
+  .home-page--shell { grid-template-columns: minmax(0, 1fr); padding-bottom: 76px; }
+  .home-page--shell > .home-topbar--shell,
+  .home-page--shell > .home-content,
+  .home-page--shell > .home-rail { grid-column: 1; }
+  .home-page--shell > .home-rail { padding: 0 var(--sp-4) var(--sp-5); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hr-list > li, .ai-overlay, .ai-panel, .ai-asked, .anno-body { animation: none !important; }
+  .hr-item:hover, .ai-banner:hover { transform: none; }
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   MOTION PASS — nothing arrives on screen without moving there.
+   ════════════════════════════════════════════════════════════════════════════
+
+   Overlays and modals that appeared instantly are the loudest kind of jump:
+   a full-screen scrim popping into existence reads as a glitch rather than as
+   a layer opening. These are the surfaces that had no entrance at all. The
+   shared keyframes below are the same two the newer panels already use
+   (overlay-in / panel-in), so every dialog in the app now opens the same way
+   rather than each inventing its own timing.
+
+   Deliberately NOT animated:
+   · exits. React unmounts these immediately, so an exit animation would need
+     presence tracking in every caller; a fade-in with a hard close is honest
+     and consistent, where a half-implemented exit is worse than none.
+   · anything already carrying its own animation (see .modal-card, .fa-overlay,
+     .et-popover, .tut-overlay) — a second one would double up.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.drawer-overlay,
+.join-modal-overlay,
+.name-entry-overlay,
+.ws-settings-overlay {
+  animation: overlay-in var(--dur-mid) var(--ease-soft) both;
+}
+
+.join-modal,
+.name-entry-modal,
+.ws-settings-modal {
+  animation: panel-in var(--dur-slow) var(--ease-flow) both;
+}
+
+/* The tafsīr drawer slides in from the edge it is docked to, not up from the
+   middle — it is a panel attached to the side of the screen, and moving it
+   along its own axis is what makes that read. */
+.drawer-split {
+  animation: drawer-slide var(--dur-slow) var(--ease-flow) both;
+}
+@keyframes drawer-slide {
+  from { opacity: 0; transform: translateX(24px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* Popovers grow from their trigger rather than fading in place. */
+.ctr-popover {
+  animation: pop-in 160ms var(--ease-flow) both;
+  transform-origin: top center;
+}
+@keyframes pop-in {
+  from { opacity: 0; transform: scale(0.96) translateY(-4px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ── Route content ─────────────────────────────────────────────────────────
+   A settled fade for the body of each screen. Short and small on purpose:
+   this fires on every navigation, and anything longer than a couple of frames
+   past the eye's arrival becomes a wait rather than a transition. The sidebar
+   is excluded — it persists across routes, and re-animating furniture that did
+   not change is exactly what makes navigation feel like a page load. */
+.app-shell-body,
+.home-content,
+.home-rail {
+  animation: route-in var(--dur-slow) var(--ease-flow) both;
+}
+@keyframes route-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+.home-rail { animation-delay: 60ms; }
+
+/* ── Interactive affordances ───────────────────────────────────────────────
+   Anything that responds to a press should say so before the press lands.
+   These are the app-level controls; the canvas and editor own their own. */
+.hw-ws-new-btn,
+.home-join-btn,
+.hw-cta-btn,
+.hw-ws-empty-btn {
+  transition: background var(--dur-hover) var(--ease-flow),
+              color var(--dur-hover) var(--ease-flow),
+              border-color var(--dur-hover) var(--ease-flow),
+              transform var(--dur-hover) var(--ease-flow);
+}
+.hw-ws-new-btn:hover,
+.home-join-btn:hover,
+.hw-cta-btn:hover { transform: translateY(-1px); }
+.hw-ws-new-btn:active,
+.home-join-btn:active,
+.hw-cta-btn:active { transform: translateY(0); }
+
+/* Focus must be visible on every one of these, since they are now reachable
+   from the sidebar by keyboard alone. */
+.app-sidebar-item:focus-visible,
+.an-tab:focus-visible,
+.an-chip:focus-visible,
+.an-btn:focus-visible,
+.hr-item:focus-visible,
+.ct-kind:focus-visible,
+.settings-seg-btn:focus-visible,
+.name-entry-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .drawer-overlay, .join-modal-overlay, .name-entry-overlay, .ws-settings-overlay,
+  .join-modal, .name-entry-modal, .ws-settings-modal,
+  .drawer-split, .ctr-popover,
+  .app-shell-body, .home-content, .home-rail {
+    animation: none !important;
+  }
+  .hw-ws-new-btn:hover, .home-join-btn:hover, .hw-cta-btn:hover { transform: none; }
+}

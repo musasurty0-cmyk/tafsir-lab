@@ -14,6 +14,8 @@ import { getSession } from "@/lib/session";
 import { db } from "@/lib/db";
 import { listForUser } from "@/lib/services/workspaces.service";
 import { fetchChapters } from "@/lib/quran-api";
+import * as Bookmarks from "@/lib/services/bookmarks.service";
+import * as Analytics from "@/lib/services/analytics.service";
 import HomeClient from "./HomeClient";
 
 export const dynamic = "force-dynamic";
@@ -87,6 +89,16 @@ export default async function HomePage() {
   // Total surahs in progress across all workspaces
   const totalSurahs = workspaces.reduce((n, ws) => n + ws._count.surahs, 0);
 
+  /* The rail and the streak. Separate from the block above only because they
+     were added later; still one round of parallel queries, and each one is
+     allowed to fail on its own — an empty rail is a worse dashboard, a
+     missing dashboard is no dashboard. */
+  const [recent, bookmarks, summary] = await Promise.all([
+    Bookmarks.recentAnnotations(userId).catch(() => []),
+    Bookmarks.listBookmarks(userId, 6).catch(() => []),
+    Analytics.summary(userId, 0).catch(() => null),
+  ]);
+
   return (
     <HomeClient
       workspaces={enrichedWorkspaces}
@@ -94,6 +106,11 @@ export default async function HomePage() {
       user={user ?? null}
       surahNames={surahNames}
       totalSurahs={totalSurahs}
+      recent={recent}
+      bookmarks={bookmarks}
+      streak={summary
+        ? { current: summary.streak, today: summary.todayCount, goal: summary.dailyGoal }
+        : null}
     />
   );
 }
