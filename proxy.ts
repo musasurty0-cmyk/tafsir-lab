@@ -1,8 +1,14 @@
 /**
  * Next.js proxy (middleware) — runs on every matched request before the page renders.
  *
- * Auth gate: /home, /workspaces, and /workspace require a valid tl-session JWT.
+ * Auth gate: every signed-in surface requires a valid tl-session JWT.
  * Unauthenticated users are redirected to /login.
+ *
+ * AUTH_PATHS and the matcher below must list the same routes. They are two
+ * separate mechanisms — the matcher decides whether this file runs at all, the
+ * list decides what it does — so a route added to one and not the other is
+ * silently unprotected, which is how a page ends up 500ing on a missing
+ * session instead of redirecting.
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -19,7 +25,10 @@ function sessionSecret() {
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  const AUTH_PATHS = ["/home", "/workspaces", "/workspace"];
+  const AUTH_PATHS = [
+    "/home", "/workspaces", "/workspace",
+    "/analytics", "/leaderboard", "/friends", "/settings", "/contact",
+  ];
   const needsAuth  = AUTH_PATHS.some(
     (p) => pathname === p || pathname.startsWith(p + "/"),
   );
@@ -43,5 +52,9 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/home/:path*", "/workspaces/:path*", "/workspace/:path*"],
+  matcher: [
+    "/home/:path*", "/workspaces/:path*", "/workspace/:path*",
+    "/analytics/:path*", "/leaderboard/:path*", "/friends/:path*",
+    "/settings/:path*", "/contact/:path*",
+  ],
 };

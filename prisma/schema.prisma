@@ -14,10 +14,18 @@ datasource db {
 model User {
   id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   email       String   @unique
-  firebaseUid String?  @unique   // set on first Google sign-in
+  firebaseUid String?  @unique // set on first Google sign-in
   name        String
   avatarUrl   String?
   createdAt   DateTime @default(now()) @db.Timestamptz(6)
+
+  // Opt-in to appearing on the public leaderboard. Default true because the
+  // welcome modal asks explicitly on first run; a user who never sees that
+  // modal (seeded, invited) can still turn it off in Settings.
+  publicLeaderboard Boolean @default(true)
+  // Annotations the user is aiming for each day. Drives the Daily Progress
+  // ring and nothing else — missing it has no consequence.
+  dailyGoal         Int     @default(10)
 
   ownedWorkspaces  Workspace[]            @relation("WorkspaceOwner")
   memberships      WorkspaceMember[]
@@ -33,6 +41,58 @@ model User {
   pagePresence     PagePresence[]
   segments         QuranSegment[]         @relation("SegmentCreatedBy")
   connections      QuranConnection[]      @relation("ConnectionCreatedBy")
+  bookmarks        Bookmark[]
+  friendshipsSent  Friendship[]           @relation("FriendRequester")
+  friendshipsRecvd Friendship[]           @relation("FriendAddressee")
+}
+
+// ─────────────────────────────────────────────────────────────
+// SOCIAL
+//
+// One row per pair, held in the direction it was requested. Storing a single
+// directed row (rather than two mirrored ones) means "are these two friends"
+// is one lookup with an OR, and an accept is an UPDATE rather than an insert
+// that could half-fail. The unique pair is enforced on (requesterId,
+// addresseeId); the reverse direction is rejected in the service, since a
+// database constraint cannot express "either order".
+// ─────────────────────────────────────────────────────────────
+model Friendship {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  requesterId String    @db.Uuid
+  addresseeId String    @db.Uuid
+  status      String    @default("pending") // 'pending' | 'accepted'
+  createdAt   DateTime  @default(now()) @db.Timestamptz(6)
+  respondedAt DateTime? @db.Timestamptz(6)
+
+  requester User @relation("FriendRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  addressee User @relation("FriendAddressee", fields: [addresseeId], references: [id], onDelete: Cascade)
+
+  @@unique([requesterId, addresseeId])
+  @@index([addresseeId, status])
+}
+
+// ─────────────────────────────────────────────────────────────
+// BOOKMARKS — a saved place, not a saved note.
+//
+// Deliberately loose: a bookmark points at a Page and optionally at a spot
+// inside it (mushaf sheet, or surah:ayah). Nulls are meaningful — a bookmark
+// with only a pageId is "this notebook page", which is what a blank board or
+// an imported PDF needs.
+// ─────────────────────────────────────────────────────────────
+model Bookmark {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String   @db.Uuid
+  pageId      String   @db.Uuid
+  label       String
+  surahNumber Int?
+  ayahNumber  Int?
+  mushafPage  Int?
+  createdAt   DateTime @default(now()) @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  page Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -41,7 +101,7 @@ model User {
 model Workspace {
   id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name       String
-  type       String   // 'private' | 'group'  (visibility)
+  type       String // 'private' | 'group'  (visibility)
   // 'study'  → 114-surah grid + a single blank board (default)
   // 'boards' → no surahs; several free blank boards (e.g. a weekly class)
   // 'books'  → no surahs; a library of PDFs to annotate around (book study)
@@ -70,7 +130,7 @@ model Workspace {
 model WorkspaceMember {
   workspaceId String   @db.Uuid
   userId      String   @db.Uuid
-  role        String   // 'owner' | 'admin' | 'member'
+  role        String // 'owner' | 'admin' | 'member'
   joinedAt    DateTime @default(now()) @db.Timestamptz(6)
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
@@ -85,7 +145,7 @@ model WorkspaceMember {
 model PageTemplate {
   id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name        String
-  surahNumber Int?     // null = universal
+  surahNumber Int? // null = universal
   // [{ title: string, orderIndex: number, isAdminAuthored: boolean }]
   structure   Json
   isSystem    Boolean  @default(false)
@@ -148,27 +208,27 @@ model QuranSegment {
 // ─────────────────────────────────────────────────────────────
 
 model QuranConnection {
-  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  workspaceId String   @db.Uuid
+  id          String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId String @db.Uuid
 
   // Stable object keys, never display labels: "ayah:67:1", "surah:67",
   // "selection:<uuid>". A label can be renamed; these cannot drift.
-  sourceType  String   // 'ayah' | 'selection' | 'surah'
-  sourceKey   String
-  targetType  String
-  targetKey   String
+  sourceType String // 'ayah' | 'selection' | 'surah'
+  sourceKey  String
+  targetType String
+  targetKey  String
 
   // The two endpoint keys sorted and joined. A Connection is bidirectional, so
   // A->B and B->A are the SAME relationship; sorting collapses them to one
   // value and the unique index below makes the database — not the client —
   // the thing that prevents a reversed duplicate, including under concurrent
   // creation from two devices.
-  pairKey     String
+  pairKey String
 
-  name        String
-  commentary  String?
-  category    String?
-  tags        String[] @default([])
+  name       String
+  commentary String?
+  category   String?
+  tags       String[] @default([])
 
   createdById String   @db.Uuid
   createdAt   DateTime @default(now()) @db.Timestamptz(6)
@@ -192,46 +252,47 @@ model QuranConnection {
 // PAGES
 // ─────────────────────────────────────────────────────────────
 model Page {
-  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  workspaceSurahId String    @db.Uuid
+  id               String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceSurahId String @db.Uuid
   title            String
   orderIndex       Int
   // 'draft' | 'published' | 'archived'
-  status           String    @default("draft")
+  status           String @default("draft")
   tiptapContent    Json?
 
   // Book study: a page can BE a book (a PDF to annotate around). pdfUrl is a
   // static library path ("/books/slug.pdf") or the sentinel "local" for a PDF
   // the user uploaded (bytes live in the browser's IndexedDB, keyed by pageId).
-  pdfUrl           String?
-  pdfName          String?
+  pdfUrl  String?
+  pdfName String?
 
   // Signals admin-authored content is present on this page.
   // Does NOT prevent members from adding their own notes.
   // Full page lock is a separate future concept.
-  isAdminAuthored  Boolean   @default(false)
+  isAdminAuthored Boolean @default(false)
 
   // Template lineage
-  templateId       String?   @db.Uuid
-  templatePageIdx  Int?
+  templateId      String? @db.Uuid
+  templatePageIdx Int?
 
   // Authorship trail
-  createdById      String    @db.Uuid
-  createdAt        DateTime  @default(now()) @db.Timestamptz(6)
-  publishedById    String?   @db.Uuid
-  publishedAt      DateTime? @db.Timestamptz(6)
-  archivedAt       DateTime? @db.Timestamptz(6)
+  createdById   String    @db.Uuid
+  createdAt     DateTime  @default(now()) @db.Timestamptz(6)
+  publishedById String?   @db.Uuid
+  publishedAt   DateTime? @db.Timestamptz(6)
+  archivedAt    DateTime? @db.Timestamptz(6)
 
-  workspaceSurah   WorkspaceSurah     @relation(fields: [workspaceSurahId], references: [id], onDelete: Cascade)
-  template         PageTemplate?      @relation(fields: [templateId], references: [id])
-  createdBy        User               @relation("PageCreatedBy", fields: [createdById], references: [id])
-  publishedBy      User?              @relation("PagePublishedBy", fields: [publishedById], references: [id])
+  workspaceSurah   WorkspaceSurah         @relation(fields: [workspaceSurahId], references: [id], onDelete: Cascade)
+  template         PageTemplate?          @relation(fields: [templateId], references: [id])
+  createdBy        User                   @relation("PageCreatedBy", fields: [createdById], references: [id])
+  publishedBy      User?                  @relation("PagePublishedBy", fields: [publishedById], references: [id])
   notes            StructuredNote[]
   drawings         CanvasDrawing[]
   personalProgress PersonalAyahProgress[]
   groupProgress    GroupAyahProgress[]
   userPrefs        PageUserPrefs[]
   pagePresence     PagePresence[]
+  bookmarks        Bookmark[]
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -265,7 +326,7 @@ model GroupAyahProgress {
   pageId        String   @db.Uuid
   surahNumber   Int
   ayahNumber    Int
-  status        String   // 'not_studied' | 'pending' | 'studied'
+  status        String // 'not_studied' | 'pending' | 'studied'
   lastChangedBy String   @db.Uuid // accountability: who made the last change
   changedAt     DateTime @updatedAt @db.Timestamptz(6)
 
@@ -299,14 +360,14 @@ model StructuredNote {
   // Nullable: rows created before this column stay valid (see the filter in
   // ModeBPage for how they are treated).
   mushafPage   Int?
-  content      Json     // TipTap JSON — rich text, full-text searchable
+  content      Json // TipTap JSON — rich text, full-text searchable
   // 'amber' | 'emerald' | 'sky' | 'rose' | null
   color        String?
   // Canvas geometry — used in Mode B, ignored in Mode A
   offsetX      Float    @default(40)
   offsetY      Float    @default(0)
   width        Float    @default(280)
-  height       Float?   // null = auto
+  height       Float? // null = auto
   zIndex       Int      @default(0)
   isMinimized  Boolean  @default(false)
   // true → only admin+ can edit or delete
@@ -330,7 +391,7 @@ model CanvasDrawing {
   id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   pageId    String   @db.Uuid
   authorId  String   @db.Uuid
-  strokes   Json     // raw stroke array
+  strokes   Json // raw stroke array
   updatedAt DateTime @updatedAt @db.Timestamptz(6)
 
   page   Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
@@ -385,21 +446,21 @@ model ActivityLog {
 // ─────────────────────────────────────────────────────────────
 
 model TafsirSource {
-  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   // Human-readable unique key, e.g. "ibn-kathir-en", "tabari-ar"
-  slug        String   @unique
-  name        String   // "Ibn Kathīr (English)"
-  nameArabic  String?  // "ابن كثير"
-  language    String   // ISO 639-1: "en" | "ar" | "ur" …
+  slug       String   @unique
+  name       String // "Ibn Kathīr (English)"
+  nameArabic String? // "ابن كثير"
+  language   String // ISO 639-1: "en" | "ar" | "ur" …
   // "api"    → fetched from a structured API (e.g. quran.com)
   // "scrape" → fetched by parsing an HTML page (e.g. tafsir.app)
-  type        String
+  type       String
   // Source-specific config (varies by type):
   //   api:    { provider: "quran.com", tafsirId: 169 }
   //   scrape: { provider: "tafsir.app", slug: "tabari" }
-  config      Json
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now()) @db.Timestamptz(6)
+  config     Json
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now()) @db.Timestamptz(6)
 
   entries   TafsirEntry[]
   fetchJobs TafsirFetchJob[]
@@ -408,7 +469,7 @@ model TafsirSource {
 model TafsirEntry {
   id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   sourceId    String   @db.Uuid
-  verseKey    String   // "1:1"
+  verseKey    String // "1:1"
   // Plain-text content (always present)
   content     String
   // HTML content as returned by the source (optional, may contain
@@ -459,7 +520,6 @@ model PagePresence {
 
   @@unique([pageId, userId])
 }
-
 
 /// Waitlist signups from the public /waitlist page (linked from the IG bio).
 /// The row is the source of truth: the notification email to the team is

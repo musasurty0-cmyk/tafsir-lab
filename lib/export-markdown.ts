@@ -150,6 +150,22 @@ export function pageToMarkdown(opts: {
   return md.replace(/\n{3,}/g, "\n\n").trimEnd() + "\n";
 }
 
+/**
+ * One note's body as Markdown.
+ *
+ * Shares the block pipeline above rather than a second flattener, so a note
+ * exported on its own from the annotation export keeps the same bold, lists
+ * and embedded āyah blocks it gets inside a page export.
+ */
+export function noteToMarkdown(content: unknown): string {
+  const root = content as TNode | null;
+  if (!root) return "";
+  const body = root.type === "doc"
+    ? (root.content ?? []).map((n) => block(n)).join("")
+    : block(root);
+  return body.replace(/\n{3,}/g, "\n\n").trim();
+}
+
 /** Trigger a client-side download of the markdown file. */
 export function downloadMarkdown(filename: string, markdown: string) {
   const blob = new Blob([markdown], { type: "text/markdown;charset=utf-8" });
