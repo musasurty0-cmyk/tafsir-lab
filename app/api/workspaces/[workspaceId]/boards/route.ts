@@ -1,4 +1,8 @@
 /**
+ * GET  /api/workspaces/[workspaceId]/boards
+ *   Every board in the workspace, in order. Used by the board sidebar so you
+ *   can move between them without going back to the workspace home.
+ *
  * POST /api/workspaces/[workspaceId]/boards
  *   Create a new blank board in the workspace. Body: { title? }.
  *   Returns { board: { id, title } }.
@@ -8,6 +12,19 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import * as PagesService from "@/lib/services/pages.service";
 import { apiError } from "@/lib/api-errors";
+
+export async function GET(
+  _req: Request,
+  { params }: { params: Promise<{ workspaceId: string }> },
+) {
+  try {
+    const { workspaceId } = await params;
+    const { userId } = await getSession();
+    return NextResponse.json({ boards: await PagesService.listWorkspaceBoards(workspaceId, userId) });
+  } catch (err) {
+    return apiError(err);
+  }
+}
 
 export async function POST(
   req: Request,

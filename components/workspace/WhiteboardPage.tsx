@@ -72,12 +72,28 @@ export default function WhiteboardPage({
   const containerRef = useRef<HTMLDivElement>(null);
   const drawingRef   = useRef<DrawingCanvasHandle>(null);
 
-  // ── Viewport (pan/zoom), persisted locally ──────────────────────────────
-  const [viewport, setViewport] = useState<Viewport>(() => {
-    if (typeof window === "undefined") return { x: 0, y: 0, zoom: 1 };
-    try { const raw = localStorage.getItem(VP_KEY(pageId)); if (raw) return JSON.parse(raw); } catch { /* ignore */ }
-    return { x: 0, y: 0, zoom: 1 };
-  });
+  /* ── Viewport (pan/zoom), persisted locally ──────────────────────────────
+     Restored in an effect, NOT in the initialiser. Reading localStorage during
+     render made the server emit `translate(0px,0px) scale(1)` while the client
+     emitted the saved transform, so React failed hydration and threw away the
+     whole canvas subtree on every board load — visible in the dev overlay as a
+     recoverable error, and in production as a wasted re-render of the most
+     expensive thing on the page. The cost of doing it properly is that a saved
+     viewport lands one frame late, which is not perceptible; the cost of the
+     old way was re-mounting the canvas. */
+  const [viewport, setViewport] = useState<Viewport>({ x: 0, y: 0, zoom: 1 });
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(VP_KEY(pageId));
+      if (!raw) return;
+      const saved = JSON.parse(raw) as Partial<Viewport>;
+      // Guard the shape: a corrupt or half-written value must not produce a
+      // NaN transform, which paints nothing at all and looks like a blank board.
+      if ([saved.x, saved.y, saved.zoom].every((n) => typeof n === "number" && Number.isFinite(n))) {
+        setViewport({ x: saved.x!, y: saved.y!, zoom: clamp(saved.zoom!, ZOOM_MIN, ZOOM_MAX) });
+      }
+    } catch { /* ignore */ }
+  }, [pageId]);
   const viewportRef = useRef(viewport);
   useEffect(() => { viewportRef.current = viewport; }, [viewport]);
   const saveVpTimer = useRef<ReturnType<typeof setTimeout> | null>(null);

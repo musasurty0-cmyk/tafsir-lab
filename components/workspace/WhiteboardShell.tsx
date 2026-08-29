@@ -35,6 +35,7 @@ import TafsirDrawer from "./TafsirDrawer";
 import BookmarkButton from "@/components/BookmarkButton";
 import ImportDialog from "./ImportDialog";
 import BoardBackdrop from "./BoardBackdrop";
+import BoardsSidebar from "./BoardsSidebar";
 
 /** Which surface the board is showing. Remembered per board. */
 type BoardView = "canvas" | "notes";
@@ -270,6 +271,13 @@ export default function WhiteboardShell({
       <EditorToolbar editor={editor} open={view === "notes" && formattingOpen} />
 
       <div className="whiteboard-shell-body">
+        <BoardsSidebar
+          workspaceId={workspaceId}
+          currentId={pageId}
+          view={view}
+          onView={chooseView}
+        />
+
         <EditorContextProvider value={ctx}>
           {view === "canvas" ? (
             <WhiteboardPage
