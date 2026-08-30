@@ -25,6 +25,7 @@ import {
 import AppShell, { type ShellStreak } from "@/components/AppShell";
 import type { SidebarUser } from "@/components/AppSidebar";
 import { parseBlocks, type Inline } from "@/lib/lab-markdown";
+import { embedQuery, prefetch } from "@/lib/tafsir/browser-embed";
 
 interface SourceRow {
   slug: string; name: string; language: string; chunks: number; verses: number;
@@ -134,6 +135,10 @@ export default function AssistantClient({ user, sources, streak }: Props) {
   const busy = turns.some((t) => t.running);
 
   const endRef = useRef<HTMLDivElement>(null);
+  /* This whole page is the assistant, so landing on it is intent enough to
+     start fetching the embedding model. Declines on a metered connection. */
+  useEffect(() => { prefetch(); }, []);
+
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [turns]);
 
   const patch = useCallback((id: string, fn: (t: Turn) => Turn) => {
@@ -164,12 +169,17 @@ export default function AssistantClient({ user, sources, streak }: Props) {
     }]);
     setQ("");
 
+    /* Embedded in the browser, same as the docked panel. Null means the model
+       has not finished downloading, and the server falls back to keyword. */
+    const vector = await embedQuery(question);
+
     const res = await fetch("/api/assistant", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         question,
         sources: pinned.length ? pinned : undefined,
         history,
+        queryVector: vector ?? undefined,
       }),
     }).catch(() => null);
 

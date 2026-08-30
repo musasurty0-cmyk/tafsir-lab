@@ -27,6 +27,7 @@ import {
 import { useOverlayMotion } from "@/lib/use-overlay-motion";
 import { useDismissable } from "@/lib/use-dismissable";
 import { parseBlocks, type Inline } from "@/lib/lab-markdown";
+import { embedQuery, prefetch } from "@/lib/tafsir/browser-embed";
 
 interface CiteRef { n: number; sourceName: string; verseKey: string }
 interface Step { step: string; detail: string; state?: string }
@@ -207,6 +208,13 @@ export default function AiPanel({ pageId, surahNumber, surahName, onClose }: Pro
      to find the X. */
   useDismissable(onClose);
 
+  /* Start pulling the embedding model as soon as the panel is opened, since
+     this component only mounts when it is. Opening the assistant is the first
+     clear signal that someone intends to ask something, and the download wants
+     the head start — a question asked before it lands is answered by keyword
+     rather than made to wait. Declines on a metered connection. */
+  useEffect(() => { prefetch(); }, []);
+
   useEffect(() => { inputRef.current?.focus(); }, []);
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [turns]);
 
@@ -233,10 +241,16 @@ export default function AiPanel({ pageId, surahNumber, surahName, onClose }: Pro
     }]);
     setQ("");
 
+    /* The question is embedded here, in the browser, and the vector travels
+       with it. Null is an ordinary outcome — the model is still downloading —
+       and the server answers by keyword when it sees no vector. */
+    const vector = await embedQuery(question);
+
     const res = await fetch("/api/assistant", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         question, history,
+        queryVector: vector ?? undefined,
         // What you have open. The server treats this as a default that a
         // reference inside the question can override.
         surah: surahNumber,

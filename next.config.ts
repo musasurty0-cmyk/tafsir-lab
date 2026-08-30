@@ -20,6 +20,13 @@ const authProxyTarget =
     : null);
 
 const nextConfig: NextConfig = {
+  /* @huggingface/transformers resolves to a Node build on the server, which
+     depends on onnxruntime-node — a native binary that must not be traced into
+     a serverless function. Nothing on the server imports it: the only use is a
+     dynamic import inside a browser-only path. Marking it external stops the
+     bundler following that edge anyway. */
+  serverExternalPackages: ["@huggingface/transformers"],
+
   // MuPDF's WASM glue (used client-side to rasterise book PDFs) imports Node's
   // built-in "module" inside a Node-only branch. Stub it for the BROWSER build
   // so turbopack can resolve it; the branch never runs in a browser.
@@ -64,7 +71,12 @@ const nextConfig: NextConfig = {
       "img-src 'self' data: blob: https://api.quran.com https://cdn.islamic.network https://verses.quran.foundation",
       /* Realtime collaboration is a WebSocket to PartyKit; Firebase Auth talks
          to Google's identity endpoints. */
-      "connect-src 'self' https://api.quran.com https://*.partykit.dev wss://*.partykit.dev ws://localhost:1999 https://identitytoolkit.googleapis.com https://securetoken.googleapis.com",
+      /* Hugging Face serves the embedding model that Lab AI runs in the
+         browser; the large files redirect to their CDN, hence the wildcards.
+         jsdelivr serves onnxruntime's WASM binary. Both are fetch(), not
+         script — the WASM glue ships inside the package, and instantiating it
+         is covered by the 'unsafe-eval' above. */
+      "connect-src 'self' https://api.quran.com https://*.partykit.dev wss://*.partykit.dev ws://localhost:1999 https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://huggingface.co https://*.huggingface.co https://*.hf.co https://cdn.jsdelivr.net",
       "worker-src 'self' blob:",
       "frame-src 'self'",
       "object-src 'none'",

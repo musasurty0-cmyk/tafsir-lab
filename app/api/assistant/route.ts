@@ -105,6 +105,40 @@ function placeName(v: unknown): string | undefined {
   return clean.length ? clean : undefined;
 }
 
+/**
+ * The query vector, computed in the reader's browser.
+ *
+ * The embedding model moved client-side when Hugging Face started charging for
+ * Spaces, so this array now arrives over the wire and is exactly as trustworthy
+ * as anything else a client sends. It is bound as a parameter and cast to
+ * halfvec, so there is no injection to worry about — but a NaN, an Infinity or
+ * a short array reaches pgvector as a malformed literal and comes back as an
+ * opaque 500 from deep inside the search. Rejecting it here costs one pass and
+ * degrades to keyword search, which is the behaviour every other embedding
+ * failure already has.
+ *
+ * Not checked: whether the numbers mean anything. A well-formed vector of
+ * nonsense returns poor results for the person who sent it and nobody else,
+ * which is not worth a round trip to verify.
+ */
+const EMBED_DIM = 384;
+
+function queryVector(v: unknown): number[] | null {
+  if (!Array.isArray(v) || v.length !== EMBED_DIM) return null;
+  const out = new Array<number>(EMBED_DIM);
+  for (let i = 0; i < EMBED_DIM; i++) {
+    const n = v[i];
+    /* Number.isFinite rejects NaN, ±Infinity, and every non-number — including
+       the numeric strings JSON.parse would have left alone. */
+    if (typeof n !== "number" || !Number.isFinite(n)) return null;
+    /* e5 output is L2-normalised, so every component sits well inside [-1, 1].
+       A generous bound still catches a vector that was never one. */
+    if (n < -10 || n > 10) return null;
+    out[i] = n;
+  }
+  return out;
+}
+
 const LLM_MAX_PASSAGES  = 6;
 const LLM_NOTE_SLOTS    = 2;
 const LLM_MAX_CHARS_EACH = 900;
@@ -122,7 +156,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({})) as {
     question?: unknown; sources?: unknown; verseKey?: unknown; history?: unknown;
     surah?: unknown; pageId?: unknown; includeNotes?: unknown; selection?: unknown;
-    surahName?: unknown;
+    surahName?: unknown; queryVector?: unknown;
   };
 
   /* Prior turns, so a follow-up ("what about the second view?") has something
@@ -210,13 +244,24 @@ export async function POST(req: NextRequest) {
 
         // ── 2. Embed ─────────────────────────────────────────────────────
         send({ step: "embed", detail: "Placing the question in the corpus's meaning-space" });
-        const embedding = Models.isConfigured() ? await Models.embed(q) : null;
+        /* The browser embeds the question now, and sends the vector with it.
+           A Space is still consulted if one is configured, so a self-hosted or
+           paid deployment keeps working — but nothing requires one. */
+        const supplied = queryVector(body.queryVector);
+        const embedding = supplied ?? (Models.isConfigured() ? await Models.embed(q) : null);
+
         if (!embedding) {
           send({
             step: "embed", state: "degraded",
-            detail: Models.isConfigured()
-              ? "The embedding service did not answer — falling back to keyword search"
-              : "No embedding service configured — using keyword search",
+            detail: body.queryVector !== undefined
+              /* Sent, but not usable: the reader's browser produced something
+                 malformed, or someone is poking at the endpoint. */
+              ? "That question could not be embedded — falling back to keyword search"
+              : Models.isConfigured()
+                ? "The embedding service did not answer — falling back to keyword search"
+                /* The ordinary case, and not an error: the model is still
+                   downloading in the browser and will be there next time. */
+                : "The search model is still loading in your browser — using keyword search for now",
           });
         }
 
