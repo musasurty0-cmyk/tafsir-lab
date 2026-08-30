@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { X, Copy, RefreshCw, Check } from "lucide-react";
 import type { MemberRole } from "@/lib/services/workspaces.service";
-import { WORKSPACE_ICONS, workspaceInitials } from "@/lib/workspace-icon";
 import { useDismissable } from "@/lib/use-dismissable";
 
 interface Member {
@@ -23,9 +22,6 @@ interface Props {
   currentUserRole: MemberRole;
   onClose: () => void;
   onRenamed: (name: string) => void;
-  /** Current icon; null means the workspace shows its initials. */
-  initialIcon?: string | null;
-  onIconChanged?: (icon: string | null) => void;
   onDeleted: () => void;
 }
 
@@ -42,8 +38,6 @@ export default function WorkspaceSettings({
   currentUserRole,
   onClose,
   onRenamed,
-  initialIcon,
-  onIconChanged,
   onDeleted,
 }: Props) {
   useDismissable(onClose);
@@ -80,31 +74,6 @@ export default function WorkspaceSettings({
   const [inviteCode, setInviteCode] = useState<string | null>(null);
   const [inviteLoading, setInviteLoading] = useState(false);
   const [copied, setCopied] = useState(false);
-
-  /* Icon. Admins may change it; clearing falls back to initials, which is
-     why null is a real value here rather than an absence. */
-  const [icon, setIcon] = useState<string | null>(initialIcon ?? null);
-  const [iconSaving, setIconSaving] = useState(false);
-
-  async function chooseIcon(next: string | null) {
-    const prev = icon;
-    setIcon(next);                       // optimistic — the rail updates at once
-    setIconSaving(true);
-    try {
-      const res = await fetch(`/api/workspaces/${workspaceId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ icon: next }),
-      });
-      if (!res.ok) throw new Error("failed");
-      onIconChanged?.(next);
-    } catch {
-      setIcon(prev);                     // put it back rather than lying
-      setActionError("Could not change the icon");
-    } finally {
-      setIconSaving(false);
-    }
-  }
 
   // Rename
   const [nameInput, setNameInput] = useState(workspaceName);
@@ -270,38 +239,6 @@ export default function WorkspaceSettings({
           <div className="ws-settings-section">
             <div className="ws-settings-section-title">General</div>
 
-            {isAdminOrOwner && (
-              <div className="ws-icon-picker">
-                <div className="ws-icon-current" aria-hidden>
-                  {icon || workspaceInitials(nameInput || workspaceName)}
-                </div>
-                <div className="ws-icon-grid" role="group" aria-label="Workspace icon">
-                  {WORKSPACE_ICONS.map((g) => (
-                    <button
-                      key={g}
-                      type="button"
-                      className="ws-icon-opt"
-                      data-active={icon === g ? "true" : "false"}
-                      disabled={iconSaving}
-                      title={`Use ${g}`}
-                      onClick={() => chooseIcon(g)}
-                    >
-                      {g}
-                    </button>
-                  ))}
-                  <button
-                    type="button"
-                    className="ws-icon-opt ws-icon-opt--initials"
-                    data-active={icon === null ? "true" : "false"}
-                    disabled={iconSaving}
-                    title="Use initials instead"
-                    onClick={() => chooseIcon(null)}
-                  >
-                    {workspaceInitials(nameInput || workspaceName)}
-                  </button>
-                </div>
-              </div>
-            )}
 
             <div style={{ display: "flex", gap: 8 }}>
               <input

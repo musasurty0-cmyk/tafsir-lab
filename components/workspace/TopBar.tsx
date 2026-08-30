@@ -82,15 +82,6 @@ const SparkleIcon = ({ size = 16 }: { size?: number }) => (
   </svg>
 );
 
-const ScriptIcon = ({ size = 17 }: { size?: number }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
-       strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
-    <path d="M9 7h7M9 11h5" />
-  </svg>
-);
-
 const BoardIcon = ({ size = 17 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
     stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -241,15 +232,6 @@ export default function TopBar({
             aria-label="Whiteboard — blank scratch canvas"
           >
             <BoardIcon />
-          </button>
-          <button
-            className="mode-btn"
-            data-active={mode === "read" ? "true" : "false"}
-            onClick={() => mode !== "read" && onSetMode("read")}
-            title="Read the mushaf"
-            aria-label="Read the mushaf"
-          >
-            <ScriptIcon />
           </button>
         </div>
 

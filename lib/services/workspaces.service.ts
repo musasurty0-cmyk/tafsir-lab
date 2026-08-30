@@ -11,7 +11,6 @@
  */
 
 import { db } from "@/lib/db";
-import { autoIcon } from "@/lib/workspace-icon";
 import { log } from "./activity.service";
 import { randomBytes } from "crypto";
 
@@ -147,7 +146,6 @@ export async function createWorkspace(
          it back to initials. */
       data: {
         name: name.trim(), type, kind, ownerId: userId,
-        icon: autoIcon(name),
       },
     });
     await tx.workspaceMember.create({

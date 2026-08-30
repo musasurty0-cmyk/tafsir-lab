@@ -11377,11 +11377,12 @@ input, textarea { font: inherit; color: inherit; }
   to   { opacity: 1; transform: none; }
 }
 
-/* Popovers grow from their trigger rather than fading in place. */
-.ctr-popover {
-  animation: pop-in 160ms var(--ease-flow) both;
-  transform-origin: top center;
-}
+/* NOT .ctr-popover. That one positions itself with `top: 50%` plus a
+   translateY(-50%) and opens by swapping opacity and transform on
+   [data-open] — so an animation ending in `transform: none` dropped it half
+   its own height into the corner, and `both` held the keyframe's opacity: 1
+   over its closed state, leaving the colour palette visible whether or not a
+   pen was selected. Both symptoms, one rule. It animates itself; leave it. */
 @keyframes pop-in {
   from { opacity: 0; transform: scale(0.96) translateY(-4px); }
   to   { opacity: 1; transform: none; }
@@ -12509,6 +12510,19 @@ input, textarea { font: inherit; color: inherit; }
   border-color: var(--line);
 }
 .lab-action svg { flex: none; }
+
+/* When nothing was retrieved there is no source list to promise, so the line
+   stops looking like a control and becomes what it is: a note about how the
+   answer was reached. */
+.lab-trace[data-empty="true"] .lab-trace-head {
+  background: transparent;
+  border-color: transparent;
+  padding-left: 2px;
+  padding-right: 2px;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.lab-trace[data-empty="true"] .lab-trace-head:hover { color: var(--ink-2); }
 
 .lab-thinking {
   display: inline-flex; align-items: center; gap: 9px;

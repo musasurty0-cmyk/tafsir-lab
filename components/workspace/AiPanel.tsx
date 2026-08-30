@@ -508,7 +508,11 @@ export default function AiPanel({ pageId, surahNumber, surahName, onAddToEditor,
 function Trace({ turn, onToggle }: { turn: Turn; onToggle: () => void }) {
   const { mounted, state } = useOverlayMotion(turn.openTrace, 160);
   return (
-    <div className="lab-trace" data-open={turn.openTrace ? "true" : "false"}>
+    <div
+      className="lab-trace"
+      data-open={turn.openTrace ? "true" : "false"}
+      data-empty={turn.hits.length === 0 && !turn.running ? "true" : "false"}
+    >
       <button type="button" className="lab-trace-head" onClick={onToggle} aria-expanded={turn.openTrace}>
         <Search size={12} aria-hidden />
         <span>

@@ -107,10 +107,13 @@ export default function Rail({ activeWorkspaceId }: Props) {
             /* A tone per workspace so several of them stay distinguishable at
                a glance, even when all are showing initials. */
             data-tone={workspaceTone(ws.id, ws.name)}
-            data-glyph={ws.icon ? "true" : "false"}
             onClick={() => pushWithSplash(router, `/workspaces/${ws.id}`)}
           >
-            {ws.icon || workspaceInitials(ws.name)}
+            {/* Initials, always. Workspaces used to be given an emoji at
+                creation; a rail of glyphs read as decoration rather than as
+                navigation, and the letters of the name are what people
+                actually recognise. The stored column is ignored. */}
+            {workspaceInitials(ws.name)}
           </button>
         ))}
 

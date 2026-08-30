@@ -235,7 +235,6 @@ export default function CanvasToolRail({
   const isCurrentlyPalette =
     activeTool === "pen" || activeTool === "highlight" ||
     (activeTool === "eraser" && eraserHasPopover);
-  if (isCurrentlyPalette) lastPaletteToolRef.current = activeTool as "pen" | "highlight" | "eraser";
 
   const popoverTool = lastPaletteToolRef.current;
   const isEraser    = popoverTool === "eraser";
@@ -302,6 +301,26 @@ export default function CanvasToolRail({
   // onMouseLeave: mouse exits the rail (including moving through the gap into
   //              the popover) → start the hide timer. The popover's own
   //              onMouseEnter cancels it if the user bridges the gap.
+
+  /* Written in an effect rather than during render: assigning a ref while
+     rendering is a genuine hazard under concurrent rendering, and this one is
+     read on the very next line to choose the popover's contents. */
+  useEffect(() => {
+    if (isCurrentlyPalette) {
+      lastPaletteToolRef.current = activeTool as "pen" | "highlight" | "eraser";
+    }
+  }, [isCurrentlyPalette, activeTool]);
+
+  /* Switching to hand, arrow or text left the palette open: nothing closed it,
+     and if the pointer was still inside the rail the hide timer had already
+     been cancelled, so it stayed up until something else happened to dismiss
+     it. A tool that has no palette should not be showing one. */
+  useEffect(() => {
+    if (!isCurrentlyPalette) {
+      if (hideTimerRef.current) { clearTimeout(hideTimerRef.current); hideTimerRef.current = null; }
+      setPopoverOpen(false);
+    }
+  }, [isCurrentlyPalette]);
 
   function onRailEnter() {
     if (isCurrentlyPalette) {

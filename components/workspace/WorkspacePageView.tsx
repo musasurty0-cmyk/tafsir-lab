@@ -124,7 +124,10 @@ export default function WorkspacePageView({
   useEffect(() => {
     try {
       const m = new URLSearchParams(window.location.search).get("mode");
-      if (m === "board" || m === "canvas" || m === "split" || m === "editor" || m === "read")
+      /* "read" is no longer offered. It stays out of this list so an old link
+         or a stored preference cannot drop someone into a mode with no button
+         to leave it by. */
+      if (m === "board" || m === "canvas" || m === "split" || m === "editor")
         setMode(m as ViewMode);
     } catch { /* ignore */ }
   }, []);

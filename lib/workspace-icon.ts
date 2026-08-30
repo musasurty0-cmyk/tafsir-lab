@@ -1,20 +1,14 @@
 /**
  * Workspace identity marks.
  *
- * A workspace shows its INITIALS by default. An icon can be assigned instead,
- * and one is picked automatically at creation so a new workspace is never an
- * anonymous grey square in the rail.
+ * A workspace shows its INITIALS, and only ever its initials. It used to be
+ * given an emoji at creation so a new one was never an anonymous grey square;
+ * a rail of glyphs turned out to read as decoration rather than navigation,
+ * and the letters of the name are what people actually recognise. Distinction
+ * between workspaces comes from the tone below instead.
  *
- * The auto-pick is derived from the name rather than random, so the same name
- * always gets the same mark: creating "Youth Majlis" twice on two devices does
- * not produce two different icons for what the user thinks of as one thing.
+ * The `icon` column still exists and is ignored. Nothing writes it any more.
  */
-
-/** Study-appropriate glyphs. Deliberately plain — no faces, no decoration. */
-export const WORKSPACE_ICONS = [
-  "📖", "🕌", "🌙", "⭐", "🖋", "📜", "🗝", "🧭",
-  "🪶", "🏛", "🌿", "💠", "🔖", "📐", "🕋", "🔭",
-] as const;
 
 /**
  * Stable hash — same string in, same number out, across devices and reloads.
@@ -33,13 +27,6 @@ function hash(s: string): number {
   h ^= h >>> 16;
   h = Math.imul(h, 0x2545f491) >>> 0;
   return (h ^ (h >>> 15)) >>> 0;
-}
-
-/** The icon a workspace gets when nobody has chosen one. */
-export function autoIcon(name: string): string {
-  const n = name.trim();
-  if (!n) return WORKSPACE_ICONS[0];
-  return WORKSPACE_ICONS[hash(n) % WORKSPACE_ICONS.length];
 }
 
 /**
