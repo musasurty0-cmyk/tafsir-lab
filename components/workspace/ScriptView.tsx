@@ -70,27 +70,13 @@ export default function ScriptView({ surah, onVerseClick }: Props) {
 
   return (
     <div className="sv">
-      <div className="sv-picker" role="group" aria-label="Script">
-        {(scripts.length ? scripts : [{ id: "uthmani", label: "Uthmani", note: "" }]).map((s) => (
-          <button
-            key={s.id}
-            className="sv-chip"
-            data-active={script === s.id ? "true" : "false"}
-            onClick={() => choose(s.id)}
-            title={s.note}
-          >
-            {s.label}
-          </button>
-        ))}
-      </div>
-
       {state.kind === "loading" && (
         <p className="sv-status"><Loader2 size={16} className="rec-spin" aria-hidden /> Loading…</p>
       )}
 
       {state.kind === "error" && (
         <p className="sv-status sv-status--err">
-          That script could not be loaded. The Uthmani text is still available.
+          The text could not be loaded. Try again in a moment.
         </p>
       )}
 

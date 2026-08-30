@@ -232,8 +232,8 @@ export default function TopBar({
             className="mode-btn"
             data-active={mode === "read" ? "true" : "false"}
             onClick={() => mode !== "read" && onSetMode("read")}
-            title="Read — Uthmani, Indo-Pak, Tajweed or plain script"
-            aria-label="Read — choose a script"
+            title="Read the mushaf"
+            aria-label="Read the mushaf"
           >
             <ScriptIcon />
           </button>
