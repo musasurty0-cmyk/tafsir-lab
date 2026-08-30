@@ -251,6 +251,45 @@ export async function lexicalSearch(
 }
 
 /**
+ * Every commentary on one verse, regardless of what words the question used.
+ *
+ * When a reader names a verse, that verse's commentary IS the answer — the
+ * keyword search should not have to agree. "What does 18:65 say?" returned
+ * nothing at all, because the question's only content words are the digits in
+ * the reference, so no trigram matched, while Ibn Kathir alone had 27,000
+ * characters on that ayah waiting behind the filter.
+ *
+ * Longest first, as a rough proxy for which commentary says most about it.
+ */
+async function verseEntries(verseKey: string, opts: SearchOptions): Promise<RawHit[]> {
+  const params: unknown[] = [verseKey];
+  let sourceFilter = "";
+  if (opts.sources?.length) {
+    params.push(opts.sources);
+    sourceFilter = `AND s.slug = ANY($${params.length}::text[])`;
+  }
+  params.push(opts.limit ?? DEFAULT_LIMIT);
+
+  return db.$queryRawUnsafe<RawHit[]>(`
+    SELECT e."sourceId"::text || '#' || e."verseKey"        AS "chunkId",
+           s.slug     AS "sourceSlug",
+           s.name     AS "sourceName",
+           s.language AS "language",
+           e."verseKey",
+           split_part(e."verseKey", ':', 1)::int AS surah,
+           split_part(e."verseKey", ':', 2)::int AS ayah,
+           substr(e.content, 1, 1400)            AS content
+    FROM "TafsirEntry" e
+    JOIN "TafsirSource" s ON s.id = e."sourceId"
+    WHERE e."verseKey" = $1
+      AND length(e.content) >= 120
+      ${sourceFilter}
+    ORDER BY length(e.content) DESC
+    LIMIT $${params.length}::int
+  `, ...params);
+}
+
+/**
  * Merge two ranked lists by reciprocal rank fusion.
  *
  * Exported because it is pure and worth testing on its own: it decides what the
@@ -330,7 +369,11 @@ export async function search(
   const probes = probeTerms(query).slice(0, 2);
   const lexicalQueries = probes.length ? probes : [query];
 
-  const [semantic, ...lexicalLists] = await Promise.all([
+  const [direct, semantic, ...lexicalLists] = await Promise.all([
+    /* A named verse answers itself. Fetched alongside the other two rather
+       than instead of them, so a question that is both specific and about a
+       theme still benefits from the keyword and semantic lists. */
+    opts.verseKey ? verseEntries(opts.verseKey, opts) : Promise.resolve([] as RawHit[]),
     embedding ? semanticSearch(embedding, { ...opts, limit: CANDIDATES }) : Promise.resolve([]),
     ...lexicalQueries.map((p) => lexicalSearch(p, { ...opts, limit: CANDIDATES })),
   ]);
@@ -341,7 +384,10 @@ export async function search(
     ? fuse(lexicalLists[0], lexicalLists.slice(1).flat(), CANDIDATES)
     : (lexicalLists[0] ?? []);
 
-  const hits = fuse(semantic, lexical, limit);
+  /* The verse's own commentary is fused in first, so it leads when a verse was
+     named and simply adds nothing when one was not. */
+  const found = fuse(semantic, lexical, limit);
+  const hits = direct.length ? fuse(direct, found, limit) : found;
 
   return {
     hits,
