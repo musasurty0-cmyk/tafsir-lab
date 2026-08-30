@@ -143,48 +143,22 @@ export default function NewWorkspaceModal({ onClose, originPoint }: Props) {
           </div>
 
           <label className="modal-label" style={{ marginTop: 18 }}>{t("modal.whatFor")}</label>
-          <div className="modal-type-row">
-            <button
-              type="button"
-              className="modal-type-btn"
-              data-active={kind === "study" ? "true" : "false"}
-              onClick={() => setKind("study")}
-              disabled={loading}
-            >
-              <span className="modal-type-icon">📖</span>
-              <div>
-                <div className="modal-type-name">{t("modal.study")}</div>
-                <div className="modal-type-desc">{t("modal.studyDesc")}</div>
-              </div>
-            </button>
-
-            <button
-              type="button"
-              className="modal-type-btn"
-              data-active={kind === "boards" ? "true" : "false"}
-              onClick={() => setKind("boards")}
-              disabled={loading}
-            >
-              <span className="modal-type-icon">◇</span>
-              <div>
-                <div className="modal-type-name">{t("modal.boards")}</div>
-                <div className="modal-type-desc">{t("modal.boardsDesc")}</div>
-              </div>
-            </button>
-
-            <button
-              type="button"
-              className="modal-type-btn"
-              data-active={kind === "books" ? "true" : "false"}
-              onClick={() => setKind("books")}
-              disabled={loading}
-            >
-              <span className="modal-type-icon">📚</span>
-              <div>
-                <div className="modal-type-name">{t("modal.books")}</div>
-                <div className="modal-type-desc">{t("modal.booksDesc")}</div>
-              </div>
-            </button>
+          <div className="kind-row" role="radiogroup" aria-label={t("modal.whatFor")}>
+            <KindCard
+              active={kind === "study"} disabled={loading} onSelect={() => setKind("study")}
+              name={t("modal.study")} caption={t("modal.studyDesc")}
+              preview={<QuranPreview />}
+            />
+            <KindCard
+              active={kind === "boards"} disabled={loading} onSelect={() => setKind("boards")}
+              name={t("modal.boards")} caption={t("modal.boardsDesc")}
+              preview={<CanvasPreview />}
+            />
+            <KindCard
+              active={kind === "books"} disabled={loading} onSelect={() => setKind("books")}
+              name={t("modal.books")} caption={t("modal.booksDesc")}
+              preview={<BookPreview />}
+            />
           </div>
 
           {error && <p className="modal-error">{error}</p>}
@@ -209,5 +183,81 @@ export default function NewWorkspaceModal({ onClose, originPoint }: Props) {
         </form>
       </div>
     </div>
+  );
+}
+
+/* ── Workspace kind cards ──────────────────────────────────────────────────
+   Three emoji beside three labels asked the reader to imagine the difference
+   between a mushaf, a blank canvas and a book. A drawing of each shows it, and
+   the choice stops being a guess made before you have seen either.
+
+   The previews are inline SVG rather than screenshots: they inherit the
+   theme's own tokens, cost no request, and cannot go stale when the thing they
+   depict is restyled. */
+
+function KindCard({
+  active, disabled, onSelect, name, caption, preview,
+}: {
+  active: boolean; disabled: boolean; onSelect: () => void;
+  name: string; caption: string; preview: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={active}
+      className="kind-card"
+      data-active={active ? "true" : "false"}
+      onClick={onSelect}
+      disabled={disabled}
+    >
+      <span className="kind-preview" aria-hidden>{preview}</span>
+      <span className="kind-name">{name}</span>
+      <span className="kind-caption">{caption}</span>
+    </button>
+  );
+}
+
+/* Right-aligned lines, because that is the one feature that reads as Arabic
+   at thumbnail size — the glyphs themselves would be illegible. */
+function QuranPreview() {
+  return (
+    <svg viewBox="0 0 120 84" className="kind-svg">
+      <rect x="0" y="0" width="120" height="84" rx="5" className="kp-page" />
+      {[14, 24, 34, 44, 54, 64].map((y, i) => (
+        <rect key={y} x={i % 3 === 2 ? 34 : 20} y={y} rx="1.5"
+              width={i % 3 === 2 ? 66 : 80} height="4" className="kp-line" />
+      ))}
+      <rect x="20" y="8" width="80" height="3" rx="1.5" className="kp-rule" />
+      <circle cx="14" cy="26" r="3" className="kp-mark" />
+      <circle cx="14" cy="46" r="3" className="kp-mark kp-mark--2" />
+    </svg>
+  );
+}
+
+function CanvasPreview() {
+  return (
+    <svg viewBox="0 0 120 84" className="kind-svg">
+      <rect x="0" y="0" width="120" height="84" rx="5" className="kp-page" />
+      <rect x="16" y="16" width="34" height="24" rx="3" className="kp-note" />
+      <rect x="58" y="30" width="42" height="18" rx="3" className="kp-note kp-note--2" />
+      <rect x="26" y="52" width="38" height="18" rx="3" className="kp-note" />
+      <path d="M50 28 L58 38" className="kp-link" />
+      <path d="M45 40 L45 52" className="kp-link" />
+    </svg>
+  );
+}
+
+function BookPreview() {
+  return (
+    <svg viewBox="0 0 120 84" className="kind-svg">
+      <rect x="0" y="0" width="120" height="84" rx="5" className="kp-page" />
+      <rect x="18" y="12" width="38" height="60" rx="3" className="kp-note" />
+      <rect x="64" y="12" width="38" height="60" rx="3" className="kp-note kp-note--2" />
+      {[22, 30, 38, 46].map((y) => (
+        <rect key={y} x="70" y={y} width="26" height="3" rx="1.5" className="kp-line" />
+      ))}
+      <rect x="24" y="22" width="26" height="18" rx="2" className="kp-rule" />
+    </svg>
   );
 }

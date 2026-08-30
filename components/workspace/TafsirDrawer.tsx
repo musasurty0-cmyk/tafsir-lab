@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, useMemo } from "react";
-import { X } from "lucide-react";
+import { X, Maximize2, Minimize2 } from "lucide-react";
 import { TAFSIR_LANGUAGE_NAMES } from "@/lib/tafsir/spa5k-catalog";
 import { useT } from "@/lib/i18n/LocaleProvider";
 import { sanitizeTafsirHtml } from "@/lib/sanitize-html";
@@ -52,6 +52,7 @@ function stripTags(html: string): string {
 
 const LS_SOURCE_KEY = "tl-tafsir-source";
 const LS_LANG_KEY   = "tl-tafsir-lang";
+const LS_EXPANDED_KEY = "tl-tafsir-expanded";
 
 /** "all" or an ISO language code present in the source list. */
 type LangFilter = string;
@@ -272,9 +273,28 @@ export default function TafsirDrawer({ open, verseKey, verses, onClose }: Props)
     { id: "info",         label: "Surah Info" },
   ];
 
+  /* Full-screen is a per-reader habit, not a per-session one: someone who
+     reads tafsir wide wants it wide next time too. Restored in an effect,
+     because reading localStorage during render makes the server and client
+     disagree and React discards the tree on hydration. */
+  const [expanded, setExpanded] = useState(false);
+  useEffect(() => {
+    try { setExpanded(localStorage.getItem(LS_EXPANDED_KEY) === "1"); } catch { /* private mode */ }
+  }, []);
+  const toggleExpanded = useCallback(() => {
+    setExpanded((v) => {
+      try { localStorage.setItem(LS_EXPANDED_KEY, v ? "0" : "1"); } catch { /* private mode */ }
+      return !v;
+    });
+  }, []);
+
   // ── Render ───────────────────────────────────────────────────────────────
   return (
-    <div className="drawer-overlay" data-open={open ? "true" : "false"}>
+    <div
+      className="drawer-overlay"
+      data-open={open ? "true" : "false"}
+      data-expanded={expanded ? "true" : "false"}
+    >
 
       {/* ── Header ── */}
       <div className="drawer-head">
@@ -288,6 +308,15 @@ export default function TafsirDrawer({ open, verseKey, verses, onClose }: Props)
             <div className="drawer-head-ref">Al-Qurʾān {activeAyah}</div>
           )}
         </div>
+        <button
+          className="drawer-close"
+          onClick={toggleExpanded}
+          title={expanded ? "Restore" : "Full screen"}
+          aria-label={expanded ? "Restore Tafsīr panel" : "Expand Tafsīr to full screen"}
+          aria-pressed={expanded}
+        >
+          {expanded ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+        </button>
         <button className="drawer-close" onClick={onClose} title="Close" aria-label="Close Tafsīr">
           <X size={14} />
         </button>

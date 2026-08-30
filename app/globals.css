@@ -13049,3 +13049,142 @@ input, textarea { font: inherit; color: inherit; }
   }
   @keyframes ov-band-fade { from { opacity: 0; } to { opacity: 1; } }
 }
+
+/* ── Tafsīr drawer, full screen ────────────────────────────────────────────
+   Reading several commentaries side by side is the actual job, and a 440px
+   column is a compromise made for the mushaf behind it. When that stops
+   mattering — because the reader has asked for the whole window — the panel
+   takes it.
+
+   The measure does NOT stretch with the panel. Commentary set to a 1900px
+   line length is unreadable in a way that a narrow column never is, so the
+   extra width becomes columns instead: the text keeps a sane measure and the
+   reader gets more of it on screen, which is what they were asking for. */
+
+.drawer-overlay[data-expanded="true"] {
+  width: 100%;
+  border-left: none;
+  z-index: var(--z-drawer);
+}
+
+/* Column count is driven by width, not by a fixed number, so a 1280px laptop
+   gets two and an ultrawide gets three without a separate breakpoint each. */
+.drawer-overlay[data-expanded="true"] .drawer-body {
+  column-width: 34rem;
+  column-gap: var(--sp-7, 40px);
+  column-rule: 1px solid var(--line);
+  padding-inline: max(var(--sp-6, 32px), calc((100% - 108rem) / 2));
+}
+
+/* A verse card broken across a column boundary loses the tie between the
+   Arabic and its commentary, which is the one thing the card exists to keep
+   together. */
+.drawer-overlay[data-expanded="true"] .drawer-verse {
+  break-inside: avoid;
+}
+
+/* The header stops being a narrow stack and becomes a single line, because at
+   full width there is no reason to wrap three fields under each other. */
+.drawer-overlay[data-expanded="true"] .drawer-head {
+  align-items: center;
+  padding-inline: max(var(--sp-6, 32px), calc((100% - 108rem) / 2));
+}
+.drawer-overlay[data-expanded="true"] .drawer-head-text {
+  display: flex; align-items: baseline; gap: var(--sp-3, 12px);
+}
+.drawer-overlay[data-expanded="true"] .drawer-head-sub,
+.drawer-overlay[data-expanded="true"] .drawer-head-ref {
+  margin: 0;
+}
+.drawer-overlay[data-expanded="true"] .drawer-source-bar,
+.drawer-overlay[data-expanded="true"] .drawer-tabs {
+  padding-inline: max(var(--sp-6, 32px), calc((100% - 108rem) / 2));
+}
+
+/* Width is animated with the same curve as the slide, so expanding reads as
+   the same object changing rather than a second panel replacing the first. */
+.drawer-overlay {
+  transition:
+    transform var(--dur-slow) var(--ease-out),
+    width var(--dur-overlay) var(--ease-overlay);
+}
+@media (prefers-reduced-motion: reduce) {
+  .drawer-overlay { transition: opacity var(--dur-mid) var(--ease-soft); }
+}
+
+/* ── Workspace kind cards ──────────────────────────────────────────────────
+   Picking between a mushaf, a canvas and a book is a choice about what the
+   thing will look like, so it is made by looking at three drawings of it
+   rather than reading three labels. */
+
+.kind-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.kind-card {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 3px;
+  padding: 10px 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: color-mix(in oklab, var(--ink) 3%, transparent);
+  cursor: pointer; text-align: left;
+  transition:
+    border-color var(--dur-fast) ease,
+    background   var(--dur-fast) ease,
+    transform    var(--dur-fast) var(--ease-out);
+}
+.kind-card:hover:not(:disabled) {
+  background: var(--hover);
+  border-color: var(--line-strong);
+  transform: translateY(-1px);
+}
+.kind-card[data-active="true"] {
+  border-color: var(--accent);
+  background: color-mix(in oklab, var(--accent) 10%, transparent);
+}
+.kind-card:disabled { opacity: .55; cursor: default; }
+.kind-card:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.kind-preview {
+  display: block; width: 100%; margin-bottom: 7px;
+  border-radius: 7px; overflow: hidden;
+  border: 1px solid var(--line);
+}
+.kind-svg { display: block; width: 100%; height: auto; }
+
+/* Preview parts. Everything is drawn from theme tokens so the thumbnails
+   follow light and dark without a second set of assets. */
+.kp-page  { fill: var(--bg); }
+.kp-line  { fill: var(--ink); opacity: .17; }
+.kp-rule  { fill: var(--accent); opacity: .5; }
+.kp-mark  { fill: var(--accent); opacity: .75; }
+.kp-mark--2 { opacity: .4; }
+.kp-note  { fill: var(--ink); opacity: .1; }
+.kp-note--2 { fill: var(--accent); opacity: .18; }
+.kp-link  { stroke: var(--ink); stroke-width: 1.5; opacity: .25; fill: none; }
+
+.kind-name {
+  font-size: 12.5px; font-weight: 620; color: var(--ink);
+}
+.kind-caption {
+  font-size: 11px; color: var(--ink-4); line-height: 1.45;
+}
+
+/* Below ~520px three cards each become too narrow to show anything, so the
+   drawing stops earning its place and they stack as rows instead. */
+@media (max-width: 560px) {
+  .kind-row { grid-template-columns: 1fr; }
+  .kind-card { flex-direction: row; align-items: center; gap: 10px; }
+  .kind-preview { width: 74px; flex: none; margin-bottom: 0; }
+  .kind-card > .kind-name { flex: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kind-card:hover:not(:disabled) { transform: none; }
+}

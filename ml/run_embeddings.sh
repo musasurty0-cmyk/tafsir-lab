@@ -14,6 +14,10 @@ export DATABASE_URL="$(grep -m1 '^DATABASE_URL=' .env | cut -d= -f2- | sed 's/^[
 
 start=$(date +%s)
 while read -r slug; do
+  # Strip a trailing CR. The editions list is written by Python on Windows, so
+  # it arrives CRLF; without this the slug carries an invisible , matches no
+  # source, and every edition reports "0 entries -> 0 chunks" as a success.
+  slug="${slug%$''}"
   [ -z "$slug" ] && continue
   echo ""
   echo "================================================================"
@@ -24,3 +28,12 @@ while read -r slug; do
 done < ml/EMBED_EDITIONS.txt
 echo ""
 echo "ALL EDITIONS FINISHED in $(( ($(date +%s) - start) / 60 )) min"
+python - <<'CHECK'
+import os, psycopg2
+c = psycopg2.connect(os.environ["DATABASE_URL"], connect_timeout=30); cur = c.cursor()
+cur.execute('SELECT count(*), count(embedding) FROM "TafsirChunk"')
+n, e = cur.fetchone()
+print("chunks %s | embedded %s" % (n, e))
+cur.execute("SELECT pg_size_pretty(pg_database_size(current_database()))")
+print("database:", cur.fetchone()[0], "of 500 MB")
+CHECK
