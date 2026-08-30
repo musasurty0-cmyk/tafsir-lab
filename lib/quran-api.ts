@@ -81,7 +81,7 @@ export async function fetchWordDetails(wordKey: string) {
   // wordKey format: "surahId:verseId:wordPosition"
   const [surahId, verseId, position] = wordKey.split(":").map(Number);
   const res = await fetch(
-    `${BASE}/verses/by_key/${surahId}:${verseId}?language=en&words=true&translations=20&fields=text_uthmani&word_fields=text_uthmani,transliteration,text_indopak`,
+    `${BASE}/verses/by_key/${surahId}:${verseId}?language=en&words=true&translations=20&fields=text_uthmani&word_fields=text_uthmani,transliteration`,
     { next: { revalidate: 86400 } }
   );
   if (!res.ok) throw new Error(`word fetch failed: ${res.status}`);

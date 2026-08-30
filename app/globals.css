@@ -9042,46 +9042,11 @@ input, textarea { font: inherit; color: inherit; }
    Was a bordered, tinted, fully rounded tray of pills — 33 outlined buttons
    competing with the content tabs directly beneath them. Now plain text with
    a single restrained active state, so the tabs remain the louder control. */
-.drawer-lang-chips {
-  display: inline-flex;
-  align-items: baseline;
-  gap: var(--sp-3);
-  padding: 0;
-  background: none;
-  border: 0;
-  border-radius: 0;
-  /* 33 languages — scroll horizontally rather than overflow the bar. */
-  flex: 1 1 auto;
-  min-width: 0;
-  overflow-x: auto;
-  scrollbar-width: none;
-  white-space: nowrap;
-}
-.drawer-lang-chips::-webkit-scrollbar { display: none; }
-.drawer-lang-chip {
-  flex: none;
-  padding: 2px 0;
-  border: 0; border-radius: 0; background: none;
-  font-size: 11.5px;
-  font-weight: 400;
-  letter-spacing: 0;
-  color: var(--ink-3);
-  transition: color var(--dur-fast) ease;
-}
-.drawer-lang-chip:hover { color: var(--ink-2); }
+
+
 /* Tone and weight, not a fill: the accent is reserved for the tab underline
    and the active ayah tick. */
-.drawer-lang-chip[data-active="true"] {
-  background: none;
-  box-shadow: none;
-  color: var(--ink);
-  font-weight: 500;
-}
-.drawer-lang-chip:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-  border-radius: var(--radius-sm);
-}
+
 
 /* Source picker — quiet text with a chevron, not a form input. */
 .drawer-source-select-wrap {
@@ -11271,7 +11236,7 @@ input, textarea { font: inherit; color: inherit; }
 .hr-item-sub  { font-size: 13px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
 .hr-item-at   { grid-row: 1 / span 2; align-self: center; font-size: 11.5px; color: var(--ink-4); }
 
-/* ── Study with AI ─────────────────────────────────────────────────────── */
+/* ── Lab AI banner (dashboard) ─────────────────────────────────────────── */
 
 .ai-banner {
   width: 100%;
@@ -12119,7 +12084,7 @@ input, textarea { font: inherit; color: inherit; }
 
 .sv { display: flex; flex-direction: column; gap: var(--sp-4); padding: var(--sp-5); }
 
-.sv-picker { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
+
 .sv-chip {
   padding: 7px 15px;
   border-radius: 999px;
@@ -12173,9 +12138,6 @@ input, textarea { font: inherit; color: inherit; }
   font-variant-numeric: tabular-nums;
   vertical-align: middle;
 }
-
-/* Tajweed colours. Conventional hues — a reader who has seen a printed
-   tajweed mushaf should recognise them without consulting the legend. */
 
 /* ── Boards sidebar (inside a board) ─────────────────────────────────────── */
 
