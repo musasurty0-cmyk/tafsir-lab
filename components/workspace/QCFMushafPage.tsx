@@ -25,6 +25,7 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState, useLayoutEffect} from "react";
 import type { QCFVerse, Chapter } from "@/lib/types";
 import { loadQCFFont } from "@/lib/qcf-font";
+import { Info, Pencil } from "lucide-react";
 
 // ── Props ───────────────────────────────────────────────────────────────────
 
@@ -402,41 +403,49 @@ function QCFMushafPage({
       {/* ── Surah header — on EVERY page, so you always know which surah you
              are reading. Only the basmala is limited to the opening page. ── */}
       <div className="qcf-surah-header">
-          <div className="qcf-surah-ornament">
-            {/* In Reading Mode the title is the door into Study Mode — it is
-                the one affordance on an otherwise inert page. In Study Mode
-                it is plain text again, since the workspace is already open. */}
+          {/* One bar, read right to left on this RTL page: the Arabic name
+              plate, the basmala, then the Latin gloss. DOM order is that
+              order — first child sits rightmost. */}
+          <div className="qcf-surah-bar">
+            {/* In Reading Mode the name plate is the door into Study Mode —
+                the one affordance on an otherwise inert page, and the pencil
+                is what says so. In Study Mode it is plain text again, since
+                the workspace is already open. */}
             {studyMode ? (
-              <span className="qcf-surah-name">
-                {chapter.name_arabic}
-                <span className="qcf-surah-name-en" dir="ltr">{chapter.name_simple}</span>
-              </span>
+              <span className="qcf-plate">{chapter.name_arabic}</span>
             ) : (
               <button
                 type="button"
-                className="qcf-surah-name qcf-surah-name--btn"
+                className="qcf-plate qcf-plate--btn"
                 onClick={onEnterStudy}
                 onMouseDown={(e) => e.stopPropagation()}
                 onPointerDown={(e) => e.stopPropagation()}
                 title="Open study notes"
               >
                 {chapter.name_arabic}
-                {/* dir="ltr" so the Latin name is not reordered by the RTL page. */}
-                <span className="qcf-surah-name-en" dir="ltr">{chapter.name_simple}</span>
-                <span className="qcf-surah-caret" aria-hidden>▾</span>
+                <Pencil size={13} aria-hidden className="qcf-plate-pen" />
               </button>
             )}
+
+            {/* Unicode, not glyph codes — so it is set in the Qur'anic text
+                face rather than the page font, which only renders code_v2. */}
+            {isSurahStart && chapter.bismillah_pre && (
+              <span className="qcf-bar-basmala" dir="rtl">
+                بِسۡمِ ٱللَّهِ ٱلرَّحۡمَـٰنِ ٱلرَّحِيمِ
+              </span>
+            )}
+
+            {/* dir="ltr" so the Latin name is not reordered by the RTL page. */}
+            <span className="qcf-bar-en" dir="ltr">
+              <Info size={12.5} aria-hidden />
+              {chapter.name_simple}
+            </span>
           </div>
           {/* Reading Mode only: the surah name is the way in, but nothing says
               so. Sits under the heading, never over the text, and disappears
               the moment Study Mode opens. */}
           {!studyMode && (
             <div className="qcf-read-hint">Press the Surah name to start studying</div>
-          )}
-          {isSurahStart && chapter.bismillah_pre && (
-            <div className="qcf-basmala">
-              بِسۡمِ ٱللَّهِ ٱلرَّحۡمَـٰنِ ٱلرَّحِيمِ
-            </div>
           )}
       </div>
 

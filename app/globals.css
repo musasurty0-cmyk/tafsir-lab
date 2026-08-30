@@ -3098,6 +3098,64 @@ input, textarea { font: inherit; color: inherit; }
   color:           var(--paper-ink);
 }
 
+/* ── Surah bar ─────────────────────────────────────────────────────────────
+   One capsule holding the whole heading: the Arabic name plate, the basmala,
+   and the Latin gloss. It used to be three stacked things — a nameplate, a
+   hint line, then the basmala on its own — which took four times the vertical
+   room above the first line of Qur'an. */
+.qcf-surah-bar {
+  display: inline-flex;
+  align-items: center;
+  gap: 16px;
+  padding: 7px 10px 7px 16px;
+  border: 1px solid var(--paper-line);
+  border-radius: 999px;
+  background: var(--paper-wash);
+  max-width: 100%;
+}
+
+/* The basmala. Unicode text, so it takes the Qur'anic reading face — the
+   mushaf page fonts render code_v2 and nothing else. */
+.qcf-bar-basmala {
+  font-family: var(--font-arabic);
+  font-size: 19px;
+  line-height: 1.6;
+  color: var(--paper-ink);
+  white-space: nowrap;
+}
+
+/* The Latin gloss, with its marker. Set in the UI face and quieter: it names
+   the surah, it is not a second title competing with the Arabic. */
+.qcf-bar-en {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--font-sans);
+  font-size: 12.5px; font-weight: 500; letter-spacing: 0.01em;
+  color: color-mix(in srgb, var(--paper-ink) 58%, transparent);
+  white-space: nowrap;
+}
+.qcf-bar-en svg { flex: none; opacity: 0.75; }
+
+/* The name plate — a rounded rectangle inside the capsule, so the name reads
+   as the labelled thing rather than as one more item in a row. */
+.qcf-plate {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 5px 13px;
+  font-family: var(--font-arabic);
+  font-size: 18px; font-weight: 600; line-height: 1.5;
+  color: var(--paper-ink);
+  background: color-mix(in srgb, var(--paper-ink) 7%, transparent);
+  border: 0; border-radius: var(--radius-md);
+  white-space: nowrap;
+}
+.qcf-plate--btn {
+  appearance: none; cursor: pointer;
+  transition: background var(--dur-hover) var(--ease-soft);
+}
+.qcf-plate--btn:hover { background: color-mix(in srgb, var(--paper-ink) 13%, transparent); }
+/* The pencil is what says the plate opens study mode. */
+.qcf-plate-pen { flex: none; opacity: 0.6; }
+.qcf-plate--btn:hover .qcf-plate-pen { opacity: 1; }
+
 .qcf-surah-name {
   font-family: var(--font-arabic);
   font-size:   18px;
