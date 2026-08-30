@@ -92,6 +92,11 @@ function loadTweaks(): TweaksState {
 
 // ── Component ─────────────────────────────────────────────────────────────
 
+/** How long a locally created page is kept even if the server has not
+ *  returned it yet. Long enough to outlast a read-after-write race,
+ *  short enough that a page deleted elsewhere still disappears. */
+const KEEP_UNCONFIRMED_MS = 30_000;
+
 export default function WorkspacePageView({
   workspaceId,
   workspace,
@@ -152,17 +157,18 @@ export default function WorkspacePageView({
      whatever list it was first mounted with. A page created in one view could
      then vanish when you came back to it, and renames made elsewhere never
      appeared. Compared by id+title so an identical list does not churn state
-     on every render. */
-  /* Pages this client created that the server may not have returned yet, with
-     the moment each was added. The previous version kept only rows still
-     flagged `pending`, which are the OPTIMISTIC ones — but a successful create
-     replaces its optimistic row with a real, unflagged one and then navigates.
-     If that navigation's payload was read before the insert was visible (a
-     pooled connection makes read-after-write a real race), the new page was in
-     neither `pages` nor the pending set, and this effect deleted it. That is
+     on every render.
+
+     Pages this client created are shielded from that re-sync for a short
+     window. The earlier version shielded only rows still flagged `pending`,
+     which are the OPTIMISTIC ones — but a successful create replaces its
+     optimistic row with a real, unflagged one and then navigates. When that
+     navigation's payload was read before the insert became visible (a pooled
+     connection makes read-after-write a genuine race) the new page was in
+     neither the payload nor the pending set, and the sync deleted it. That is
      the "I made a page and the last one vanished" report. */
-  const recentlyCreated = useRef(new Map<string, number>());
-  const KEEP_UNCONFIRMED_MS = 30_000;
+  const recentlyCreated = useRef<Map<string, number>>(null!);
+  recentlyCreated.current ??= new Map();
 
   const pageCreated = useCallback((page: PageSummary) => {
     recentlyCreated.current.set(page.id, Date.now());
@@ -171,20 +177,22 @@ export default function WorkspacePageView({
 
   const pagesKey = pages.map((p) => `${p.id}:${p.title}`).join("|");
   useEffect(() => {
+    /* Pruned out here rather than inside the updater below: a state updater
+       must be pure, and React may call it more than once for a single update.
+       Stop shielding a page once the server acknowledges it, or the window
+       lapses — shielding forever would mean a page deleted on another device
+       could never disappear here. */
+    const serverIds = new Set(pages.map((p) => p.id));
+    const now = Date.now();
+    for (const [id, at] of recentlyCreated.current) {
+      if (serverIds.has(id) || now - at > KEEP_UNCONFIRMED_MS) {
+        recentlyCreated.current.delete(id);
+      }
+    }
+
     setPageList((prev) => {
       const prevKey = prev.map((p) => `${p.id}:${p.title}`).join("|");
       if (prevKey === pagesKey) return prev;
-
-      const serverIds = new Set(pages.map((p) => p.id));
-      const now = Date.now();
-
-      /* Once the server acknowledges a page, stop shielding it — otherwise a
-         page deleted on another device could never disappear here. */
-      for (const [id, at] of recentlyCreated.current) {
-        if (serverIds.has(id) || now - at > KEEP_UNCONFIRMED_MS) {
-          recentlyCreated.current.delete(id);
-        }
-      }
 
       const unconfirmed = prev.filter((p) =>
         !serverIds.has(p.id) &&
