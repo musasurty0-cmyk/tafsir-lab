@@ -275,6 +275,9 @@ export async function POST(req: NextRequest) {
           sources: {
             searched: trace.sourcesSearched,
             semantic: trace.semanticCount,
+            /* How close the nearest passage actually was. Hit count cannot
+               answer that — a vector space always has a nearest neighbour. */
+            best:     trace.semanticBest,
             lexical:  trace.lexicalCount,
             hits: hits.map((h) => ({
               sourceName: h.sourceName, sourceSlug: h.sourceSlug,
