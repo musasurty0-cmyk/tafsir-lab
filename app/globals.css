@@ -12928,7 +12928,16 @@ input, textarea { font: inherit; color: inherit; }
 .lab-send:disabled { opacity: 0.4; cursor: default; }
 
 @media (prefers-reduced-motion: reduce) {
-  .lab, .lab-bubble, .lab-empty, .lab-suggest button { animation: none; }
+  /* Fade, not nothing — the same call the drawer makes a few thousand lines
+     up. What is worth suppressing is the travel; removing the transition
+     entirely makes a panel snap into place and read as a rendering glitch.
+     The thinking dots do stop moving: they are a decorative loop with no
+     start and no end, which is exactly what this preference is asking about,
+     and the word "Thinking" beside them already says it. */
+  .lab, .lab-bubble, .lab-empty, .lab-suggest button {
+    animation: lab-fade-in 160ms var(--ease-soft) both;
+  }
+  @keyframes lab-fade-in { from { opacity: 0; } to { opacity: 1; } }
   .lab-dots i { animation: none; opacity: .5; }
 }
 
