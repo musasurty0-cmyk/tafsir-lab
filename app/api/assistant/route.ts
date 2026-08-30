@@ -56,6 +56,24 @@ const TRANSLATE_LIMIT = 3;
    Notes keep a reserved share, so a full slate of tafsīr hits cannot crowd
    out the reader's own writing on their own page. */
 /**
+ * What to tell the reader when generation fails.
+ *
+ * "The model did not answer" is true and useless. The free tier allows 8,000
+ * tokens a minute, so the overwhelmingly common failure is asking a second
+ * question too quickly — which is a wait, not a fault, and the reader can act
+ * on knowing that. Everything else stays generic on purpose: the specific
+ * error text belongs in `reason`, for whoever is reading a trace, not in a
+ * line addressed to someone studying.
+ */
+function generationFailure(err: unknown): string {
+  const msg = err instanceof Error ? err.message : String(err);
+  if (/429|rate.?limit/i.test(msg)) {
+    return "Lab AI is at its limit for the moment — quoting the passages instead. Try again in a minute.";
+  }
+  return "The model did not answer — quoting the passages instead";
+}
+
+/**
  * The sūrah name the client says is open, made safe to put in a prompt.
  *
  * It lands in the SYSTEM message, which is the one place a caller must not be
@@ -231,7 +249,7 @@ export async function POST(req: NextRequest) {
                  half-written greeting. */
               send({
                 step: "answer", state: "degraded",
-                detail: "The model did not answer",
+                detail: generationFailure(err).replace(" — quoting the passages instead", ""),
                 reason: err instanceof Error ? err.message : String(err),
               });
             }
@@ -338,7 +356,7 @@ export async function POST(req: NextRequest) {
                is the least trustworthy thing this app could show. */
             send({
               step: "answer", state: "degraded",
-              detail: "The model did not answer — quoting the passages instead",
+              detail: generationFailure(err),
               reason: err instanceof Error ? err.message : String(err),
             });
             const selected = selectSentences(q, passages, { max: 6, perSource: 2 });
