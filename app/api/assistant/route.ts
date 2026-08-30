@@ -55,6 +55,20 @@ const TRANSLATE_LIMIT = 3;
 
    Notes keep a reserved share, so a full slate of tafsīr hits cannot crowd
    out the reader's own writing on their own page. */
+/**
+ * The sūrah name the client says is open, made safe to put in a prompt.
+ *
+ * It lands in the SYSTEM message, which is the one place a caller must not be
+ * able to write freely: newlines let it fake the turn structure, and there was
+ * no length bound at all while every other client-supplied string here is
+ * capped. A sūrah name is at most a few words.
+ */
+function placeName(v: unknown): string | undefined {
+  if (typeof v !== "string") return undefined;
+  const clean = v.replace(/\s+/g, " ").trim().slice(0, 60);
+  return clean.length ? clean : undefined;
+}
+
 const LLM_MAX_PASSAGES  = 6;
 const LLM_NOTE_SLOTS    = 2;
 const LLM_MAX_CHARS_EACH = 900;
@@ -206,7 +220,7 @@ export async function POST(req: NextRequest) {
             let spoke = false;
             try {
               for await (const piece of LLM.converse(q, history, {
-                surahName: typeof body.surahName === "string" ? body.surahName : undefined,
+                surahName: placeName(body.surahName),
                 verseKey,
               })) {
                 spoke = true;
