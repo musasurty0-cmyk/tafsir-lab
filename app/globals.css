@@ -3113,9 +3113,12 @@ input, textarea { font: inherit; color: inherit; }
   width: min(480px, 100%);
   justify-content: space-between;
   gap: 16px;
-  padding: 7px 10px;
+  padding: 8px 10px;
   border: 1px solid var(--paper-line);
-  border-radius: 999px;
+  /* A rounded rectangle, not a capsule. 999px made the ends semicircular,
+     which reads as a pill or a status chip; the reference is squarer than
+     that, and so is a nameplate. */
+  border-radius: var(--radius-lg);
   background: var(--paper-wash);
 }
 /* Al-Fatihah has no separate basmala — its own first verse is the basmala —
@@ -3151,7 +3154,9 @@ input, textarea { font: inherit; color: inherit; }
    as the labelled thing rather than as one more item in a row. */
 .qcf-plate {
   display: inline-flex; align-items: center; gap: 8px;
-  padding: 5px 13px;
+  /* Squarer than the bar around it, so the two curves nest rather than
+     echoing each other. */
+  padding: 6px 13px;
   font-family: var(--font-arabic);
   font-size: 18px; font-weight: 600; line-height: 1.5;
   color: var(--paper-ink);
