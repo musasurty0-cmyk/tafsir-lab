@@ -303,7 +303,7 @@ function QCFMushafPage({
   // object per word — several hundred per page — and it used to run on EVERY
   // render, including every frame of a zoom gesture, where none of its inputs
   // had changed.
-  const { sortedLines, isSurahStart, shortLines } = useMemo(() => {
+  const { sortedLines, shortLines } = useMemo(() => {
     const lineMap = new Map<number, WordEntry[]>();
     let lineCounter = 0;
 
@@ -350,12 +350,6 @@ function QCFMushafPage({
     return {
       shortLines,
       sortedLines: ordered,
-      /* True only on the surah's OPENING page. The name label shows on every
-         page; the basmala belongs to the surah's start, not to each sheet. */
-      isSurahStart: verses.some((v) => {
-        const [sId, vNum] = v.verse_key.split(":").map(Number);
-        return sId === chapter.id && vNum === 1;
-      }),
     };
   }, [verses, pageNumber, chapter.id, chapter.verses_count]);
 
@@ -427,9 +421,14 @@ function QCFMushafPage({
               </button>
             )}
 
-            {/* Unicode, not glyph codes — so it is set in the Qur'anic text
+            {/* On every page of the surah, not only its opening one. The bar
+                is a persistent header naming where you are, and the basmala
+                is part of that identity — gating it on the first sheet left
+                the heading a different shape on page 2 than on page 1.
+
+                Unicode, not glyph codes, so it is set in the Qur'anic text
                 face rather than the page font, which only renders code_v2. */}
-            {isSurahStart && chapter.bismillah_pre && (
+            {chapter.bismillah_pre && (
               <span className="qcf-bar-basmala" dir="rtl">
                 بِسۡمِ ٱللَّهِ ٱلرَّحۡمَـٰنِ ٱلرَّحِيمِ
               </span>
