@@ -335,6 +335,74 @@ export async function* converse(
  * "never", and an answer carrying [7] when only six passages were supplied is
  * exactly the failure a reader cannot detect on their own.
  */
+/**
+ * Is this a message to answer, or a corpus to search?
+ *
+ * The conversational reply used to trigger on retrieving nothing, which worked
+ * only while retrieval was lexical. Semantic search has no such thing as "no
+ * results": it returns its nearest neighbours, and a vector space always has
+ * some. So "hello" arrives with twelve passages attached and the assistant
+ * dutifully reports that they do not address it.
+ *
+ * A distance threshold looked like the obvious fix and does not survive
+ * measurement. Nearest-hit cosine distance on the deployed corpus:
+ *
+ *     what does the Qur'an say about patience in hardship   0.110
+ *     what does al-Ṭabarī say about the opening of al-Fātiḥa 0.122
+ *     HELLO                                                  0.144
+ *     thanks, that was helpful                               0.149
+ *     how do I keep going when everything falls apart        0.151
+ *
+ * The genuinely semantic question sits FARTHER from its answer than the
+ * greeting does, so every cutoff that rejects small talk also rejects the one
+ * capability worth having. e5 puts all short English text in much the same
+ * neighbourhood; the distance simply does not carry this signal.
+ *
+ * Asking is cheap and reliable. It runs alongside retrieval rather than before
+ * it, so a real question waits for nothing, and it fails towards LOOKUP: a
+ * wrong CHAT costs the reader their answer, a wrong LOOKUP costs one search
+ * nobody sees.
+ */
+const INTENT_SYSTEM = `Decide whether the reader's message asks for something from the Qur'an or its commentary, or is ordinary conversation.
+
+Reply with exactly one word: LOOKUP or CHAT.
+
+CHAT — greetings, farewells, thanks, acknowledgements ("ok", "got it", "nice"), and questions about you or what you are able to do.
+
+LOOKUP — anything that wants an answer out of the text: a verse, a sūrah, a scholar, a theme, a word. This includes vague questions, questions about living that expect scripture to answer them, and follow-ups to what you just said.
+
+If you are not sure, reply LOOKUP.`;
+
+export async function isSmallTalk(
+  question: string, history: ChatTurn[] = [],
+): Promise<boolean> {
+  if (provider() === "none") return false;
+
+  const messages = [
+    { role: "system", content: INTENT_SYSTEM },
+    /* One prior turn, so "yes, go on" is read as a follow-up rather than as
+       small talk. More than one is noise for a single-word decision. */
+    ...history.slice(-1).map((t) => ({ role: t.role, content: t.content.slice(0, 300) })),
+    { role: "user", content: question.slice(0, 500) },
+  ];
+
+  try {
+    let out = "";
+    for await (const piece of dispatch(messages)) {
+      out += piece;
+      if (out.length > 200) break;
+    }
+    const said = out.toUpperCase();
+    /* Some models narrate before answering, so look for the word rather than
+       demanding the whole reply be it — and require CHAT to appear alone,
+       since a hedged answer naming both should search. */
+    return said.includes("CHAT") && !said.includes("LOOKUP");
+  } catch {
+    // A classifier that fails must not cost anyone their answer.
+    return false;
+  }
+}
+
 export function checkCitations(text: string, passages: Passage[]): {
   cited: number[]; invalid: number[]; uncited: boolean;
 } {

@@ -267,11 +267,22 @@ export async function POST(req: NextRequest) {
 
         // ── 3. Retrieve ──────────────────────────────────────────────────
         send({ step: "search", detail: "Searching the tafsīr corpus" });
-        const { hits, trace } = await Search.search(q, embedding, {
-          sources, verseKey, surah, limit: 12,
-        });
+        /* Classified alongside retrieval rather than before it, so a real
+           question waits no longer than the search it was going to do anyway.
+           The result is discarded for anything that turns out to be a lookup. */
+        const [{ hits, trace }, smallTalk] = await Promise.all([
+          Search.search(q, embedding, { sources, verseKey, surah, limit: 12 }),
+          LLM.isSmallTalk(q, history),
+        ]);
 
-        send({
+        /* Two different things the reader experiences identically: nothing was
+           found, or nothing was being looked for. Both mean talk back. */
+        const conversational = smallTalk || hits.length === 0;
+
+        /* Not sent for small talk. "Searched 12 sources" under a reply to
+           "thanks" is the same mistake as answering it from the passages —
+           reporting a search nobody asked for. */
+        if (!conversational) send({
           sources: {
             searched: trace.sourcesSearched,
             semantic: trace.semanticCount,
@@ -287,17 +298,15 @@ export async function POST(req: NextRequest) {
           },
         });
 
-        if (hits.length === 0) {
-          /* Retrieving nothing is the right answer to some questions and a
-             broken one to "hello". An assistant that meets a greeting with
-             "nothing in the corpus matched that" is not being careful; it has
-             simply mistaken every message for a lookup. So hand it to the
-             model in conversational mode, which may talk but may not teach:
-             it has no passages here, so it is forbidden to explain a verse or
-             report what a scholar held. */
+        if (conversational) {
+          /* Conversational mode may talk but may not teach: it is given no
+             passages, so it cannot explain a verse or report what a scholar
+             held, and the instruction it runs under says so. */
           const chatMode = LLM.provider();
           if (chatMode !== "none") {
-            send({ step: "answer", detail: "Nothing matched — replying directly" });
+            send({ step: "answer", detail: smallTalk
+              ? "Replying directly"
+              : "Nothing matched — replying directly" });
             send({ answerStart: { mode: chatMode, cites: [] } });
 
             let spoke = false;
