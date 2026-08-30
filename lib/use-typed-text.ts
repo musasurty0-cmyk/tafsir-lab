@@ -34,6 +34,14 @@ const DRAIN_MS = 220;
 const MIN_CPS = 180;
 /** Fast enough that a long answer is never held back. */
 const MAX_CPS = 1400;
+/**
+ * How long to wait for a frame before giving up on the effect and showing the
+ * text outright. requestAnimationFrame does not run in a backgrounded tab, and
+ * does not run at all in some embedded webviews — without this, a reader who
+ * switches tabs mid-answer comes back to an empty bubble with a cursor in it.
+ * Losing the animation is a disappointment; losing the answer is a bug.
+ */
+const NO_FRAME_MS = 1200;
 
 export function useTypedText(full: string, live: boolean): string {
   const [count, setCount] = useState(() => (live ? 0 : full.length));
@@ -41,13 +49,27 @@ export function useTypedText(full: string, live: boolean): string {
   const countRef = useRef(count);
   const targetRef = useRef(full.length);
   const rafRef = useRef(0);
+  const watchdogRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   /* Whether this text was ever streamed. A turn read back from localStorage
      arrives complete and must render complete. */
   const everLive = useRef(live);
 
   const finish = useCallback((n: number) => {
+    if (watchdogRef.current) { clearTimeout(watchdogRef.current); watchdogRef.current = null; }
     countRef.current = n;
     setCount(n);
+  }, []);
+
+  /** Restarted by every frame, so it only fires when frames have stopped. */
+  const armWatchdog = useCallback(() => {
+    if (watchdogRef.current) clearTimeout(watchdogRef.current);
+    watchdogRef.current = setTimeout(() => {
+      watchdogRef.current = null;
+      if (countRef.current < targetRef.current) {
+        countRef.current = targetRef.current;
+        setCount(targetRef.current);
+      }
+    }, NO_FRAME_MS);
   }, []);
 
   const ensureLoop = useCallback(() => {
@@ -73,13 +95,18 @@ export function useTypedText(full: string, live: boolean): string {
 
       /* Stop when caught up rather than idling a frame loop per turn. A later
          token restarts it through the effect below. */
-      rafRef.current = countRef.current < targetRef.current
-        ? requestAnimationFrame(tick)
-        : 0;
+      if (countRef.current < targetRef.current) {
+        rafRef.current = requestAnimationFrame(tick);
+        armWatchdog();
+      } else {
+        rafRef.current = 0;
+        if (watchdogRef.current) { clearTimeout(watchdogRef.current); watchdogRef.current = null; }
+      }
     };
 
     rafRef.current = requestAnimationFrame(tick);
-  }, []);
+    armWatchdog();
+  }, [armWatchdog]);
 
   useEffect(() => {
     if (live) everLive.current = true;
@@ -95,7 +122,10 @@ export function useTypedText(full: string, live: boolean): string {
     if (countRef.current < target) ensureLoop();
   }, [full, live, ensureLoop, finish]);
 
-  useEffect(() => () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); }, []);
+  useEffect(() => () => {
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    if (watchdogRef.current) clearTimeout(watchdogRef.current);
+  }, []);
 
   return count >= full.length ? full : full.slice(0, count);
 }
