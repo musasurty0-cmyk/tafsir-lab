@@ -1,17 +1,23 @@
 """
 Tafsir Lab model service — a Hugging Face Space on the free CPU tier.
 
-Two jobs, and deliberately only two:
+Three jobs:
 
     POST /embed      a question -> a 384-dim vector, to search with
     POST /translate  Arabic     -> English
+    POST /chat       passages + question -> a grounded answer
 
-Both are small enough to be fast on two shared vCPUs. What is NOT here is a
-chat model: a 7B would not fit in this tier's memory and would take tens of
-seconds per reply if it did. That absence is the design, not a gap — the
-assistant answers by QUOTING retrieved passages, so the only generation
-anywhere in the system is machine translation of text that already exists.
-Nothing here can invent a tafsir.
+The chat model is a BASE instruct model, not a fine-tune, and that is the
+important decision. Fine-tuning on tafsir would teach it to write LIKE
+al-Tabari, which is how invented commentary ends up attributed to a named
+scholar; it also cannot cite, because weights carry no provenance. Here the
+model never answers from what it knows — it is handed passages retrieved from
+the corpus and asked to read them. The facts come from the database; only the
+prose comes from the model.
+
+Qwen2.5-3B-Instruct at Q4_K_M is about 2 GB and runs on this tier's two shared
+vCPUs at a few tokens a second. Slow, and honestly so; set TAFSIR_LLM_REPO to
+the 1.5B build to trade quality for speed.
 
 Models are loaded lazily and cached. A free Space sleeps when idle, so the
 first request after a nap pays the load cost; every one after it is warm.
@@ -32,11 +38,17 @@ EMBED_MODEL = "intfloat/multilingual-e5-small"
 # to track the source.
 TRANSLATE_MODEL = "Helsinki-NLP/opus-mt-ar-en"
 
+# A base instruct model, quantised. Overridable so the 1.5B can be swapped in
+# on a slower box without editing code.
+LLM_REPO = os.environ.get("TAFSIR_LLM_REPO", "Qwen/Qwen2.5-3B-Instruct-GGUF")
+LLM_FILE = os.environ.get("TAFSIR_LLM_FILE", "qwen2.5-3b-instruct-q4_k_m.gguf")
+
 # Shared, because Gradio serves requests on threads and loading the same model
 # twice on a 16 GB box is how a free Space starts OOMing.
 _lock = threading.Lock()
 _embedder = None
 _translator = None
+_llm = None
 
 
 def embedder():
@@ -82,6 +94,54 @@ def embed(text: str) -> dict:
 _SENTENCE_SPLIT = re.compile(r"(?<=[.!؟۔?])\s+")
 
 
+def llm():
+    """
+    Load the GGUF model once.
+
+    n_ctx is 4096 because the prompt carries several retrieved passages and a
+    few turns of conversation; 2048 truncates the passages, which would mean
+    the model answering from less than it was given without saying so.
+    """
+    global _llm
+    with _lock:
+        if _llm is None:
+            from llama_cpp import Llama
+            _llm = Llama.from_pretrained(
+                repo_id=LLM_REPO,
+                filename=LLM_FILE,
+                n_ctx=4096,
+                n_threads=int(os.environ.get("LLM_THREADS", "2")),
+                verbose=False,
+            )
+    return _llm
+
+
+def chat(messages_json: str) -> str:
+    """
+    Answer from the supplied passages.
+
+    Takes the full message list as JSON so the instruction, the conversation so
+    far and the passages arrive exactly as the app composed them — the prompt is
+    written once, in the app, rather than half here and half there where the two
+    halves could drift apart.
+    """
+    import json
+    try:
+        messages = json.loads(messages_json)
+    except Exception:
+        return "Could not read the request."
+
+    if not isinstance(messages, list) or not messages:
+        return "Could not read the request."
+
+    out = llm().create_chat_completion(
+        messages=messages,
+        temperature=0.2,      # low: this is reading, not composing
+        max_tokens=800,
+    )
+    return out["choices"][0]["message"]["content"].strip()
+
+
 def translate(text: str) -> dict:
     text = (text or "").strip()
     if not text:
@@ -123,17 +183,20 @@ def health() -> dict:
         "translate_model": TRANSLATE_MODEL,
         # Reported so the caller can tell a cold Space from a warm one rather
         # than guessing from latency.
+        "llm_model": LLM_REPO,
         "embed_loaded": _embedder is not None,
         "translate_loaded": _translator is not None,
+        "llm_loaded": _llm is not None,
     }
 
 
-with gr.Blocks(title="Tafsir Lab models") as demo:
+with gr.Blocks(title="Tafsir Lab - model service") as demo:
     gr.Markdown(
-        "## Tafsir Lab — model service\n"
-        "Embeddings and Arabic→English translation. No chat model, on purpose: "
-        "the assistant answers by quoting retrieved passages, so nothing here "
-        "generates tafsīr."
+        "## Tafsir Lab - model service\n"
+        "Embeddings, Arabic to English translation, and a grounded chat model.\n\n"
+        "The chat model is a **base instruct model, not a fine-tune**. It never "
+        "answers from what it knows: it is handed passages retrieved from the "
+        "tafsir corpus and asked to read them, and it must cite each claim."
     )
 
     with gr.Tab("Embed"):
@@ -145,6 +208,15 @@ with gr.Blocks(title="Tafsir Lab models") as demo:
         a = gr.Textbox(label="Arabic", lines=6)
         to = gr.JSON(label="English")
         gr.Button("Translate").click(translate, a, to, api_name="translate")
+
+    with gr.Tab("Chat"):
+        gr.Markdown(
+            "Takes the full message list as JSON. The app composes the prompt; "
+            "this only runs it."
+        )
+        m = gr.Textbox(label="messages (JSON)", lines=8)
+        co = gr.Textbox(label="Answer", lines=10)
+        gr.Button("Answer").click(chat, m, co, api_name="chat")
 
     with gr.Tab("Health"):
         ho = gr.JSON(label="Status")

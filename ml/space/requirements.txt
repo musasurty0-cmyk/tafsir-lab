@@ -7,3 +7,9 @@ transformers>=4.44,<5
 torch>=2.2,<3
 sentencepiece>=0.2,<1
 sacremoses>=0.1,<1
+
+# The GGUF runtime. Prebuilt CPU wheels exist for the versions below, which
+# matters on a free Space: building llama.cpp from source there exceeds the
+# build timeout.
+llama-cpp-python>=0.3.2,<0.4
+huggingface-hub>=0.25,<1

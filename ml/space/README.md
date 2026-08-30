@@ -1,41 +1,51 @@
----
-title: Tafsir Lab Models
-emoji: 📖
-colorFrom: green
-colorTo: gray
-sdk: gradio
-app_file: app.py
-pinned: false
----
-
 # Tafsir Lab — model service
 
-Two endpoints, on the free CPU tier:
+The half of semantic search that does not live in the database.
 
-| Endpoint | Model | Job |
-|---|---|---|
-| `/embed` | `intfloat/multilingual-e5-small` | question → 384-dim vector |
-| `/translate` | `Helsinki-NLP/opus-mt-ar-en` | Arabic → English |
+Embedding the corpus (done, in Colab or locally) turns 78,000 commentary
+passages into vectors. Searching them needs the *question* turned into a vector
+by **the same model** — otherwise the two live in different spaces and the
+nearest neighbours are noise. This Space is what does that.
 
-There is **no chat model here, deliberately.** The assistant answers by quoting
-passages that were retrieved from the corpus, so the only generation anywhere in
-the system is machine translation of text that already exists. Nothing in this
-Space can invent a tafsīr, because nothing in it writes prose.
+Until it exists, the app falls back to keyword search. That works, and says so
+in the trace, but it can only find passages that share a word with the question:
+searching for *patience* will never surface "he did not weaken".
 
-Both models are small enough to be quick on two shared vCPUs. A 7B chat model
-would not fit in this tier and would take tens of seconds a reply if it did.
+## Deploying it
 
-## Deploying
+1. **huggingface.co** → your profile → **New Space**
+2. Name it anything. SDK: **Gradio**. Hardware: **CPU basic (free)**.
+3. Upload `app.py` and `requirements.txt` from this folder.
+4. Wait for the build (a few minutes — it installs torch).
+5. Copy the Space URL, e.g. `https://your-name-tafsir-lab.hf.space`
+6. In Vercel → Settings → Environment Variables, add:
 
-1. Create a Space → Gradio → **CPU basic (free)**
-2. Upload `app.py`, `requirements.txt`, this `README.md`
-3. Copy the Space URL into `TAFSIR_MODEL_SPACE` in the app's environment
+   ```
+   TAFSIR_MODEL_SPACE = https://your-name-tafsir-lab.hf.space
+   ```
 
-## Notes
+   Tick Production, Preview and Development. Then redeploy.
 
-- A free Space **sleeps when idle**. The first call after a nap pays the model
-  load; the caller in Tafsir Lab handles that with a longer first-call timeout
-  and falls back to keyword search rather than failing the question.
-- `query:` / `passage:` prefixes are required by e5 and must match how the
-  corpus was embedded. `/embed` applies `query:`; the Colab job applies
-  `passage:`. Changing one without the other degrades results silently.
+That is the whole setup. The app detects the variable and switches retrieval
+from keyword-only to hybrid; nothing else changes.
+
+## What it serves
+
+| Endpoint | Purpose |
+|---|---|
+| `/embed` | A question → a 384-dim vector. The one the app needs. |
+| `/translate` | Arabic → English, via `Helsinki-NLP/opus-mt-ar-en`. |
+| `/chat` | A grounded answer from supplied passages. Unused when `GROQ_API_KEY` is set — Groq is far faster. |
+| `/health` | Which models are loaded, so a cold Space is distinguishable from a slow one. |
+
+## Two things that will bite
+
+**The `query: ` prefix is not optional.** e5 was trained with asymmetric
+prefixes and the corpus was embedded with `passage: `. Using the wrong one here
+does not error — it quietly returns worse neighbours, which reads as "the search
+is a bit rubbish" for months. `embed()` applies it; do not remove it.
+
+**A free Space sleeps when idle.** The first request after a nap pays the model
+load, which is tens of seconds. Every request after it is warm. The app treats a
+slow or absent embedding service as a fallback to keyword search rather than as
+an error, so a sleeping Space degrades the results rather than breaking the page.
