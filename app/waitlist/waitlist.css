@@ -120,7 +120,3 @@
 .wl-foot a { color: #56514b; text-decoration: none; }
 .wl-foot a:hover { text-decoration: underline; }
 
-@media (prefers-reduced-motion: reduce) {
-  .wl-submit, .wl-input { transition: none; }
-  .wl-submit:hover:not(:disabled) { transform: none; }
-}

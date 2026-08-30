@@ -28,6 +28,7 @@ import { useOverlayMotion } from "@/lib/use-overlay-motion";
 import { useDismissable } from "@/lib/use-dismissable";
 import { parseBlocks, type Inline } from "@/lib/lab-markdown";
 import { embedQuery, prefetch } from "@/lib/tafsir/browser-embed";
+import { useTypedText } from "@/lib/use-typed-text";
 
 interface CiteRef { n: number; sourceName: string; verseKey: string }
 interface Step { step: string; detail: string; state?: string }
@@ -116,6 +117,28 @@ function renderInline(kids: Inline[], cites: Map<number, CiteRef>, k: { i: numbe
       }
     }
   });
+}
+
+/**
+ * The answer, revealed as it is written.
+ *
+ * Its own component so the hook has somewhere to live: turns render in a map,
+ * and a hook cannot go there. The caret outlives `live` on purpose — the
+ * stream closes before the last buffered characters have been typed, and a
+ * caret that vanishes mid-word looks like the answer was cut off.
+ */
+function AnswerText(
+  { text, cites, live, className }:
+  { text: string; cites: CiteRef[]; live: boolean; className: string },
+) {
+  const shown = useTypedText(text, live);
+  const typing = live || shown.length < text.length;
+  return (
+    <div className={className}>
+      {renderMarkdown(shown, cites)}
+      {typing && <span className="as-caret" aria-hidden />}
+    </div>
+  );
 }
 
 function renderMarkdown(text: string, cites: CiteRef[]): React.ReactNode[] {
@@ -383,10 +406,10 @@ export default function AiPanel({ pageId, surahNumber, surahName, onClose }: Pro
                     )}
 
                     {t.text && (
-                      <div className="lab-bubble lab-answer">
-                        {renderMarkdown(t.text, t.cites)}
-                        {t.running && <span className="as-caret" aria-hidden />}
-                      </div>
+                      <AnswerText
+                        className="lab-bubble lab-answer"
+                        text={t.text} cites={t.cites} live={t.running}
+                      />
                     )}
 
                     {t.sentences.length > 0 && (

@@ -1550,10 +1550,6 @@ html{scroll-behavior:smooth;}
 .ink-play .margin-arrow .ink-path:first-child{animation-delay:1.5s;}
 .ink-play .margin-arrow .ink-path:last-child{animation-delay:2s; animation-duration:.45s;}
 .ink-play .scribble-flick .ink-path{animation-delay:1.9s;}
-@media (prefers-reduced-motion:reduce){
-  .ink-path{stroke-dashoffset:0;}
-  .ink-play .ink-path{animation:none;}
-}
 
 /* Pen underline beneath a marked āyah */
 .ink-under{
@@ -1589,7 +1585,6 @@ html{scroll-behavior:smooth;}
   transition:background-size .9s ease .8s;
 }
 .ink-play .mushaf-hl{background-size:100% 100%;}
-@media (prefers-reduced-motion:reduce){.mushaf-hl{background-size:100% 100%;}}
 
 /* Handwriting — Caveat, fades in after the strokes land */
 .mushaf-hand{
@@ -1602,7 +1597,6 @@ html{scroll-behavior:smooth;}
   transition:opacity .7s ease 1.7s;
 }
 .ink-play .mushaf-hand{opacity:1;}
-@media (prefers-reduced-motion:reduce){.mushaf-hand{opacity:1;}}
 
 /* Margin note — violet ink, angled like a real gloss */
 .mushaf-margin{

@@ -785,19 +785,6 @@ input, textarea { font: inherit; color: inherit; }
 /* Closed: no animation state left behind to flash on the next open. */
 .drawer-overlay[data-open="false"] > * { animation: none; }
 
-/* Reduced-motion handling for the drawer lives with the global block at the
-   end of this file, so the `*` transition-duration override is countered in
-   one place rather than fought from two. */
-@media (prefers-reduced-motion: reduce) {
-  /* Fade, not nothing. The band-in travels 6px, which is the part worth
-     suppressing; removing the animation entirely made the drawer contents
-     snap into place and read as a rendering glitch. */
-  .drawer-overlay[data-open="true"] > * {
-    animation: drawer-band-fade 180ms var(--ease-soft) both;
-  }
-  @keyframes drawer-band-fade { from { opacity: 0; } to { opacity: 1; } }
-}
-
 /* ── Header — three quiet levels, no title bar ───────────────────────────── */
 .drawer-head {
   /* No bottom border. The panel used to open with five stacked horizontal
@@ -1906,18 +1893,6 @@ input, textarea { font: inherit; color: inherit; }
   to   { opacity: 1; transform: translateX(0); }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  /* Fade, not nothing — the same call the drawer above makes. What is worth
-     suppressing here is the 14px horizontal travel, which is directional
-     motion across the whole grid every time the page changes; cutting the
-     animation outright made the grid snap and read as a repaint. */
-  .ws-surah-grid[data-anim-direction="left"],
-  .ws-surah-grid[data-anim-direction="right"] {
-    animation: surah-grid-fade 180ms var(--ease-out) both;
-  }
-  @keyframes surah-grid-fade { from { opacity: 0; } to { opacity: 1; } }
-}
-
 /* Workspace surah grid */
 .ws-surah-grid {
   display: grid;
@@ -2473,12 +2448,6 @@ input, textarea { font: inherit; color: inherit; }
   transition: opacity var(--dur-hover) var(--ease-soft);
 }
 .qcf-surah-name--btn:hover .qcf-surah-caret { opacity: 0.65; }
-
-@media (prefers-reduced-motion: reduce) {
-  .study-layer, .study-rail-wrap, .study-bar, .drawing-canvas-wrap {
-    transition: none; animation: none; transition-delay: 0ms !important;
-  }
-}
 
 /* ── Inner transformed layer ── */
 .mode-b-inner {
@@ -4782,7 +4751,6 @@ input, textarea { font: inherit; color: inherit; }
 .block-handle:hover  { background: var(--hover); color: var(--ink-2); }
 .block-handle:active { cursor: grabbing; }
 @keyframes block-handle-in { from { opacity: 0; } to { opacity: 1; } }
-@media (prefers-reduced-motion: reduce) { .block-handle { animation: none; } }
 
 /* Ink overlay — strokes live in content space and scroll with the text.
    pointer-events: none is CRITICAL: the canvas is display-only (all pen
@@ -5197,11 +5165,6 @@ input, textarea { font: inherit; color: inherit; }
 @keyframes toggle-body-in {
   from { opacity: 0; transform: translateY(-3px); }
   to   { opacity: 1; transform: none; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .toggle-list[data-open="true"] .toggle-list-content > *:not(:first-child) {
-    animation: none;
-  }
 }
 
 /* Bold / italic */
@@ -5693,13 +5656,6 @@ input, textarea { font: inherit; color: inherit; }
 .hw-ws-new-btn { transition: transform 90ms var(--ease-out), background var(--dur-hover) var(--ease-soft); }
 .hw-ws-new-btn:active { transform: scale(0.96); }
 
-@media (prefers-reduced-motion: reduce) {
-  /* Still a state change, not a flash: the backdrop fades, the card does not
-     travel or scale. */
-  .modal-card { animation: modal-card-fade 120ms var(--ease-out) both; }
-  @keyframes modal-card-fade { from { opacity: 0; } to { opacity: 1; } }
-  .hw-ws-new-btn:active { transform: none; }
-}
 .modal-card {
   background: var(--bg-elev);
   border: 1px solid var(--line);
@@ -7228,12 +7184,6 @@ input, textarea { font: inherit; color: inherit; }
 .settings-item:hover { background: var(--hover); color: var(--ink); }
 .settings-item--danger:hover { color: var(--danger, oklch(0.55 0.19 25)); }
 
-@media (prefers-reduced-motion: reduce) {
-  .settings-panel { animation-name: settings-fade; }
-  @keyframes settings-fade { from { opacity: 0; } to { opacity: 1; } }
-  .settings-cog[data-open="true"] { transform: none; }
-}
-
 /* ── Segment contextual bar ──────────────────────────────────────────────
    A popover, not a modal: it acts on a selection that is on the page behind
    it, and a modal would cover the very thing being named. */
@@ -7303,11 +7253,6 @@ input, textarea { font: inherit; color: inherit; }
 .segbar-color:hover { transform: scale(1.15); }
 .segbar-color[data-active="true"] { border-color: var(--ink); }
 .segbar-form-actions { display: flex; gap: 5px; }
-
-@media (prefers-reduced-motion: reduce) {
-  .segbar { animation: none; }
-  .segbar-color { transition: none; }
-}
 
 /* Connection form. Reuses the Selection dialog shell but is a WIDER card,
    because it must show both endpoints before anything is named — a form that
@@ -7457,10 +7402,6 @@ input, textarea { font: inherit; color: inherit; }
 .cxmap-empty code {
   font-family: var(--font-mono); font-size: 11.5px;
   background: var(--panel); padding: 1px 5px; border-radius: 4px;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .cxmap-edge, .cxmap-seg { transition: none; }
 }
 
 /* Connections catalogue — a full page, because it is a place you go to look
@@ -7651,10 +7592,6 @@ input, textarea { font: inherit; color: inherit; }
 }
 .anchor-session-conn:hover { background: var(--hover); color: var(--ink); }
 
-@media (prefers-reduced-motion: reduce) {
-  .cxp-scrim, .cxp { animation: none; }
-}
-
 /* Connection card in the editor. Deliberately unlike an ayah quotation: that
    block IS the verse, whereas this asserts a relationship between two things
    that live outside the document. */
@@ -7844,11 +7781,6 @@ input, textarea { font: inherit; color: inherit; }
 .anchor-session-color:hover { transform: scale(1.18); }
 .anchor-session-color[data-active="true"] { border-color: var(--ink); }
 
-@media (prefers-reduced-motion: reduce) {
-  .seldlg-scrim, .sellist-scrim, .seldlg, .sellist { animation: none; }
-  .anchor-session-color { transition: none; }
-}
-
 /* Reading Mode guidance. Quiet by construction: small, muted, no border, no
    repeated motion — it is a hint, not a notice. */
 .qcf-read-hint {
@@ -7860,7 +7792,6 @@ input, textarea { font: inherit; color: inherit; }
   animation: qcf-hint-in 400ms var(--ease-out) both;
 }
 @keyframes qcf-hint-in { from { opacity: 0; } to { opacity: 1; } }
-@media (prefers-reduced-motion: reduce) { .qcf-read-hint { animation: none; } }
 
 /* ── Qurʾān target search ────────────────────────────────────────────────
    Shared by /ayah and, in time, /link, Segment ranges and Connections. */
@@ -7944,8 +7875,6 @@ input, textarea { font: inherit; color: inherit; }
 /* Ayah rows wrap rather than truncate — the list is for reading and picking. */
 .qs-row--ayah .qs-row-arabic { white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.95; }
 
-@media (prefers-reduced-motion: reduce) { .qs-panel { animation: none; } }
-
 /* ── Tour spotlight ──────────────────────────────────────────────────────
    Sits just BELOW the bubble (8000) so the bubble is never dimmed, and
    above everything else. pointer-events:none throughout — the spotlit
@@ -7983,10 +7912,6 @@ input, textarea { font: inherit; color: inherit; }
 }
 .tr-back-btn:hover:not(:disabled) { background: var(--hover); }
 .tr-back-btn:disabled { opacity: 0.5; cursor: default; }
-
-@media (prefers-reduced-motion: reduce) {
-  .tr-spotlight { animation: none; }
-}
 
 .tr-bubble.tr-in  { animation: tr-bubble-in  0.28s cubic-bezier(0.22,1,0.36,1) both; }
 .tr-bubble.tr-out { animation: tr-bubble-out 0.22s ease both; pointer-events: none; }
@@ -8780,44 +8705,6 @@ input, textarea { font: inherit; color: inherit; }
               color      var(--dur-hover) var(--ease-soft);
 }
 
-/* Respect reduced-motion preferences everywhere */
-@media (prefers-reduced-motion: reduce) {
-  .doc, .mode-b-canvas, .slash-palette, .free-textbox,
-  .collaboration-cursor__caret, .live-pill-dot,
-  .toggle-list[data-open="true"] .toggle-list-content > *:not(:first-child) {
-    animation: none !important;
-  }
-  /* Keep collaborator labels visible (no fade) when motion is reduced */
-  .collaboration-cursor__label { animation: none !important; opacity: 1 !important; }
-
-  /* NO blanket `* { transition-duration: 0.01ms }` here.
-     That rule killed every transition in the app — colour fades, opacity,
-     hover states — and left the UI snapping between states, which is harsher
-     than the motion it replaced and is not what this preference asks for.
-     Reduced motion means suppress TRAVEL: movement across the screen,
-     parallax, scale and spin. Colour and opacity stay.
-     Anything that genuinely travels is neutralised explicitly below. */
-  /* NOTE: .mode-b-inner is deliberately absent — its transform IS the
-     viewport (pan and zoom), not decoration. Neutralising it would snap the
-     canvas back to the origin. */
-  /* Only the drawer is neutralised wholesale — it is the one surface whose
-     transform is purely travel. .study-rail-wrap and .study-bar are handled
-     by their [data-visible="false"] rules below, which kill just the entry
-     offset; blanketing them here would also clobber any positioning
-     transform they or their children rely on. */
-  .drawer-overlay { transform: none !important; }
-  .anchored-note-card, .free-textbox, .slash-palette,
-  .et-popover, .ctr-popover, .study-layer {
-    animation-name: none !important;
-  }
-
-  /* No travel: the drawer is simply present or not. */
-  .drawer-overlay                    { transform: none !important; opacity: 0; }
-  .drawer-overlay[data-open="true"]  { opacity: 1; }
-  .study-rail-wrap[data-visible="false"],
-  .study-bar[data-visible="false"]   { transform: none !important; }
-}
-
 /* ═══════════════════════════════════════════════════════════════════════════
    Notes review — workspace-wide retrieval view (/workspaces/[id]/notes)
    ═══════════════════════════════════════════════════════════════════════════ */
@@ -9126,13 +9013,6 @@ input, textarea { font: inherit; color: inherit; }
 @keyframes qcf-ayah-lift {
   from { transform: translateY(0);    box-shadow: 0 0 0 rgba(26, 26, 26, 0); }
   to   { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(26, 26, 26, 0.18); }
-}
-@media (prefers-reduced-motion: reduce) {
-  /* Keep the depth cue, drop the movement. */
-  .qcf-ayah-run--active {
-    animation: none;
-    box-shadow: 0 4px 12px rgba(26, 26, 26, 0.18);
-  }
 }
 
 /* Eraser rubber — round, sized to the real hit radius, follows the pointer */
@@ -9633,9 +9513,6 @@ input, textarea { font: inherit; color: inherit; }
   animation: pdf-skeleton-sheen 1.5s ease-in-out infinite;
 }
 @keyframes pdf-skeleton-sheen { to { transform: translateX(100%); } }
-@media (prefers-reduced-motion: reduce) {
-  .pdf-page--skeleton::after { animation: none; }
-}
 
 .pdf-pages-loading,
 .pdf-pages-error {
@@ -10169,30 +10046,6 @@ input, textarea { font: inherit; color: inherit; }
   /* Starts after the LAST segment has landed (220 + 113x3 + 260 = 819ms), so
      no link is ever drawn across a half-built ring. */
   animation-delay: calc(900ms + var(--i, 0) * 70ms);
-}
-
-/* Reduced motion suppresses TRAVEL, not the build-in itself.
-   Killing the animation outright was wrong here: a system-wide "reduce
-   motion" preference is about vestibular triggers — spinning, sliding,
-   parallax — not about a fade or a line drawing itself. Blanking it also
-   meant anyone with the OS setting on simply never saw the map assemble and
-   reasonably concluded it was broken.
-   So: no rotation, no scale, and quicker — but the ring still fades up and
-   the links still draw. */
-@media (prefers-reduced-motion: reduce) {
-  @keyframes cxmap-wheel-in {
-    from { opacity: 0; }
-    to   { opacity: 1; }
-  }
-  .cxmap-build { animation-duration: 280ms; }
-  .cxmap-build .cxmap-seg {
-    animation-duration: 160ms;
-    animation-delay: calc(120ms + var(--i, 0) * 2ms);
-  }
-  .cxmap-build .cxmap-edge {
-    animation-duration: 420ms;
-    animation-delay: calc(460ms + var(--i, 0) * 40ms);
-  }
 }
 
 /* ── Editor typography ─────────────────────────────────────────────────────
@@ -11159,15 +11012,6 @@ input, textarea { font: inherit; color: inherit; }
   .an-notice { flex-direction: column; align-items: flex-start; }
 }
 
-/* Motion is decoration here — the information reads the same either way. */
-@media (prefers-reduced-motion: reduce) {
-  .an-pane, .an-stat, .an-cal-cell, .an-mrow, .fr-row, .lb-row,
-  .app-sidebar-item[data-active="true"]::before {
-    animation: none !important;
-  }
-  .an-bar-fill { transition: none; }
-}
-
 /* ════════════════════════════════════════════════════════════════════════════
    DASHBOARD SHELL — sidebar | content | rail
    ════════════════════════════════════════════════════════════════════════════ */
@@ -11490,11 +11334,6 @@ input, textarea { font: inherit; color: inherit; }
   .home-page--shell > .home-rail { padding: 0 var(--sp-4) var(--sp-5); }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .hr-list > li, .ai-overlay, .ai-panel, .ai-asked, .anno-body { animation: none !important; }
-  .hr-item:hover, .ai-banner:hover { transform: none; }
-}
-
 /* ════════════════════════════════════════════════════════════════════════════
    MOTION PASS — nothing arrives on screen without moving there.
    ════════════════════════════════════════════════════════════════════════════
@@ -11596,16 +11435,6 @@ input, textarea { font: inherit; color: inherit; }
 .name-entry-toggle:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .drawer-overlay, .join-modal-overlay, .name-entry-overlay, .ws-settings-overlay,
-  .join-modal, .name-entry-modal, .ws-settings-modal,
-  .drawer-split, .ctr-popover,
-  .app-shell-body, .home-content, .home-rail {
-    animation: none !important;
-  }
-  .hw-ws-new-btn:hover, .home-join-btn:hover, .hw-cta-btn:hover { transform: none; }
 }
 
 /* ── Onboarding carousel ──────────────────────────────────────────────────── */
@@ -11749,12 +11578,6 @@ input, textarea { font: inherit; color: inherit; }
   .ob-tag-text { font-size: 19px; }
   .ob-nav--prev { left: 2px; }
   .ob-nav--next { right: 2px; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .ob, .ob-screen, .ob-tag { animation: none !important; }
-  .ob-progress-fill { transition: none; }
-  .ob-cta:hover { transform: none; }
 }
 
 /* ── Explore the Qur'an ───────────────────────────────────────────────────── */
@@ -11901,10 +11724,6 @@ input, textarea { font: inherit; color: inherit; }
 .ex-page:hover:not(:disabled) { background: var(--accent); color: #fff; }
 .ex-page:disabled { opacity: 0.45; cursor: default; }
 
-@media (prefers-reduced-motion: reduce) {
-  .ex-ref, .ex-hit, .ex-list > li { animation: none !important; }
-}
-
 .app-shell-search {
   margin-left: auto;
   flex: none;
@@ -11918,7 +11737,6 @@ input, textarea { font: inherit; color: inherit; }
               transform var(--dur-hover) var(--ease-flow);
 }
 .app-shell-search:hover { background: var(--panel-2); color: var(--ink); transform: scale(1.04); }
-@media (prefers-reduced-motion: reduce) { .app-shell-search:hover { transform: none; } }
 
 /* ── Recitation player ───────────────────────────────────────────────────── */
 
@@ -11982,11 +11800,6 @@ input, textarea { font: inherit; color: inherit; }
 .rec-error { font-size: 13.5px; color: var(--danger); }
 .rec-reciter { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); }
 .rec-reciter .an-select { flex: 1; min-width: 0; }
-
-@media (prefers-reduced-motion: reduce) {
-  .rec { animation: none; }
-  .rec-spin { animation-duration: 2s; }
-}
 
 /* ── Import dialog ───────────────────────────────────────────────────────── */
 
@@ -12093,10 +11906,6 @@ input, textarea { font: inherit; color: inherit; }
   box-shadow: var(--shadow-md);
   user-select: none;
   -webkit-user-drag: none;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .imp-overlay, .imp { animation: none; }
 }
 
 /* ── Script view (Uthmani / Indo-Pak / Tajweed / Simple) ─────────────────── */
@@ -12244,7 +12053,6 @@ input, textarea { font: inherit; color: inherit; }
 .bs-new:hover:not(:disabled) { background: var(--hover); border-color: var(--accent); color: var(--ink); }
 
 @media (max-width: 860px) { .bs { display: none; } .bs-reopen { display: none; } }
-@media (prefers-reduced-motion: reduce) { .bs { animation: none; } }
 
 /* ── Assistant ────────────────────────────────────────────────────────────── */
 
@@ -12485,11 +12293,6 @@ input, textarea { font: inherit; color: inherit; }
 .as-input:disabled { background: var(--panel); color: var(--ink-4); }
 .as-composer .an-btn { align-self: auto; }
 
-@media (prefers-reduced-motion: reduce) {
-  .as-turn, .as-picker, .as-trace-body, .as-steps li { animation: none !important; }
-  .as-trace-chev { transition: none; }
-}
-
 /* ── Generated answer ─────────────────────────────────────────────────────
    Prose, not a list of quotations — so it is typeset to be read, and the
    citation chips are the seam back to the passages it came from. */
@@ -12569,8 +12372,6 @@ input, textarea { font: inherit; color: inherit; }
 }
 /* Jumping to a passage should not bury it under the sticky composer. */
 .as-passage { scroll-margin-block: 80px; }
-
-@media (prefers-reduced-motion: reduce) { .as-caret { animation: none; } }
 
 /* ── Lab AI, docked in the reader ──────────────────────────────────────────
    A column inside the study layout, not an overlay: it takes width from the
@@ -12695,14 +12496,16 @@ input, textarea { font: inherit; color: inherit; }
 .lab-dots { display: inline-flex; gap: 3px; }
 .lab-dots i {
   width: 5px; height: 5px; border-radius: 50%;
-  background: currentColor; opacity: .45;
-  animation: lab-dot 1.15s var(--ease-soft) infinite;
+  background: currentColor; opacity: .3;
+  animation: lab-dot 1.05s var(--ease-soft) infinite;
 }
-.lab-dots i:nth-child(2) { animation-delay: .16s; }
-.lab-dots i:nth-child(3) { animation-delay: .32s; }
+.lab-dots i:nth-child(2) { animation-delay: .14s; }
+.lab-dots i:nth-child(3) { animation-delay: .28s; }
+/* Scale as well as travel: a dot that only hops reads as three dots taking
+   turns, where one that swells reads as a single thing moving through them. */
 @keyframes lab-dot {
-  0%, 60%, 100% { opacity: .28; transform: translateY(0); }
-  30%           { opacity: 1;   transform: translateY(-3px); }
+  0%, 62%, 100% { opacity: .26; transform: translateY(0) scale(.82); }
+  28%           { opacity: 1;   transform: translateY(-3.5px) scale(1); }
 }
 
 /* ── Retrieval trace ────────────────────────────────────────────────────────
@@ -12864,20 +12667,6 @@ input, textarea { font: inherit; color: inherit; }
 .lab-send:hover:not(:disabled) { filter: brightness(1.08); transform: translateY(-1px); }
 .lab-send:disabled { opacity: 0.4; cursor: default; }
 
-@media (prefers-reduced-motion: reduce) {
-  /* Fade, not nothing — the same call the drawer makes a few thousand lines
-     up. What is worth suppressing is the travel; removing the transition
-     entirely makes a panel snap into place and read as a rendering glitch.
-     The thinking dots do stop moving: they are a decorative loop with no
-     start and no end, which is exactly what this preference is asking about,
-     and the word "Thinking" beside them already says it. */
-  .lab, .lab-bubble, .lab-empty, .lab-suggest button {
-    animation: lab-fade-in 160ms var(--ease-soft) both;
-  }
-  @keyframes lab-fade-in { from { opacity: 0; } to { opacity: 1; } }
-  .lab-dots i { animation: none; opacity: .5; }
-}
-
 /* ══ Overlay motion ════════════════════════════════════════════════════════
    One system for every drawer, sheet, modal and popover.
 
@@ -12983,19 +12772,6 @@ input, textarea { font: inherit; color: inherit; }
 [data-ov-stagger][data-state="entering"] > *,
 [data-ov-stagger][data-state="exiting"]  > * { animation: none; }
 
-@media (prefers-reduced-motion: reduce) {
-  /* Fade, not nothing. Removing the motion entirely made panels snap into
-     place and read as a rendering glitch; what is worth suppressing is the
-     travel, not the transition. */
-  [data-ov] { transition: opacity var(--dur-mid) var(--ease-soft); }
-  [data-ov][data-state="entering"],
-  [data-ov][data-state="exiting"] { transform: none; opacity: 0; }
-  [data-ov-stagger][data-state="open"] > * {
-    animation: ov-band-fade 160ms var(--ease-soft) both;
-  }
-  @keyframes ov-band-fade { from { opacity: 0; } to { opacity: 1; } }
-}
-
 /* ── Tafsīr drawer, full screen ────────────────────────────────────────────
    Reading several commentaries side by side is the actual job, and a 440px
    column is a compromise made for the mushaf behind it. When that stops
@@ -13060,9 +12836,6 @@ input, textarea { font: inherit; color: inherit; }
   transition:
     transform var(--dur-slow) var(--ease-out),
     width var(--dur-overlay) var(--ease-overlay);
-}
-@media (prefers-reduced-motion: reduce) {
-  .drawer-overlay { transition: opacity var(--dur-mid) var(--ease-soft); }
 }
 
 /* ── Workspace kind cards ──────────────────────────────────────────────────
@@ -13136,10 +12909,6 @@ input, textarea { font: inherit; color: inherit; }
   .kind-card { flex-direction: row; align-items: center; gap: 10px; }
   .kind-preview { width: 74px; flex: none; margin-bottom: 0; }
   .kind-card > .kind-name { flex: none; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .kind-card:hover:not(:disabled) { transform: none; }
 }
 
 /* ── Profile picture ──────────────────────────────────────────────────────
@@ -13253,12 +13022,6 @@ input, textarea { font: inherit; color: inherit; }
   padding-left: 3px; padding-right: 3px;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .film { animation: none; }
-  .film-tile:hover { transform: none; }
-  .film-strip { scroll-behavior: auto; }
-}
-
 /* ── Motion for overlays that had none ─────────────────────────────────────
    Audited rather than guessed: these are the positioned surfaces in this file
    that carried no transition or animation at all, so they appeared on the same
@@ -13327,14 +13090,6 @@ input, textarea { font: inherit; color: inherit; }
 
 .tut-overlay { animation: ov-dialog-in var(--dur-overlay) var(--ease-soft) both; }
 
-@media (prefers-reduced-motion: reduce) {
-  .join-modal-overlay, .name-entry-overlay, .join-modal-overlay > *,
-  .name-entry-overlay > *, .slash-menu, .tweaks-panel, .format-bar,
-  .study-bar, .canvas-tool-rail, .tut-overlay {
-    animation: ov-dialog-in var(--dur-mid) var(--ease-soft) both;
-  }
-}
-
 /* ── Tafsīr language filter ───────────────────────────────────────────────
    Matches the source select beside it. These are two halves of one decision —
    which commentary, in which language — and they previously looked like
@@ -13402,14 +13157,6 @@ input, textarea { font: inherit; color: inherit; }
   .lab-composer { padding-bottom: max(12px, env(safe-area-inset-bottom)); }
   .lab-head     { padding-top: max(10px, env(safe-area-inset-top)); }
   .lab-bubble--you { max-width: 88%; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  /* Fade rather than nothing, matching the desktop panel and the drawer. The
-     sheet's travel is what the preference asks to remove, not the transition. */
-  @media (max-width: 720px) {
-    .lab { animation: lab-fade-in 160ms var(--ease-soft) both; }
-  }
 }
 
 /* ── The tour and a full-screen sheet ─────────────────────────────────────

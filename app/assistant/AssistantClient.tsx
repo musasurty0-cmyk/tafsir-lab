@@ -26,6 +26,7 @@ import AppShell, { type ShellStreak } from "@/components/AppShell";
 import type { SidebarUser } from "@/components/AppSidebar";
 import { parseBlocks, type Inline } from "@/lib/lab-markdown";
 import { embedQuery, prefetch } from "@/lib/tafsir/browser-embed";
+import { useTypedText } from "@/lib/use-typed-text";
 
 interface SourceRow {
   slug: string; name: string; language: string; chunks: number; verses: number;
@@ -94,6 +95,20 @@ const STEP_ICON: Record<string, typeof BookOpen> = {
    wherever it is asked. This page previously had a citation-only renderer of
    its own, which meant bold and headings showed up here as raw asterisks long
    after the panel had learned to draw them. */
+/** The answer, revealed as it is written. See AiPanel for the reasoning. */
+function AnswerText(
+  { text, cites, live }: { text: string; cites: CiteRef[]; live: boolean },
+) {
+  const shown = useTypedText(text, live);
+  const typing = live || shown.length < text.length;
+  return (
+    <div className="as-prose">
+      {renderWithCitations(shown, cites)}
+      {typing && <span className="as-caret" aria-hidden />}
+    </div>
+  );
+}
+
 function renderWithCitations(text: string, cites: CiteRef[]): React.ReactNode[] {
   const by = new Map(cites.map((c) => [c.n, c]));
   const k = { i: 0 };
@@ -376,10 +391,7 @@ export default function AssistantClient({ user, sources, streak }: Props) {
             {/* ── Generated answer, with its citations ────────────────── */}
             {t.text && (
               <div className="as-answer">
-                <div className="as-prose">
-                  {renderWithCitations(t.text, t.cites)}
-                  {t.running && <span className="as-caret" aria-hidden />}
-                </div>
+                <AnswerText text={t.text} cites={t.cites} live={t.running} />
                 {t.warning && (
                   <p className="as-warn">
                     <AlertCircle size={15} aria-hidden /> {t.warning}
