@@ -13218,3 +13218,84 @@ input, textarea { font: inherit; color: inherit; }
 }
 .pfp-clear:hover:not(:disabled) { color: #c2544d; }
 .pfp-clear:disabled { opacity: .5; cursor: default; }
+
+/* ── PDF filmstrip ────────────────────────────────────────────────────────
+   The index a long book was missing. Docked to the bottom of the canvas, over
+   it rather than beside it, so the reading area keeps its full width. */
+.film {
+  position: absolute;
+  left: 50%; bottom: 14px;
+  transform: translateX(-50%);
+  z-index: 6;
+  display: flex; align-items: center; gap: 6px;
+  max-width: min(760px, calc(100% - 32px));
+  padding: 7px 9px;
+  border-radius: 14px;
+  background: color-mix(in oklab, var(--bg-elev) 92%, transparent);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-lg);
+  backdrop-filter: blur(8px);
+  animation: film-in 260ms var(--ease-overlay) both;
+}
+@keyframes film-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(10px); }
+  to   { opacity: 1; transform: translateX(-50%); }
+}
+
+.film-arrow {
+  flex: none;
+  display: grid; place-items: center;
+  width: 28px; height: 28px; border-radius: 8px;
+  color: var(--ink-3); background: none; border: none; cursor: pointer;
+  transition: background var(--dur-fast) ease, color var(--dur-fast) ease;
+}
+.film-arrow:hover:not(:disabled) { background: var(--hover); color: var(--ink); }
+.film-arrow:disabled { opacity: .3; cursor: default; }
+
+.film-strip {
+  flex: 1; min-width: 0;
+  display: flex; align-items: flex-end; gap: 6px;
+  overflow-x: auto; overflow-y: hidden;
+  scroll-behavior: smooth;
+  padding: 2px 2px 4px;
+  /* A visible scrollbar under forty tiles is more chrome than the tiles. */
+  scrollbar-width: none;
+}
+.film-strip::-webkit-scrollbar { display: none; }
+
+.film-tile {
+  flex: none;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  background: none; border: none; padding: 0; cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+.film-tile:hover { transform: translateY(-2px); }
+.film-sheet {
+  display: block; width: 34px;
+  border-radius: 3px;
+  background: var(--bg);
+  border: 1px solid var(--line-strong);
+  transition: border-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease;
+}
+.film-tile[data-active="true"] .film-sheet {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--accent) 40%, transparent);
+}
+.film-num {
+  font-size: 10px; color: var(--ink-4); font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.film-tile[data-active="true"] .film-num { color: var(--ink); font-weight: 600; }
+
+.film-count {
+  flex: none;
+  font-size: 11.5px; color: var(--ink-4);
+  font-variant-numeric: tabular-nums;
+  padding-left: 3px; padding-right: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .film { animation: none; }
+  .film-tile:hover { transform: none; }
+  .film-strip { scroll-behavior: auto; }
+}

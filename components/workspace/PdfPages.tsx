@@ -33,10 +33,18 @@ function loadMupdf(): Promise<Mupdf> {
   return mupdfMod;
 }
 
+/** Where a page sits in world space, so a caller can navigate to it. */
+export interface PdfPageBox { index: number; x: number; y: number; w: number; h: number }
+
 interface Props {
   src:        string | ArrayBuffer;
   /** World-space width of each page (height derives from the page ratio). */
   pageWidth?: number;
+  /* Reported once the document is measured. The stack stays a stack — notes
+     are stored against these world coordinates, so re-laying the pages out
+     one-per-screen would silently move every annotation ever made. Page-by-
+     page reading is navigation over this layout, not a different layout. */
+  onLayout?:  (pages: PdfPageBox[]) => void;
 }
 
 const OVERSAMPLE = 2;   // rasterise at 2× so zoom-in stays sharp
@@ -50,7 +58,7 @@ interface MuPage {
 
 type HostEl = HTMLDivElement & { __done?: boolean };
 
-export default function PdfPages({ src, pageWidth = 900 }: Props) {
+export default function PdfPages({ src, pageWidth = 900, onLayout }: Props) {
   const [dims, setDims]   = useState<{ w: number; h: number }[]>([]);
   const [error, setError] = useState<string | null>(null);
   const docRef    = useRef<MuDoc | null>(null);
@@ -101,12 +109,26 @@ export default function PdfPages({ src, pageWidth = 900 }: Props) {
           const wPt = b[2] - b[0], hPt = b[3] - b[1];
           ds.push({ w: pageWidth, h: Math.max(60, Math.round((hPt / wPt) * pageWidth)) });
         }
-        if (alive) setDims(ds);
+        if (alive) {
+          setDims(ds);
+          if (onLayout) {
+            let y = 0;
+            onLayout(ds.map((d, i) => {
+              const box = { index: i, x: 0, y, w: d.w, h: d.h };
+              y += d.h + GAP;
+              return box;
+            }));
+          }
+        }
       } catch (e) {
         if (alive) setError(String(e));
       }
     })();
     return () => { alive = false; };
+    // onLayout is deliberately not a dependency: it is a new closure on every
+    // parent render, and including it would reopen and re-measure the whole
+    // document each time the parent re-rendered.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [src, pageWidth]);
 
   // Revoke object URLs only when the component truly unmounts.

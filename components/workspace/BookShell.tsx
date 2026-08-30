@@ -21,6 +21,8 @@ import { usePresence } from "@/lib/collab/usePresence";
 import { getBookPdf, putBookPdf } from "@/lib/books/pdf-store";
 import WhiteboardPage from "./WhiteboardPage";
 import PdfPages from "./PdfPages";
+import PdfFilmstrip from "./PdfFilmstrip";
+import type { PdfPageBox } from "./PdfPages";
 import TafsirDrawer from "./TafsirDrawer";
 
 interface Props {
@@ -51,6 +53,21 @@ export default function BookShell({
     pdfUrl !== "local" ? { kind: "ready", data: pdfUrl } : { kind: "loading" },
   );
   const uploadRef = useRef<HTMLInputElement>(null);
+
+  /* Page navigation. The pages themselves stay stacked in world space — notes
+     are anchored to those coordinates — so "page by page" is a camera move,
+     not a re-layout. */
+  const [pages, setPages]   = useState<PdfPageBox[]>([]);
+  const [current, setCurrent] = useState(0);
+  const [focus, setFocus]   = useState<{ x: number; y: number; w: number; h: number; nonce: number } | null>(null);
+  const nonceRef = useRef(0);
+
+  const goToPage = useCallback((i: number) => {
+    const box = pages[i];
+    if (!box) return;
+    setCurrent(i);
+    setFocus({ x: box.x, y: box.y, w: box.w, h: box.h, nonce: ++nonceRef.current });
+  }, [pages]);
 
   const room = useRoom(pageId);
   const { others } = usePresence({
@@ -180,9 +197,16 @@ export default function BookShell({
               onNoteUpdated={handleNoteUpdated}
               onNoteDeleted={handleNoteDeleted}
               showBlankHint={false}
-              background={source.kind === "ready" ? <PdfPages src={source.data} /> : null}
+              focus={focus}
+              background={source.kind === "ready"
+                ? <PdfPages src={source.data} onLayout={setPages} />
+                : null}
             />
           </EditorContextProvider>
+        )}
+
+        {source.kind === "ready" && (
+          <PdfFilmstrip pages={pages} current={current} onGo={goToPage} />
         )}
       </div>
 

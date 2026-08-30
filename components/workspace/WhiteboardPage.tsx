@@ -62,12 +62,16 @@ interface Props {
   background?:     ReactNode;
   /** Show the "Blank whiteboard" hint on an empty board (off for book study). */
   showBlankHint?:  boolean;
+  /** Centre the viewport on a world-space box. `nonce` re-triggers the move
+   *  when the same box is asked for twice — clicking page 7's thumbnail again
+   *  after panning away should return there. */
+  focus?: { x: number; y: number; w: number; h: number; nonce: number } | null;
 }
 
 export default function WhiteboardPage({
   pageId, notes, roomSocket, currentUserId, currentUserName,
   onNoteCreated, onNoteUpdated, onNoteDeleted,
-  background, showBlankHint = true,
+  background, showBlankHint = true, focus = null,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const drawingRef   = useRef<DrawingCanvasHandle>(null);
@@ -341,6 +345,31 @@ export default function WhiteboardPage({
     isDragging.current = false;
     dragStart.current  = null;
   }
+
+  /* Navigate to a page. The zoom is chosen to fit the box with a margin, so
+     a tall page and a wide one both land readable rather than one filling the
+     screen and the other sitting in the middle of it. The reader can still
+     pan and zoom afterwards; this only sets a starting point. */
+  const focusNonce = focus?.nonce;
+  useEffect(() => {
+    if (!focus) return;
+    const el = containerRef.current;
+    if (!el) return;
+    const { width, height } = el.getBoundingClientRect();
+    if (!width || !height) return;
+
+    const fit = Math.min(width / (focus.w * 1.12), height / (focus.h * 1.06));
+    const zoom = clamp(fit, ZOOM_MIN, ZOOM_MAX);
+    const next = {
+      zoom,
+      x: width  / 2 - (focus.x + focus.w / 2) * zoom,
+      y: height / 2 - (focus.y + focus.h / 2) * zoom,
+    };
+    setViewport(next);
+    patchViewport(next);
+    // focus is a fresh object each render; the nonce is what actually changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusNonce, patchViewport]);
 
   const zoomBy = (f: number) => {
     const next = { ...viewportRef.current, zoom: clamp(viewportRef.current.zoom * f, ZOOM_MIN, ZOOM_MAX) };
