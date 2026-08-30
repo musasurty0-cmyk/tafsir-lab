@@ -17,6 +17,7 @@
 import { useEffect, useRef, useState } from "react";
 import PartySocket from "partysocket";
 import { PARTYKIT_HOST } from "./config";
+import { getCollabToken } from "./collab-token";
 
 export type RoomStatus = "connecting" | "connected" | "disconnected";
 
@@ -51,16 +52,7 @@ export function useRoom(pageId: string): Room {
          valid page-scoped token. `query` is re-evaluated on every reconnect,
          so each carries a fresh 2-minute token from the membership-gated
          endpoint. */
-      query: async () => {
-        try {
-          const r = await fetch(`/api/pages/${pageId}/collab-token`, { credentials: "include" });
-          if (!r.ok) return { token: "" };
-          const { token } = await r.json() as { token?: string };
-          return { token: token ?? "" };
-        } catch {
-          return { token: "" };
-        }
-      },
+      query: async () => ({ token: await getCollabToken(pageId) }),
     });
 
     socketRef.current = s;

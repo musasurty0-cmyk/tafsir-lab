@@ -56,6 +56,7 @@ import { useEditorCtxOptional } from "./EditorContext";
 import TafsirVersePicker from "./TafsirVersePicker";
 import QuranSearch from "./QuranSearch";
 import { parseReference, type SearchTarget } from "@/lib/quran-search";
+import { getCollabToken } from "@/lib/collab/collab-token";
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
@@ -277,19 +278,11 @@ export default function PageEditor({
         /* The realtime server rejects any socket without a valid, page-scoped
            token (party/index.ts onBeforeConnect). params is called on every
            (re)connect, so we mint a fresh 2-minute token each time from the
-           membership-gated endpoint. Same-origin fetch carries the session
-           cookie. On failure we send an empty token, which the server denies —
-           correct: no membership, no realtime. */
-        params: async () => {
-          try {
-            const r = await fetch(`/api/pages/${pageId}/collab-token`, { credentials: "include" });
-            if (!r.ok) return { token: "" };
-            const { token } = await r.json() as { token?: string };
-            return { token: token ?? "" };
-          } catch {
-            return { token: "" };
-          }
-        },
+           membership-gated endpoint, via the shared per-page cache so the
+           editor and the room socket do not each mint their own. On failure
+           an empty token is sent, which the server denies — correct: no
+           membership, no realtime. */
+        params: async () => ({ token: await getCollabToken(pageId) }),
       }),
     };
   }
