@@ -3113,7 +3113,7 @@ input, textarea { font: inherit; color: inherit; }
   width: min(480px, 100%);
   justify-content: space-between;
   gap: 16px;
-  padding: 8px 10px;
+  padding: 5px 8px;
   border: 1px solid var(--paper-line);
   /* A rounded rectangle, not a capsule. 999px made the ends semicircular,
      which reads as a pill or a status chip; the reference is squarer than
@@ -3129,12 +3129,18 @@ input, textarea { font: inherit; color: inherit; }
   gap: 14px;
 }
 
-/* The basmala. Unicode text, so it takes the Qur'anic reading face — the
-   mushaf page fonts render code_v2 and nothing else. */
+/* The basmala. Unicode text, so it cannot take a mushaf page face — those
+   render code_v2 and nothing else — but --font-uthmanic is the closer of the
+   two Qur'anic faces here: lighter and more open than Amiri Quran, which set
+   at this size read as the heavier, denser thing in the reference.
+
+   line-height is nearly solid. At 1.6 this span was 30px tall and helped push
+   the bar to 57, which is what made the whole thing look chunky beside a bar
+   that should read as a label. */
 .qcf-bar-basmala {
-  font-family: var(--font-arabic);
-  font-size: 19px;
-  line-height: 1.6;
+  font-family: var(--font-uthmanic);
+  font-size: 17px;
+  line-height: 1.25;
   color: var(--paper-ink);
   white-space: nowrap;
 }
@@ -3155,10 +3161,11 @@ input, textarea { font: inherit; color: inherit; }
 .qcf-plate {
   display: inline-flex; align-items: center; gap: 8px;
   /* Squarer than the bar around it, so the two curves nest rather than
-     echoing each other. */
-  padding: 6px 13px;
+     echoing each other. Tight: at 1.5 line-height plus 6px padding this was
+     39px tall on its own and set the height of the whole bar. */
+  padding: 4px 12px;
   font-family: var(--font-arabic);
-  font-size: 18px; font-weight: 600; line-height: 1.5;
+  font-size: 18px; font-weight: 600; line-height: 1.3;
   color: var(--paper-ink);
   background: color-mix(in srgb, var(--paper-ink) 7%, transparent);
   border: 0; border-radius: var(--radius-md);
