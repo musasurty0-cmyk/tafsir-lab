@@ -47,6 +47,10 @@ interface Turn {
   openTrace: boolean;
 }
 
+/* Enough to scroll back through, bounded so a long session cannot fill a
+   browser's storage quota with text nobody will read again. */
+const KEEP_TURNS = 20;
+
 interface Props {
   workspaceId: string;
   pageId:      string | null;
@@ -104,6 +108,44 @@ function renderMarkdown(text: string, cites: CiteRef[]): React.ReactNode[] {
 
 export default function AiPanel({ pageId, surahNumber, surahName, onClose }: Props) {
   const [turns, setTurns] = useState<Turn[]>([]);
+
+  /* The conversation survives closing the panel.
+     It is per page, because that is what the answers are about: a thread on
+     al-Baqarah means nothing reopened on al-Kahf. Kept in localStorage rather
+     than the database — it belongs to this reader on this device, it is worth
+     nothing to anyone else, and the database is near its free-tier ceiling.
+
+     Restored in an effect, never during render: reading localStorage while
+     rendering makes the server and client disagree and React throws the tree
+     away. */
+  const storeKey = pageId ? `tl-lab-chat:${pageId}` : null;
+
+  useEffect(() => {
+    if (!storeKey) return;
+    try {
+      const raw = localStorage.getItem(storeKey);
+      if (!raw) return;
+      const saved = JSON.parse(raw) as Turn[];
+      if (Array.isArray(saved) && saved.length) {
+        /* Nothing is ever restored mid-flight. A turn saved while streaming
+           would come back with running: true and a spinner that never stops,
+           because the response it was waiting for is long gone. */
+        setTurns(saved.map((t) => ({ ...t, running: false, openTrace: false })));
+      }
+    } catch { /* private mode, or a shape from an older build */ }
+  }, [storeKey]);
+
+  useEffect(() => {
+    if (!storeKey) return;
+    // Only once the exchange has settled, so a half-streamed answer is never
+    // what gets written down.
+    if (turns.some((t) => t.running)) return;
+    try {
+      if (turns.length === 0) localStorage.removeItem(storeKey);
+      else localStorage.setItem(storeKey, JSON.stringify(turns.slice(-KEEP_TURNS)));
+    } catch { /* quota, or private mode — the conversation is still on screen */ }
+  }, [turns, storeKey]);
+
   const [q, setQ] = useState("");
   const busy = turns.some((t) => t.running);
   const endRef = useRef<HTMLDivElement>(null);
