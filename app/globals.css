@@ -3178,8 +3178,13 @@ input, textarea { font: inherit; color: inherit; }
    that should read as a label. */
 .qcf-bar-basmala {
   font-family: var(--font-uthmanic);
-  font-size: 17px;
-  line-height: 1.25;
+  /* Sized by measurement, not by eye. In the reference the basmala occupies
+     37% of the bar's width; at 17px it occupied 29%. Swept against the live
+     stylesheet, 22px lands on 37.7% — I had corrected it in the wrong
+     direction, having read a too-tall bar as a too-large basmala when the
+     height was coming from the name plate's leading. */
+  font-size: 22px;
+  line-height: 1.2;
   color: var(--paper-ink);
   white-space: nowrap;
 }
