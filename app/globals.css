@@ -659,7 +659,15 @@ input, textarea { font: inherit; color: inherit; }
 .verse-header {
   display: flex; align-items: center; justify-content: space-between;
 }
-.verse-ref { display: flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: 11px; color: var(--ink-4); letter-spacing: 0.04em; }
+/* The same citation, in the standalone ayah card — matched to the block above
+   rather than left as the only place still setting verse numbers in mono. */
+.verse-ref {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12px; font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+  color: var(--ink-3);
+}
 .verse-ref-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--accent); opacity: 0.6; }
 .verse-actions { display: flex; gap: 1px; }
 .verse-action {
@@ -5269,10 +5277,16 @@ input, textarea { font: inherit; color: inherit; }
   gap: 8px;
   margin-bottom: 12px;
 }
+/* A verse reference is a citation, not a machine identifier. Set in the mono
+   face at 10.5px with letter-spacing it read as a code fragment — and the same
+   app already had a better answer for the same thing in .ex-ref-key, so this
+   follows that: the text face, tabular figures so 37:101 and 2:5 line up down a
+   column of blocks, and no tracking. */
 .ayah-block-ref {
-  font-family: var(--font-mono);
-  font-size: 10.5px; font-weight: 500;
-  letter-spacing: 0.06em; color: var(--ink-4);
+  font-size: 12px; font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+  color: var(--ink-3);
   flex-shrink: 0;
 }
 .ayah-block-toolbar {
