@@ -10,10 +10,11 @@
  * rename you mid-word.
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import AppShell, { type ShellStreak } from "@/components/AppShell";
 import Toast from "@/components/Toast";
+import { squareToDataUrl } from "@/lib/avatar-image";
 import Onboarding, { clearOnboarded } from "@/components/Onboarding";
 import {
   FONT_STEPS, DEFAULT_TYPO, applyAppearance, readTheme, readTypo, writeAppearance,
@@ -37,6 +38,8 @@ const TABS: { key: Tab; label: string }[] = [
 
 export default function SettingsClient({ user, streak }: Props) {
   const [tab, setTab] = useState<Tab>("theme");
+  const [avatar, setAvatar] = useState<string | null>(user?.avatarUrl ?? null);
+  const fileRef = useRef<HTMLInputElement>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [replayOb, setReplayOb] = useState(false);
 
@@ -74,6 +77,26 @@ export default function SettingsClient({ user, streak }: Props) {
     if (note) setToast(note);
     return true;
   }, []);
+
+  const pickAvatar = useCallback(async (file: File | undefined) => {
+    if (!file) return;
+    try {
+      /* Downscaled here, not on the server: a 6 MB phone photo should never
+         cross the wire to be thrown away at the other end. */
+      const { dataUrl } = await squareToDataUrl(file);
+      const ok = await patch({ avatarUrl: dataUrl }, "Picture updated.");
+      if (ok) setAvatar(dataUrl);
+    } catch (err) {
+      setToast(err instanceof Error ? err.message : "That image could not be used.");
+    } finally {
+      /* Cleared so choosing the same file twice still fires a change event. */
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  }, [patch]);
+
+  const clearAvatar = useCallback(async () => {
+    if (await patch({ avatarUrl: null }, "Picture removed.")) setAvatar(null);
+  }, [patch]);
 
   const dirty = name.trim() !== (user?.name ?? "") && name.trim().length > 0;
 
@@ -143,6 +166,37 @@ export default function SettingsClient({ user, streak }: Props) {
         <div className="an-pane" key="account">
           <section className="an-card">
             <h2 className="an-card-title">Profile</h2>
+
+            <div className="pfp-row">
+              <span className="pfp-preview" aria-hidden>
+                {avatar
+                  // eslint-disable-next-line @next/next/no-img-element -- a data
+                  // URI has no remote host for next/image to optimise, and
+                  // routing it through the loader would only add a round trip.
+                  ? <img src={avatar} alt="" width={64} height={64} />
+                  : <span className="pfp-initials">
+                      {(user?.name ?? "?").trim().charAt(0).toUpperCase()}
+                    </span>}
+              </span>
+              <div className="pfp-actions">
+                <button className="an-btn" disabled={saving}
+                        onClick={() => fileRef.current?.click()}>
+                  {avatar ? "Change picture" : "Upload picture"}
+                </button>
+                {avatar && (
+                  <button className="pfp-clear" disabled={saving} onClick={clearAvatar}>
+                    Remove
+                  </button>
+                )}
+                <p className="an-muted an-footnote">
+                  Square-cropped and scaled to 256px before it is saved.
+                </p>
+              </div>
+              <input
+                ref={fileRef} type="file" accept="image/*" hidden
+                onChange={(e) => pickAvatar(e.target.files?.[0])}
+              />
+            </div>
 
             <label className="set-label" htmlFor="set-email">Email Address</label>
             <input id="set-email" className="set-input" value={user?.email ?? ""} disabled />

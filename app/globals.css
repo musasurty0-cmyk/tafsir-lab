@@ -13188,3 +13188,33 @@ input, textarea { font: inherit; color: inherit; }
 @media (prefers-reduced-motion: reduce) {
   .kind-card:hover:not(:disabled) { transform: none; }
 }
+
+/* ── Profile picture ──────────────────────────────────────────────────────
+   Stored inline on the user row, so the control shows what will actually be
+   saved: a circle, already cropped, at the size it will be seen. */
+.pfp-row {
+  display: flex; align-items: flex-start; gap: 16px;
+  margin-bottom: 22px;
+}
+.pfp-preview {
+  flex: none;
+  width: 64px; height: 64px; border-radius: 50%;
+  overflow: hidden; display: grid; place-items: center;
+  background: color-mix(in oklab, var(--accent) 18%, transparent);
+  border: 1px solid var(--line-strong);
+}
+.pfp-preview img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.pfp-initials {
+  font-size: 24px; font-weight: 600; color: var(--ink-2);
+  line-height: 1; user-select: none;
+}
+.pfp-actions { display: flex; flex-direction: column; align-items: flex-start; gap: 7px; }
+.pfp-actions .an-footnote { margin: 0; }
+.pfp-clear {
+  background: none; border: none; padding: 0; cursor: pointer;
+  font-size: 12px; color: var(--ink-4); text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color var(--dur-fast) ease;
+}
+.pfp-clear:hover:not(:disabled) { color: #c2544d; }
+.pfp-clear:disabled { opacity: .5; cursor: default; }
