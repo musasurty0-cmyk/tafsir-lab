@@ -173,6 +173,10 @@ export default function AiPanel({ pageId, surahNumber, surahName, onClose }: Pro
         restored = saved.map((t) => ({ ...t, running: false, openTrace: false }));
       }
     } catch { /* private mode, or a shape from an older build */ }
+    /* Restoring is exactly the case this rule cannot derive: the value
+       lives in the browser's storage, which does not exist until the
+       browser does. */
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setTurns(restored);
   }, [storeKey]);
 
