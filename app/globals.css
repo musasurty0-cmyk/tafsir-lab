@@ -3104,14 +3104,26 @@ input, textarea { font: inherit; color: inherit; }
    hint line, then the basmala on its own — which took four times the vertical
    room above the first line of Qur'an. */
 .qcf-surah-bar {
-  display: inline-flex;
+  display: flex;
   align-items: center;
+  /* The width of the text it heads. It used to hug its contents, so the
+     heading was a small tab floating over a 592px column — matching the
+     column lines it up with the Qur'an beneath and spreads the three parts
+     the way a printed heading does. */
+  width: 100%;
+  justify-content: space-between;
   gap: 16px;
-  padding: 7px 10px 7px 16px;
+  padding: 7px 10px;
   border: 1px solid var(--paper-line);
   border-radius: 999px;
   background: var(--paper-wash);
-  max-width: 100%;
+}
+/* Al-Fatihah has no separate basmala — its own first verse is the basmala —
+   so that bar holds two items, and pushing them to opposite ends of the
+   column would leave a void down the middle. They centre instead. */
+.qcf-surah-bar:not(:has(.qcf-bar-basmala)) {
+  justify-content: center;
+  gap: 14px;
 }
 
 /* The basmala. Unicode text, so it takes the Qur'anic reading face — the
