@@ -13075,8 +13075,18 @@ input, textarea { font: inherit; color: inherit; }
    vertically scrolling box flows sideways — at 1680px the body laid out
    seventeen columns and reading meant scrolling right, which is worse than the
    440px panel it replaced. */
+/* Centre the rail WITH the column, not the column away from the rail.
+   Padding the body alone pushed the text to the middle of a 1680px window
+   while the ayah numbers stayed pinned to the far left edge — three hundred
+   pixels from the verses they index, which is the one thing a margin of
+   numbers exists to be next to. */
+.drawer-overlay[data-expanded="true"] .drawer-split {
+  width: 100%;
+  max-width: 58rem;
+  margin-inline: auto;
+}
 .drawer-overlay[data-expanded="true"] .drawer-body {
-  padding-inline: max(var(--sp-6, 32px), calc((100% - 46rem) / 2));
+  padding-inline: var(--sp-5, 24px);
 }
 
 
@@ -13084,7 +13094,7 @@ input, textarea { font: inherit; color: inherit; }
    full width there is no reason to wrap three fields under each other. */
 .drawer-overlay[data-expanded="true"] .drawer-head {
   align-items: center;
-  padding-inline: max(var(--sp-6, 32px), calc((100% - 108rem) / 2));
+  padding-inline: max(var(--sp-5, 24px), calc((100% - 58rem) / 2));
 }
 .drawer-overlay[data-expanded="true"] .drawer-head-text {
   display: flex; align-items: baseline; gap: var(--sp-3, 12px);
@@ -13095,7 +13105,7 @@ input, textarea { font: inherit; color: inherit; }
 }
 .drawer-overlay[data-expanded="true"] .drawer-source-bar,
 .drawer-overlay[data-expanded="true"] .drawer-tabs {
-  padding-inline: max(var(--sp-6, 32px), calc((100% - 108rem) / 2));
+  padding-inline: max(var(--sp-5, 24px), calc((100% - 58rem) / 2));
 }
 
 /* Width is animated with the same curve as the slide, so expanding reads as
