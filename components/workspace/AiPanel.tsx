@@ -51,6 +51,38 @@ interface Turn {
    browser's storage quota with text nobody will read again. */
 const KEEP_TURNS = 20;
 
+/* And a ceiling on how many pages keep a conversation at all. One key per page
+   ever opened grows without limit — a reader with hundreds of pages would
+   eventually hit the storage quota, at which point saving throws and
+   conversations stop being kept, silently. Oldest thread goes first. */
+const KEEP_CHATS = 12;
+const CHAT_PREFIX = "tl-lab-chat:";
+
+/** Stored shape. `at` exists so the oldest can be identified for eviction. */
+interface StoredChat { at: number; turns: Turn[] }
+
+function evictOldChats(keep: string) {
+  try {
+    const rows: { key: string; at: number }[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key?.startsWith(CHAT_PREFIX) || key === keep) continue;
+      let at = 0;
+      try {
+        const parsed = JSON.parse(localStorage.getItem(key) ?? "null");
+        // A bare array is the older shape and has no timestamp; treat it as
+        // ancient so it is evicted before anything written since.
+        at = Array.isArray(parsed) ? 0 : Number(parsed?.at ?? 0);
+      } catch { at = 0; }
+      rows.push({ key, at });
+    }
+    rows.sort((a, b) => a.at - b.at);
+    for (const r of rows.slice(0, Math.max(0, rows.length - (KEEP_CHATS - 1)))) {
+      localStorage.removeItem(r.key);
+    }
+  } catch { /* private mode — nothing was being stored anyway */ }
+}
+
 interface Props {
   workspaceId: string;
   pageId:      string | null;
@@ -131,7 +163,9 @@ export default function AiPanel({ pageId, surahNumber, surahName, onClose }: Pro
     let restored: Turn[] = [];
     try {
       const raw = localStorage.getItem(storeKey);
-      const saved = raw ? JSON.parse(raw) as Turn[] : null;
+      const parsed = raw ? JSON.parse(raw) as StoredChat | Turn[] : null;
+      // Accepts the older bare-array shape as well as the current wrapper.
+      const saved = Array.isArray(parsed) ? parsed : parsed?.turns ?? null;
       if (Array.isArray(saved)) {
         /* Nothing is ever restored mid-flight. A turn saved while streaming
            would come back with running: true and a spinner that never stops,
@@ -148,8 +182,13 @@ export default function AiPanel({ pageId, surahNumber, surahName, onClose }: Pro
     // what gets written down.
     if (turns.some((t) => t.running)) return;
     try {
-      if (turns.length === 0) localStorage.removeItem(storeKey);
-      else localStorage.setItem(storeKey, JSON.stringify(turns.slice(-KEEP_TURNS)));
+      if (turns.length === 0) {
+        localStorage.removeItem(storeKey);
+        return;
+      }
+      const payload: StoredChat = { at: Date.now(), turns: turns.slice(-KEEP_TURNS) };
+      localStorage.setItem(storeKey, JSON.stringify(payload));
+      evictOldChats(storeKey);
     } catch { /* quota, or private mode — the conversation is still on screen */ }
   }, [turns, storeKey]);
 
