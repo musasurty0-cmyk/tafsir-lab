@@ -34,6 +34,14 @@ describe("findSurahInText", () => {
     expect(await findSurahInText("what does the Quran say about patience")).toBe(null);
     expect(await findSurahInText("tell me about the people")).toBe(null);
   });
+  it("tolerates the spellings readers actually use", async () => {
+    // The dataset says "As-Saf"; nearly everyone writes "As-Saff".
+    expect(await findSurahInText("surah saff main maqsad")).toBe(61);
+    expect(await findSurahInText("what is al-baqara about")).toBe(2);
+    expect(await findSurahInText("surah fatiha")).toBe(1);
+    expect(await findSurahInText("as-saff")).toBe(61);
+  });
+
   it("returns null for nothing", async () => {
     expect(await findSurahInText("")).toBe(null);
   });

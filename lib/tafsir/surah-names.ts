@@ -32,7 +32,25 @@ function normalize(name: string): string {
   return name
     .toLowerCase()
     .normalize("NFD").replace(/[̀-ͯ]/g, "")   // drop diacritics
-    .replace(/[^a-z0-9]/g, "");                          // and everything else
+    .replace(/[^a-z0-9]/g, "");                           // and everything else
+}
+
+/**
+ * The spelling-tolerant form.
+ *
+ * Transliteration is not standardised and readers do not consult a dataset
+ * before typing. The bundled names say "As-Saf"; almost everyone writes
+ * "As-Saff", and matching literally missed it. Doubled consonants collapse
+ * (saff → saf, muhammad → muhamad) and a trailing h goes (baqarah → baqara,
+ * fatihah → fatiha), which covers the variants that actually turn up.
+ *
+ * Applied to the stored names and the query alike, so the two meet in the
+ * middle. Keys that two sūrahs would both claim under this looser form are
+ * dropped when the table is built, so loosening cannot create a wrong answer
+ * — only a missing one.
+ */
+function canonical(normalized: string): string {
+  return normalized.replace(/(.)\1+/g, "$1").replace(/h$/, "");
 }
 
 /**
@@ -71,9 +89,12 @@ function load(): Promise<Map<string, number>> {
     for (const r of rows) {
       if (!r?.surah_name || !r.surah_number) continue;
       const full = normalize(r.surah_name);
-      claim(full, r.surah_number);
       const bare = withoutArticle(full);
-      if (bare) claim(bare, r.surah_number);
+      /* Both the literal and the spelling-tolerant form, with and without the
+         article: "assaf", "asaf", "saf" all reach sūrah 61. */
+      for (const k of [full, canonical(full), bare, bare ? canonical(bare) : null]) {
+        if (k) claim(k, r.surah_number);
+      }
     }
 
     const out = new Map<string, number>();
@@ -105,8 +126,7 @@ export async function findSurahInText(text: string): Promise<number | null> {
      name is safe here. Hyphenated names arrive as one token. */
   const named = text.match(/\b(?:s(?:u|ū)rahs?|s(?:u|ū)rat|sura|chapter)\s+([\p{L}][\p{L}'’ʿʾ-]{1,24})/iu);
   if (named) {
-    const key = normalize(named[1]);
-    const hit = names.get(key) ?? (withoutArticle(key) ? names.get(withoutArticle(key)!) : undefined);
+    const hit = lookup(names, normalize(named[1]));
     if (hit) return hit;
   }
 
@@ -115,14 +135,20 @@ export async function findSurahInText(text: string): Promise<number | null> {
   for (const token of text.match(/[\p{L}][\p{L}'’ʿʾ-]{3,24}/gu) ?? []) {
     const key = normalize(token);
     if (key.length < UNAMBIGUOUS_LEN) continue;
-    const hit = names.get(key);
+    const hit = lookup(names, key);
     if (hit) return hit;
-    const bare = withoutArticle(key);
-    if (bare && bare.length >= UNAMBIGUOUS_LEN) {
-      const b = names.get(bare);
-      if (b) return b;
-    }
   }
 
+  return null;
+}
+
+/** Literal, then spelling-tolerant, each with and without the article. */
+function lookup(names: Map<string, number>, key: string): number | null {
+  const bare = withoutArticle(key);
+  for (const k of [key, canonical(key), bare, bare ? canonical(bare) : null]) {
+    if (!k) continue;
+    const hit = names.get(k);
+    if (hit) return hit;
+  }
   return null;
 }
