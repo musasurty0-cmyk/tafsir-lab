@@ -462,33 +462,6 @@ input, textarea { font: inherit; color: inherit; }
 }
 
 /* ── Topbar ── */
-/* Collapsed: a thin strip holding only the handle, so the page gets the
-   height back without the toolbar becoming unreachable. */
-.topbar--collapsed {
-  min-height: 0;
-  padding: 0;
-  justify-content: center;
-  border-bottom: 1px solid var(--line);
-}
-.topbar-handle {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 56px; height: 16px;
-  color: var(--ink-4);
-  background: transparent;
-  border: 0; border-radius: 0 0 var(--radius-sm) var(--radius-sm);
-  cursor: pointer;
-  transition: color var(--dur-fast) var(--ease-soft),
-              background var(--dur-fast) var(--ease-soft);
-}
-.topbar-handle:hover {
-  color: var(--ink);
-  background: color-mix(in oklab, var(--ink) 6%, transparent);
-}
-/* The collapse control sits with the actions but reads as chrome, not as one
-   of the things you came here to press. */
-.tb-btn--collapse { color: var(--ink-4); }
-.tb-btn--collapse:hover { color: var(--ink-2); }
-
 .topbar {
   position: sticky; top: 0; z-index: 4;
   /* Opaque, and the same colour as the page. The translucent fill plus a
@@ -500,6 +473,45 @@ input, textarea { font: inherit; color: inherit; }
   padding: 10px 20px; gap: 10px;
   min-height: 48px;
 }
+
+/* Collapsed — the banner goes, not just its contents.
+   Two things had to be right here and neither was. The rule lived ABOVE
+   .topbar, so at equal specificity the base won and min-height: 48px stood:
+   the strip stayed exactly as tall, only emptied. And zeroing the height is
+   not enough on its own — the handle has to come out of flow, or it holds the
+   bar open by its own height. Doubled class for specificity, absolute handle
+   overlaying the content it sits above. */
+.topbar.topbar--collapsed {
+  min-height: 0;
+  height: 0;
+  padding: 0;
+  border-bottom: 0;
+  overflow: visible;
+  justify-content: center;
+}
+.topbar-handle {
+  position: absolute;
+  top: 0; left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 54px; height: 15px;
+  color: var(--ink-4);
+  background: var(--bg);
+  border: 1px solid var(--line); border-top: 0;
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  cursor: pointer;
+  transition: color var(--dur-fast) var(--ease-soft),
+              background var(--dur-fast) var(--ease-soft);
+}
+.topbar-handle:hover {
+  color: var(--ink);
+  background: color-mix(in oklab, var(--ink) 8%, var(--bg));
+}
+/* The collapse control sits with the actions but reads as chrome, not as one
+   of the things you came here to press. */
+.tb-btn--collapse { color: var(--ink-4); }
+.tb-btn--collapse:hover { color: var(--ink-2); }
 /* Sized to content, not greedy: the page navigator sits immediately to its
    right, so the crumbs must not grow and push it away. Slack is taken by
    .topbar-actions' auto margin instead, which keeps the actions right-aligned
