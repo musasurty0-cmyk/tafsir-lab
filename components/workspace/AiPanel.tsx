@@ -386,9 +386,14 @@ function Trace({ turn, onToggle }: { turn: Turn; onToggle: () => void }) {
       <button className="lab-trace-head" onClick={onToggle} aria-expanded={turn.openTrace}>
         <Search size={12} aria-hidden />
         <span>
+          {/* Three states, not two. A greeting retrieves nothing and finishes,
+              so "Searching…" with no count left the line reading as though it
+              were still working long after the answer had arrived. */}
           {turn.hits.length > 0
             ? `Searched ${turn.hits.length} source${turn.hits.length === 1 ? "" : "s"}`
-            : "Searching…"}
+            : turn.running
+              ? "Searching…"
+              : "Answered without sources"}
         </span>
         <ChevronDown size={13} aria-hidden className="lab-trace-chev" />
       </button>
