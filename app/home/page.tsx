@@ -93,8 +93,7 @@ export default async function HomePage() {
      were added later; still one round of parallel queries, and each one is
      allowed to fail on its own — an empty rail is a worse dashboard, a
      missing dashboard is no dashboard. */
-  const [recent, bookmarks, summary] = await Promise.all([
-    Bookmarks.recentAnnotations(userId).catch(() => []),
+  const [bookmarks, summary] = await Promise.all([
     Bookmarks.listBookmarks(userId, 6).catch(() => []),
     Analytics.summary(userId, 0).catch(() => null),
   ]);
@@ -106,7 +105,6 @@ export default async function HomePage() {
       user={user ?? null}
       surahNames={surahNames}
       totalSurahs={totalSurahs}
-      recent={recent}
       bookmarks={bookmarks}
       streak={summary
         ? { current: summary.streak, today: summary.todayCount, goal: summary.dailyGoal }

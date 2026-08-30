@@ -1,21 +1,25 @@
 "use client";
 
 /**
- * HomeRail — the dashboard's right column: what you wrote last, and what you
- * saved.
+ * HomeRail — the dashboard's right column: what you saved.
  *
- * Both lists are links to a real place, so the rail is a way back into work
- * rather than a display. When either is empty it says what would put something
+ * Each entry is a link to a real place, so the rail is a way back into work
+ * rather than a display. When it is empty it says what would put something
  * there instead of showing a bare heading over nothing.
+ *
+ * It used to carry a "Recent Annotations" list above this one. Two stacked
+ * lists of recent-ish links competed with each other and with the workspace
+ * cards that already show recent work, so the rail said the same thing three
+ * times. Bookmarks are the half you choose deliberately, so that is the half
+ * that stayed.
  */
 
 import { useRouter } from "next/navigation";
-import { Clock, Bookmark } from "lucide-react";
+import { Bookmark } from "lucide-react";
 import { pushWithSplash } from "@/lib/nav-splash";
 import type { RailItem } from "@/lib/services/bookmarks.service";
 
 interface Props {
-  recent:    RailItem[];
   bookmarks: RailItem[];
 }
 
@@ -32,7 +36,7 @@ function ago(iso: string) {
 
 function Section({
   title, Icon, items, empty,
-}: { title: string; Icon: typeof Clock; items: RailItem[]; empty: string }) {
+}: { title: string; Icon: typeof Bookmark; items: RailItem[]; empty: string }) {
   const router = useRouter();
 
   return (
@@ -58,13 +62,9 @@ function Section({
   );
 }
 
-export default function HomeRail({ recent, bookmarks }: Props) {
+export default function HomeRail({ bookmarks }: Props) {
   return (
-    <aside className="home-rail" aria-label="Recent and saved">
-      <Section
-        title="Recent Annotations" Icon={Clock} items={recent}
-        empty="Notes you write will appear here, with a way straight back to them."
-      />
+    <aside className="home-rail" aria-label="Saved places">
       <Section
         title="Bookmarks" Icon={Bookmark} items={bookmarks}
         empty="No bookmarks yet. Save a place from a page's menu to pin it here."

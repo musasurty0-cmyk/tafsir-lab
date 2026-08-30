@@ -61,7 +61,6 @@ interface Props {
   user:        UserInfo | null;
   surahNames:  Record<number, SurahName>;
   totalSurahs: number;
-  recent:      RailItem[];
   bookmarks:   RailItem[];
   streak:      { current: number; today: number; goal: number } | null;
 }
@@ -407,7 +406,6 @@ export default function HomeClient({
   user,
   surahNames,
   totalSurahs,
-  recent,
   bookmarks,
   streak,
 }: Props) {
@@ -579,7 +577,7 @@ export default function HomeClient({
 
       </div>
 
-      <HomeRail recent={recent} bookmarks={bookmarks} />
+      <HomeRail bookmarks={bookmarks} />
 
       {/* First-run explainer. Sits above the tour, which teaches the editor —
           this one explains the shape of the app before you are in it. */}

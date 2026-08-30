@@ -194,7 +194,12 @@ def main() -> int:
 
     conn = connect(dsn)
     conn.autocommit = False
-    cur = conn.cursor()
+    # Two cursors, deliberately. The insert used to run on the same cursor
+    # as the SELECT, which discards the result set mid-iteration: the next
+    # fetchmany raised "no results to fetch" and the run stopped after one
+    # batch of 400 entries, having reported that batch as a success.
+    read  = conn.cursor()
+    write = conn.cursor()
 
     # Must match the chunker's own floor. A stricter filter here would silently
     # exclude the short glosses the chunker is written to keep.
@@ -216,17 +221,29 @@ def main() -> int:
         WHERE ''' + " AND ".join(where) + '''
         ORDER BY e."sourceId", e."verseKey"
     '''
-    if args.limit:
-        sql += " LIMIT %d" % int(args.limit)
-
     print("reading entries...")
-    cur.execute(sql, params)
 
     entries = chunks = 0
     t0 = time.time()
+    offset = 0          # only used by --redo, which has no anti-join to advance it
 
     while True:
-        rows = cur.fetchmany(BATCH_ENTRIES)
+        if args.limit and entries >= int(args.limit):
+            break
+
+        take = BATCH_ENTRIES
+        if args.limit:
+            take = min(take, int(args.limit) - entries)
+
+        page = sql + " LIMIT %d" % take
+        if args.redo:
+            # --redo rewrites rows that already have chunks, so the anti-join is
+            # absent and the same page would come back forever. Walk it instead.
+            page += " OFFSET %d" % offset
+            offset += take
+
+        read.execute(page, params)
+        rows = read.fetchall()
         if not rows:
             break
 
@@ -262,7 +279,7 @@ def main() -> int:
         ]
 
         execute_values(
-            cur,
+            write,
             '''INSERT INTO "TafsirChunk"
                  ("sourceId","verseKey",surah,ayah,"chunkIndex","startChar","endChar",embedding)
                VALUES %s
@@ -280,12 +297,12 @@ def main() -> int:
         rate = entries / max(time.time() - t0, 1e-6)
         print("  %7d entries -> %8d chunks (%.0f entries/s)" % (entries, chunks, rate))
 
-    cur.close()
+    read.close()
+    write.close()
     conn.close()
 
     print("\ndone: %d entries -> %d chunks in %.1f min"
           % (entries, chunks, (time.time() - t0) / 60))
-    print("\nNow build the index, once - prisma/sql/006_tafsir_index.sql")
     return 0
 
 
