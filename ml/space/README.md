@@ -1,4 +1,14 @@
-# Tafsir Lab — model service
+# Tafsir Lab — model service (OPTIONAL)
+
+> **You do not need this.** Hugging Face began requiring a paid plan to create
+> a compute Space, so the query half of semantic search moved into the reader's
+> browser — see `lib/tafsir/browser-embed.ts`. That path needs no host, no
+> account and no bill, and it is what the deployed app uses.
+>
+> This Space is kept for anyone who would rather run it server-side: a paid HF
+> plan, or the same two files on any host that will run Python. Set
+> `TAFSIR_MODEL_SPACE` and the app prefers it over the browser. Nothing breaks
+> if you never do.
 
 The half of semantic search that does not live in the database.
 
@@ -13,8 +23,10 @@ searching for *patience* will never surface "he did not weaken".
 
 ## Deploying it
 
-1. **huggingface.co** → your profile → **New Space**
-2. Name it anything. SDK: **Gradio**. Hardware: **CPU basic (free)**.
+1. **huggingface.co** → your profile → **New Space** — note this now needs a
+   paid plan; CPU Basic has no hourly cost but creating a compute Space is
+   gated. This is the step that made the browser the default instead.
+2. Name it anything. SDK: **Gradio**. Hardware: **CPU basic**.
 3. Upload `app.py` and `requirements.txt` from this folder.
 4. Wait for the build. A few minutes: it installs torch, which is the slow part.
 5. Copy the Space URL, e.g. `https://your-name-tafsir-lab.hf.space`
