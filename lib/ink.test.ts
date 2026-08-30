@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { packStroke, packStrokes, normPts } from "./ink";
+import { packStroke, packStrokes, normPts, resample, streamline } from "./ink";
 
 /**
  * The ink codec touches strokes people have already drawn, so the properties
@@ -90,5 +90,91 @@ describe("packStrokes — a whole drawing", () => {
     const before = JSON.stringify(src).length;
     const after  = JSON.stringify(packStrokes(src)).length;
     expect(after).toBeLessThan(before / 2);
+  });
+});
+
+/* ── Stroke smoothing ──────────────────────────────────────────────────────
+   The reported symptom was a pen that drew polygons: straight facets with a
+   corner at every sample. The cause was gap-filling along the CHORD between
+   two samples, which lengthens the flat parts and leaves every corner exactly
+   as sharp as it was. These pin the property that fixes it — inserted points
+   leave the chord — rather than any particular curve maths. */
+describe("resample", () => {
+  const dist = (p: number[], q: number[]) => Math.hypot(p[0] - q[0], p[1] - q[1]);
+
+  /** How far a point sits from the straight line through a→b. */
+  function offChord(a: number[], b: number[], p: number[]): number {
+    const dx = b[0] - a[0], dy = b[1] - a[1];
+    const len = Math.hypot(dx, dy);
+    if (!len) return dist(a, p);
+    return Math.abs((p[0] - a[0]) * dy - (p[1] - a[1]) * dx) / len;
+  }
+
+  it("bends inserted points away from the chord at a corner", () => {
+    // A right angle, sampled sparsely — the shape a quick mouse stroke makes.
+    const corner: [number, number, number][] = [
+      [0, 0, 0.5], [40, 0, 0.5], [40, 40, 0.5],
+    ];
+    const out = resample(corner, 4);
+    const added = out.filter((p) => !corner.some((c) => dist(c, p) < 1e-9));
+    expect(added.length).toBeGreaterThan(10);
+
+    // At least some inserted point must leave the straight line it replaced.
+    // Linear interpolation — the bug — puts every one of them exactly on it.
+    const worst = Math.max(...added.map((p) => Math.min(
+      offChord(corner[0], corner[1], p),
+      offChord(corner[1], corner[2], p),
+    )));
+    expect(worst).toBeGreaterThan(0.5);
+  });
+
+  it("leaves the original samples where they were", () => {
+    const pts: [number, number, number][] = [[0, 0, 0.5], [30, 10, 0.5], [60, 0, 0.5]];
+    const out = resample(pts, 4);
+    for (const original of pts) {
+      expect(out.some((p) => dist(p, original) < 1e-9)).toBe(true);
+    }
+  });
+
+  it("adds nothing to an already dense stroke", () => {
+    const dense: [number, number, number][] = Array.from({ length: 20 }, (_, i) =>
+      [i, 0, 0.5] as [number, number, number]);
+    expect(resample(dense, 4)).toHaveLength(dense.length);
+  });
+
+  it("keeps a straight line straight", () => {
+    const line: [number, number, number][] = [[0, 0, 0.5], [100, 0, 0.5]];
+    for (const p of resample(line, 4)) expect(Math.abs(p[1])).toBeLessThan(1e-6);
+  });
+
+  it("survives a single point and a pair", () => {
+    expect(resample([[1, 2, 0.5]], 4)).toHaveLength(1);
+    expect(resample([], 4)).toHaveLength(0);
+  });
+});
+
+describe("streamline", () => {
+  it("ends exactly where the stroke ended", () => {
+    // The filter trails its input; the true lift point must be pinned back on
+    // or short strokes fall short of the mark the reader made.
+    const pts: [number, number, number][] = [[0, 0, 0.5], [10, 10, 0.5], [20, 5, 0.5]];
+    const out = streamline(pts);
+    const last = out[out.length - 1];
+    expect(last[0]).toBeCloseTo(20, 6);
+    expect(last[1]).toBeCloseTo(5, 6);
+  });
+
+  it("starts exactly where the stroke started", () => {
+    const pts: [number, number, number][] = [[3, 7, 0.5], [10, 10, 0.5]];
+    expect(streamline(pts)[0]).toEqual([3, 7, 0.5]);
+  });
+
+  it("pulls a spike back towards its neighbours", () => {
+    const spiky: [number, number, number][] = [
+      [0, 0, 0.5], [10, 0, 0.5], [20, 30, 0.5], [30, 0, 0.5], [40, 0, 0.5],
+    ];
+    const out = streamline(spiky);
+    const peak = Math.max(...out.map((p) => p[1]));
+    expect(peak).toBeLessThan(30);
   });
 });

@@ -161,12 +161,19 @@ const STREAMLINE = 0.42;
  * sampled semicircular caps centred on the exact first and last points —
  * nothing tapers away or gets cut off at pen-lift.
  */
-function penOutline(raw: Pt[], base: number): [number, number][] {
-  if (raw.length < 2) return [];
-
-  // 1. Streamline. Applied at RENDER time, so the stored points stay the true
-  //    input: smoothing is a presentation choice we can retune later, and
-  //    strokes drawn before this existed pick it up too.
+/**
+ * Damp the jitter out of a stroke without moving where it went.
+ *
+ * An exponential filter, applied at RENDER time so the stored points stay the
+ * true input: smoothing is a presentation choice that can be retuned later,
+ * and strokes drawn before it existed pick it up too.
+ *
+ * Note what it does NOT do — it shifts points, it never adds any. On its own
+ * it cannot round a corner between two distant samples, which is what
+ * `resample` is for.
+ */
+export function streamline(raw: Pt[]): Pt[] {
+  if (raw.length < 2) return raw.slice();
   const t = 1 - STREAMLINE;
   const S: Pt[] = [raw[0]];
   for (let i = 1; i < raw.length; i++) {
@@ -177,14 +184,74 @@ function penOutline(raw: Pt[], base: number): [number, number][] {
       raw[i][2],
     ]);
   }
-  // The filter always trails the input, so the smoothed path stops short of
-  // where the pen actually lifted. Pin the true endpoint back on, or short
-  // strokes visibly fall short of the mark the user made.
+  /* The filter always trails the input, so the smoothed path stops short of
+     where the pen actually lifted. Pin the true endpoint back on, or short
+     strokes visibly fall short of the mark the user made. */
   const rawTail = raw[raw.length - 1];
   const sTail   = S[S.length - 1];
   if (Math.hypot(rawTail[0] - sTail[0], rawTail[1] - sTail[1]) > 1e-3) {
     S.push([rawTail[0], rawTail[1], rawTail[2]]);
   }
+  return S;
+}
+
+/**
+ * One point on a Catmull-Rom spline through p1→p2, with p0 and p3 setting the
+ * tangents. Uniform parameterisation: the samples are already streamlined and
+ * near-evenly spaced by the time this runs, which is the condition under which
+ * the uniform form behaves.
+ */
+function catmullRom(p0: Pt, p1: Pt, p2: Pt, p3: Pt, t: number): Pt {
+  const t2 = t * t, t3 = t2 * t;
+  const at = (i: 0 | 1) => 0.5 * (
+    2 * p1[i] +
+    (-p0[i] + p2[i]) * t +
+    (2 * p0[i] - 5 * p1[i] + 4 * p2[i] - p3[i]) * t2 +
+    (-p0[i] + 3 * p1[i] - 3 * p2[i] + p3[i]) * t3
+  );
+  return [at(0), at(1), p1[2] + (p2[2] - p1[2]) * t];
+}
+
+/**
+ * Fill the gaps between samples along a CURVE rather than a chord.
+ *
+ * This used to interpolate linearly, which is why fast strokes came out
+ * faceted: adding points along the straight line between two samples leaves
+ * the corner at every original sample exactly where it was, however many
+ * points you add. Only the flat bits got longer. Running the inserted points
+ * through a Catmull-Rom spline instead bends them around each sample, and the
+ * corners become curves.
+ *
+ * Sparse input is where this shows. A stylus reporting a few hundred samples a
+ * second is already smooth; a mouse dragged quickly lands points eight or ten
+ * pixels apart, and those are the strokes that looked like polygons.
+ */
+export function resample(S: Pt[], maxGap: number): Pt[] {
+  if (S.length < 2) return S.slice();
+  const out: Pt[] = [S[0]];
+
+  for (let i = 1; i < S.length; i++) {
+    const a = S[i - 1], b = S[i];
+    const gap = Math.hypot(b[0] - a[0], b[1] - a[1]);
+
+    if (gap > maxGap) {
+      /* Neighbours for the tangents, clamped at the ends so the first and last
+         segments curve with the stroke instead of straightening out. */
+      const p0 = S[i - 2] ?? a;
+      const p3 = S[i + 1] ?? b;
+      const steps = Math.min(Math.ceil(gap / maxGap), 64); // bounded: never stall a frame
+      for (let k = 1; k < steps; k++) out.push(catmullRom(p0, a, b, p3, k / steps));
+    }
+    out.push(b);
+  }
+  return out;
+}
+
+function penOutline(raw: Pt[], base: number): [number, number][] {
+  if (raw.length < 2) return [];
+
+  // 1. Streamline — see `streamline`.
+  const S = streamline(raw);
 
   // 2. Upsample long gaps. Streamlining fixes noise but not SPARSITY: move the
   //    pen quickly and consecutive samples land far apart, so the outline
@@ -197,23 +264,7 @@ function penOutline(raw: Pt[], base: number): [number, number][] {
   //    only ever ADDED where a gap exceeds the cap, so a slow stroke — already
   //    densely sampled — is untouched and cannot bead up from over-sampling.
   const MAX_GAP = Math.max(1.5, Math.min(4, base * 0.8));
-  const D: Pt[] = [S[0]];
-  for (let i = 1; i < S.length; i++) {
-    const a = D[D.length - 1], b = S[i];
-    const gap = Math.hypot(b[0] - a[0], b[1] - a[1]);
-    if (gap > MAX_GAP) {
-      const steps = Math.min(Math.ceil(gap / MAX_GAP), 64); // bounded: never stall a frame
-      for (let k = 1; k < steps; k++) {
-        const f = k / steps;
-        D.push([
-          a[0] + (b[0] - a[0]) * f,
-          a[1] + (b[1] - a[1]) * f,
-          a[2] + (b[2] - a[2]) * f,   // pressure eased across the gap too
-        ]);
-      }
-    }
-    D.push(b);
-  }
+  const D: Pt[] = resample(S, MAX_GAP);
 
   // 3. Drop only genuinely coincident samples. Degenerate spacing makes the
   //    local tangent undefined; anything above that threshold is real detail
@@ -315,16 +366,21 @@ export function buildStrokePath(
   }
 
   if (!pressureSensitive) {
-    path.moveTo(pts[0][0], pts[0][1]);
-    if (pts.length === 2) {
-      path.lineTo(pts[1][0], pts[1][1]);
+    /* The flat-width tools were drawing midpoint-quadratics straight through
+       the raw samples, with none of the smoothing the pen gets — so the
+       highlighter was faceted for exactly the reason the pen was. Same
+       treatment: damp the jitter, then bend the gaps. */
+    const sm = resample(streamline(pts), Math.max(1.5, Math.min(4, width * 0.8)));
+    path.moveTo(sm[0][0], sm[0][1]);
+    if (sm.length === 2) {
+      path.lineTo(sm[1][0], sm[1][1]);
     } else {
-      for (let i = 1; i < pts.length - 1; i++) {
-        const [x0, y0] = pts[i];
-        const [x1, y1] = pts[i + 1];
+      for (let i = 1; i < sm.length - 1; i++) {
+        const [x0, y0] = sm[i];
+        const [x1, y1] = sm[i + 1];
         path.quadraticCurveTo(x0, y0, (x0 + x1) / 2, (y0 + y1) / 2);
       }
-      path.lineTo(pts[pts.length - 1][0], pts[pts.length - 1][1]);
+      path.lineTo(sm[sm.length - 1][0], sm[sm.length - 1][1]);
     }
     return { path, mode: "stroke", lineWidth: width };
   }
