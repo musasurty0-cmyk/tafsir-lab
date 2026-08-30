@@ -1,8 +1,2 @@
-ar-tafsir-al-mukhtasar
-ar-tafsir-al-jalalayn
-en-tafsir-al-mukhtasar
-tafsir-al-jalalayn
-tafsir-al-baydawi
-ar-tafsir-as-saadi
 ar-tafsir-al-tabari
 en-tafisr-ibn-kathir
