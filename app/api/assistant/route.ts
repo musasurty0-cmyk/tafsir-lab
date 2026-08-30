@@ -74,6 +74,24 @@ function generationFailure(err: unknown): string {
 }
 
 /**
+ * A verse key the client says is open, or nothing.
+ *
+ * It is safe in SQL — every query parameterises it — but it also reaches the
+ * SYSTEM message through converse(), and that is somewhere a caller must not
+ * be able to write freely. A verse key has exactly one shape, so this checks
+ * for it rather than truncating: 1–114, then an ayah, and nothing else.
+ */
+function verseRef(v: unknown): string | undefined {
+  if (typeof v !== "string") return undefined;
+  const m = /^(\d{1,3}):(\d{1,3})$/.exec(v.trim());
+  if (!m) return undefined;
+  const surah = Number(m[1]);
+  const ayah  = Number(m[2]);
+  if (surah < 1 || surah > 114 || ayah < 1 || ayah > 286) return undefined;
+  return `${surah}:${ayah}`;
+}
+
+/**
  * The sūrah name the client says is open, made safe to put in a prompt.
  *
  * It lands in the SYSTEM message, which is the one place a caller must not be
@@ -159,8 +177,7 @@ export async function POST(req: NextRequest) {
         const ctxSurah = typeof body.surah === "number" ? body.surah : undefined;
 
         const verseKey = ref?.ayah != null ? `${ref.surah}:${ref.ayah}`
-          : typeof body.verseKey === "string" ? body.verseKey
-          : undefined;
+          : verseRef(body.verseKey);
         const surah = verseKey ? undefined
           : ref ? ref.surah
           : aboutHere ? ctxSurah
