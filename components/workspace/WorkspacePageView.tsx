@@ -31,6 +31,7 @@ import AiPanel from "./AiPanel";
 import ModeAPage from "./ModeAPage";
 import EditorToolbar from "./editor/EditorToolbar";
 import type { Editor } from "@tiptap/core";
+import { labMarkdownToTiptap } from "@/lib/lab-to-tiptap";
 import ModeBPage, { type PageUserPrefsData } from "./ModeBPage";
 import WhiteboardPage from "./WhiteboardPage";
 import { EditorContextProvider } from "./editor/EditorContext";
@@ -130,6 +131,34 @@ export default function WorkspacePageView({
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [formattingOpen, setFormattingOpen] = useState(false);
   const [activeEditor, setActiveEditor]     = useState<Editor | null>(null);
+
+  /**
+   * Put a Lab AI answer into the page as notes.
+   *
+   * Inserted at the caret rather than appended, because the reader pressed the
+   * button while looking at a particular place in their notes. Citations are
+   * resolved to the source they stood for on the way in — a bare [1] means
+   * nothing once the answer is separated from the conversation that retrieved
+   * it, and the sourcing is the point of the whole app.
+   *
+   * Returns whether it landed, so the panel can say so rather than looking
+   * like a button that does nothing.
+   */
+  const addAnswerToEditor = useCallback((
+    markdown: string,
+    cites: { n: number; sourceName: string; verseKey: string }[],
+  ): boolean => {
+    const ed = activeEditor;
+    if (!ed || ed.isDestroyed) return false;
+    const nodes = labMarkdownToTiptap(markdown, (n) => {
+      const c = cites.find((x) => x.n === n);
+      return c ? `${c.sourceName} ${c.verseKey}` : null;
+    });
+    if (!nodes.length) return false;
+    // One chain, so it is a single undo step rather than one per paragraph.
+    ed.chain().focus().insertContent(nodes).run();
+    return true;
+  }, [activeEditor]);
 
   // Persist formatting toolbar open/closed state
   useEffect(() => {
@@ -725,6 +754,10 @@ export default function WorkspacePageView({
               pageId={page ? activePageId : null}
               surahNumber={surahNumber}
               surahName={chapter.name_simple}
+              /* Absent when there is no editor to add to — the canvas and
+                 board modes have no document — so the panel hides the
+                 control rather than offering one that cannot work. */
+              onAddToEditor={activeEditor ? addAnswerToEditor : undefined}
               onClose={() => setAiOpen(false)}
             />
           )}

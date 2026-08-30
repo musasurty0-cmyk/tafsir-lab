@@ -36,6 +36,7 @@ import * as Models from "@/lib/tafsir/model-client";
 import { selectSentences, verifyExtractive, type Passage } from "@/lib/tafsir/answer";
 import * as LLM from "@/lib/tafsir/llm";
 import { parseReference, findReference } from "@/lib/quran-search";
+import { findSurahInText } from "@/lib/tafsir/surah-names";
 
 export const runtime = "nodejs";
 /** Retrieval plus a cold Space can take a while; the default would cut it off. */
@@ -212,15 +213,23 @@ export async function POST(req: NextRequest) {
 
         const verseKey = ref?.ayah != null ? `${ref.surah}:${ref.ayah}`
           : verseRef(body.verseKey);
+
+        /* A sūrah named in words, where `ref` only ever understood numbers.
+           "Surah saf main maqsad" resolved to nothing, so the search was not
+           scoped, and a transliterated question went out across the whole
+           corpus and came back with al-Baqarah on poetry. Asked for last, so
+           an explicit reference and the page you are on both still win. */
+        const namedSurah = verseKey || ref ? null : await findSurahInText(q);
+
         const surah = verseKey ? undefined
           : ref ? ref.surah
-          : aboutHere ? ctxSurah
-          : undefined;
+          : namedSurah ?? (aboutHere ? ctxSurah : undefined);
 
 
         send({
           step: "understand",
           detail: verseKey ? `Reading as a question about ${verseKey}`
+            : namedSurah ? `Reading as a question about sūrah ${namedSurah}`
             : surah ? `Scoped to sūrah ${surah}, the one you have open`
             : "Reading as a general question — searching every source",
           ...(sources?.length ? { pinned: sources } : {}),

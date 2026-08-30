@@ -12487,6 +12487,29 @@ input, textarea { font: inherit; color: inherit; }
 }
 
 /* ── Thinking ───────────────────────────────────────────────────────────── */
+/* "Add to editor" — quiet until wanted. It sits under a finished answer and
+   should read as an offer, not as the point of the bubble above it. */
+.lab-actions { display: flex; gap: 6px; margin: -2px 0 2px 2px; }
+.lab-action {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 9px;
+  font-size: 12.5px; font-weight: 500;
+  color: var(--ink-3);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: color var(--dur-fast) var(--ease-soft),
+              background var(--dur-fast) var(--ease-soft),
+              border-color var(--dur-fast) var(--ease-soft);
+}
+.lab-action:hover {
+  color: var(--ink);
+  background: color-mix(in oklab, var(--ink) 5%, transparent);
+  border-color: var(--line);
+}
+.lab-action svg { flex: none; }
+
 .lab-thinking {
   display: inline-flex; align-items: center; gap: 9px;
   background: color-mix(in oklab, var(--ink) 6%, transparent);

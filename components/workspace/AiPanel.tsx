@@ -22,7 +22,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Sparkles, ArrowUp, X, SquarePen, ChevronDown, AlertCircle,
-  Search, BookOpen,
+  Search, BookOpen, FilePlus2, Check,
 } from "lucide-react";
 import { useOverlayMotion } from "@/lib/use-overlay-motion";
 import { useDismissable } from "@/lib/use-dismissable";
@@ -90,6 +90,15 @@ interface Props {
   pageId:      string | null;
   surahNumber: number;
   surahName:   string;
+  /**
+   * Put an answer into the page as notes. Absent when there is nothing to
+   * add to — the canvas and board modes have no document — and the control
+   * is hidden rather than shown failing.
+   */
+  onAddToEditor?: (
+    markdown: string,
+    cites: { n: number; sourceName: string; verseKey: string }[],
+  ) => boolean;
   onClose:     () => void;
 }
 
@@ -162,8 +171,11 @@ function renderMarkdown(text: string, cites: CiteRef[]): React.ReactNode[] {
 
 // ── Component ──────────────────────────────────────────────────────────────
 
-export default function AiPanel({ pageId, surahNumber, surahName, onClose }: Props) {
+export default function AiPanel({ pageId, surahNumber, surahName, onAddToEditor, onClose }: Props) {
   const [turns, setTurns] = useState<Turn[]>([]);
+  /* The turn most recently added to the page, held briefly so the button can
+     confirm it worked. A toast would be too much for something this small. */
+  const [addedId, setAddedId] = useState<string | null>(null);
 
   /* The conversation survives closing the panel.
      It is per page, because that is what the answers are about: a thread on
@@ -410,6 +422,28 @@ export default function AiPanel({ pageId, surahNumber, surahName, onClose }: Pro
                         className="lab-bubble lab-answer"
                         text={t.text} cites={t.cites} live={t.running}
                       />
+                    )}
+
+                    {/* Offered only once the answer is complete: adding half
+                        a paragraph to someone's notes is not useful, and the
+                        text is still arriving until running goes false. */}
+                    {t.text && !t.running && onAddToEditor && (
+                      <div className="lab-actions">
+                        <button
+                          type="button"
+                          className="lab-action"
+                          onClick={() => {
+                            if (onAddToEditor(t.text, t.cites)) {
+                              setAddedId(t.id);
+                              setTimeout(() => setAddedId((id) => (id === t.id ? null : id)), 2200);
+                            }
+                          }}
+                        >
+                          {addedId === t.id
+                            ? <><Check size={13} aria-hidden /> Added to page</>
+                            : <><FilePlus2 size={13} aria-hidden /> Add to editor</>}
+                        </button>
+                      </div>
                     )}
 
                     {t.sentences.length > 0 && (
