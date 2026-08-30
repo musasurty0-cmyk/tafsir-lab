@@ -18,7 +18,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ChevronUp, ChevronDown, X } from "lucide-react";
+import { ChevronUp, ChevronDown, LayoutGrid } from "lucide-react";
 import type { Chapter } from "@/lib/types";
 
 /** Row height in px. Mirrored in the stylesheet — see .spot-row. */
@@ -33,10 +33,15 @@ interface Props {
   /** Where to open. Defaults to the first sūrah. */
   initialId?: number;
   onPick: (chapter: Chapter) => void;
+  /** Leaving this view. It is the default one, so this goes to the grid. */
   onClose: () => void;
+  /** Label for that exit, since "close" is not what it does any more. */
+  closeLabel?: string;
 }
 
-export default function SurahSpotlight({ chapters, initialId, onPick, onClose }: Props) {
+export default function SurahSpotlight({
+  chapters, initialId, onPick, onClose, closeLabel = "Close",
+}: Props) {
   const startAt = Math.max(0, chapters.findIndex((c) => c.id === initialId));
   const [i, setI] = useState(startAt === -1 ? 0 : startAt);
   const boxRef = useRef<HTMLDivElement | null>(null);
@@ -99,10 +104,10 @@ export default function SurahSpotlight({ chapters, initialId, onPick, onClose }:
       >
         <div className="spot-head">
           <span className="spot-keys">
-            Use <kbd>↑</kbd> <kbd>↓</kbd> to move · <kbd>Enter</kbd> to open · <kbd>Esc</kbd> to close
+            Use <kbd>↑</kbd> <kbd>↓</kbd> to move · <kbd>Enter</kbd> to open · <kbd>Esc</kbd> for the grid
           </span>
-          <button type="button" className="spot-x" onClick={onClose} aria-label="Close">
-            <X size={15} aria-hidden />
+          <button type="button" className="spot-alt" onClick={onClose}>
+            <LayoutGrid size={14} aria-hidden /> {closeLabel}
           </button>
         </div>
 

@@ -55,9 +55,20 @@ export default function WorkspaceHome({
   const [starting,   setStarting]   = useState<number | null>(null);
   const [navigating, setNavigating] = useState<number | null>(null);
   const [filter,     setFilter]     = useState<"all" | "started" | "not-started">("all");
-  /* The grid stays the default. This is the other way through the same
-     list, for reading down it rather than scanning across it. */
-  const [spotlightOpen, setSpotlightOpen] = useState(false);
+  /* The spotlight is where the picker opens: one sūrah at a time is how you
+     move through the Qur'an, and the grid is the reference view you go to when
+     you want to see the whole of it. The choice is remembered, because someone
+     who prefers the grid should not have to say so every time. */
+  const [surahView, setSurahView] = useState<"spotlight" | "grid">("spotlight");
+  useEffect(() => {
+    try {
+      if (localStorage.getItem("tl-surah-view") === "grid") setSurahView("grid");
+    } catch { /* private mode — the default stands */ }
+  }, []);
+  const chooseView = useCallback((v: "spotlight" | "grid") => {
+    setSurahView(v);
+    try { localStorage.setItem("tl-surah-view", v); } catch { /* no matter */ }
+  }, []);
   const [prevFilter, setPrevFilter] = useState(filter);
   const tabsRef = useRef<Record<string, HTMLButtonElement | null>>({ all: null, started: null, "not-started": null });
   const tabsContainerRef = useRef<HTMLDivElement | null>(null);
@@ -301,7 +312,7 @@ export default function WorkspaceHome({
             <button
               type="button"
               className="ws-view-btn"
-              onClick={() => setSpotlightOpen(true)}
+              onClick={() => chooseView("spotlight")}
               title="Scroll the Qur'an one sūrah at a time"
             >
               <ScanLine size={14} aria-hidden /> Scroll
@@ -309,17 +320,18 @@ export default function WorkspaceHome({
           </div>
         </div>
 
-        {spotlightOpen && (
+        {surahView === "spotlight" && (
           <SurahSpotlight
             chapters={chapters}
             initialId={visible[0]?.id}
-            onPick={(ch) => { setSpotlightOpen(false); handleCardClick(ch); }}
-            onClose={() => setSpotlightOpen(false)}
+            closeLabel="Grid view"
+            onPick={handleCardClick}
+            onClose={() => chooseView("grid")}
           />
         )}
 
-        {/* Grid */}
-        <div
+        {/* Grid — the reference view, shown when it is the one chosen. */}
+        {surahView === "grid" && <div
           className="ws-surah-grid"
           data-anim-direction={(() => {
             const order = ["all", "started", "not-started"];
@@ -391,7 +403,7 @@ export default function WorkspaceHome({
               </button>
             );
           })}
-        </div>
+        </div>}
       </div>
     </div>
 
