@@ -9,6 +9,7 @@
  */
 
 import Link from "next/link";
+import { ChevronsUpDown } from "lucide-react";
 import SurahCrumbMenu from "./SurahCrumbMenu";
 import type { Chapter } from "@/lib/types";
 import PresenceBar from "./PresenceBar";
@@ -92,6 +93,9 @@ const BoardIcon = ({ size = 17 }: { size?: number }) => (
 );
 
 interface Props {
+  /** Collapsed to a handle, so the page gets the height back. */
+  collapsed?:         boolean;
+  onToggleCollapse?:  () => void;
   workspaceId:        string;
   surahNumber:        number;
   workspaceName:      string;
@@ -139,8 +143,31 @@ export default function TopBar({
   onToggleFormatting,
   presenceOthers = [],
   liveStatus,
+  collapsed = false,
+  onToggleCollapse,
 }: Props) {
   const t = useT();
+
+  /* Collapsed, the bar keeps only the handle. Everything else unmounts rather
+     than being hidden: a toolbar you cannot see should not still be catching
+     Tab, and the page navigator underneath it should not still be live. */
+  if (collapsed) {
+    return (
+      <div className="topbar topbar--collapsed">
+        <button
+          type="button"
+          className="topbar-handle"
+          onClick={onToggleCollapse}
+          title="Show the toolbar"
+          aria-label="Show the toolbar"
+          aria-expanded={false}
+        >
+          <ChevronsUpDown size={13} aria-hidden />
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="topbar">
 
@@ -199,6 +226,18 @@ export default function TopBar({
 
       {/* ── Actions ── */}
       <div className="topbar-actions">
+        {onToggleCollapse && (
+          <button
+            type="button"
+            className="tb-btn tb-btn--collapse"
+            onClick={onToggleCollapse}
+            title="Hide the toolbar"
+            aria-label="Hide the toolbar"
+            aria-expanded
+          >
+            <ChevronsUpDown size={15} aria-hidden />
+          </button>
+        )}
 
         {/* Mode toggle */}
         <div className="mode-toggle" role="group" aria-label="View mode">

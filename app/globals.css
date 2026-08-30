@@ -462,6 +462,33 @@ input, textarea { font: inherit; color: inherit; }
 }
 
 /* ── Topbar ── */
+/* Collapsed: a thin strip holding only the handle, so the page gets the
+   height back without the toolbar becoming unreachable. */
+.topbar--collapsed {
+  min-height: 0;
+  padding: 0;
+  justify-content: center;
+  border-bottom: 1px solid var(--line);
+}
+.topbar-handle {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 56px; height: 16px;
+  color: var(--ink-4);
+  background: transparent;
+  border: 0; border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  cursor: pointer;
+  transition: color var(--dur-fast) var(--ease-soft),
+              background var(--dur-fast) var(--ease-soft);
+}
+.topbar-handle:hover {
+  color: var(--ink);
+  background: color-mix(in oklab, var(--ink) 6%, transparent);
+}
+/* The collapse control sits with the actions but reads as chrome, not as one
+   of the things you came here to press. */
+.tb-btn--collapse { color: var(--ink-4); }
+.tb-btn--collapse:hover { color: var(--ink-2); }
+
 .topbar {
   position: sticky; top: 0; z-index: 4;
   /* Opaque, and the same colour as the page. The translucent fill plus a
