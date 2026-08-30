@@ -80,6 +80,43 @@ export function terms(s: string): string[] {
   return [...out];
 }
 
+/* Words that describe the ACT of asking rather than the thing asked about.
+   They survive STOP because they are meaningful English — but they are the
+   scaffolding of a question, not its subject, and they are also common in
+   commentary, so searching for them returns everything and means nothing.
+
+   This exists because ranking probes by length picked "commentators" out of
+   "What do the commentators say about al-hamd?" and went looking for that word
+   in tafsir. The answer came back about Surat al-Fil. */
+const FRAMING = new Set([
+  "commentator", "commentators", "commentary", "scholar", "scholars",
+  "mufassir", "mufassirun", "tafsir", "tafseer", "exegesis",
+  "explain", "explains", "explanation", "mean", "means", "meaning",
+  "describe", "describes", "discuss", "discusses", "mention", "mentions",
+  "passage", "passages", "verse", "verses", "ayah", "ayat", "surah", "sura",
+  "chapter", "quran", "qur", "book", "text", "texts",
+  "tell", "state", "states", "stated", "outright", "specifically",
+  "imply", "implies", "implied", "clearly", "anything", "something",
+  "according", "regarding", "concerning", "here", "there",
+]);
+
+/**
+ * The words worth actually searching for, strongest first.
+ *
+ * Ranked by whether a word carries subject matter, then by length as a crude
+ * proxy for specificity within that group — "al-Khidr" beats "learn". Framing
+ * words are kept, but last, so a question made entirely of them still has
+ * something to search rather than falling back to the whole sentence.
+ */
+export function probeTerms(query: string): string[] {
+  return terms(query).sort((a, b) => {
+    const fa = FRAMING.has(a) ? 1 : 0;
+    const fb = FRAMING.has(b) ? 1 : 0;
+    if (fa !== fb) return fa - fb;          // subject words first
+    return b.length - a.length;             // then longest
+  });
+}
+
 // ── Sentences ──────────────────────────────────────────────────────────────
 
 /**

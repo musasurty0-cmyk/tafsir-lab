@@ -33,7 +33,7 @@
  */
 
 import { db } from "@/lib/db";
-import { terms } from "@/lib/tafsir/answer";
+import { probeTerms } from "@/lib/tafsir/answer";
 
 export interface SearchHit {
   chunkId:    string;
@@ -323,12 +323,11 @@ export async function search(
      empty — which is what "Who was al-Khidr and what did Musa learn?" did.
      Searching the two or three strongest words instead is what a person would
      do, and it is the difference between the keyword fallback working and not.
-     Longest-first as a crude proxy for specificity: "al-Khidr" beats "learn".
+     probeTerms ranks subject words above the vocabulary of asking — otherwise
+     "What do the commentators say about al-hamd?" searched for "commentators".
      Two probes rather than three — they run in parallel but contend for the
      same index, and the third rarely changes the top of the list. */
-  const probes = terms(query)
-    .sort((a, b) => b.length - a.length)
-    .slice(0, 2);
+  const probes = probeTerms(query).slice(0, 2);
   const lexicalQueries = probes.length ? probes : [query];
 
   const [semantic, ...lexicalLists] = await Promise.all([

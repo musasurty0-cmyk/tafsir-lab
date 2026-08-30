@@ -8,10 +8,7 @@
  * rather than only testing that honest input passes.
  */
 import { describe, it, expect } from "vitest";
-import {
-  foldArabic, normalise, terms, sentences,
-  selectSentences, verifyExtractive, type Passage,
-} from "@/lib/tafsir/answer";
+import { foldArabic, normalise, terms, sentences, selectSentences, verifyExtractive, type Passage, probeTerms } from "@/lib/tafsir/answer";
 
 const P: Passage[] = [
   {
@@ -162,5 +159,37 @@ describe("verifyExtractive", () => {
 
   it("passes an empty selection", () => {
     expect(verifyExtractive([], P)).toEqual({ ok: true });
+  });
+});
+
+describe("probeTerms", () => {
+  it("puts the subject ahead of the vocabulary of asking", () => {
+    // The bug this fixes: ranking by length picked "commentators" out of this
+    // question and searched tafsir for that word. The answer came back about
+    // Surat al-Fil.
+    // normalise() splits the hyphen, so the subject arrives as "hamd".
+    const [first] = probeTerms("What do the commentators say about al-hamd?");
+    expect(first).toBe("hamd");
+  });
+
+  it("keeps framing words rather than dropping them", () => {
+    // A question made only of framing words must still have something to
+    // search, or the fallback becomes the whole sentence.
+    const out = probeTerms("explain the meaning of this passage");
+    expect(out.length).toBeGreaterThan(0);
+  });
+
+  it("ranks longer subject words first among equals", () => {
+    const out = probeTerms("who was al-Khidr and what did Musa learn");
+    expect(out.indexOf("khidr")).toBeLessThan(out.indexOf("learn"));
+  });
+
+  it("still finds a subject buried among framing words", () => {
+    const [first] = probeTerms("what does the commentary mention regarding patience");
+    expect(first).toBe("patience");
+  });
+
+  it("returns nothing for a question with no content words", () => {
+    expect(probeTerms("what is it about?")).toEqual([]);
   });
 });
