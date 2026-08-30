@@ -485,6 +485,50 @@ function noteText(node: unknown): string {
   return n.type === "paragraph" || n.type === "heading" ? inner + "\n" : inner;
 }
 
+/**
+ * The page the reader is looking at, as a note.
+ *
+ * `searchNotes` reads StructuredNote rows — annotations tied to a verse. It has
+ * never read the page's own document, which is where most people actually
+ * write. So "summarise my notes on this page", asked on a page full of the
+ * reader's writing, retrieved nothing and the assistant answered that it had no
+ * access to their notes. It had no access to the one thing they were looking at.
+ *
+ * Fetched whole rather than keyword-matched: the request is about this page,
+ * and a page is small. Access is checked in the query — a page id is not a
+ * capability, and the reader must be a member of the workspace holding it.
+ */
+export async function pageDocument(
+  userId: string, pageId: string, maxChars = 4000,
+): Promise<NoteHit | null> {
+  const page = await db.page.findFirst({
+    where: {
+      id: pageId,
+      workspaceSurah: { workspace: { members: { some: { userId } } } },
+    },
+    select: {
+      id: true, title: true, tiptapContent: true,
+      workspaceSurah: {
+        select: { surahNumber: true, workspace: { select: { name: true } } },
+      },
+    },
+  });
+  if (!page) return null;
+
+  const text = noteText(page.tiptapContent).replace(/\n{2,}/g, "\n").trim();
+  /* A page with a heading and nothing under it is not notes yet, and offering
+     it as a source invites the model to pad. */
+  if (text.length < 40) return null;
+
+  return {
+    noteId:   page.id,
+    title:    page.title,
+    verseKey: null,
+    content:  text.slice(0, maxChars),
+    workspace: page.workspaceSurah?.workspace?.name ?? "",
+  };
+}
+
 export async function searchNotes(
   userId: string, query: string,
   opts: { surah?: number; verseKey?: string; pageId?: string; limit?: number } = {},

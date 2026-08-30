@@ -9,6 +9,7 @@
  */
 
 import Link from "next/link";
+import SurahCrumbMenu from "./SurahCrumbMenu";
 import type { Chapter } from "@/lib/types";
 import PresenceBar from "./PresenceBar";
 import BookmarkButton from "@/components/BookmarkButton";
@@ -157,6 +158,10 @@ export default function TopBar({
         >
           {chapter.name_simple}
         </Link>
+        {/* The crumb names where you are; the arrow makes it where you change
+            it from. Going back to the grid to move one sūrah is three
+            navigations for one decision. */}
+        <SurahCrumbMenu workspaceId={workspaceId} current={surahNumber} />
 
         {activePageTitle && (
           <>

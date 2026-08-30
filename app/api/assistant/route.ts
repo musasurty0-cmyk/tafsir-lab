@@ -240,14 +240,29 @@ export async function POST(req: NextRequest) {
            labelled: a note is the reader's thinking, not a source, and it must
            not acquire a commentary's authority by sitting in the same list. */
         const wantNotes = body.includeNotes !== false;
+        const openPageId = typeof body.pageId === "string" ? body.pageId : undefined;
         let notes: Awaited<ReturnType<typeof Search.searchNotes>> = [];
         if (wantNotes) {
-          notes = await Search.searchNotes(userId, q, {
-            surah, verseKey,
-            pageId: typeof body.pageId === "string" ? body.pageId : undefined,
-          }).catch(() => []);
+          /* The page in front of them and the annotations they have written
+             elsewhere. The page is fetched whole and put first: "summarise my
+             notes on this page" is a question about this page, and matching it
+             on keywords used to return nothing, which is why the assistant kept
+             saying it had no access to notes the reader was looking at. */
+          const [openPage, matched] = await Promise.all([
+            openPageId ? Search.pageDocument(userId, openPageId).catch(() => null) : null,
+            Search.searchNotes(userId, q, { surah, verseKey, pageId: openPageId })
+              .catch(() => []),
+          ]);
+          notes = openPage
+            ? [openPage, ...matched.filter((m) => m.noteId !== openPage.noteId)]
+            : matched;
           if (notes.length) {
-            send({ step: "notes", detail: `Found ${notes.length} of your own notes on this` });
+            send({
+              step: "notes",
+              detail: openPage
+                ? `Reading this page${notes.length > 1 ? ` and ${notes.length - 1} of your notes` : ""}`
+                : `Found ${notes.length} of your own notes on this`,
+            });
           }
         }
 
@@ -285,8 +300,14 @@ export async function POST(req: NextRequest) {
         ]);
 
         /* Two different things the reader experiences identically: nothing was
-           found, or nothing was being looked for. Both mean talk back. */
-        const conversational = smallTalk || hits.length === 0;
+           found, or nothing was being looked for. Both mean talk back.
+
+           Notes count as something found. "Summarise my notes on this page"
+           retrieves little or no tafsīr by design — it is not a question about
+           the corpus — and testing tafsīr hits alone sent it down the
+           conversational path, which is handed no passages and so answered
+           that it had no access to the notes that had just been read. */
+        const conversational = smallTalk || (hits.length === 0 && notes.length === 0);
 
         /* Not sent for small talk. "Searched 12 sources" under a reply to
            "thanks" is the same mistake as answering it from the passages —
