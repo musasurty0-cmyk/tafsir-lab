@@ -13441,3 +13441,16 @@ input, textarea { font: inherit; color: inherit; }
 @media (prefers-reduced-motion: reduce) {
   @media (max-width: 720px) { .lab { animation: none; } }
 }
+
+/* ── The tour and a full-screen sheet ─────────────────────────────────────
+   The tour bubble is docked to the bottom of the viewport and sits above
+   everything, which is right while it is pointing at the page. On a phone the
+   Lab AI panel is itself the whole viewport, and its composer is at the
+   bottom — so the bubble landed exactly on top of the text box, and the panel
+   could be opened but not typed into.
+
+   While that sheet is open the bubble stands down. It is not pointing at
+   anything the reader can see, so there is nothing for it to cover for. */
+@media (max-width: 720px) {
+  body:has(.lab) .tr-bubble { display: none; }
+}
