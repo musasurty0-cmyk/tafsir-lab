@@ -505,7 +505,9 @@ export default function HomeClient({
       </header>
 
       {/* Content */}
-      <div className="home-content">
+      {/* The content region as a landmark. This page builds its own shell
+          rather than using AppShell, so it needs its own. */}
+      <main className="home-content" id="main">
 
         <StudyWithAI />
 
@@ -575,7 +577,7 @@ export default function HomeClient({
           </button>
         </div>
 
-      </div>
+      </main>
 
       <HomeRail bookmarks={bookmarks} />
 

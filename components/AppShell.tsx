@@ -93,7 +93,10 @@ export default function AppShell({ user, streak, action, children }: Props) {
           )}
         </header>
 
-        <div className="app-shell-body">{children}</div>
+        {/* A landmark, not a div: this is the region a screen-reader user
+            jumps to in order to skip the sidebar and the greeting, and the
+            sidebar beside it is already a <nav>. */}
+        <main className="app-shell-body" id="main">{children}</main>
       </div>
     </div>
   );
