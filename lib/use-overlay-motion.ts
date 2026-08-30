@@ -42,6 +42,10 @@ export function useOverlayMotion(open: boolean, exitMs = 200): {
     if (timer.current) { clearTimeout(timer.current); timer.current = null; }
 
     if (open) {
+      /* setState in an effect, deliberately: this hook exists to keep a node
+         mounted across a state change the render pass cannot express, which
+         is exactly the case the rule cannot know about.
+         eslint-disable-next-line react-hooks/set-state-in-effect */
       setMounted(true);
       setState("entering");
       /* Two frames, not one. A single rAF still lands in the same paint as the

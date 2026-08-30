@@ -85,13 +85,14 @@ describe("getCollabToken", () => {
     await getCollabToken("page-1");
 
     // Tokens live 2 minutes and are only reused with 30s to spare, so at
-    // 1m40s the cached one must no longer be handed out.
-    const realNow = Date.now;
-    Date.now = () => realNow() + 100_000;
+    // 1m40s the cached one must no longer be handed out. Spied rather than
+    // reassigned: swapping Date.now around an await is a genuine race, and
+    // eslint is right to say so.
+    const clock = vi.spyOn(Date, "now").mockReturnValue(Date.now() + 100_000);
     try {
       await getCollabToken("page-1");
     } finally {
-      Date.now = realNow;
+      clock.mockRestore();
     }
     expect(spy).toHaveBeenCalledTimes(2);
   });
