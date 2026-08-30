@@ -62,3 +62,7 @@ __pycache__/
 
 # Corpus ingestion log (local, regenerated on every run)
 tafsir-ingest.log
+
+# Local embedding run log
+ml/embed.log
+ml/dataset.jsonl

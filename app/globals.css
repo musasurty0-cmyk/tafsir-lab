@@ -13221,7 +13221,13 @@ input, textarea { font: inherit; color: inherit; }
    it rather than beside it, so the reading area keeps its full width. */
 .film {
   position: absolute;
-  left: 50%; bottom: 14px;
+  left: 50%;
+  /* Clear of the zoom cluster, which is already parked in the bottom-right of
+     this same canvas — docked at 14px the strip ran 136px underneath it and
+     the page counter sat behind the zoom percentage. Measured, not guessed:
+     that cluster is 34px tall on a 14px offset, so 62px puts the strip above
+     it with a hairline of air rather than touching. */
+  bottom: 62px;
   transform: translateX(-50%);
   z-index: 6;
   display: flex; align-items: center; gap: 6px;
