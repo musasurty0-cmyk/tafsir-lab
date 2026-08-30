@@ -13443,3 +13443,27 @@ input, textarea { font: inherit; color: inherit; }
 @media (max-width: 720px) {
   body:has(.lab) .tr-bubble { display: none; }
 }
+
+/* ── Standalone Lab AI page: answers read as replies ──────────────────────
+   The docked panel and this page are the same assistant, so an answer should
+   not look like a report in one place and a message in the other. The page
+   keeps its own trace and its full-passage drawer — it does more than the
+   panel — but the answer itself now sits in the same bubble. */
+.as-answer {
+  background: color-mix(in oklab, var(--ink) 6%, transparent);
+  border-radius: 16px;
+  border-bottom-left-radius: 6px;
+  padding: 12px 15px;
+}
+.as-answer > * + * { margin-top: .62em; }
+.as-answer h3, .as-answer h4, .as-answer h5 {
+  font-size: 13.5px; font-weight: 650; margin-top: 1.1em; color: var(--ink);
+}
+.as-answer h3:first-child, .as-answer h4:first-child, .as-answer h5:first-child {
+  margin-top: 0;
+}
+.as-answer ul, .as-answer ol { padding-left: 1.3em; }
+.as-answer li { margin-top: .32em; }
+.as-answer li::marker { color: var(--ink-4); }
+.as-answer strong { font-weight: 650; color: var(--ink); }
+.as-answer em { font-style: italic; }

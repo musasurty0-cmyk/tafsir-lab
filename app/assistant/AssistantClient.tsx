@@ -298,7 +298,12 @@ export default function AssistantClient({ user, sources, streak }: Props) {
 
         {turns.map((t) => (
           <article key={t.id} className="as-turn">
-            <p className="as-q">{t.question}</p>
+            {/* The reader's own words, on the side the eye returns to —
+                matching the docked panel, so the same conversation looks the
+                same wherever it happens. */}
+            <div className="lab-row lab-row--you">
+              <p className="lab-bubble lab-bubble--you">{t.question}</p>
+            </div>
             {t.pinned.length > 0 && (
               <p className="as-q-pin">Limited to {t.pinned.length} pinned source(s)</p>
             )}
