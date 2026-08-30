@@ -411,9 +411,14 @@ export default function WorkspacePageView({
   // ── Markdown export — the "your notes aren't locked in" safety valve ──
   const handleExport = useCallback(() => {
     if (!page) return;
-    const doc = activeEditor && !activeEditor.isDestroyed
-      ? activeEditor.getJSON()
-      : page.tiptapContent;
+    /* Prefer what is on screen, but only if there is anything on it. The
+       editor is collaborative: its content arrives over Yjs after mount, so
+       between opening a page and the document syncing, getJSON() returns an
+       empty doc. Exporting that produced a file with a title and nothing
+       else — silently, which is the worst way for a backup to fail. */
+    const live = activeEditor && !activeEditor.isDestroyed ? activeEditor.getJSON() : null;
+    const hasLive = Array.isArray(live?.content) && live.content.length > 0;
+    const doc = hasLive ? live : page.tiptapContent;
     const md = pageToMarkdown({
       title:     page.title,
       surahName: chapter.name_simple,
