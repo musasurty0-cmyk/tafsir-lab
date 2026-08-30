@@ -656,7 +656,8 @@ export default function WorkspacePageView({
           chapter={chapter}
           activePageTitle={page?.title ?? null}
           activePageId={page ? activePageId : null}
-          aiOpen={aiOpen}
+          onExport={page ? handleExport : undefined}
+        aiOpen={aiOpen}
           onToggleAi={() => setAiOpen((v) => !v)}
           mode={mode}
           onSetMode={setMode}

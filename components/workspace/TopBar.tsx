@@ -64,6 +64,16 @@ const FormattingIcon = ({ size = 13 }: { size?: number }) => (
 
 export type ViewMode = "editor" | "canvas" | "split" | "board" | "read";
 
+const DownloadIcon = ({ size = 16 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+       stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"
+       strokeLinejoin="round" aria-hidden>
+    <path d="M12 3v12" />
+    <path d="m7 11 5 5 5-5" />
+    <path d="M4 20h16" />
+  </svg>
+);
+
 const SparkleIcon = ({ size = 16 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
        strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
@@ -111,6 +121,9 @@ interface Props {
   activePageId?:      string | null;
   aiOpen?:            boolean;
   onToggleAi?:        () => void;
+  /** Download this page as Markdown. Absent = nothing to export yet, and the
+   *  control is not rendered rather than rendered inert. */
+  onExport?:          () => void;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────
@@ -124,6 +137,7 @@ export default function TopBar({
   activePageId,
   aiOpen,
   onToggleAi,
+  onExport,
   mode,
   onSetMode,
   progressLoading,
@@ -275,6 +289,17 @@ export default function TopBar({
             aria-label="Lab AI"
           >
             <SparkleIcon /> Ask
+          </button>
+        )}
+
+        {onExport && (
+          <button
+            className="tb-icon-btn"
+            onClick={onExport}
+            title="Download this page as Markdown"
+            aria-label="Download this page as Markdown"
+          >
+            <DownloadIcon />
           </button>
         )}
 
