@@ -294,12 +294,12 @@ export default function TopBar({
 
         {onExport && (
           <button
-            className="tb-icon-btn"
+            className="tb-btn"
             onClick={onExport}
             title="Download this page as Markdown"
             aria-label="Download this page as Markdown"
           >
-            <DownloadIcon />
+            <DownloadIcon /> Export
           </button>
         )}
 
