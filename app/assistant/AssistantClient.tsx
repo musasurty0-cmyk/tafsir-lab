@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import AppShell, { type ShellStreak } from "@/components/AppShell";
 import type { SidebarUser } from "@/components/AppSidebar";
+import { parseBlocks, type Inline } from "@/lib/lab-markdown";
 
 interface SourceRow {
   slug: string; name: string; language: string; chunks: number; verses: number;
@@ -88,26 +89,42 @@ const STEP_ICON: Record<string, typeof BookOpen> = {
  * one they have to go and decode. A number with no matching passage is left as
  * plain text and flagged separately, never dressed up as a real citation.
  */
-function renderWithCitations(text: string, cites: CiteRef[]) {
+/* Shared with the docked panel: one parser, so an answer reads the same
+   wherever it is asked. This page previously had a citation-only renderer of
+   its own, which meant bold and headings showed up here as raw asterisks long
+   after the panel had learned to draw them. */
+function renderWithCitations(text: string, cites: CiteRef[]): React.ReactNode[] {
   const by = new Map(cites.map((c) => [c.n, c]));
-  const out: React.ReactNode[] = [];
-  let last = 0, key = 0;
-
-  for (const m of text.matchAll(/\[(\d{1,2})\]/g)) {
-    const at = m.index ?? 0;
-    if (at > last) out.push(text.slice(last, at));
-    const n = Number(m[1]);
-    const c = by.get(n);
-    out.push(
-      c
-        ? <a key={key++} href={`#p-${n}`} className="as-cite" title={`${c.sourceName} — ${c.verseKey}`}>{n}</a>
-        : <span key={key++} className="as-cite as-cite--bad" title="No such passage was retrieved">{m[0]}</span>,
-    );
-    last = at + m[0].length;
-  }
-  if (last < text.length) out.push(text.slice(last));
-  return out;
+  const k = { i: 0 };
+  const inline = (kids: Inline[]) => kids.map((n) => {
+    switch (n.t) {
+      case "text":   return <span key={k.i++}>{n.v}</span>;
+      case "strong": return <strong key={k.i++}>{n.v}</strong>;
+      case "em":     return <em key={k.i++}>{n.v}</em>;
+      case "code":   return <code key={k.i++}>{n.v}</code>;
+      case "cite": {
+        const c = by.get(n.n);
+        return c
+          ? <a key={k.i++} href={`#p-${n.n}`} className="as-cite"
+               title={`${c.sourceName} — ${c.verseKey}`}>{n.n}</a>
+          : <span key={k.i++} className="as-cite as-cite--bad"
+                  title="No such passage was retrieved">[{n.n}]</span>;
+      }
+    }
+  });
+  return parseBlocks(text).map((b) => {
+    switch (b.t) {
+      case "h": {
+        const Tag = (`h${b.level}`) as "h3" | "h4" | "h5";
+        return <Tag key={k.i++}>{inline(b.kids)}</Tag>;
+      }
+      case "ul": return <ul key={k.i++}>{b.items.map((it) => <li key={k.i++}>{inline(it)}</li>)}</ul>;
+      case "ol": return <ol key={k.i++}>{b.items.map((it) => <li key={k.i++}>{inline(it)}</li>)}</ol>;
+      default:   return <p key={k.i++}>{inline(b.kids)}</p>;
+    }
+  });
 }
+
 
 export default function AssistantClient({ user, sources, streak }: Props) {
   const [turns, setTurns] = useState<Turn[]>([]);
@@ -228,7 +245,7 @@ export default function AssistantClient({ user, sources, streak }: Props) {
   return (
     <AppShell user={user} streak={streak}>
       <section className="as-head">
-        <h1 className="as-title"><Sparkles size={22} aria-hidden /> Study with AI</h1>
+        <h1 className="as-title"><Sparkles size={22} aria-hidden /> Lab AI</h1>
         <p className="an-muted">
           Every answer is quoted from the tafsīr in this library. It cannot use the
           web, and it will say it found nothing rather than invent.

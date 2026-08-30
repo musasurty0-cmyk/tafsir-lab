@@ -19,7 +19,7 @@ export default function StudyWithAI() {
     <button className="ai-banner" onClick={() => pushWithSplash(router, "/assistant")}>
       <span className="ai-banner-icon" aria-hidden><Sparkles size={19} /></span>
       <span className="ai-banner-text">
-        <strong>Study with AI</strong>
+        <strong>Lab AI</strong>
         <span>
           Ask about any verse or theme. Every answer is quoted from the tafsīr in
           your library, with the source shown.
