@@ -16,6 +16,7 @@ import type { MemberRole } from "@/lib/services/workspaces.service";
 import WorkspaceSettings from "./WorkspaceSettings";
 import Rail from "./Rail";
 import NewWorkspaceModal from "@/components/NewWorkspaceModal";
+import { useHydrated } from "@/lib/use-hydrated";
 
 interface Board { id: string; title: string; createdAt: Date | string; }
 
@@ -26,6 +27,10 @@ interface Props {
   boards: Board[];
 }
 
+/* Intl formats in the runtime's timezone. Vercel runs UTC and the reader does
+   not, so a board created near midnight formats as a different day on the
+   server than in the browser — which is a hydration mismatch, not a cosmetic
+   one. Only ever called once the browser is in charge; see useHydrated. */
 function fmt(d: Date | string) {
   return new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" }).format(new Date(d));
 }
@@ -36,6 +41,7 @@ function todayTitle() {
 export default function BoardsHome({ workspaceId, workspace, role, boards: initialBoards }: Props) {
   const router = useRouter();
   const t = useT();
+  const hydrated = useHydrated();
 
   useLayoutEffect(() => {
     document.getElementById("tl-nav-splash")?.remove();
@@ -48,7 +54,7 @@ export default function BoardsHome({ workspaceId, workspace, role, boards: initi
 
   // New board inline flow
   const [creating, setCreating] = useState(false);
-  const [title, setTitle]       = useState(todayTitle());
+  const [title, setTitle]       = useState(() => todayTitle());
   const [saving, setSaving]     = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -168,7 +174,7 @@ export default function BoardsHome({ workspaceId, workspace, role, boards: initi
               <Link key={b.id} href={`/workspaces/${workspaceId}/whiteboard/${b.id}`} className="board-card">
                 <span className="board-card-icon">◇</span>
                 <span className="board-card-title">{b.title}</span>
-                <span className="board-card-date">{fmt(b.createdAt)}</span>
+                <span className="board-card-date">{hydrated ? fmt(b.createdAt) : " "}</span>
               </Link>
             ))}
           </div>

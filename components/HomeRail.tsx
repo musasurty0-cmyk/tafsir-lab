@@ -17,6 +17,7 @@
 import { useRouter } from "next/navigation";
 import { Bookmark } from "lucide-react";
 import { pushWithSplash } from "@/lib/nav-splash";
+import { useHydrated } from "@/lib/use-hydrated";
 import type { RailItem } from "@/lib/services/bookmarks.service";
 
 interface Props {
@@ -38,6 +39,9 @@ function Section({
   title, Icon, items, empty,
 }: { title: string; Icon: typeof Bookmark; items: RailItem[]; empty: string }) {
   const router = useRouter();
+  /* "5m ago" is computed from the current time, and the server's clock is not
+     the reader's. Rendered only once the browser is in charge. */
+  const hydrated = useHydrated();
 
   return (
     <section className="hr-section">
@@ -52,7 +56,7 @@ function Section({
               <button className="hr-item" onClick={() => pushWithSplash(router, it.href)}>
                 <span className="hr-item-title">{it.title}</span>
                 <span className="hr-item-sub">{it.subtitle}</span>
-                <span className="hr-item-at">{ago(it.at)}</span>
+                <span className="hr-item-at">{hydrated ? ago(it.at) : " "}</span>
               </button>
             </li>
           ))}

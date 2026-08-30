@@ -11,7 +11,8 @@
  * separate documents.
  */
 
-import { useEffect, useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
+import { useHydrated } from "@/lib/use-hydrated";
 import Link from "next/link";
 import { Search } from "lucide-react";
 import AppSidebar, { type SidebarUser } from "./AppSidebar";
@@ -35,19 +36,15 @@ interface Props {
  * and React discarded the tree with a hydration error. Nobody notices at
  * midday; it fires every night.
  *
- * So the date is filled in after mount, when there is a real timezone to
- * format against. The server emits the same non-breaking space the client
- * starts with, which keeps the line's height and stops the greeting jumping
- * when it arrives.
+ * The non-breaking space keeps the line's height so the greeting does not jump
+ * when the date arrives.
  */
 function useToday(): string {
-  const [label, setLabel] = useState(" ");
-  useEffect(() => {
-    setLabel(ordinalise(new Intl.DateTimeFormat("en-GB", {
-      weekday: "long", day: "numeric", month: "long", year: "numeric",
-    }).format(new Date())));
-  }, []);
-  return label;
+  const hydrated = useHydrated();
+  if (!hydrated) return " ";
+  return ordinalise(new Intl.DateTimeFormat("en-GB", {
+    weekday: "long", day: "numeric", month: "long", year: "numeric",
+  }).format(new Date()));
 }
 
 /** "29th" rather than "29" — the greeting reads as a sentence, not a log line. */
