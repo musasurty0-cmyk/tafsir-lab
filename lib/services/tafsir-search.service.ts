@@ -73,6 +73,8 @@ const RRF_K = 60;
 interface RawHit {
   chunkId: string; sourceSlug: string; sourceName: string; language: string;
   verseKey: string; surah: number; ayah: number; content: string;
+  /** Cosine distance from the query. Semantic rows only; 0 is identical. */
+  distance?: number;
 }
 
 function filterSql(opts: SearchOptions, params: unknown[]): string {
@@ -103,20 +105,42 @@ export async function semanticSearch(
   const where = filterSql(opts, params);
   params.push(opts.limit ?? CANDIDATES);
 
+  /* The ordering scan and the text assembly are separated deliberately.
+     Written as one statement, this joined TafsirEntry and ran substr() over
+     the corpus and THEN sorted 90,092 rows by distance, which measured 13.5
+     seconds against the deployed database — slow enough that the assistant
+     read as broken. Ranking on TafsirChunk alone and joining the thirty
+     survivors afterwards asks for the same answer without building the text
+     of every passage it is about to discard.
+
+     TafsirSource is joined inside the scan only when a source filter needs it:
+     it is a seven-row table, but the filter references s.slug and the
+     predicate has to be applied before the LIMIT, not after. */
+  const needsSourceInScan = Boolean(opts.sources?.length);
+
   return db.$queryRawUnsafe<RawHit[]>(`
-    SELECT c.id         AS "chunkId",
+    WITH nearest AS (
+      SELECT c.id, c."sourceId", c."verseKey", c.surah, c.ayah,
+             c."startChar", c."endChar",
+             c.embedding <=> $1::halfvec AS distance
+      FROM "TafsirChunk" c
+      ${needsSourceInScan ? 'JOIN "TafsirSource" s ON s.id = c."sourceId"' : ""}
+      WHERE c.embedding IS NOT NULL ${where}
+      ORDER BY c.embedding <=> $1::halfvec
+      LIMIT $${params.length}::int
+    )
+    SELECT n.id         AS "chunkId",
            s.slug       AS "sourceSlug",
            s.name       AS "sourceName",
            s.language   AS "language",
-           c."verseKey" AS "verseKey",
-           c.surah, c.ayah,
-           substr(e.content, c."startChar" + 1, c."endChar" - c."startChar") AS content
-    FROM "TafsirChunk" c
-    JOIN "TafsirSource" s ON s.id = c."sourceId"
-    JOIN "TafsirEntry"  e ON e."sourceId" = c."sourceId" AND e."verseKey" = c."verseKey"
-    WHERE c.embedding IS NOT NULL ${where}
-    ORDER BY c.embedding <=> $1::halfvec
-    LIMIT $${params.length}::int
+           n."verseKey" AS "verseKey",
+           n.surah, n.ayah,
+           n.distance   AS "distance",
+           substr(e.content, n."startChar" + 1, n."endChar" - n."startChar") AS content
+    FROM nearest n
+    JOIN "TafsirSource" s ON s.id = n."sourceId"
+    JOIN "TafsirEntry"  e ON e."sourceId" = n."sourceId" AND e."verseKey" = n."verseKey"
+    ORDER BY n.distance
   `, ...params);
 }
 
@@ -337,6 +361,8 @@ export interface SearchResult {
     semanticUsed: boolean;
     semanticCount: number;
     lexicalCount: number;
+    /** Cosine distance of the closest semantic hit, when there was one. */
+    semanticBest?: number;
     /** Set when the embedding service was unreachable and we fell back. */
     degraded?: string;
     sourcesSearched: string[];
@@ -394,6 +420,10 @@ export async function search(
     trace: {
       semanticUsed:  embedding !== null,
       semanticCount: semantic.length,
+      /* Distance of the nearest passage. A vector space always has a nearest
+         neighbour, so "we found something" says nothing about relevance —
+         this is the number that does. */
+      semanticBest:  semantic[0]?.distance,
       lexicalCount:  lexical.length,
       degraded: embedding === null
         ? "The embedding service did not respond, so this used keyword search only."
