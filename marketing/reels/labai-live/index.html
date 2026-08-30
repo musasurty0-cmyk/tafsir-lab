@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=1080, height=1080">
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      /* ══════════════════════════════════════════════════════════════════
+         labai-live — 11.5s square announcement reel.
+         Recreates the beat order and seam grammar of the analysed reference
+         (ledger.json) in TafsirLab's own brand. No reference assets carried.
+
+         Wrapper discipline: every animated group is  .fx > .mv > content —
+         blur tweens ride .fx, transform/opacity tweens ride .mv, so blur and
+         transforms never share an element (headless compositing), and no CSS
+         transform ever collides with a GSAP tween (lint:
+         gsap_css_transform_conflict). Centring is flex, never translate.
+         ══════════════════════════════════════════════════════════════════ */
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+
+      :root {
+        --ink-0: #07080a;
+        --ink-1: #0d0f12;
+        --ink-2: #16191d;
+        --paper: #f6f5f2;
+        --fg: #f6f5f2;
+        --fg-dim: #a7a29b;
+        --accent: #4f9a7a;
+        --accent-deep: #3c7a60;
+        --highlight: #f2e3a4;
+        --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI",
+                system-ui, "Helvetica Neue", Arial, sans-serif;
+        --serif: Georgia, "Times New Roman", serif;
+      }
+
+      html, body {
+        width: 1080px;
+        height: 1080px;
+        overflow: hidden;
+        background: var(--ink-0);
+        font-family: var(--font);
+        -webkit-font-smoothing: antialiased;
+      }
+
+      /* Opaque stage ground — the mid-window cut's white-flash guard. */
+      #root {
+        position: relative;
+        width: 1080px;
+        height: 1080px;
+        background: var(--ink-0);
+      }
+
+      .clip { position: absolute; inset: 0; overflow: hidden; }
+
+      /* ── Grounds ─────────────────────────────────────────────────────── */
+      .ground { position: absolute; inset: 0; background: var(--ink-0); }
+      .ground--paper { background: var(--paper); }
+      /* The dawn: deep ink sky over a green-gold horizon. */
+      .dawn {
+        position: absolute; inset: 0;
+        background:
+          radial-gradient(140% 90% at 50% 118%, rgba(242, 227, 164, 0.32), transparent 55%),
+          radial-gradient(160% 100% at 50% 112%, rgba(79, 154, 122, 0.5), transparent 62%),
+          linear-gradient(180deg, #07080a 0%, #0a0f10 55%, #12241d 100%);
+      }
+
+      .fx { position: absolute; inset: 0; }
+      .mv { position: absolute; inset: 0; }
+
+      /* ── Scene: ident ────────────────────────────────────────────────── */
+      #id-glyph-fx { inset: auto; left: 150px; top: 240px; width: 150px; height: 150px; }
+      #id-glyph-mv { inset: 0; }
+      .id-center { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+      .wordmark {
+        font-family: var(--serif);
+        font-size: 96px;
+        font-weight: 600;
+        letter-spacing: -0.015em;
+        color: var(--fg);
+      }
+
+      /* ── Scene: composer ─────────────────────────────────────────────── */
+      .cp-center { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+      .composer {
+        width: 880px;
+        background: rgba(18, 21, 24, 0.94);
+        border: 1px solid rgba(246, 245, 242, 0.07);
+        border-radius: 30px;
+        padding: 52px 48px 40px;
+        box-shadow: 0 40px 90px rgba(0, 0, 0, 0.5);
+      }
+      .prompt {
+        font-size: 40px;
+        font-weight: 500;
+        line-height: 1.35;
+        color: var(--fg);
+        min-height: 116px;
+      }
+      .prompt .ch { display: inline; }
+      .caret {
+        display: inline-block;
+        width: 4px; height: 42px;
+        background: var(--accent);
+        vertical-align: -6px;
+        margin-left: 4px;
+      }
+      .cp-row {
+        display: flex; align-items: center; gap: 16px;
+        margin-top: 40px;
+      }
+      .chip {
+        display: inline-flex; align-items: center; justify-content: center;
+        height: 62px; padding: 0 26px;
+        border: 1.5px solid rgba(246, 245, 242, 0.18);
+        border-radius: 999px;
+        color: var(--fg-dim);
+        font-size: 24px; font-weight: 500;
+        gap: 10px;
+      }
+      .chip--round { width: 62px; padding: 0; font-size: 30px; }
+      .send {
+        margin-left: auto;
+        width: 72px; height: 72px;
+        border-radius: 50%;
+        background: var(--accent);
+        display: flex; align-items: center; justify-content: center;
+        position: relative;
+      }
+      .send svg { width: 34px; height: 34px; }
+      .badge {
+        position: absolute; right: -76px; top: 4px;
+        width: 62px; height: 62px; border-radius: 50%;
+        background: var(--paper);
+        display: flex; align-items: center; justify-content: center;
+        box-shadow: 0 10px 26px rgba(0, 0, 0, 0.35);
+      }
+      .badge svg { width: 34px; height: 34px; }
+
+      .cursor {
+        position: absolute;
+        /* CSS holds the FINAL pose (tip on the send button); all motion is
+           x/y transform offsets from here — layout properties snap to device
+           pixels under seek-by-frame capture. */
+        left: 64.8%; top: 63.5%;
+        width: 120px; height: 120px;
+        z-index: 20;
+        filter: drop-shadow(0 5px 8px rgba(0, 0, 0, 0.35));
+        pointer-events: none;
+        will-change: transform;
+      }
+
+      /* ── Scenes: mark / capsule / pill ───────────────────────────────── */
+      .center { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+      .mark-badge {
+        width: 180px; height: 180px; border-radius: 50%;
+        background: var(--ink-1);
+        display: flex; align-items: center; justify-content: center;
+        box-shadow: 0 30px 60px rgba(7, 8, 10, 0.18);
+      }
+      .mark-badge svg { width: 92px; height: 92px; }
+
+      .cap {
+        width: 180px; height: 150px;
+        border-radius: 999px;
+        background: var(--ink-1);
+        display: flex; align-items: center; justify-content: center;
+        gap: 20px;
+        overflow: hidden;
+        white-space: nowrap;
+        box-shadow: 0 30px 60px rgba(7, 8, 10, 0.16);
+      }
+      .cap svg { width: 56px; height: 56px; flex: none; }
+      .cap-label {
+        display: inline-flex; gap: 18px;
+        font-size: 46px; font-weight: 800; letter-spacing: 0.02em;
+        color: var(--paper);
+      }
+      .cap-label .w { display: inline-block; }
+
+      .cap--light {
+        width: 620px;
+        background: var(--paper);
+        box-shadow: 0 30px 70px rgba(0, 0, 0, 0.55);
+      }
+      .cap--light .cap-label { color: var(--ink-1); font-style: italic; font-size: 54px; }
+
+      /* ── Scene: live ─────────────────────────────────────────────────── */
+      .type-row {
+        position: absolute; inset: 0;
+        display: flex; align-items: center; justify-content: center;
+        gap: 34px;
+        font-size: 128px; font-weight: 900; font-style: italic;
+        letter-spacing: -0.01em;
+        color: var(--fg);
+        z-index: 5;
+      }
+      .type-row .tw { display: inline-block; }
+      .live-word {
+        background: linear-gradient(92deg, var(--accent) 10%, var(--highlight) 90%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        padding-right: 10px; /* italic overhang — keep the E's clip inside the box */
+      }
+
+      .card {
+        position: absolute;
+        width: 330px;
+        background: #fbfaf7;
+        border-radius: 16px;
+        box-shadow: 0 24px 50px rgba(4, 6, 8, 0.45);
+        overflow: hidden;
+      }
+      .card-page { padding: 18px 18px 14px; background: #ffffff; }
+      .card-head {
+        height: 16px; width: 62%;
+        border-radius: 4px;
+        background: var(--accent);
+        opacity: 0.85;
+        margin-bottom: 12px;
+      }
+      .card-line { height: 9px; border-radius: 3px; background: #e3e0d8; margin-bottom: 8px; }
+      .card-line:nth-child(3) { width: 92%; }
+      .card-line:nth-child(4) { width: 78%; }
+      .card-line:nth-child(5) { width: 86%; margin-bottom: 0; }
+      .card-meta {
+        display: flex; align-items: center; gap: 12px;
+        padding: 14px 18px;
+      }
+      .card-ini {
+        width: 40px; height: 40px; border-radius: 50%;
+        background: var(--ink-2); color: var(--paper);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 17px; font-weight: 700;
+        flex: none;
+      }
+      .card-name { font-size: 21px; font-weight: 650; color: #1c1f22; line-height: 1.15; }
+      .card-sub  { font-size: 16px; color: #8a857c; margin-top: 2px; }
+
+      /* ── Scene: close ────────────────────────────────────────────────── */
+      .close-stack {
+        position: absolute; inset: 0;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        gap: 26px;
+      }
+      .close-stack svg { width: 72px; height: 72px; }
+      .close-word {
+        font-family: var(--serif);
+        font-size: 92px; font-weight: 600; letter-spacing: -0.012em;
+        color: #16181b;
+      }
+      .close-rule {
+        width: 210px; height: 5px; border-radius: 3px;
+        background: var(--accent);
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Sparkle glyph used everywhere, via <use>. Own geometry. -->
+    <svg data-hf-id="hf-8rgt" width="0" height="0" style="position:absolute">
+      <defs data-hf-id="hf-mh0t">
+        <g data-hf-id="hf-hqzr" id="sparkle">
+          <path data-hf-id="hf-yef8" d="M32 2 C34.6 18.4 40.2 23.9 56 26.4 C40.2 28.9 34.6 34.4 32 50.8 C29.4 34.4 23.8 28.9 8 26.4 C23.8 23.9 29.4 18.4 32 2 Z" />
+          <path data-hf-id="hf-mbs9" d="M50 40 C51.2 46.4 53.6 48.8 60 50 C53.6 51.2 51.2 53.6 50 60 C48.8 53.6 46.4 51.2 40 50 C46.4 48.8 48.8 46.4 50 40 Z" opacity="0.85" />
+        </g>
+        <lineargradient data-hf-id="hf-ybiz" id="spark-grad" x1="0" y1="0" x2="1" y2="1">
+          <stop data-hf-id="hf-xejf" offset="0%" stop-color="#4f9a7a" />
+          <stop data-hf-id="hf-v0z1" offset="100%" stop-color="#f2e3a4" />
+        </lineargradient>
+      </defs>
+    </svg>
+
+    <div data-hf-id="hf-zfpc" id="root" data-composition-id="main" data-start="0" data-duration="11.5" data-fps="30" data-width="1080" data-height="1080">
+      <!-- ═══ 1 · IDENT 0–2.8 — glyph resolves, wordmark blurs in, dawn wakes -->
+      <div data-hf-id="hf-zwse" id="sc-ident" class="clip" data-start="0" data-duration="2.8" data-track-index="1">
+        <div data-hf-id="hf-ygft" class="ground"></div>
+        <div data-hf-id="hf-vsii" class="dawn" id="id-dawn"></div>
+        <div data-hf-id="hf-h37u" class="fx" id="id-fx">
+          <div data-hf-id="hf-k59g" class="mv" id="id-content">
+            <div data-hf-id="hf-edqd" class="fx" id="id-glyph-fx">
+              <div data-hf-id="hf-firn" class="mv" id="id-glyph-mv">
+                <svg data-hf-id="hf-gyzt" viewBox="0 0 64 64"><use data-hf-id="hf-u1y5" href="#sparkle" fill="url(#spark-grad)" /></svg>
+              </div>
+            </div>
+            <div data-hf-id="hf-jemb" class="id-center">
+              <div data-hf-id="hf-4xi4" class="fx" id="wm-fx" style="position:relative; inset:auto;">
+                <div data-hf-id="hf-nt32" class="mv" id="wm-mv" style="position:relative; inset:auto;">
+                  <div data-hf-id="hf-jlxb" class="wordmark">TafsirLab</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ 2 · COMPOSER 2.8–4.7 — typed prompt, cursor, click ignites -->
+      <div data-hf-id="hf-g0qc" id="sc-composer" class="clip" data-start="2.8" data-duration="1.9" data-track-index="1">
+        <div data-hf-id="hf-p66l" class="ground"></div>
+        <div data-hf-id="hf-7l49" class="dawn" style="opacity:0.55"></div>
+        <div data-hf-id="hf-97bw" class="fx" id="cp-fx">
+          <div data-hf-id="hf-ob5q" class="mv" id="cp-mv">
+            <div data-hf-id="hf-gv8t" class="cp-center">
+              <div data-hf-id="hf-cydq" class="composer">
+                <div data-hf-id="hf-8qwy" class="prompt" id="prompt"><span data-hf-id="hf-fir1" class="caret" id="caret"></span></div>
+                <div data-hf-id="hf-bhmi" class="cp-row">
+                  <div data-hf-id="hf-ugfb" class="chip chip--round">＋</div>
+                  <div data-hf-id="hf-yi1e" class="chip">⌕&#160; All sources</div>
+                  <div data-hf-id="hf-7ksy" class="send" id="send">
+                    <svg data-hf-id="hf-2iyw" viewBox="0 0 24 24" fill="none" stroke="#f6f5f2" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path data-hf-id="hf-436h" d="M12 19V5M5 12l7-7 7 7" /></svg>
+                    <div data-hf-id="hf-zrfo" class="badge" id="badge">
+                      <svg data-hf-id="hf-06jh" viewBox="0 0 64 64"><use data-hf-id="hf-s41p" href="#sparkle" fill="#4f9a7a" /></svg>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div data-hf-id="hf-ib7z" class="cursor" id="cursor" data-layout-allow-overflow="true">
+          <svg data-hf-id="hf-y9f5" viewBox="0 0 24 24">
+            <path data-hf-id="hf-tt9s" d="M5 2.5 L19.2 12.6 L12.7 13.7 L16.2 20.8 L13.3 22.2 L9.8 15.1 L5 18.9 Z" fill="#f6f5f2" stroke="#101215" stroke-width="1.3" stroke-linejoin="round" />
+          </svg>
+        </div>
+      </div>
+
+      <!-- ═══ 3 · MARK 4.7–5.5 — inversion; the mark lands; stillness -->
+      <div data-hf-id="hf-6efw" id="sc-mark" class="clip" data-start="4.7" data-duration="0.8" data-track-index="1">
+        <div data-hf-id="hf-h3dq" class="ground ground--paper"></div>
+        <div data-hf-id="hf-kpgn" class="fx" id="mk-fx">
+          <div data-hf-id="hf-sx49" class="mv" id="mk-mv">
+            <div data-hf-id="hf-0oij" class="center">
+              <div data-hf-id="hf-rjil" class="mark-badge">
+                <svg data-hf-id="hf-1dgk" viewBox="0 0 64 64"><use data-hf-id="hf-vdkh" href="#sparkle" fill="url(#spark-grad)" /></svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ 4 · CAPSULE 5.5–6.5 — circle stretches, label waterfalls in -->
+      <div data-hf-id="hf-x5dg" id="sc-capsule" class="clip" data-start="5.5" data-duration="1.0" data-track-index="1">
+        <div data-hf-id="hf-mf5u" class="ground ground--paper"></div>
+        <div data-hf-id="hf-gtfr" class="mv" id="cap-mv">
+          <div data-hf-id="hf-rdqz" class="center">
+            <div data-hf-id="hf-txi6" class="cap" id="cap">
+              <svg data-hf-id="hf-cuqn" id="cap-spark" viewBox="0 0 64 64"><use data-hf-id="hf-wkhk" href="#sparkle" fill="url(#spark-grad)" /></svg>
+              <span data-hf-id="hf-s87x" class="cap-label" id="cap-label">
+                <span data-hf-id="hf-oeh5" class="w">ASK</span><span data-hf-id="hf-nadb" class="w">LAB</span><span data-hf-id="hf-hlbq" class="w">AI</span>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ 5 · PILL 6.5–7.3 — match-cut inversion, same capsule, new label -->
+      <div data-hf-id="hf-zn5u" id="sc-pill" class="clip" data-start="6.5" data-duration="0.8" data-track-index="1">
+        <div data-hf-id="hf-qd3o" class="ground"></div>
+        <div data-hf-id="hf-uqs9" class="mv" id="pl-mv">
+          <div data-hf-id="hf-qzfy" class="center">
+            <div data-hf-id="hf-kgj2" class="cap cap--light">
+              <svg data-hf-id="hf-0z5j" viewBox="0 0 64 64"><use data-hf-id="hf-84dx" href="#sparkle" fill="#101215" /></svg>
+              <span data-hf-id="hf-bizh" class="cap-label">LAB&#160;AI</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ 6 · LIVE 7.3–10.3 — kinetic type; dawn + source wall rise -->
+      <div data-hf-id="hf-nh2b" id="sc-live" class="clip" data-start="7.3" data-duration="3.0" data-track-index="1">
+        <div data-hf-id="hf-pysn" class="ground"></div>
+        <div data-hf-id="hf-rxzh" class="mv" id="lv-dawn-mv" data-layout-allow-overflow="true"><div data-hf-id="hf-cabx" class="dawn" id="lv-dawn"></div></div>
+        <div data-hf-id="hf-9o7d" class="mv" id="lv-content">
+          <div data-hf-id="hf-0ur7" class="mv" id="lv-cards">
+            <div data-hf-id="hf-y98n" class="card" id="card-1" style="left:64px;  top:96px;">
+              <div data-hf-id="hf-udva" class="card-page"><div data-hf-id="hf-841h" class="card-head"></div><div data-hf-id="hf-mund" class="card-line"></div><div data-hf-id="hf-uh7h" class="card-line"></div><div data-hf-id="hf-vo4k" class="card-line"></div></div>
+              <div data-hf-id="hf-ylbo" class="card-meta"><div data-hf-id="hf-qkof" class="card-ini">IK</div><div data-hf-id="hf-yeow"><div data-hf-id="hf-pns2" class="card-name">Ibn Kathīr</div><div data-hf-id="hf-43l2" class="card-sub">18,900 passages</div></div></div>
+            </div>
+            <div data-hf-id="hf-a2e1" class="card" id="card-2" style="right:64px; top:56px;">
+              <div data-hf-id="hf-3sii" class="card-page"><div data-hf-id="hf-cavq" class="card-head" style="width:48%"></div><div data-hf-id="hf-v9tj" class="card-line"></div><div data-hf-id="hf-wgqm" class="card-line"></div><div data-hf-id="hf-w2fl" class="card-line"></div></div>
+              <div data-hf-id="hf-6i6k" class="card-meta"><div data-hf-id="hf-bjwd" class="card-ini">Ṭ</div><div data-hf-id="hf-y7yw"><div data-hf-id="hf-htmn" class="card-name">al-Ṭabarī</div><div data-hf-id="hf-g79a" class="card-sub">28,400 passages</div></div></div>
+            </div>
+            <div data-hf-id="hf-med4" class="card" id="card-3" style="left:44px;  bottom:132px;">
+              <div data-hf-id="hf-46tj" class="card-page"><div data-hf-id="hf-6nqd" class="card-head" style="width:70%"></div><div data-hf-id="hf-x9co" class="card-line"></div><div data-hf-id="hf-wv1n" class="card-line"></div><div data-hf-id="hf-y1yq" class="card-line"></div></div>
+              <div data-hf-id="hf-5b9h" class="card-meta"><div data-hf-id="hf-munf" class="card-ini">J</div><div data-hf-id="hf-x11t"><div data-hf-id="hf-6njk" class="card-name">al-Jalālayn</div><div data-hf-id="hf-002d" class="card-sub">12,400 passages</div></div></div>
+            </div>
+            <div data-hf-id="hf-prvn" class="card" id="card-4" style="right:56px; bottom:170px;">
+              <div data-hf-id="hf-4l4k" class="card-page"><div data-hf-id="hf-upbg" class="card-head" style="width:55%"></div><div data-hf-id="hf-xnnp" class="card-line"></div><div data-hf-id="hf-hftj" class="card-line"></div><div data-hf-id="hf-hu4k" class="card-line"></div></div>
+              <div data-hf-id="hf-5pki" class="card-meta"><div data-hf-id="hf-q13n" class="card-ini">B</div><div data-hf-id="hf-xfcu"><div data-hf-id="hf-kxea" class="card-name">al-Bayḍāwī</div><div data-hf-id="hf-wsbe" class="card-sub">17,200 passages</div></div></div>
+            </div>
+            <div data-hf-id="hf-qi7d" class="card" id="card-5" style="left:375px; bottom:24px;">
+              <div data-hf-id="hf-4zfl" class="card-page"><div data-hf-id="hf-8gt0" class="card-head" style="width:60%"></div><div data-hf-id="hf-gn7h" class="card-line"></div><div data-hf-id="hf-h1ii" class="card-line"></div><div data-hf-id="hf-j11n" class="card-line"></div></div>
+              <div data-hf-id="hf-7p3n" class="card-meta"><div data-hf-id="hf-kv4a" class="card-ini">M</div><div data-hf-id="hf-w8fr"><div data-hf-id="hf-434y" class="card-name">al-Mukhtaṣar</div><div data-hf-id="hf-nksp" class="card-sub">13,100 passages</div></div></div>
+            </div>
+          </div>
+          <div data-hf-id="hf-ignm" class="type-row" id="type-row">
+            <span data-hf-id="hf-c474" class="tw" id="tw-is">IS</span>
+            <span data-hf-id="hf-z8zs" class="tw" id="tw-now" data-layout-allow-occlusion="true">NOW</span>
+            <span data-hf-id="hf-8fv5" class="tw live-word" id="tw-live">LIVE</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ 7 · CLOSE 10.3–11.5 — light close on the wordmark -->
+      <div data-hf-id="hf-q1el" id="sc-close" class="clip" data-start="10.3" data-duration="1.2" data-track-index="1">
+        <div data-hf-id="hf-mtgv" class="ground ground--paper"></div>
+        <div data-hf-id="hf-yu82" class="mv" id="cl-mv">
+          <div data-hf-id="hf-k3tr" class="close-stack">
+            <svg data-hf-id="hf-262m" viewBox="0 0 64 64"><use data-hf-id="hf-w66j" href="#sparkle" fill="url(#spark-grad)" /></svg>
+            <div data-hf-id="hf-6j6l" class="close-word">TafsirLab</div>
+            <div data-hf-id="hf-glhz" class="close-rule" id="cl-rule"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Split the prompt into per-character spans (deterministic, build-time).
+      const PROMPT = "what does ibn kathir say about the basmalah";
+      const promptEl = document.getElementById("prompt");
+      const caret = document.getElementById("caret");
+      const chars = [];
+      for (const c of PROMPT) {
+        const s = document.createElement("span");
+        s.className = "ch";
+        s.textContent = c;
+        promptEl.insertBefore(s, caret);
+        chars.push(s);
+      }
+
+      const tl = gsap.timeline({ paused: true });
+
+      /* ── Build-time hidden states (seek-safe: set once, reveal with to()) */
+      gsap.set(chars, { autoAlpha: 0 });
+      gsap.set("#wm-fx", { autoAlpha: 0 });
+      gsap.set("#badge", { autoAlpha: 0 });
+      gsap.set("#cap-spark", { autoAlpha: 0 });
+      gsap.set("#cap-label .w", { autoAlpha: 0 });
+      gsap.set("#lv-cards .card", { autoAlpha: 0 });
+      gsap.set("#lv-dawn", { autoAlpha: 0 });
+      gsap.set("#cl-rule", { scaleX: 0, transformOrigin: "left center" });
+
+      /* ═══ 1 · IDENT ═══════════════════════════════════════════════════ */
+      // Glyph enters the room: one continuous decelerating vector, defocus→sharp.
+      tl.fromTo("#id-glyph-mv", { x: -80, y: 150, scale: 0.9 },
+        { x: 0, y: 0, scale: 1, duration: 1.6, ease: "expo.out" }, 0.05);
+      tl.fromTo("#id-glyph-fx", { filter: "blur(24px)" },
+        { filter: "blur(0px)", duration: 1.25, ease: "power2.out" }, 0.05);
+      // Dawn wakes underneath.
+      tl.fromTo("#id-dawn", { autoAlpha: 0 }, { autoAlpha: 0.55, duration: 1.6, ease: "sine.out" }, 0.7);
+      // Wordmark blur-in (fade_blur), slightly rising.
+      tl.to("#wm-fx", { autoAlpha: 1, duration: 0.55, ease: "power2.out" }, 1.75);
+      tl.fromTo("#wm-fx", { filter: "blur(16px)" }, { filter: "blur(0px)", duration: 0.6, ease: "power2.out" }, 1.75);
+      tl.fromTo("#wm-mv", { y: 26 }, { y: 0, duration: 0.6, ease: "power3.out" }, 1.75);
+
+      // SEAM 1 (t=2.8, Z push): exit grows into the cut — zoom-through.
+      tl.to("#id-content", { scale: 1.2, duration: 0.2, ease: "power3.in" }, 2.6);
+      tl.to("#id-fx", { filter: "blur(10px)", duration: 0.2, ease: "power3.in" }, 2.6);
+      tl.to("#id-content", { opacity: 0.15, duration: 0.2, ease: "none" }, 2.6);
+
+      /* ═══ 2 · COMPOSER ════════════════════════════════════════════════ */
+      // Entry keeps growing (0.78→1): same Z sign as the exit — the cut is
+      // mid-push on both sides.
+      tl.fromTo("#cp-mv", { scale: 0.78, opacity: 0.15 },
+        { scale: 1, opacity: 1, duration: 0.5, ease: "expo.out" }, 2.8);
+      tl.fromTo("#cp-fx", { filter: "blur(10px)" }, { filter: "blur(0px)", duration: 0.5, ease: "expo.out" }, 2.8);
+
+      // Typing: stepped per-character reveal (43 sets — binary, seek-safe).
+      chars.forEach((c, i) => tl.set(c, { autoAlpha: 1 }, 3.06 + i * 0.021));
+      // Caret blinks while typing (finite), then goes out before the click.
+      tl.to("#caret", { autoAlpha: 0, duration: 0.28, repeat: 4, yoyo: true, ease: "none" }, 3.0);
+      tl.set("#caret", { autoAlpha: 0 }, 4.35);
+
+      // The badge pops in beside send — scale_punch, announced before the click.
+      tl.to("#badge", { autoAlpha: 1, duration: 0.12, ease: "none" }, 4.14);
+      tl.fromTo("#badge", { scale: 0.4 }, { scale: 1, duration: 0.4, ease: "back.out(2)" }, 4.14);
+
+      // Cursor: physical entry from below, one vector, tip toward send.
+      // Offsets from the CSS final pose: start ≈ (46%, 112%) of the canvas.
+      tl.fromTo("#cursor", { x: -203, y: 524 },
+        { x: -14, y: 27, duration: 0.75, ease: "power3.out" }, 3.3);
+      tl.to("#cursor", { x: 0, y: 0, duration: 0.3, ease: "power2.out" }, 4.05);
+      // Click at 4.42 — asymmetric tap, target reacts same-frame.
+      tl.to("#cursor", { scale: 0.84, duration: 0.1, ease: "power2.in", transformOrigin: "21% 14%" }, 4.42);
+      tl.to("#cursor", { scale: 1, duration: 0.22, ease: "power2.out", transformOrigin: "21% 14%" }, 4.52);
+      tl.to("#send", { scale: 0.92, duration: 0.1, ease: "power2.in" }, 4.42);
+      tl.to("#send", { scale: 1, duration: 0.22, ease: "power2.out" }, 4.52);
+
+      // SEAM 2 (t=4.7, Z pull, caused by the click): the click's recoil sends
+      // the composer AWAY — shrinking, blurring — matching the incoming mark's
+      // shrink-settle. Same-frame ignition: recoil starts on the release.
+      tl.to("#cp-mv", { scale: 0.9, duration: 0.22, ease: "power3.in" }, 4.48);
+      tl.to("#cp-fx", { filter: "blur(14px)", duration: 0.22, ease: "power3.in" }, 4.48);
+      tl.to("#cp-mv", { opacity: 0.15, duration: 0.22, ease: "none" }, 4.48);
+      tl.to("#cursor", { y: 70, duration: 0.22, ease: "power2.in" }, 4.48);
+
+      /* ═══ 3 · MARK ════════════════════════════════════════════════════ */
+      // Arrival: oversized, shrinking into the focal plane (pull sign held).
+      tl.fromTo("#mk-mv", { scale: 1.18 }, { scale: 1, duration: 0.5, ease: "expo.out" }, 4.7);
+      tl.fromTo("#mk-fx", { filter: "blur(8px)" }, { filter: "blur(0px)", duration: 0.4, ease: "expo.out" }, 4.7);
+      // 5.2–5.5: stillness before the stretch — the dramatic comma.
+
+      /* ═══ 4 · CAPSULE ═════════════════════════════════════════════════ */
+      // The circle stretches into a labelled pill.
+      tl.to("#cap", { width: 620, duration: 0.45, ease: "back.out(1.3)" }, 5.52);
+      tl.to("#cap-spark", { autoAlpha: 1, duration: 0.1, ease: "none" }, 5.62);
+      tl.fromTo("#cap-spark", { scale: 0.5 }, { scale: 1, duration: 0.35, ease: "back.out(2)" }, 5.62);
+      // Label: waterfall ENTRY (§6) — binary alpha, y-cascade, weight-varied.
+      tl.set("#cap-label .w", { autoAlpha: 1 }, 5.92);
+      tl.fromTo("#cap-label .w:nth-child(1)", { y: 62 }, { y: 0, duration: 0.18, ease: "power4.out" }, 5.92);
+      tl.fromTo("#cap-label .w:nth-child(2)", { y: 48 }, { y: 0, duration: 0.14, ease: "power4.out" }, 6.03);
+      tl.fromTo("#cap-label .w:nth-child(3)", { y: 40 }, { y: 0, duration: 0.12, ease: "power4.out" }, 6.12);
+
+      // SEAM 3 (t=6.5, match-cut): slow push drift into the cut; the capsule
+      // geometry is the carrier — same rect, colors invert, label swaps.
+      tl.to("#cap-mv", { scale: 1.045, duration: 0.2, ease: "power1.in" }, 6.3);
+
+      /* ═══ 5 · PILL ════════════════════════════════════════════════════ */
+      // Velocity carries through the cut (push continues), then settles.
+      tl.fromTo("#pl-mv", { scale: 1.045 }, { scale: 1.09, duration: 0.1, ease: "none" }, 6.5);
+      tl.to("#pl-mv", { scale: 1, duration: 0.3, ease: "expo.out" }, 6.6);
+
+      // SEAM 4 (t=7.3, X left — the current): partial travel, early fade
+      // timed to die at the cut.
+      tl.to("#pl-mv", { x: -130, duration: 0.3, ease: "power4.in" }, 7.0);
+      tl.to("#pl-mv", { opacity: 0, duration: 0.2, ease: "none" }, 7.09);
+      tl.set("#pl-mv", { opacity: 0 }, 7.3); // hard kill at the boundary (seek-safe)
+
+      /* ═══ 6 · LIVE ════════════════════════════════════════════════════ */
+      // Entry continues leftward at matched velocity, igniting mid-path.
+      tl.fromTo("#type-row", { x: 130 }, { x: 0, duration: 0.34, ease: "power4.out" }, 7.3);
+      tl.fromTo("#type-row", { opacity: 0.35 }, { opacity: 1, duration: 0.25, ease: "none" }, 7.3);
+
+      // 8.05: IS + NOW leave; LIVE nudges to centre (§7 three-phase curve).
+      tl.to(["#tw-is", "#tw-now"], { x: -110, duration: 0.3, ease: "power3.in" }, 8.05);
+      tl.to(["#tw-is", "#tw-now"], { autoAlpha: 0, duration: 0.24, ease: "none" }, 8.08);
+      tl.to("#tw-live", { x: -19, duration: 0.09, ease: "power3.in" }, 8.05);   // ramp ~10%
+      tl.to("#tw-live", { x: -142, duration: 0.08, ease: "none" }, 8.14);       // burst ~65%
+      tl.to("#tw-live", { x: -189, duration: 0.28, ease: "power4.out" }, 8.22); // tail ~25%
+
+      // Dawn rises during the burst (reveals masked by motion).
+      tl.to("#lv-dawn", { autoAlpha: 1, duration: 0.9, ease: "sine.inOut" }, 8.15);
+      tl.fromTo("#lv-dawn-mv", { y: 90 }, { y: 0, duration: 1.0, ease: "power2.out" }, 8.15);
+
+      // The wall: cards float up in, staggered, then keep drifting (parallax) —
+      // still mid-flight at the seam.
+      const cards = ["#card-1", "#card-2", "#card-3", "#card-4", "#card-5"];
+      const drift = [-64, -46, -58, -40, -72];
+      cards.forEach((id, i) => {
+        const t0 = 8.4 + i * 0.14;
+        tl.fromTo(id, { y: 180 }, { y: 30, duration: 0.55, ease: "power3.out" }, t0);
+        tl.to(id, { autoAlpha: 1, duration: 0.3, ease: "none" }, t0);
+        tl.to(id, { y: 30 + drift[i], duration: 10.3 - (t0 + 0.55), ease: "none" }, t0 + 0.55);
+      });
+
+      // SEAM 5 (t=10.3, Y up): everything accelerates upward out; fade dies
+      // at the cut.
+      tl.to("#lv-content", { y: -130, duration: 0.3, ease: "power4.in" }, 10.0);
+      tl.to("#lv-content", { opacity: 0, duration: 0.2, ease: "none" }, 10.09);
+      tl.set("#lv-content", { opacity: 0 }, 10.3); // hard kill at the boundary
+
+      /* ═══ 7 · CLOSE ═══════════════════════════════════════════════════ */
+      // Entry continues upward at matched velocity onto the light ground.
+      tl.fromTo("#cl-mv", { y: 130 }, { y: 0, duration: 0.4, ease: "power4.out" }, 10.3);
+      tl.fromTo("#cl-mv", { opacity: 0.35 }, { opacity: 1, duration: 0.28, ease: "none" }, 10.3);
+      tl.to("#cl-rule", { scaleX: 1, duration: 0.35, ease: "expo.out" }, 10.85);
+      // Hold to 11.5.
+
+      tl.seek(0);
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>

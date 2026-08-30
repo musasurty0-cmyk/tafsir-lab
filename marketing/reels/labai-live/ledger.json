@@ -1,0 +1,52 @@
+{
+  "current": "left",
+  "seams": [
+    {
+      "t": 2.8,
+      "name": "wordmark→composer",
+      "axis": "z", "direction": "push",
+      "exit":  { "selector": "#sc-wordmark .wm-stack", "motion": "scale 1→1.2, blur 0→10, opacity linear →0.15, power3.in 0.2s" },
+      "entry": { "selector": "#sc-composer .composer-wrap", "motion": "scale 0.78→1, blur 10→0, opacity 0.15→1, expo.out 0.5s" },
+      "technique": "zoom-through",
+      "why": "pushing deeper into the product — reserved vector spent on entering the demo"
+    },
+    {
+      "t": 4.7,
+      "name": "composer→mark",
+      "axis": "z", "direction": "pull",
+      "cause": "cursor click at 4.42 (recoil licenses the direction change)",
+      "exit":  { "selector": "#sc-composer .composer-wrap", "motion": "scale 1→0.9, blur 0→14, opacity linear →0.15, power3.in 0.22s" },
+      "entry": { "selector": "#sc-mark .mark-badge", "motion": "scale 1.18→1, blur 8→0, expo.out 0.5s" },
+      "technique": "inverse-zoom-through + ground inversion",
+      "why": "ARRIVAL — the brand beat lands; both sides shrinking (pull sign matched)"
+    },
+    {
+      "t": 6.5,
+      "name": "capsule→pill",
+      "axis": "z", "direction": "push",
+      "carrier": "the capsule geometry, held at matched rect across the cut",
+      "exit":  { "selector": "#sc-capsule .cap", "motion": "scale 1→1.045 slow drift, power1.in" },
+      "entry": { "selector": "#sc-pill .cap", "motion": "scale 1.045→1.09→settle 1, matched velocity then expo.out" },
+      "technique": "match-cut inversion (Tier-A hand-authored)",
+      "why": "same surface, state swap — colors invert, label swaps, shape carries"
+    },
+    {
+      "t": 7.3,
+      "name": "pill→live",
+      "axis": "x", "direction": "left",
+      "exit":  { "selector": "#sc-pill .cap", "motion": "x 0→-130 (12% of 1080), fade done by 30% travel, power4.in 0.3s" },
+      "entry": { "selector": "#sc-live .type-row", "motion": "x +130→0, opacity from 0.35, power4.out 0.34s" },
+      "technique": "cut-the-curve (the current)",
+      "why": "ordinary forward progress into the payoff line"
+    },
+    {
+      "t": 10.3,
+      "name": "live→close",
+      "axis": "y", "direction": "up",
+      "exit":  { "selector": "#sc-live .wall", "motion": "y 0→-130, fade early, power4.in 0.3s (cards already travelling up)" },
+      "entry": { "selector": "#sc-close .close-stack", "motion": "y +130→0, opacity from 0.35, power4.out 0.4s" },
+      "technique": "cut-the-curve vertical",
+      "why": "elevation — the conclusion rises; matches the wall's existing upward drift"
+    }
+  ]
+}

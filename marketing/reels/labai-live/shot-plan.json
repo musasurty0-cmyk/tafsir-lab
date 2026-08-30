@@ -1,0 +1,33 @@
+{
+  "category": "kinetic-type",
+  "duration_s": 11.5,
+  "fps": 30,
+  "canvas": { "w": 1080, "h": 1080, "aspect": "1:1" },
+  "style": "premium launch reel; dark ink ground with a warm dawn horizon; hard light/dark inversion cuts; italic heavyweight kinetic type; one oversized cursor drives the demo beat",
+  "palette": ["#07080a", "#0d0f12", "#f6f5f2", "#a7a29b", "#4f9a7a", "#f2e3a4"],
+  "font": "system-ui stack (kit) + Georgia serif for the wordmark",
+  "beats": [2.8, 4.42, 4.7, 6.5, 7.3, 8.3, 10.3],
+  "export": "mp4",
+  "asset_needs": [],
+  "block": null,
+  "customize": {},
+  "content": {
+    "scenes": [
+      { "id": "ident",    "start": 0.0,  "end": 1.75, "text": "",                "emotion": "anticipation", "motion": "fade_blur glyph drift; defocus resolves; horizon glow wakes", "beats": [] },
+      { "id": "wordmark", "start": 1.75, "end": 2.8,  "text": "TafsirLab",       "emotion": "arrival",      "motion": "fade_blur wordmark; glyph docks upper-left; dawn rises", "beats": [2.8] },
+      { "id": "composer", "start": 2.8,  "end": 4.7,  "text": "what does ibn kathir say about the basmalah", "emotion": "focus", "motion": "zoom-through entry; typewriter; cursor-led action; click ignites at 4.42", "beats": [4.42] },
+      { "id": "mark",     "start": 4.7,  "end": 5.5,  "text": "",                "emotion": "impact",       "motion": "inversion to light ground; mark lands shrinking 1.18→1; stillness 0.3s", "beats": [4.7] },
+      { "id": "capsule",  "start": 5.5,  "end": 6.5,  "text": "ASK LAB AI",      "emotion": "build",        "motion": "circle stretches to pill; label waterfall entry", "beats": [6.5] },
+      { "id": "pill",     "start": 6.5,  "end": 7.3,  "text": "LAB AI",          "emotion": "build",        "motion": "match-cut inversion, capsule is the carrier; slow push through the cut", "beats": [7.3] },
+      { "id": "live",     "start": 7.3,  "end": 10.3, "text": "IS NOW LIVE",     "emphasis_words": ["LIVE"], "emotion": "payoff", "motion": "leftward cut-the-curve entry; LIVE centres and holds as carrier; dawn ground and five source cards rise (staged reveal, parallax)", "beats": [8.3] },
+      { "id": "close",    "start": 10.3, "end": 11.5, "text": "TafsirLab",       "emotion": "resolve",      "motion": "upward cut-the-curve; wordmark rises and settles on light ground", "beats": [] }
+    ],
+    "cards": [
+      { "name": "Ibn Kathīr",  "meta": "18,900 passages", "initial": "IK" },
+      { "name": "al-Ṭabarī",   "meta": "28,400 passages", "initial": "Ṭ"  },
+      { "name": "al-Jalālayn", "meta": "12,400 passages", "initial": "J"  },
+      { "name": "al-Bayḍāwī",  "meta": "17,200 passages", "initial": "B"  },
+      { "name": "al-Mukhtaṣar","meta": "13,100 passages", "initial": "M"  }
+    ]
+  }
+}
