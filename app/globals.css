@@ -3106,11 +3106,11 @@ input, textarea { font: inherit; color: inherit; }
 .qcf-surah-bar {
   display: flex;
   align-items: center;
-  /* The width of the text it heads. It used to hug its contents, so the
-     heading was a small tab floating over a 592px column — matching the
-     column lines it up with the Qur'an beneath and spreads the three parts
-     the way a printed heading does. */
-  width: 100%;
+  /* Narrower than the column it heads. Hugging its contents made it a small
+     tab floating over 592px of Qur'an; spanning the full column made it a
+     banner. This sits between — wide enough to give the three parts room,
+     short enough that the text below is plainly the wider thing. */
+  width: min(480px, 100%);
   justify-content: space-between;
   gap: 16px;
   padding: 7px 10px;
