@@ -271,8 +271,8 @@ export default function TopBar({
             className="tb-btn"
             data-active={aiOpen ? "true" : "false"}
             onClick={onToggleAi}
-            title="AI study assistant"
-            aria-label="AI study assistant"
+            title="Lab AI"
+            aria-label="Lab AI"
           >
             <SparkleIcon /> Ask
           </button>
