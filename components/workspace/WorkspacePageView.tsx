@@ -153,16 +153,44 @@ export default function WorkspacePageView({
      then vanish when you came back to it, and renames made elsewhere never
      appeared. Compared by id+title so an identical list does not churn state
      on every render. */
+  /* Pages this client created that the server may not have returned yet, with
+     the moment each was added. The previous version kept only rows still
+     flagged `pending`, which are the OPTIMISTIC ones — but a successful create
+     replaces its optimistic row with a real, unflagged one and then navigates.
+     If that navigation's payload was read before the insert was visible (a
+     pooled connection makes read-after-write a real race), the new page was in
+     neither `pages` nor the pending set, and this effect deleted it. That is
+     the "I made a page and the last one vanished" report. */
+  const recentlyCreated = useRef(new Map<string, number>());
+  const KEEP_UNCONFIRMED_MS = 30_000;
+
+  const pageCreated = useCallback((page: PageSummary) => {
+    recentlyCreated.current.set(page.id, Date.now());
+    setPageList((prev) => (prev.some((p) => p.id === page.id) ? prev : [...prev, page]));
+  }, []);
+
   const pagesKey = pages.map((p) => `${p.id}:${p.title}`).join("|");
   useEffect(() => {
     setPageList((prev) => {
       const prevKey = prev.map((p) => `${p.id}:${p.title}`).join("|");
       if (prevKey === pagesKey) return prev;
-      /* Keep rows the server has not caught up on yet — a page created a
-         moment ago is real to the user even if this payload predates it. */
+
       const serverIds = new Set(pages.map((p) => p.id));
-      const pending = prev.filter((p) => !serverIds.has(p.id) && "pending" in p);
-      return [...pages, ...pending];
+      const now = Date.now();
+
+      /* Once the server acknowledges a page, stop shielding it — otherwise a
+         page deleted on another device could never disappear here. */
+      for (const [id, at] of recentlyCreated.current) {
+        if (serverIds.has(id) || now - at > KEEP_UNCONFIRMED_MS) {
+          recentlyCreated.current.delete(id);
+        }
+      }
+
+      const unconfirmed = prev.filter((p) =>
+        !serverIds.has(p.id) &&
+        ("pending" in p || recentlyCreated.current.has(p.id)));
+
+      return [...pages, ...unconfirmed];
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pagesKey]);
@@ -595,11 +623,7 @@ export default function WorkspacePageView({
         onPageDeleted={(id) =>
           setPageList((prev) => prev.filter((p) => p.id !== id))
         }
-        onPageCreated={(page) =>
-          /* Guarded against duplicates: the optimistic insert and the
-             server-confirmed insert both come through here. */
-          setPageList((prev) => prev.some((p) => p.id === page.id) ? prev : [...prev, page])
-        }
+        onPageCreated={pageCreated}
         onPageCreateFailed={(tempId) =>
           setPageList((prev) => prev.filter((p) => p.id !== tempId))
         }
