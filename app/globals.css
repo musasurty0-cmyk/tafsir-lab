@@ -13409,3 +13409,35 @@ input, textarea { font: inherit; color: inherit; }
 /* Native option lists inherit nothing useful, so give them a readable ground
    in both themes rather than leaving a white menu on a dark panel. */
 .drawer-lang-select option { background: var(--bg-elev); color: var(--ink); }
+
+/* ── Lab AI on a narrow screen ────────────────────────────────────────────
+   As a side column the panel has a 300px floor, which on a 375px phone leaves
+   seventy-five pixels for the thing you are asking about — it was pushed off
+   the right edge entirely and the reader measured negative.
+
+   Below the point where two columns stop fitting it becomes a sheet over the
+   page instead. Same panel, same markup; it stops pretending there is room
+   beside the text when there is not. */
+@media (max-width: 720px) {
+  .lab {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    min-width: 0;
+    z-index: var(--z-drawer);
+    border-left: none;
+    animation: lab-sheet-in var(--dur-overlay) var(--ease-overlay) both;
+  }
+  @keyframes lab-sheet-in {
+    from { opacity: 0; transform: translateX(16px); }
+    to   { opacity: 1; transform: none; }
+  }
+  /* Room for a thumb, and clear of the phone's home indicator. */
+  .lab-composer { padding-bottom: max(12px, env(safe-area-inset-bottom)); }
+  .lab-head     { padding-top: max(10px, env(safe-area-inset-top)); }
+  .lab-bubble--you { max-width: 88%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  @media (max-width: 720px) { .lab { animation: none; } }
+}
