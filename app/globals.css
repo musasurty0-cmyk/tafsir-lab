@@ -13372,3 +13372,40 @@ input, textarea { font: inherit; color: inherit; }
     animation: ov-dialog-in var(--dur-mid) var(--ease-soft) both;
   }
 }
+
+/* ── Tafsīr language filter ───────────────────────────────────────────────
+   Matches the source select beside it. These are two halves of one decision —
+   which commentary, in which language — and they previously looked like
+   different kinds of control: a select next to a horizontally scrolling row of
+   thirty-odd chips that filled the header with options almost nobody wants. */
+.drawer-lang-wrap {
+  position: relative; display: flex; align-items: center;
+  flex: none; max-width: 45%;
+}
+.drawer-lang-select {
+  max-width: 100%;
+  appearance: none; -webkit-appearance: none;
+  background: none; border: 0;
+  border-radius: var(--radius-sm);
+  padding: 2px 16px 2px 0;
+  font-family: inherit;
+  font-size: 11.5px; font-weight: 400; color: var(--ink-3);
+  text-overflow: ellipsis;
+  cursor: pointer; outline: none;
+  transition: color var(--dur-fast) ease;
+}
+.drawer-lang-select:hover { color: var(--ink); }
+.drawer-lang-select:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px;
+}
+/* The chevron the native control does not draw once appearance is stripped. */
+.drawer-lang-wrap::after {
+  content: ""; position: absolute; right: 4px; top: 50%;
+  width: 5px; height: 5px; pointer-events: none;
+  border-right: 1.2px solid var(--ink-4);
+  border-bottom: 1.2px solid var(--ink-4);
+  transform: translateY(-70%) rotate(45deg);
+}
+/* Native option lists inherit nothing useful, so give them a readable ground
+   in both themes rather than leaving a white menu on a dark panel. */
+.drawer-lang-select option { background: var(--bg-elev); color: var(--ink); }

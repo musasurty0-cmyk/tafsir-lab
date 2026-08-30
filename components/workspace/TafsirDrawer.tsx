@@ -326,25 +326,27 @@ export default function TafsirDrawer({ open, verseKey, verses, onClose }: Props)
       <div className="drawer-source-bar">
         {/* The uppercase "SOURCE" label is dropped: the row is self-evident,
             and the group keeps an accessible name. */}
-        <div className="drawer-lang-chips" role="tablist" aria-label="Tafsir language">
-          <button
-            className="drawer-lang-chip"
-            data-active={langFilter === "all" ? "true" : "false"}
-            onClick={() => switchLang("all")}
+        {/* A select, not a row of chips. There are thirty-odd languages in the
+            catalogue; laid out as chips they filled the header with a wall of
+            undifferentiated options, none of which most readers ever want —
+            and the source control beside it was already a select, so the two
+            halves of the same decision looked like different kinds of thing.
+            The count sits in the label because it is what makes one language
+            worth choosing over another. */}
+        <div className="drawer-lang-wrap">
+          <select
+            className="drawer-lang-select"
+            aria-label="Tafsīr language"
+            value={langFilter}
+            onChange={(e) => switchLang(e.target.value)}
           >
-            All
-          </button>
-          {languages.map(([code, count]) => (
-            <button
-              key={code}
-              className="drawer-lang-chip"
-              data-active={langFilter === code ? "true" : "false"}
-              onClick={() => switchLang(code)}
-              title={`${TAFSIR_LANGUAGE_NAMES[code] ?? code} · ${count} source${count !== 1 ? "s" : ""}`}
-            >
-              {TAFSIR_LANGUAGE_NAMES[code] ?? code.toUpperCase()}
-            </button>
-          ))}
+            <option value="all">All languages</option>
+            {languages.map(([code, count]) => (
+              <option key={code} value={code}>
+                {TAFSIR_LANGUAGE_NAMES[code] ?? code.toUpperCase()} ({count})
+              </option>
+            ))}
+          </select>
         </div>
         <div className="drawer-source-select-wrap">
           <select
