@@ -8,8 +8,16 @@ torch>=2.2,<3
 sentencepiece>=0.2,<1
 sacremoses>=0.1,<1
 
-# The GGUF runtime. Prebuilt CPU wheels exist for the versions below, which
-# matters on a free Space: building llama.cpp from source there exceeds the
-# build timeout.
-llama-cpp-python>=0.3.2,<0.4
 huggingface-hub>=0.25,<1
+
+# llama-cpp-python is deliberately NOT here.
+#
+# It is only needed by /chat, and /chat is not what this Space is for: the app
+# generates through Groq, which is faster than a shared CPU will ever be. Its
+# import in app.py is inside the function, so the Space starts and serves
+# /embed and /translate perfectly well without it — and a free Space builds
+# from scratch on every push, where this package is both the slowest wheel and
+# the one most likely to exceed the build timeout.
+#
+# Add it back if you ever want the Space to answer as well as embed:
+#   llama-cpp-python>=0.3.2,<0.4
