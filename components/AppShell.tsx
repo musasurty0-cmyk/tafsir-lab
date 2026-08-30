@@ -11,7 +11,7 @@
  * separate documents.
  */
 
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { Search } from "lucide-react";
 import AppSidebar, { type SidebarUser } from "./AppSidebar";
@@ -26,10 +26,28 @@ interface Props {
   children:  ReactNode;
 }
 
-function today() {
-  return new Intl.DateTimeFormat("en-GB", {
-    weekday: "long", day: "numeric", month: "long", year: "numeric",
-  }).format(new Date());
+/**
+ * Today, in the READER's timezone — which the server does not know.
+ *
+ * This is a client component, so React renders it twice: once on the server
+ * and once in the browser. Vercel runs UTC, so anyone between midnight and
+ * their own UTC offset had the server render one date and the browser another,
+ * and React discarded the tree with a hydration error. Nobody notices at
+ * midday; it fires every night.
+ *
+ * So the date is filled in after mount, when there is a real timezone to
+ * format against. The server emits the same non-breaking space the client
+ * starts with, which keeps the line's height and stops the greeting jumping
+ * when it arrives.
+ */
+function useToday(): string {
+  const [label, setLabel] = useState(" ");
+  useEffect(() => {
+    setLabel(ordinalise(new Intl.DateTimeFormat("en-GB", {
+      weekday: "long", day: "numeric", month: "long", year: "numeric",
+    }).format(new Date())));
+  }, []);
+  return label;
 }
 
 /** "29th" rather than "29" — the greeting reads as a sentence, not a log line. */
@@ -43,6 +61,7 @@ function ordinalise(s: string) {
 }
 
 export default function AppShell({ user, streak, action, children }: Props) {
+  const todayLabel = useToday();
   const first = (user?.name ?? "").trim() || "friend";
 
   return (
@@ -54,7 +73,7 @@ export default function AppShell({ user, streak, action, children }: Props) {
           <div className="app-shell-greet">
             <h1 className="app-shell-title">Salaam, {first}</h1>
             <p className="app-shell-sub">
-              Today is {ordinalise(today())}
+              Today is {todayLabel}
               {streak && (
                 <>
                   {" "}
