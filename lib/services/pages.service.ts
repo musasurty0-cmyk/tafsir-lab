@@ -478,9 +478,11 @@ export async function createWorkspaceBook(
   return db.page.create({
     data: {
       workspaceSurahId: container.id,
-      title:      book.title.trim() || "Untitled book",
+      title:      boundedTitle(book.title, "Untitled book"),
       pdfUrl:     book.pdfUrl,
-      pdfName:    book.pdfName ?? null,
+      /* A filename off the user's disk, so it is neither trusted nor short by
+         nature — it is only ever shown as a label. Same bound as a title. */
+      pdfName:    book.pdfName ? boundedTitle(book.pdfName, "") || null : null,
       orderIndex: (last?.orderIndex ?? -1) + 1,
       status:     "draft",
       createdById: userId,
