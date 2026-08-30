@@ -11126,7 +11126,21 @@ input, textarea { font: inherit; color: inherit; }
   }
   .app-sidebar-me,
   .app-sidebar-label { display: none; }
-  .app-sidebar-items { flex-direction: row; justify-content: space-around; }
+  /* The bar spans the screen but its items did not: six 28px-wide buttons in
+     a 178px group on a 375px phone, with the rest of the width unused. That
+     clears WCAG 2.2 AA at 24px and still misses under a thumb, which is the
+     standard nobody writes down. They fill the bar now. */
+  .app-sidebar-items {
+    flex-direction: row;
+    justify-content: space-around;
+    width: 100%;
+  }
+  .app-sidebar-item {
+    flex: 1 1 0;
+    min-width: 44px;
+    min-height: 44px;
+    justify-content: center;
+  }
   .app-sidebar-item[data-active="true"]::before {
     left: 50%; top: 0;
     width: 20px; height: 3px;
