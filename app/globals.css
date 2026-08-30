@@ -13306,6 +13306,7 @@ input, textarea { font: inherit; color: inherit; }
   padding: var(--sp-5) var(--sp-4);
   display: flex; flex-direction: column; gap: var(--sp-4);
   justify-content: center; align-items: stretch;
+  overflow-y: auto;
   animation: modal-card-in var(--dur-overlay) var(--ease-overlay) both;
 }
 /* The parts stay a readable column even though the surface is the screen. */
@@ -13343,7 +13344,13 @@ input, textarea { font: inherit; color: inherit; }
   font-variant-numeric: tabular-nums;
 }
 
-.spot-stage { position: relative; overflow: hidden; }
+.spot-stage {
+  position: relative; overflow: hidden;
+  /* Never shrink. Its height is the seven rows it draws; as a flex child in a
+     full-height column it was being compressed on a short window until the
+     rows were clipped to a sliver. The card scrolls instead. */
+  flex: none;
+}
 /* The centre line, so the eye knows where the selection lives. */
 .spot-stage::before,
 .spot-stage::after {
