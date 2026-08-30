@@ -32,8 +32,14 @@ import { useCallback, useEffect, useRef, useState } from "react";
 const DRAIN_MS = 220;
 /** Slow enough to read as typing on a one-line reply. */
 const MIN_CPS = 180;
-/** Fast enough that a long answer is never held back. */
-const MAX_CPS = 1400;
+/**
+ * Headroom, not the usual governor. At Groq's ~800-1600 characters a second
+ * the drain constant above binds first and this ceiling is never reached — it
+ * earns its keep only when a provider bursts faster than that, where a lower
+ * cap would let the reveal fall progressively further behind instead of
+ * settling at a fixed lag. Well past reading speed either way.
+ */
+const MAX_CPS = 2600;
 /**
  * How long to wait for a frame before giving up on the effect and showing the
  * text outright. requestAnimationFrame does not run in a backgrounded tab, and
@@ -42,6 +48,22 @@ const MAX_CPS = 1400;
  * Losing the animation is a disappointment; losing the answer is a bug.
  */
 const NO_FRAME_MS = 1200;
+
+/**
+ * How far the reveal advances in one frame — the whole of the pacing, pulled
+ * out of the hook so it can be tested against a clock instead of a browser.
+ *
+ * `dt` is seconds since the last frame. Returns the new (fractional) count;
+ * the caller floors it for display.
+ */
+export function revealStep(count: number, target: number, dt: number): number {
+  const behind = target - count;
+  if (behind <= 0) return target;
+  const cps = Math.min(MAX_CPS, Math.max(MIN_CPS, behind / (DRAIN_MS / 1000)));
+  /* At least one character per frame, so a nearly-caught-up reveal still
+     finishes rather than creeping by fractions forever. */
+  return Math.min(target, count + Math.max(1, cps * dt));
+}
 
 export function useTypedText(full: string, live: boolean): string {
   const [count, setCount] = useState(() => (live ? 0 : full.length));
@@ -84,11 +106,8 @@ export function useTypedText(full: string, live: boolean): string {
       last = now;
 
       const target = targetRef.current;
-      const behind = target - countRef.current;
-
-      if (behind > 0) {
-        const cps = Math.min(MAX_CPS, Math.max(MIN_CPS, behind / (DRAIN_MS / 1000)));
-        const next = Math.min(target, countRef.current + Math.max(1, cps * dt));
+      if (countRef.current < target) {
+        const next = revealStep(countRef.current, target, dt);
         countRef.current = next;
         setCount(Math.floor(next));
       }
