@@ -470,7 +470,11 @@ export async function POST(req: NextRequest) {
                 warning: cite.invalid.length
                   ? `The answer cited passage${cite.invalid.length > 1 ? "s" : ""} ${cite.invalid.join(", ")}, which ${cite.invalid.length > 1 ? "were" : "was"} not among those retrieved. Treat ${cite.invalid.length > 1 ? "those claims" : "that claim"} with suspicion.`
                   : cite.uncited
-                    ? "The answer gave no citations. Check it against the passages below."
+                    /* Not a warning any more. An answer with no citations is
+                       the assistant teaching rather than quoting, which is
+                       allowed — the reader only needs to know which of the two
+                       they are reading. */
+                    ? "Nothing here is quoted from the library — this is general teaching, not a source speaking."
                     : undefined,
               },
             });

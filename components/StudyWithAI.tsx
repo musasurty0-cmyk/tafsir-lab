@@ -21,8 +21,8 @@ export default function StudyWithAI() {
       <span className="ai-banner-text">
         <strong>Lab AI</strong>
         <span>
-          Ask about any verse or theme. Every answer is quoted from the tafsīr in
-          your library, with the source shown.
+          Ask about any verse or theme. It teaches from the classical tafsīr in
+          your library and quotes it, with the source shown.
         </span>
       </span>
       <ChevronRight size={18} aria-hidden className="ai-banner-chev" />

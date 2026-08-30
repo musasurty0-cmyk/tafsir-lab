@@ -272,8 +272,9 @@ export default function AssistantClient({ user, sources, streak }: Props) {
       <section className="as-head">
         <h1 className="as-title"><Sparkles size={22} aria-hidden /> Lab AI</h1>
         <p className="an-muted">
-          Every answer is quoted from the tafsīr in this library. It cannot use the
-          web, and it will say it found nothing rather than invent.
+          Teaches from the classical tafsīr in this library and quotes it, with the
+          source shown. It will not tell you what a named scholar held unless the
+          text is in front of it, and it cannot use the web.
         </p>
 
         <div className="as-pin">

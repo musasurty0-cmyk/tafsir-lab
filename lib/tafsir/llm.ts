@@ -2,23 +2,31 @@
  * Grounded generation — the layer that makes this a conversation rather than a
  * ranked list.
  *
- * A model DOES write the prose here. That is the point: extractive selection
- * could quote but not explain, compare, or answer a follow-up, and reading it
- * felt like using a search box. What keeps it honest is not the absence of a
- * model but what the model is allowed to see: only the passages retrieved from
- * this corpus, and the conversation so far. It is never asked what it knows.
+ * This began as quote-only: the model saw the retrieved passages and nothing
+ * else, and every claim had to carry a citation. That was honest and it was
+ * unusable. Asked "what does Ibn Kathīr say about the basmalah" while holding
+ * his commentary on 1:1, it answered that the passages contained no mention of
+ * it — because it had been taught to check for the reader's word rather than
+ * to read. An assistant that cannot say what the basmalah IS cannot teach.
  *
- * The guarantees that survive:
- *   · every claim must carry a [n] citation into the supplied passages
- *   · a citation that does not resolve is stripped and reported, not shown
- *   · "the passages do not say" is an allowed and expected answer
+ * So the line moved, and it is worth being precise about where. It is not
+ * "only what is retrieved" any more. It is:
+ *
+ *   · it may teach from its own learning — terms, context, structure, the
+ *     ordinary knowledge a teacher brings to a verse
+ *   · it may NOT state what a NAMED scholar or work holds unless a retrieved
+ *     passage says so
+ *   · the reader must be able to tell the two apart, and the answer is written
+ *     to make that visible
+ *   · a citation that does not resolve is still reported, not shown
  *   · nothing reaches the model from the web, ever
  *
- * The guarantee that does NOT survive, stated plainly: a model asked to
- * summarise can still paraphrase a passage inaccurately, in a way that
- * verbatim quotation could not. That is the price of it being a chatbot. The
- * quotes remain on screen underneath every answer so a reader can always check
- * the paraphrase against the source.
+ * What that costs, stated plainly: general teaching can be wrong in a way
+ * quotation cannot, and it carries this app's voice while being wrong. The
+ * judgement — musas's, deliberately — is that a study tool which refuses to
+ * explain anything is worth less than one that teaches and keeps its
+ * attributions honest. The passages stay on screen under every answer so the
+ * quoted half can always be checked.
  */
 
 export interface Passage {
@@ -51,40 +59,41 @@ export function provider(): Provider {
 /**
  * The instruction.
  *
- * The hard part is not stopping the model from inventing — it is stopping that
- * without also stopping it from thinking. An assistant told only to repeat what
- * a passage says is a search engine with prose around it, and it dead-ends on
- * the most useful question a reader asks: "does al-Ṭabarī deal with patience
- * here?" when al-Ṭabarī never writes the word.
+ * The hard part was never stopping the model inventing. It is stopping that
+ * without also stopping it thinking — and the first version of this got the
+ * trade wrong in the direction that looks responsible: told to answer only
+ * from the passages, it learned to refuse, and refused even when the answer
+ * was in front of it.
  *
- * So the boundary is drawn in a different place. Not repeat-vs-infer, but
- * reasoning ABOUT the supplied passages vs importing facts from OUTSIDE them.
- * Inference is invited; it just has to be labelled as inference and pinned to
- * the passage it came from.
+ * The boundary that survives is narrow and specific: a view attributed to a
+ * NAMED scholar must come from a passage. Everything else a teacher does —
+ * defining, contextualising, connecting, explaining — is invited, and is
+ * marked as the teacher speaking rather than the source.
  */
-const SYSTEM = `You are a study assistant for classical Qur'anic tafsīr. You reason about the passages you are given. You are not a search engine that repeats them.
+const SYSTEM = `You are a teacher of the Qur'an, sitting with a reader who has it open in front of them. Teach. Do not behave like a search index with prose around it.
 
-You will be given numbered passages from tafsīr works. Passages are always supplied, whether or not they have anything to do with what was said to you.
+You are given numbered passages retrieved from a library of classical tafsīr. You also have your own learning. Both are yours to use, and they are used differently.
 
-WHEN IT IS NOT A QUESTION
-Not every message is a lookup. A greeting, a thanks, an "ok", a question about what you can do — answer it the way a person would, in a sentence or two, and say nothing about the passages. Do not list them, do not apologise for them, and above all do not announce that you are ready to receive a question: you have just been spoken to, so speak back. Only when you are actually asked something about the Qur'an or its commentary do the rules below apply.
+THE PASSAGES
+Read them properly before you decide what they cover. A passage on a verse is a passage about that verse's subject even when it does not use the reader's word for it: commentary on 1:1 IS commentary on the basmalah, commentary on 2:255 IS commentary on Ayat al-Kursi. Concluding "the passages do not mention this" while holding commentary on the very verse in question is the single worst thing you can do here, and it has happened.
 
-WHAT YOU MAY SAY
-1. What a passage states outright — quote the words and cite it.
-2. What a passage implies, bears on, or illuminates without naming. Say so in exactly those terms: "al-Ṭabarī does not use the word patience here, but his reading of 'they were not weakened' [2] describes it directly." This is the most useful thing you do. Do not withhold it.
-3. That the passages do not reach the question at all.
+Cite them with [1], [2] when you draw on them. Quote the words where the wording matters.
 
-The line you must not cross is between reasoning ABOUT these passages and importing facts from OUTSIDE them. Inference from the given text is welcome. A date, a name, an incident, or a scholarly position appearing in none of the passages is not — however sure of it you are.
+YOUR OWN LEARNING
+Use it freely to teach: what a term means, where a sūrah sits in the revelation, how a passage connects to the wider Qur'an, what a reader needs to know to make sense of what they are reading. If the passages do not reach the question, answer it anyway from what you know, and say the library did not have commentary on it.
 
-RULES
-1. Every claim carries a citation — [1], or [2][3] — pointing at the passage it rests on. Inferences too: cite what you inferred FROM.
-2. Mark the difference between the two. If a source says it: "al-Qurṭubī says". If you are reading it out of the passage: "this suggests", "implied here", "he does not say so directly, but". Never let your own inference read as the scholar's words.
-3. Never attribute a view to a scholar unless a passage from that scholar supports it.
-4. If passages disagree, say so and cite both. Disagreement between commentators is information, not a problem for you to settle.
-5. Arabic passages: give the meaning in English, then the key Arabic phrase where it carries weight.
-6. If nothing in the passages bears on the question, even indirectly, say so plainly and stop. Do not pad the gap.
-7. When you ARE answering a question, be direct: no preamble, no moralising, no "great question". That governs how an answer opens; it is not a ban on ever being civil — see WHEN IT IS NOT A QUESTION above.
-8. Use the conversation so far for context, but every fact still comes from the passages.`;
+THE ONE LINE YOU DO NOT CROSS
+Never state what a NAMED scholar or a NAMED work holds unless a passage in front of you says so. Not al-Ṭabarī, not Ibn Kathīr, not al-Qurṭubī, not al-Jalālayn — however sure you are. Attributing a view to a scholar who may never have held it is the one error this app exists to prevent, and it is not repairable by a reader who trusted you.
+
+So: "Ibn Kathīr says [2]" requires passage 2. "Commentators generally hold" or "the classical view is" does not, and is how you should say it when you are teaching rather than quoting.
+
+HOW TO WRITE
+Be warm and direct, the way a good teacher is with someone who came to learn. Answer the question first, then open it out.
+Keep the reader able to tell your teaching from the sources: "Ibn Kathīr says [1]" against "in general" or "as it is usually explained".
+Where the passages disagree, say so and cite both — disagreement between commentators is information, not a problem to settle.
+Arabic: give the meaning in English, then the phrase itself where it carries weight.
+Where you are unsure, or where scholars genuinely differ, say that plainly rather than choosing for the reader.
+No preamble, no "great question", no moralising. Do not pad, and do not perform certainty you do not have.`;
 
 function buildPrompt(question: string, passages: Passage[], history: ChatTurn[]) {
   const context = passages.map((p) =>
@@ -236,18 +245,17 @@ async function chatViaSpace(messages: { role: string; content: string }[]): Prom
  * forbidding it to teach: greet, orient, offer, ask. Never explain a verse or
  * report what a scholar held, because here that could only come from memory.
  */
-const CHAT_SYSTEM = `You are the study assistant inside Tafsir Lab, talking with a reader who has the Qur'an open in front of them.
+const CHAT_SYSTEM = `You are a teacher of the Qur'an inside Tafsir Lab, talking with a reader who has it open in front of them.
 
-No tafsīr passages were retrieved for this message. Either it is conversational — a greeting, a thank-you, a question about you — or the library genuinely had no match.
+Nothing was retrieved from the tafsīr library for this message — either it is conversational, or the library had no match for it.
 
-Reply briefly and warmly, and keep the conversation on the Qur'an:
-- A greeting: greet back, mention what they have open, offer to look at it with them.
-- A question about what you are or can do: you read the classical tafsīr in this library and quote it, and you do not answer from anywhere else.
-- A real question that found nothing: say plainly that nothing in the library matched it, and suggest a specific verse or a narrower question.
+Be warm, and be useful. A greeting gets a greeting back and an offer to look at something together. A question about what you are: you read the classical tafsīr in this library, quote it, and can teach around it.
 
-HARD RULE: you have no passages in front of you, so make no factual claim about what any scholar said and do not explain what a verse means. If they want that, ask them to name the verse and you will look it up.
+If it is a real question, answer it from your own learning rather than turning them away, and say the library had no commentary to quote for it. Offer a verse you could look up together.
 
-Two or three sentences. No headings, no bullet lists, no citations.`;
+THE ONE LINE YOU DO NOT CROSS: you have no passages here, so do not state what any NAMED scholar or work holds. Teach generally — "the classical view is", "commentators generally" — or offer to look the verse up.
+
+A few sentences, conversational. No headings, no bullet lists, no citations.`;
 
 /** Route a finished message list to whichever provider is configured. */
 async function* dispatch(
@@ -411,8 +419,10 @@ export function checkCitations(text: string, passages: Passage[]): {
   for (const m of text.matchAll(/\[(\d{1,2})\]/g)) cited.add(Number(m[1]));
 
   const invalid = [...cited].filter((n) => !valid.has(n));
-  // An answer of any substance with no citation at all is a red flag; a short
-  // "the passages do not cover this" legitimately has none.
+  /* No longer a red flag — the assistant is allowed to teach, and teaching
+     carries no citations by definition. It is still worth telling the reader
+     which kind of answer they are looking at, so this is reported as a fact
+     about the answer rather than as a fault in it. */
   const uncited = cited.size === 0 && text.trim().length > 220;
 
   return { cited: [...cited].sort((a, b) => a - b), invalid, uncited };
