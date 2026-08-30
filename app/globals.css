@@ -12158,7 +12158,6 @@ input, textarea { font: inherit; color: inherit; }
 .sv-verse:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 /* Indo-Pak sets larger and looser than Uthmani at the same nominal size —
    its marks sit further from the baseline. */
-.sv-verses[data-script="indopak"] .sv-verse { font-size: calc(31px * var(--fs-arabic, 1)); line-height: 2.5; }
 
 .sv-num {
   display: inline-grid;
@@ -12177,49 +12176,6 @@ input, textarea { font: inherit; color: inherit; }
 
 /* Tajweed colours. Conventional hues — a reader who has seen a printed
    tajweed mushaf should recognise them without consulting the legend. */
-.sv-rule[data-rule="ghunnah"],
-.sv-swatch[data-rule="ghunnah"]            { color: oklch(0.55 0.17 300); }
-.sv-rule[data-rule="ikhafa"],
-.sv-rule[data-rule="ikhafa_shafawi"],
-.sv-swatch[data-rule="ikhafa"]             { color: oklch(0.55 0.15 265); }
-.sv-rule[data-rule="idgham_ghunnah"],
-.sv-rule[data-rule="idgham_shafawi"],
-.sv-rule[data-rule="idgham_mutajanisayn"],
-.sv-rule[data-rule="idgham_mutamathilayn"],
-.sv-swatch[data-rule="idgham_ghunnah"]     { color: oklch(0.58 0.14 175); }
-.sv-rule[data-rule="qalaqah"],
-.sv-swatch[data-rule="qalaqah"]            { color: oklch(0.58 0.19 25); }
-.sv-rule[data-rule="iqlab"],
-.sv-swatch[data-rule="iqlab"]              { color: oklch(0.60 0.15 330); }
-.sv-rule[data-rule="madda_normal"],
-.sv-rule[data-rule="madda_permissible"],
-.sv-rule[data-rule="madda_obligatory"],
-.sv-rule[data-rule="madda_necessary"],
-.sv-swatch[data-rule="madda_obligatory"]   { color: oklch(0.58 0.16 55); }
-.sv-rule[data-rule="ham_wasl"],
-.sv-rule[data-rule="laam_shamsiyah"],
-.sv-swatch[data-rule="ham_wasl"],
-.sv-swatch[data-rule="laam_shamsiyah"]     { color: var(--ink-4); }
-.sv-rule[data-rule="slnt"],
-.sv-swatch[data-rule="slnt"]               { color: var(--ink-4); opacity: 0.55; }
-.sv-rule[data-rule="idgham_wo_ghunnah"]    { color: oklch(0.55 0.12 150); }
-
-.sv-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--sp-2) var(--sp-4);
-  padding: var(--sp-3) var(--sp-4);
-  border-radius: var(--radius-md);
-  background: var(--panel);
-  font-size: 12.5px;
-  color: var(--ink-3);
-}
-.sv-legend li { display: flex; align-items: center; gap: 6px; }
-.sv-swatch {
-  width: 11px; height: 11px;
-  border-radius: 3px;
-  background: currentColor;
-}
 
 /* ── Boards sidebar (inside a board) ─────────────────────────────────────── */
 

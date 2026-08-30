@@ -3,8 +3,8 @@
 /**
  * ScriptView — the sūrah in a chosen mushaf script.
  *
- * Segments are rendered as elements, never as innerHTML. The tajweed markup
- * upstream returns is parsed server-side into data (see /api/quran/script), so
+ * Segments are rendered as elements, never as innerHTML: the route returns
+ * plain text (see /api/quran/script), so
  * there is no path by which a string from another service becomes HTML in this
  * app — which is the whole reason the parse happens there rather than here.
  *
@@ -32,41 +32,22 @@ type State =
   | { kind: "ready"; verses: ScriptVerse[] }
   | { kind: "error" };
 
-const KEY = "tl-script";
-
 export default function ScriptView({ surah, onVerseClick }: Props) {
-  const [script, setScript] = useState("uthmani");
-  const [scripts, setScripts] = useState<ScriptDef[]>([]);
-  const [state, setState]   = useState<State>({ kind: "loading" });
-
-  // The chosen script is a reading preference, so it persists across sūrahs
-  // and sessions. Read in an effect for the usual hydration reason.
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(KEY);
-      if (saved) setScript(saved);
-    } catch { /* ignore */ }
-  }, []);
-
-  const choose = useCallback((id: string) => {
-    setScript(id);
-    try { localStorage.setItem(KEY, id); } catch { /* ignore */ }
-  }, []);
+  const [state, setState] = useState<State>({ kind: "loading" });
 
   useEffect(() => {
     let live = true;
     setState({ kind: "loading" });
-    fetch(`/api/quran/script?surah=${surah}&script=${script}`)
+    fetch(`/api/quran/script?surah=${surah}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((d: { verses?: ScriptVerse[]; scripts?: ScriptDef[] } | null) => {
         if (!live) return;
         if (!d?.verses) { setState({ kind: "error" }); return; }
-        if (d.scripts) setScripts(d.scripts);
         setState({ kind: "ready", verses: d.verses });
       })
       .catch(() => { if (live) setState({ kind: "error" }); });
     return () => { live = false; };
-  }, [surah, script]);
+  }, [surah]);
 
   return (
     <div className="sv">
@@ -81,7 +62,7 @@ export default function ScriptView({ surah, onVerseClick }: Props) {
       )}
 
       {state.kind === "ready" && (
-        <div className="sv-verses" dir="rtl" data-script={script}>
+        <div className="sv-verses" dir="rtl">
           {state.verses.map((v) => (
             <p
               key={v.verseKey}
@@ -102,18 +83,6 @@ export default function ScriptView({ surah, onVerseClick }: Props) {
         </div>
       )}
 
-      {script === "tajweed" && state.kind === "ready" && (
-        <ul className="sv-legend" aria-label="Tajweed rules">
-          {[
-            ["ghunnah", "Ghunnah"], ["ikhafa", "Ikhfāʾ"], ["idgham_ghunnah", "Idghām"],
-            ["qalaqah", "Qalqalah"], ["iqlab", "Iqlāb"], ["madda_obligatory", "Madd"],
-            ["ham_wasl", "Hamzat al-waṣl"], ["laam_shamsiyah", "Lām shamsiyyah"],
-            ["slnt", "Silent"],
-          ].map(([rule, label]) => (
-            <li key={rule}><span className="sv-swatch" data-rule={rule} aria-hidden /> {label}</li>
-          ))}
-        </ul>
-      )}
     </div>
   );
 }
