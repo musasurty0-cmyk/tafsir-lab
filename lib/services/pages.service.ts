@@ -252,7 +252,7 @@ export async function createPage(
   const page = await db.page.create({
     data: {
       workspaceSurahId,
-      title:      title.trim(),
+      title:      boundedTitle(title, "Untitled"),
       orderIndex,
       status:     "draft",
       createdById: userId,
@@ -298,7 +298,7 @@ export async function renamePage(
 
   return db.page.update({
     where: { id: pageId },
-    data:  { title: title.trim() },
+    data:  { title: boundedTitle(title, "Untitled") },
     select: { id: true, title: true },
   });
 }
@@ -379,6 +379,24 @@ export async function listWorkspaceBoards(workspaceId: string, userId: string) {
 }
 
 /** Create a new named board in a workspace. */
+/**
+ * A page title, bounded.
+ *
+ * The create form carries maxLength={80}, but that is a hint to a keyboard,
+ * not a constraint on the API — anything can POST here. Nothing capped these
+ * server-side, so a title was whatever arrived, stored in a database already
+ * near its free-tier ceiling.
+ *
+ * 120 rather than 80: the form's limit is a comfort for typing, and truncating
+ * a legitimate paste to it would lose words a caller meant to keep.
+ */
+const MAX_TITLE = 120;
+
+export function boundedTitle(title: string, fallback: string): string {
+  const t = title.replace(/\s+/g, " ").trim().slice(0, MAX_TITLE);
+  return t || fallback;
+}
+
 export async function createWorkspaceBoard(workspaceId: string, userId: string, title: string) {
   await getWorkspaceWithRole(workspaceId, userId);
   const container = await db.workspaceSurah.upsert({
@@ -395,7 +413,7 @@ export async function createWorkspaceBoard(workspaceId: string, userId: string, 
   const page = await db.page.create({
     data: {
       workspaceSurahId: container.id,
-      title: title.trim() || "Untitled board",
+      title: boundedTitle(title, "Untitled board"),
       orderIndex: (last?.orderIndex ?? -1) + 1,
       status: "draft",
       createdById: userId,
