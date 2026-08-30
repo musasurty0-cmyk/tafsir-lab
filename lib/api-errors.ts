@@ -44,6 +44,23 @@ export function apiError(err: unknown): NextResponse {
     return NextResponse.json({ error: message }, { status: STATUS[code] });
   }
 
+  /* Prisma's own codes for input it cannot even parse — almost always a route
+     parameter that is not a UUID, from someone editing the address bar or a
+     stale link. That is a bad request, not a server fault: it should not page
+     anyone and it should not fill the log with 500s.
+
+     Matched on the CODE and answered with our own sentence. This file learned
+     once already what happens when you match Prisma on its prose. */
+  if (code === "P2023" || code === "P2009") {
+    return NextResponse.json({ error: "That identifier is not valid." }, { status: 400 });
+  }
+  /* Same category, no code: Prisma raises this when the SHAPE of a query is
+     wrong, which a malformed id can also cause. Identified by class name,
+     which is a fact about the error rather than a guess at its wording. */
+  if ((err as { name?: unknown })?.name === "PrismaClientValidationError") {
+    return NextResponse.json({ error: "That request could not be understood." }, { status: 400 });
+  }
+
   /* No message sniffing. Session failures now carry code UNAUTHORIZED and are
      handled by the map above. The heuristic this replaces tested the message
      against /not authenticated|expired session|invalid/i, and that bare
