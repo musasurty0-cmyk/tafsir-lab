@@ -13299,3 +13299,79 @@ input, textarea { font: inherit; color: inherit; }
   .film-tile:hover { transform: none; }
   .film-strip { scroll-behavior: auto; }
 }
+
+/* ── Motion for overlays that had none ─────────────────────────────────────
+   Audited rather than guessed: these are the positioned surfaces in this file
+   that carried no transition or animation at all, so they appeared on the same
+   frame as the click that summoned them. Each now enters from somewhere,
+   using the shared curve.
+
+   Entrances only. An exit needs the node to outlive the state that renders it,
+   which is a component change rather than a stylesheet one — see
+   useOverlayMotion, which the drawer and Lab AI already use. */
+
+/* Dialogs: a short rise and settle, matching .modal-card. */
+.join-modal-overlay,
+.name-entry-overlay {
+  animation: ov-dialog-in var(--dur-overlay) var(--ease-overlay) both;
+}
+@keyframes ov-dialog-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.join-modal-overlay > *,
+.name-entry-overlay > * {
+  animation: ov-dialog-card-in 240ms var(--ease-overlay) both;
+}
+@keyframes ov-dialog-card-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.985); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* Menus and popovers grow from the control that opened them. */
+.slash-menu,
+.tweaks-panel {
+  animation: ov-menu-in var(--dur-mid) var(--ease-overlay) both;
+  transform-origin: top left;
+}
+@keyframes ov-menu-in {
+  from { opacity: 0; transform: scale(0.96) translateY(-4px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* Toolbars belong to the thing they act on, so they rise out of it. */
+.format-bar,
+.study-bar {
+  animation: ov-bar-in var(--dur-mid) var(--ease-overlay) both;
+}
+@keyframes ov-bar-in {
+  from { opacity: 0; transform: translateY(6px) scale(0.98); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* The tool rail slides in from the edge it is docked to. */
+.canvas-tool-rail {
+  animation: ov-rail-in var(--dur-overlay) var(--ease-overlay) both;
+}
+@keyframes ov-rail-in {
+  from { opacity: 0; transform: translateX(-12px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* Tooltips are the one case where travel would be noise: they are small, they
+   follow the cursor, and a moving tooltip is harder to read than a still one. */
+.presence-tooltip,
+.cxmap-tip {
+  animation: ov-tip-in var(--dur-fast) var(--ease-soft) both;
+}
+@keyframes ov-tip-in { from { opacity: 0; } to { opacity: 1; } }
+
+.tut-overlay { animation: ov-dialog-in var(--dur-overlay) var(--ease-soft) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .join-modal-overlay, .name-entry-overlay, .join-modal-overlay > *,
+  .name-entry-overlay > *, .slash-menu, .tweaks-panel, .format-bar,
+  .study-bar, .canvas-tool-rail, .tut-overlay {
+    animation: ov-dialog-in var(--dur-mid) var(--ease-soft) both;
+  }
+}
