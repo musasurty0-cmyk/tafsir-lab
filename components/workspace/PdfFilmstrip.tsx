@@ -34,16 +34,36 @@ export default function PdfFilmstrip({ pages, current, onGo }: Props) {
      that has scrolled off it. */
   useEffect(() => {
     activeRef.current?.scrollIntoView({ block: "nearest", inline: "center", behavior: "smooth" });
+    /* Follow focus to the new tile, but only if focus was already inside the
+       strip — otherwise clicking a tile would steal focus from whatever the
+       reader was doing on the page. */
+    const strip = stripRef.current;
+    if (strip && strip.contains(document.activeElement)) activeRef.current?.focus();
   }, [current]);
 
   if (pages.length === 0) return null;
 
   const go = (i: number) => onGo(Math.max(0, Math.min(pages.length - 1, i)));
 
+  /* Arrow keys walk the strip. Without this, reaching page 93 of a 93-page
+     book means ninety-three presses of Tab — the strip is a single control for
+     choosing a page, so it behaves like one rather than like ninety-three
+     separate stops. Home and End jump to the covers. */
+  const onKeyDown = (e: React.KeyboardEvent) => {
+    const step =
+      e.key === "ArrowRight" ? 1 :
+      e.key === "ArrowLeft"  ? -1 :
+      e.key === "PageDown"   ? 10 :
+      e.key === "PageUp"     ? -10 : 0;
+    if (step) { e.preventDefault(); go(current + step); return; }
+    if (e.key === "Home") { e.preventDefault(); go(0); return; }
+    if (e.key === "End")  { e.preventDefault(); go(pages.length - 1); }
+  };
+
   return (
-    <div className="film" role="group" aria-label="Pages">
+    <div className="film" role="group" aria-label="Pages" onKeyDown={onKeyDown}>
       <button
-        className="film-arrow" onClick={() => go(current - 1)}
+        type="button" className="film-arrow" onClick={() => go(current - 1)}
         disabled={current <= 0} aria-label="Previous page"
       >
         <ChevronLeft size={16} />
@@ -55,6 +75,8 @@ export default function PdfFilmstrip({ pages, current, onGo }: Props) {
             key={p.index}
             ref={p.index === current ? activeRef : undefined}
             className="film-tile"
+            type="button"
+            tabIndex={p.index === current ? 0 : -1}
             data-active={p.index === current ? "true" : "false"}
             onClick={() => onGo(p.index)}
             aria-label={`Page ${p.index + 1}`}
@@ -69,7 +91,7 @@ export default function PdfFilmstrip({ pages, current, onGo }: Props) {
       </div>
 
       <button
-        className="film-arrow" onClick={() => go(current + 1)}
+        type="button" className="film-arrow" onClick={() => go(current + 1)}
         disabled={current >= pages.length - 1} aria-label="Next page"
       >
         <ChevronRight size={16} />

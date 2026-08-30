@@ -210,11 +210,11 @@ export default function AiPanel({ pageId, surahNumber, surahName, onClose }: Pro
           <BookOpen size={11} aria-hidden /> {surahName}
         </span>
         <span className="lab-head-sp" />
-        <button className="lab-icon" onClick={() => setTurns([])}
+        <button type="button" className="lab-icon" onClick={() => setTurns([])}
                 title="New chat" aria-label="New chat">
           <SquarePen size={15} />
         </button>
-        <button className="lab-icon" onClick={onClose} title="Close" aria-label="Close Lab AI">
+        <button type="button" className="lab-icon" onClick={onClose} title="Close" aria-label="Close Lab AI">
           <X size={16} />
         </button>
       </header>
@@ -230,7 +230,7 @@ export default function AiPanel({ pageId, surahNumber, surahName, onClose }: Pro
             </p>
             <div className="lab-suggest">
               {SUGGESTIONS.map((sg, i) => (
-                <button key={sg} style={{ animationDelay: `${90 + i * 60}ms` }}
+                <button type="button" key={sg} style={{ animationDelay: `${90 + i * 60}ms` }}
                         onClick={() => ask(sg)}>{sg}</button>
               ))}
             </div>
@@ -246,7 +246,11 @@ export default function AiPanel({ pageId, surahNumber, surahName, onClose }: Pro
             <div className="lab-row lab-row--ai">
               <span className="lab-avatar" aria-hidden><Sparkles size={14} /></span>
 
-              <div className="lab-said">
+              {/* Announced once, when it is finished. aria-busy holds the
+                  region while tokens are still arriving — without it a screen
+                  reader narrates the answer a word at a time as it streams,
+                  which is unusable. */}
+              <div className="lab-said" aria-live="polite" aria-busy={t.running}>
                 {t.running && !t.text && t.sentences.length === 0 ? (
                   <div className="lab-bubble lab-thinking" role="status">
                     <span className="lab-dots" aria-hidden><i /><i /><i /></span>
@@ -319,6 +323,7 @@ export default function AiPanel({ pageId, surahNumber, surahName, onClose }: Pro
           aria-label="Ask Lab AI"
         />
         <button
+          type="button"
           className="lab-send" onClick={() => ask()}
           disabled={busy || !q.trim()} aria-label="Send"
         >
@@ -334,7 +339,7 @@ function Trace({ turn, onToggle }: { turn: Turn; onToggle: () => void }) {
   const { mounted, state } = useOverlayMotion(turn.openTrace, 160);
   return (
     <div className="lab-trace" data-open={turn.openTrace ? "true" : "false"}>
-      <button className="lab-trace-head" onClick={onToggle} aria-expanded={turn.openTrace}>
+      <button type="button" className="lab-trace-head" onClick={onToggle} aria-expanded={turn.openTrace}>
         <Search size={12} aria-hidden />
         <span>
           {/* Three states, not two. A greeting retrieves nothing and finishes,
