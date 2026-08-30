@@ -58,29 +58,46 @@ const box = (x: number, y: number, w: number, h: number, fill = "var(--panel)") 
   <rect x={x} y={y} width={w} height={h} rx="6" fill={fill} />;
 
 function DashboardDiagram() {
+  /* Drawn from the real page, not from memory. Reading order down the middle
+     column is: Lab AI, the greeting, "Continue studying", "Your workspaces",
+     and bookmarks along the bottom. There is no third column — an earlier
+     version of this drawing invented a right-hand rail labelled "what you
+     wrote last", and that section no longer exists at all. */
   return (
     <Frame>
-      {/* sidebar */}
+      {/* Left nav */}
       {box(20, 20, 56, F.h, "var(--panel-2)")}
-      {[60, 100, 140, 180, 220].map((y) => <circle key={y} cx={48} cy={y} r="7" fill="var(--ink-4)" opacity="0.5" />)}
-      {/* greeting */}
-      {box(96, 46, 260, 20)}
-      {box(96, 74, 170, 11)}
-      {/* AI banner */}
-      {box(96, 104, 400, 40, "var(--accent-soft)")}
-      {/* notebook cards */}
-      {box(96, 162, 120, 130, "oklch(0.55 0.09 210 / 0.35)")}
-      {box(228, 162, 120, 130, "oklch(0.72 0.11 350 / 0.3)")}
-      {box(360, 162, 120, 130)}
-      {/* rail */}
-      {box(520, 46, 180, 16)}
-      {box(520, 74, 180, 46, "var(--accent-soft)")}
-      {box(520, 140, 180, 16)}
+      <circle cx={48} cy={48} r="11" fill="var(--ink-4)" opacity="0.45" />
+      {[92, 130, 168, 206, 244, 282].map((y) =>
+        <circle key={y} cx={48} cy={y} r="7" fill="var(--ink-4)" opacity="0.42" />)}
 
-      <Tag x={48}  y={140} tx={-4}  ty={300} text="Everything, one click" anchor="end" />
-      <Tag x={296} y={124} tx={300} ty={-2}  text="Ask about any verse" />
-      <Tag x={156} y={226} tx={-4}  ty={392} text="Your notebooks" anchor="end" />
-      <Tag x={610} y={100} tx={716} ty={330} text="What you wrote last" />
+      {/* Streak strip */}
+      {box(96, 24, 150, 12)}
+
+      {/* Lab AI, above everything else in the column */}
+      {box(96, 52, 604, 46, "var(--accent-soft)")}
+
+      {/* Greeting */}
+      {box(96, 116, 240, 16)}
+      {box(96, 140, 150, 10)}
+
+      {/* Continue studying */}
+      {box(96, 166, 604, 62)}
+
+      {/* Your workspaces — a header row, then cards. No pink: the real cards
+          are muted tones in the accent family. */}
+      {box(96, 248, 140, 12)}
+      {box(96, 272, 190, 78, "oklch(0.62 0.06 165 / 0.28)")}
+      {box(303, 272, 190, 78, "oklch(0.60 0.05 230 / 0.24)")}
+      {box(510, 272, 190, 78)}
+
+      {/* Bookmarks, full width along the bottom */}
+      {box(96, 368, 604, 44, "var(--panel-2)")}
+
+      <Tag x={48}  y={170} tx={-4}  ty={300} text="Everything, one click" anchor="end" />
+      <Tag x={300} y={74}  tx={320} ty={-2}  text="Ask about any verse" />
+      <Tag x={200} y={196} tx={-4}  ty={392} text="Pick up where you left off" anchor="end" />
+      <Tag x={600} y={310} tx={716} ty={330} text="Your workspaces" />
     </Frame>
   );
 }
@@ -140,7 +157,7 @@ function CanvasDiagram() {
 const SCREENS = [
   {
     title:    "Your dashboard",
-    subtitle: "Notebooks, what you last wrote, and how your study is going.",
+    subtitle: "Lab AI, where you left off, and every workspace you keep.",
     cta:      "See annotations →",
     Diagram:  DashboardDiagram,
   },

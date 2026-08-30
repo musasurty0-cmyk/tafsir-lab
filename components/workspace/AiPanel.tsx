@@ -29,6 +29,8 @@ import { useDismissable } from "@/lib/use-dismissable";
 import { parseBlocks, type Inline } from "@/lib/lab-markdown";
 import { embedQuery, prefetch } from "@/lib/tafsir/browser-embed";
 import { useTypedText } from "@/lib/use-typed-text";
+import { asksForNotes } from "@/lib/lab-intent";
+import { labMarkdownToTiptap } from "@/lib/lab-to-tiptap";
 
 interface CiteRef { n: number; sourceName: string; verseKey: string }
 interface Step { step: string; detail: string; state?: string }
@@ -129,6 +131,34 @@ function renderInline(kids: Inline[], cites: Map<number, CiteRef>, k: { i: numbe
 }
 
 /**
+ * What Apply would actually insert, in one line.
+ *
+ * The reader is about to let something write into their document, so the offer
+ * should say what — counted off the same conversion the button runs, not
+ * guessed from the markdown, so the description cannot drift from the result.
+ */
+function describeInsert(text: string, cites: CiteRef[]): string {
+  const nodes = labMarkdownToTiptap(text, (n) => {
+    const c = cites.find((x) => x.n === n);
+    return c ? `${c.sourceName} ${c.verseKey}` : null;
+  });
+  const paras = nodes.filter((n) => n.type === "paragraph").length;
+  const heads = nodes.filter((n) => n.type === "heading").length;
+  const lists = nodes.filter((n) => n.type.endsWith("List")).length;
+
+  const bits: string[] = [];
+  if (heads) bits.push(`${heads} heading${heads === 1 ? "" : "s"}`);
+  if (paras) bits.push(`${paras} paragraph${paras === 1 ? "" : "s"}`);
+  if (lists) bits.push(`${lists} list${lists === 1 ? "" : "s"}`);
+  const shape = bits.length ? bits.join(", ") : "the answer";
+
+  const sourced = new Set(cites.map((c) => c.sourceName)).size;
+  return sourced
+    ? `${shape}, with citations to ${sourced} source${sourced === 1 ? "" : "s"}.`
+    : `${shape}.`;
+}
+
+/**
  * The answer, revealed as it is written.
  *
  * Its own component so the hook has somewhere to live: turns render in a map,
@@ -173,9 +203,8 @@ function renderMarkdown(text: string, cites: CiteRef[]): React.ReactNode[] {
 
 export default function AiPanel({ pageId, surahNumber, surahName, onAddToEditor, onClose }: Props) {
   const [turns, setTurns] = useState<Turn[]>([]);
-  /* The turn most recently added to the page, held briefly so the button can
-     confirm it worked. A toast would be too much for something this small. */
-  const [addedId, setAddedId] = useState<string | null>(null);
+  /* What has become of each notes offer. Absent means still standing. */
+  const [offers, setOffers] = useState<Record<string, "applied" | "dismissed">>({});
 
   /* The conversation survives closing the panel.
      It is per page, because that is what the answers are about: a thread on
@@ -424,25 +453,45 @@ export default function AiPanel({ pageId, surahNumber, surahName, onAddToEditor,
                       />
                     )}
 
-                    {/* Offered only once the answer is complete: adding half
-                        a paragraph to someone's notes is not useful, and the
-                        text is still arriving until running goes false. */}
-                    {t.text && !t.running && onAddToEditor && (
-                      <div className="lab-actions">
-                        <button
-                          type="button"
-                          className="lab-action"
-                          onClick={() => {
-                            if (onAddToEditor(t.text, t.cites)) {
-                              setAddedId(t.id);
-                              setTimeout(() => setAddedId((id) => (id === t.id ? null : id)), 2200);
-                            }
-                          }}
-                        >
-                          {addedId === t.id
-                            ? <><Check size={13} aria-hidden /> Added to page</>
-                            : <><FilePlus2 size={13} aria-hidden /> Add to editor</>}
-                        </button>
+                    {/* Offered only when it was asked for, and only once the
+                        answer is finished — half a paragraph is not worth
+                        filing, and the text arrives until running goes false. */}
+                    {t.text && !t.running && onAddToEditor
+                      && asksForNotes(t.question)
+                      && offers[t.id] !== "dismissed" && (
+                      <div className="lab-act" data-done={offers[t.id] === "applied" ? "true" : "false"}>
+                        <div className="lab-act-head">
+                          <FilePlus2 size={13} aria-hidden />
+                          {offers[t.id] === "applied" ? "Added to your notes" : "Add to your notes"}
+                        </div>
+                        <p className="lab-act-what">{describeInsert(t.text, t.cites)}</p>
+                        {offers[t.id] !== "applied" && (
+                          <>
+                            <p className="lab-act-hint">
+                              Goes in where your cursor is. Undo with Ctrl&nbsp;+&nbsp;Z.
+                            </p>
+                            <div className="lab-act-row">
+                              <button
+                                type="button"
+                                className="lab-act-apply"
+                                onClick={() => {
+                                  const ok = onAddToEditor(t.text, t.cites);
+                                  setOffers((o) => ({ ...o, [t.id]: ok ? "applied" : o[t.id] }));
+                                }}
+                              >
+                                <Check size={13} aria-hidden /> Apply
+                              </button>
+                              <button
+                                type="button"
+                                className="lab-act-x"
+                                aria-label="Dismiss"
+                                onClick={() => setOffers((o) => ({ ...o, [t.id]: "dismissed" }))}
+                              >
+                                <X size={13} aria-hidden />
+                              </button>
+                            </div>
+                          </>
+                        )}
                       </div>
                     )}
 

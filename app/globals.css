@@ -12488,28 +12488,49 @@ input, textarea { font: inherit; color: inherit; }
 }
 
 /* ── Thinking ───────────────────────────────────────────────────────────── */
-/* "Add to editor" — quiet until wanted. It sits under a finished answer and
-   should read as an offer, not as the point of the bubble above it. */
-.lab-actions { display: flex; gap: 6px; margin: -2px 0 2px 2px; }
-.lab-action {
+/* The notes offer.
+   A card rather than a link, because it is a proposal to write into the
+   reader's own document and should say what it will do before it does it. It
+   appears only when the reader asked for something to be added. */
+.lab-act {
+  margin: 2px 0 4px;
+  padding: 11px 13px;
+  background: var(--bg-elev);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  display: flex; flex-direction: column; gap: 6px;
+  animation: lab-bubble-in var(--dur-overlay) var(--ease-overlay) both;
+}
+.lab-act-head {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 12.5px; font-weight: 600; color: var(--ink);
+}
+.lab-act-head svg { flex: none; color: var(--accent); }
+.lab-act-what { margin: 0; font-size: 12.5px; color: var(--ink-2); }
+.lab-act-hint { margin: 0; font-size: 11.5px; color: var(--ink-3); }
+.lab-act-row { display: flex; align-items: center; gap: 6px; margin-top: 3px; }
+.lab-act-apply {
   display: inline-flex; align-items: center; gap: 6px;
-  padding: 5px 9px;
-  font-size: 12.5px; font-weight: 500;
-  color: var(--ink-3);
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: var(--radius-sm);
+  padding: 6px 12px;
+  font-size: 12.5px; font-weight: 600;
+  color: #fff; background: var(--accent);
+  border: none; border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: filter var(--dur-fast) var(--ease-soft);
+}
+.lab-act-apply:hover { filter: brightness(1.08); }
+.lab-act-x {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px;
+  color: var(--ink-3); background: transparent;
+  border: 1px solid var(--line); border-radius: var(--radius-sm);
   cursor: pointer;
   transition: color var(--dur-fast) var(--ease-soft),
-              background var(--dur-fast) var(--ease-soft),
               border-color var(--dur-fast) var(--ease-soft);
 }
-.lab-action:hover {
-  color: var(--ink);
-  background: color-mix(in oklab, var(--ink) 5%, transparent);
-  border-color: var(--line);
-}
-.lab-action svg { flex: none; }
+.lab-act-x:hover { color: var(--ink); border-color: var(--line-strong); }
+/* Applied: the offer becomes a receipt, so the page does not jump. */
+.lab-act[data-done="true"] { border-color: color-mix(in oklab, var(--accent) 40%, var(--line)); }
 
 /* When nothing was retrieved there is no source list to promise, so the line
    stops looking like a control and becomes what it is: a note about how the
@@ -13232,3 +13253,122 @@ input, textarea { font: inherit; color: inherit; }
 .as-answer li::marker { color: var(--ink-4); }
 .as-answer strong { font-weight: 650; color: var(--ink); }
 .as-answer em { font-style: italic; }
+
+/* ── Sūrah spotlight ───────────────────────────────────────────────────────
+   The other way through the Qurʾān: one sūrah on the centre line, neighbours
+   receding, one keystroke per move. The grid stays for scanning. */
+.spot-scrim {
+  position: fixed; inset: 0;
+  background: color-mix(in oklab, var(--ink) 52%, transparent);
+  backdrop-filter: blur(2px);
+  z-index: var(--z-modal);
+  display: flex; align-items: center; justify-content: center;
+  padding: var(--sp-4);
+  animation: modal-backdrop-in var(--dur-overlay) var(--ease-overlay) both;
+}
+.spot {
+  width: min(560px, 100%);
+  background: var(--bg-elev);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: var(--sp-4);
+  display: flex; flex-direction: column; gap: var(--sp-3);
+  animation: modal-card-in var(--dur-overlay) var(--ease-overlay) both;
+}
+.spot:focus { outline: none; }
+.spot-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); }
+.spot-keys { font-size: 11.5px; color: var(--ink-3); }
+.spot-keys kbd {
+  font-family: inherit; font-size: 10.5px;
+  padding: 1px 5px; margin: 0 1px;
+  border: 1px solid var(--line); border-radius: 4px;
+  background: var(--panel); color: var(--ink-2);
+}
+.spot-x {
+  flex: none; width: 28px; height: 28px;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--ink-3); background: transparent;
+  border: 1px solid transparent; border-radius: var(--radius-sm); cursor: pointer;
+}
+.spot-x:hover { color: var(--ink); border-color: var(--line); }
+.spot-count {
+  margin: 0; text-align: center;
+  font-size: 12px; color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.spot-stage { position: relative; overflow: hidden; }
+/* The centre line, so the eye knows where the selection lives. */
+.spot-stage::before,
+.spot-stage::after {
+  content: ""; position: absolute; left: 44px; right: 44px; height: 1px;
+  background: var(--line); opacity: .7; pointer-events: none;
+}
+.spot-stage::before { top: calc(50% - 28px); }
+.spot-stage::after  { top: calc(50% + 28px); }
+
+.spot-list {
+  position: absolute; left: 44px; right: 44px;
+  transition: transform 190ms var(--ease-overlay);
+}
+.spot-row {
+  display: flex; align-items: center; gap: var(--sp-3);
+  padding: 0 var(--sp-3);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: opacity 190ms var(--ease-overlay), background 140ms var(--ease-soft);
+}
+.spot-row[data-current="true"] {
+  background: var(--panel);
+  box-shadow: var(--shadow-sm);
+}
+.spot-row:not([data-current="true"]):hover { background: color-mix(in oklab, var(--ink) 4%, transparent); }
+.spot-num {
+  flex: none; min-width: 30px;
+  font-size: 13px; color: var(--ink-3); font-variant-numeric: tabular-nums;
+}
+.spot-name { flex: 1; font-size: 15px; font-weight: 500; color: var(--ink); }
+.spot-row[data-current="true"] .spot-name { font-weight: 650; }
+.spot-ar { flex: none; font-size: 17px; color: var(--ink-2); }
+
+.spot-step {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  width: 34px; height: 34px; z-index: 1;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--ink-2); background: var(--bg-elev);
+  border: 1px solid var(--line); border-radius: 50%;
+  cursor: pointer;
+  transition: color var(--dur-fast) var(--ease-soft), border-color var(--dur-fast) var(--ease-soft);
+}
+.spot-step--up   { top: 2px; }
+.spot-step--down { bottom: 2px; }
+.spot-step:hover:not(:disabled) { color: var(--ink); border-color: var(--line-strong); }
+.spot-step:disabled { opacity: .35; cursor: default; }
+
+.spot-open {
+  padding: 9px 14px;
+  font-size: 14px; font-weight: 600;
+  color: #fff; background: var(--accent);
+  border: none; border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: filter var(--dur-fast) var(--ease-soft);
+}
+.spot-open:hover { filter: brightness(1.08); }
+
+/* The toggle that offers it, beside the filter tabs. */
+.ws-view-toggle { display: inline-flex; gap: 2px; }
+.ws-view-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 10px;
+  font-size: 12.5px; font-weight: 500;
+  color: var(--ink-3); background: transparent;
+  border: 1px solid transparent; border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.ws-view-btn:hover { color: var(--ink); border-color: var(--line); }
+
+@media (max-width: 720px) {
+  .spot-list, .spot-stage::before, .spot-stage::after { left: 8px; right: 8px; }
+  .spot-step { display: none; }
+}

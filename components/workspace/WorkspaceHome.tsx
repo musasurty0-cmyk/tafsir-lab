@@ -18,7 +18,8 @@ import { useRouter } from "next/navigation";
 import type { Chapter } from "@/lib/types";
 import type { MemberRole } from "@/lib/services/workspaces.service";
 import { isAdmin } from "@/lib/services/workspaces.service";
-import { Lock } from "lucide-react";
+import { Lock, ScanLine } from "lucide-react";
+import SurahSpotlight from "./SurahSpotlight";
 import type { WorkspaceSurahSummary } from "@/app/workspaces/[workspaceId]/page";
 import Rail from "./Rail";
 import NewWorkspaceModal from "@/components/NewWorkspaceModal";
@@ -54,6 +55,9 @@ export default function WorkspaceHome({
   const [starting,   setStarting]   = useState<number | null>(null);
   const [navigating, setNavigating] = useState<number | null>(null);
   const [filter,     setFilter]     = useState<"all" | "started" | "not-started">("all");
+  /* The grid stays the default. This is the other way through the same
+     list, for reading down it rather than scanning across it. */
+  const [spotlightOpen, setSpotlightOpen] = useState(false);
   const [prevFilter, setPrevFilter] = useState(filter);
   const tabsRef = useRef<Record<string, HTMLButtonElement | null>>({ all: null, started: null, "not-started": null });
   const tabsContainerRef = useRef<HTMLDivElement | null>(null);
@@ -294,8 +298,25 @@ export default function WorkspaceHome({
                 </button>
               );
             })}
+            <button
+              type="button"
+              className="ws-view-btn"
+              onClick={() => setSpotlightOpen(true)}
+              title="Scroll the Qur'an one sūrah at a time"
+            >
+              <ScanLine size={14} aria-hidden /> Scroll
+            </button>
           </div>
         </div>
+
+        {spotlightOpen && (
+          <SurahSpotlight
+            chapters={chapters}
+            initialId={visible[0]?.id}
+            onPick={(ch) => { setSpotlightOpen(false); handleCardClick(ch); }}
+            onClose={() => setSpotlightOpen(false)}
+          />
+        )}
 
         {/* Grid */}
         <div
