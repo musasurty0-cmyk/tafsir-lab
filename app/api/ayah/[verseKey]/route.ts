@@ -7,6 +7,10 @@
  *
  * verseKey format in the URL: "2_255" (colon replaced by underscore).
  * Returns: { verse: { verse_key, text_uthmani, translations: [{ text }], words: [...] } }
+ *
+ * Words carry code_v2 and v2_page as well as text, so an ayah block can render
+ * in the mushaf faces — those glyph codes are meaningless without the page
+ * number that selects the font to draw them with.
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -27,7 +31,7 @@ export async function GET(
       `${BASE}/verses/by_key/${apiKey}` +
       `?language=en&words=true&translations=20` +
       `&fields=text_uthmani` +
-      `&word_fields=text_uthmani,transliteration`;
+      `&word_fields=text_uthmani,transliteration,code_v2,v2_page`;
 
     const res = await fetch(url, { next: { revalidate: 86400 } });
     if (!res.ok) {

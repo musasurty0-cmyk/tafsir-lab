@@ -5303,11 +5303,22 @@ input, textarea { font: inherit; color: inherit; }
    height was also more than the Uthmani face needs — 1.95 still clears the
    tashkīl. */
 .ayah-block-arabic {
+  /* The fallback face, shown until the muṣḥaf glyphs arrive. Once they do the
+     block sets data-qcf and each word carries its own page font inline — see
+     lib/qcf-font.ts for why the family cannot simply be set here. */
   font-family: var(--font-uthmanic);
   font-size: calc(21px * var(--fs-arabic)); line-height: 1.95;
   text-align: right; direction: rtl;
   color: var(--ink);
   margin-bottom: 7px;
+}
+/* The muṣḥaf faces carry their own generous vertical metrics and the words are
+   laid out as separate spans, so they want a little more room and a word gap
+   the glyph codes do not themselves provide. */
+.ayah-block-arabic[data-qcf="true"] {
+  font-size: calc(25px * var(--fs-arabic));
+  line-height: 2.1;
+  word-spacing: 0.14em;
 }
 
 /* Translation */
@@ -10102,7 +10113,9 @@ input, textarea { font: inherit; color: inherit; }
 }
 
 /* An embedded /ayah block is scripture, so it gets the Uthmani face — the one
-   place in a note where the script itself matters. */
+   place in a note where the script itself matters. This is the fallback only:
+   when the muṣḥaf glyphs load, each word sets its own page font inline, which
+   outranks this. */
 .ayah-block-arabic,
 .ayah-block-node [dir="rtl"].ayah-block-arabic {
   font-family: var(--font-uthmanic);

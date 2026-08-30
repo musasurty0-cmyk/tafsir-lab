@@ -24,37 +24,7 @@
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState, useLayoutEffect} from "react";
 import type { QCFVerse, Chapter } from "@/lib/types";
-
-// ── Font loading ────────────────────────────────────────────────────────────
-
-const FONT_CDN   = "https://verses.quran.foundation/fonts/quran/hafs/v2/woff2";
-const fontLoaded = new Set<number>();
-
-/**
- * Load and register one QCF v2 page font.
- * Throws if the network request fails — callers must handle errors.
- */
-async function loadQCFFont(pageNum: number): Promise<void> {
-  if (fontLoaded.has(pageNum)) return;
-
-  const family = `p${pageNum}-v2`;
-
-  // Already registered and loaded in this browser session?
-  for (const ff of document.fonts.values()) {
-    const name = ff.family.replace(/^"|"$/g, "");
-    if (name === family && ff.status === "loaded") {
-      fontLoaded.add(pageNum);
-      return;
-    }
-  }
-
-  const ff = new FontFace(family, `url(${FONT_CDN}/p${pageNum}.woff2)`);
-  // "block": text is invisible until the font loads — no flash of fallback glyphs.
-  ff.display = "block";
-  const loaded = await ff.load();  // throws on network/decode failure
-  document.fonts.add(loaded);
-  fontLoaded.add(pageNum);
-}
+import { loadQCFFont } from "@/lib/qcf-font";
 
 // ── Props ───────────────────────────────────────────────────────────────────
 

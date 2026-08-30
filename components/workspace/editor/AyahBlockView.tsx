@@ -13,6 +13,8 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
+import { qcfFamily, loadQCFFontsFor } from "@/lib/qcf-font";
+import { qcfWords } from "@/lib/qcf-words";
 import { NodeViewWrapper, type NodeViewProps } from "@tiptap/react";
 import { useEditorCtx } from "./EditorContext";
 import NoteCard from "../NoteCard";
@@ -93,8 +95,34 @@ export default function AyahBlockView({
   const [fetchError, setFetchError]     = useState<string | null>(null);
   // Incrementing this triggers a retry without changing verseKey.
   const [retryKey, setRetryKey]         = useState(0);
+  /* The muṣḥaf glyphs, when they are available.
+     Kept out of the node's attributes on purpose: they are derivable from the
+     verse key, they would bloat every saved document, and a doc written before
+     this existed must keep working. So the block renders `displayArabic` as it
+     always did and swaps to the glyphs once the page font has loaded — which
+     also means a reader on a slow link sees the verse rather than nothing. */
+  const [glyphs, setGlyphs] = useState<{ code: string; page: number }[] | null>(null);
   const [noteCreatorOpen, setNoteCreatorOpen] = useState(false);
   const [showProgress, setShowProgress] = useState(false);
+
+  /* Glyph codes + their page fonts.
+     Runs whatever the cache holds, because the text attribute says nothing
+     about whether the codes were ever fetched. `qcfWords` memoises per verse
+     across every block in the document, so a page of āyah blocks makes one
+     request per distinct verse rather than one per block. */
+  useEffect(() => {
+    let live = true;
+    qcfWords(verseKey, ctx.verses)
+      .then(async (words) => {
+        if (!live || !words.length) return;
+        await loadQCFFontsFor(words.map((w) => w.page));
+        if (live) setGlyphs(words);
+      })
+      /* No glyphs is not an error the reader needs to hear about — the verse
+         is already on screen in the fallback face. */
+      .catch(() => { /* stay with displayArabic */ });
+    return () => { live = false; };
+  }, [verseKey, ctx.verses]);
 
   // ── Fetch verse data if not yet cached ────────────────────────────────
   useEffect(() => {
@@ -313,7 +341,16 @@ export default function AyahBlockView({
 
           {!fetching && !fetchError && displayArabic && (
             <>
-              <div className="ayah-block-arabic" dir="rtl">{displayArabic}</div>
+              <div className="ayah-block-arabic" dir="rtl" data-qcf={glyphs ? "true" : "false"}>
+                {glyphs
+                  ? glyphs.map((w, i) => (
+                      /* Word by word, each in the font for ITS page: a verse
+                         that straddles a page boundary needs both, and the
+                         codes are only valid in their own page's face. */
+                      <span key={i} style={{ fontFamily: qcfFamily(w.page) }}>{w.code}</span>
+                    ))
+                  : displayArabic}
+              </div>
               {showTranslation && displayTranslation && (
                 <div className="ayah-block-translation">{displayTranslation}</div>
               )}
