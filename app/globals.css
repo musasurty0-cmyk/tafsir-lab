@@ -10867,8 +10867,13 @@ input, textarea { font: inherit; color: inherit; }
 /* ── Friends ───────────────────────────────────────────────────────────── */
 
 .fr-search {
+  /* A <label>, not a <div>: the drawn box is 54px tall and the input inside it
+     is 24, so 30px of what plainly looks like the field did nothing when
+     tapped. Wrapping in a label hands every one of those pixels to the input
+     without a click handler or a change to the layout. */
   display: flex;
   align-items: center;
+  cursor: text;
   gap: var(--sp-3);
   padding: 11px 15px;
   border: 1px solid var(--line-strong);

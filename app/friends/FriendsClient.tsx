@@ -103,7 +103,7 @@ export default function FriendsClient({ user, initialFriends, streak }: Props) {
     <AppShell user={user} streak={streak}>
       <section className="an-card">
         <h2 className="an-card-title">Add a friend</h2>
-        <div className="fr-search">
+        <label className="fr-search">
           <Search size={18} aria-hidden />
           <input
             className="fr-input"
@@ -112,7 +112,7 @@ export default function FriendsClient({ user, initialFriends, streak }: Props) {
             onChange={(e) => setQ(e.target.value)}
             aria-label="Search for people"
           />
-        </div>
+        </label>
 
         {q.trim().length >= 2 && (
           <ul className="fr-list">

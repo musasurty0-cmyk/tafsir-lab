@@ -97,7 +97,7 @@ export default function ExploreClient({ user, chapters, workspaces, streak }: Pr
         <h2 className="ex-heading">Explore the Qur&#x2019;an</h2>
         <p className="an-muted">Search by sūrah, page, or verse reference.</p>
 
-        <div className="fr-search ex-search">
+        <label className="fr-search ex-search">
           <Search size={19} aria-hidden />
           <input
             className="fr-input"
@@ -107,7 +107,7 @@ export default function ExploreClient({ user, chapters, workspaces, streak }: Pr
             onKeyDown={(e) => { if (e.key === "Enter" && ref) open(ref.surah, ref.ayah); }}
             aria-label="Search the Qur'an"
           />
-        </div>
+        </label>
 
         {workspaces.length > 1 && (
           <label className="ex-ws">
