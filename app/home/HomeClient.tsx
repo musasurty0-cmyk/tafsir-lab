@@ -272,7 +272,12 @@ function WorkspaceCard({
       if (res.ok) {
         onDeleted(ws.id);
       } else {
-        setError("Failed to delete");
+        /* The server already says why — "Only the owner can delete the
+           workspace", or that it is gone. Replacing that with "Failed to
+           delete" left the reader with a red line and no idea what to do,
+           and left me unable to diagnose a screenshot of it. */
+        const said = await res.json().catch(() => null) as { error?: string } | null;
+        setError(said?.error || `Could not delete (${res.status})`);
         setDeleting(false);
         setConfirmDel(false);
       }
