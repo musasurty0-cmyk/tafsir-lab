@@ -30,11 +30,11 @@ import { useEffect, useState } from "react";
 export function useHydrated(): boolean {
   const [hydrated, setHydrated] = useState(false);
   /* setState in an effect, on purpose, and the lint rule is right to ask.
-     The rule exists to stop cascading renders from state that could have been
-     derived. Here the value cannot be derived: the whole question is whether
-     we are on the server or in the browser, and an effect running is the only
-     honest signal of that. One extra render, once, per mount.
-     eslint-disable-next-line react-hooks/set-state-in-effect */
+     It exists to stop cascading renders from state that could have been
+     derived. This value cannot be: the whole question is whether we are on the
+     server or in the browser, and an effect running is the only honest signal
+     of that. One extra render, once, per mount. */
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setHydrated(true); }, []);
   return hydrated;
 }
