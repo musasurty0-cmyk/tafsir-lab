@@ -13268,6 +13268,11 @@ input, textarea { font: inherit; color: inherit; }
 }
 .spot {
   width: min(560px, 100%);
+  /* The stage is a fixed seven rows tall, which is taller than a short laptop
+     window once the header and the open button are added. Bound the card and
+     let it scroll rather than running off the screen. */
+  max-height: calc(100dvh - 2 * var(--sp-4));
+  overflow-y: auto;
   background: var(--bg-elev);
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
