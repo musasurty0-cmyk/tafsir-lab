@@ -377,13 +377,23 @@ Reply with exactly one word: LOOKUP or CHAT.
 
 CHAT — greetings, farewells, thanks, acknowledgements ("ok", "got it", "nice"), and questions about you or what you are able to do.
 
-LOOKUP — anything that wants an answer out of the text: a verse, a sūrah, a scholar, a theme, a word. This includes vague questions, questions about living that expect scripture to answer them, and follow-ups to what you just said.
+LOOKUP — anything that wants an answer out of the text: a verse, a sūrah, a scholar, a theme, a word. This includes vague questions, questions about living that expect scripture to answer them, and follow-ups to what you just said. It also includes anything about the reader's OWN material — their notes, this page, what they have written — because those are fetched and handed to you the same way passages are.
 
 If you are not sure, reply LOOKUP.`;
+
+/**
+ * Unmistakably about the reader's own writing. Settled without a round trip:
+ * "summarise my notes on this page" was being classified CHAT — it asks
+ * nothing of the corpus — which sent it down the path that is handed no
+ * passages, so it answered that it had no access to the notes that had just
+ * been read for it.
+ */
+const OWN_MATERIAL = /\b(?:my|these|this|the)\s+(?:own\s+)?(?:notes?|page|writing|document|annotations?)\b/i;
 
 export async function isSmallTalk(
   question: string, history: ChatTurn[] = [],
 ): Promise<boolean> {
+  if (OWN_MATERIAL.test(question)) return false;
   if (provider() === "none") return false;
 
   const messages = [
