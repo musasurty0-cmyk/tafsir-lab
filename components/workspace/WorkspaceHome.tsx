@@ -55,20 +55,13 @@ export default function WorkspaceHome({
   const [starting,   setStarting]   = useState<number | null>(null);
   const [navigating, setNavigating] = useState<number | null>(null);
   const [filter,     setFilter]     = useState<"all" | "started" | "not-started">("all");
-  /* The spotlight is where the picker opens: one sūrah at a time is how you
-     move through the Qur'an, and the grid is the reference view you go to when
-     you want to see the whole of it. The choice is remembered, because someone
-     who prefers the grid should not have to say so every time. */
+  /* The picker always opens on the spotlight: one sūrah at a time is how you
+     move through the Qur'an, and the grid is the reference view you step out to
+     when you want the whole of it at once. Deliberately NOT remembered — a
+     preference stored from one visit meant landing on the grid with no
+     explanation, which is exactly what this default exists to avoid. */
   const [surahView, setSurahView] = useState<"spotlight" | "grid">("spotlight");
-  useEffect(() => {
-    try {
-      if (localStorage.getItem("tl-surah-view") === "grid") setSurahView("grid");
-    } catch { /* private mode — the default stands */ }
-  }, []);
-  const chooseView = useCallback((v: "spotlight" | "grid") => {
-    setSurahView(v);
-    try { localStorage.setItem("tl-surah-view", v); } catch { /* no matter */ }
-  }, []);
+  const chooseView = useCallback((v: "spotlight" | "grid") => setSurahView(v), []);
   const [prevFilter, setPrevFilter] = useState(filter);
   const tabsRef = useRef<Record<string, HTMLButtonElement | null>>({ all: null, started: null, "not-started": null });
   const tabsContainerRef = useRef<HTMLDivElement | null>(null);

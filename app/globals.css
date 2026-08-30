@@ -3824,7 +3824,12 @@ input, textarea { font: inherit; color: inherit; }
 
 /* ── Rail container — bare float, no panel chrome ── */
 .canvas-tool-rail {
-  position: absolute;
+  /* Fixed, not absolute. Absolute centred it inside its container, and that
+     container is inset by the sidebar and whatever panel is open — so the bar
+     sat a couple of hundred pixels right of the middle of the screen. It reads
+     as furniture belonging to the window, so it is positioned against the
+     window. */
+  position: fixed;
   /* A bar along the bottom, centred. It has been a vertical rail on the left
      and then on the right; both put it in the path of the hand doing the
      drawing. Along the bottom it is out of the way of the page and reachable
@@ -13331,7 +13336,9 @@ input, textarea { font: inherit; color: inherit; }
 }
 .spot-alt:hover { color: var(--ink); border-color: var(--line-strong); }
 .spot-count {
-  margin: 0; text-align: center;
+  /* margin-inline stays auto — the shared centring rule above sets it, and
+     `margin: 0` here used to override it and pin the count to the left. */
+  margin-block: 0; text-align: center;
   font-size: 12px; color: var(--ink-3);
   font-variant-numeric: tabular-nums;
 }
@@ -13371,16 +13378,16 @@ input, textarea { font: inherit; color: inherit; }
 .spot-ar { flex: none; font-size: 17px; color: var(--ink-2); }
 
 .spot-step {
-  position: absolute; left: 50%; transform: translateX(-50%);
-  width: 34px; height: 34px; z-index: 1;
+  /* Above and below the stage rather than floating over it: overlapping the
+     outermost rows put a chevron on top of a sūrah name. */
+  width: 34px; height: 34px;
+  margin-inline: auto;
   display: inline-flex; align-items: center; justify-content: center;
   color: var(--ink-2); background: var(--bg-elev);
   border: 1px solid var(--line); border-radius: 50%;
   cursor: pointer;
   transition: color var(--dur-fast) var(--ease-soft), border-color var(--dur-fast) var(--ease-soft);
 }
-.spot-step--up   { top: 2px; }
-.spot-step--down { bottom: 2px; }
 .spot-step:hover:not(:disabled) { color: var(--ink); border-color: var(--line-strong); }
 .spot-step:disabled { opacity: .35; cursor: default; }
 

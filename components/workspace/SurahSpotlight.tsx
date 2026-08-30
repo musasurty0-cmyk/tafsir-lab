@@ -115,17 +115,17 @@ export default function SurahSpotlight({
           Sūrah {current.id} of {chapters.length}
         </p>
 
-        <div className="spot-stage" style={{ height: ROW * (WINGS * 2 + 1) }}>
-          <button
-            type="button"
-            className="spot-step spot-step--up"
-            onClick={() => move(-1)}
-            disabled={i === 0}
-            aria-label="Previous sūrah"
-          >
-            <ChevronUp size={18} aria-hidden />
-          </button>
+        <button
+          type="button"
+          className="spot-step spot-step--up"
+          onClick={() => move(-1)}
+          disabled={i === 0}
+          aria-label="Previous sūrah"
+        >
+          <ChevronUp size={18} aria-hidden />
+        </button>
 
+        <div className="spot-stage" style={{ height: ROW * (WINGS * 2 + 1) }}>
           {/* `top` puts row 0 on the centre line; the transform then slides the
               column so row `i` lands there. Both come from ROW rather than the
               stylesheet so the geometry has a single source. */}
@@ -156,16 +156,17 @@ export default function SurahSpotlight({
             })}
           </div>
 
-          <button
-            type="button"
-            className="spot-step spot-step--down"
-            onClick={() => move(1)}
-            disabled={i === last}
-            aria-label="Next sūrah"
-          >
-            <ChevronDown size={18} aria-hidden />
-          </button>
         </div>
+
+        <button
+          type="button"
+          className="spot-step spot-step--down"
+          onClick={() => move(1)}
+          disabled={i === last}
+          aria-label="Next sūrah"
+        >
+          <ChevronDown size={18} aria-hidden />
+        </button>
 
         <button type="button" className="spot-open" onClick={() => onPick(current)}>
           Open {current.name_simple}
