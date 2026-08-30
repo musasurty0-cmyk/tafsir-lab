@@ -1,6 +1,15 @@
 # Pinned to majors, not exact versions: a free Space rebuilds from scratch on
 # every push, and an exact pin that yanks upstream turns into a Space that will
 # not start with no change on our side.
+# CPU wheels. Plain `pip install torch` on Linux pulls the CUDA build and
+# roughly 2 GB of NVIDIA libraries with it, none of which a CPU Space can use;
+# it is the difference between a build that takes minutes and one that risks
+# the timeout. The CPU wheels version as 2.x.y+cpu, which pip prefers over the
+# bare 2.x.y on PyPI, so this line is enough to select them.
+# If a build ever fails resolving torch, delete this line and rebuild — the
+# Space works either way, just slower to build.
+--extra-index-url https://download.pytorch.org/whl/cpu
+
 gradio>=4.44,<6
 sentence-transformers>=3.0,<4
 transformers>=4.44,<5
