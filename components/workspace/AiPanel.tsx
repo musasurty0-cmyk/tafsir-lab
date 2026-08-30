@@ -122,17 +122,24 @@ export default function AiPanel({ pageId, surahNumber, surahName, onClose }: Pro
 
   useEffect(() => {
     if (!storeKey) return;
+    /* Always assigns, never falls through. Moving between pages of one sūrah
+       reuses this component, so storeKey changes without a remount: returning
+       early when the new page has nothing saved would leave the previous
+       page's thread in state, and the save effect below would then write it
+       under the new page's key. The conversation would follow the reader
+       around and be persisted where it does not belong. */
+    let restored: Turn[] = [];
     try {
       const raw = localStorage.getItem(storeKey);
-      if (!raw) return;
-      const saved = JSON.parse(raw) as Turn[];
-      if (Array.isArray(saved) && saved.length) {
+      const saved = raw ? JSON.parse(raw) as Turn[] : null;
+      if (Array.isArray(saved)) {
         /* Nothing is ever restored mid-flight. A turn saved while streaming
            would come back with running: true and a spinner that never stops,
            because the response it was waiting for is long gone. */
-        setTurns(saved.map((t) => ({ ...t, running: false, openTrace: false })));
+        restored = saved.map((t) => ({ ...t, running: false, openTrace: false }));
       }
     } catch { /* private mode, or a shape from an older build */ }
+    setTurns(restored);
   }, [storeKey]);
 
   useEffect(() => {
