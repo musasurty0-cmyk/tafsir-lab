@@ -54,33 +54,6 @@ const PAGE_SELECT = {
   },
 } as const;
 
-/** The user's most recent annotations, newest first, one row per note. */
-export async function recentAnnotations(userId: string, limit = 6): Promise<RailItem[]> {
-  const notes = await db.structuredNote.findMany({
-    where:   { authorId: userId },
-    orderBy: { createdAt: "desc" },
-    take:    limit,
-    select: {
-      id: true, surahNumber: true, ayahNumber: true, mushafPage: true,
-      createdAt: true, page: { select: PAGE_SELECT },
-    },
-  });
-
-  /* Place first, notebook second. Six notes from one notebook would otherwise
-     render as six identical titles with the only distinguishing fact demoted
-     to the sub-line — a list where every row reads the same is not a list. */
-  return notes.map((n) => ({
-    id:    n.id,
-    title:
-      n.surahNumber != null && n.ayahNumber != null ? `${n.surahNumber}:${n.ayahNumber}`
-      : n.mushafPage != null && n.mushafPage > 0    ? `Page ${n.mushafPage}`
-      : n.page.title,
-    subtitle: n.page.workspaceSurah.workspace.name,
-    href:  hrefForPage(n.page),
-    at:    n.createdAt.toISOString(),
-  }));
-}
-
 export async function listBookmarks(userId: string, limit = 20): Promise<RailItem[]> {
   const rows = await db.bookmark.findMany({
     where:   { userId },
