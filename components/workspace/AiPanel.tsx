@@ -25,6 +25,7 @@ import {
   Search, BookOpen,
 } from "lucide-react";
 import { useOverlayMotion } from "@/lib/use-overlay-motion";
+import { useDismissable } from "@/lib/use-dismissable";
 import { parseBlocks, type Inline } from "@/lib/lab-markdown";
 
 interface CiteRef { n: number; sourceName: string; verseKey: string }
@@ -107,6 +108,12 @@ export default function AiPanel({ pageId, surahNumber, surahName, onClose }: Pro
   const busy = turns.some((t) => t.running);
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  /* Escape closes it, and focus returns to the control that opened it — the
+     same contract every other overlay in the app honours. It matters most on a
+     phone, where the panel is the whole screen and the only other way out is
+     to find the X. */
+  useDismissable(onClose);
 
   useEffect(() => { inputRef.current?.focus(); }, []);
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [turns]);
