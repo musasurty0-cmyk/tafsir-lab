@@ -13067,21 +13067,18 @@ input, textarea { font: inherit; color: inherit; }
   z-index: var(--z-drawer);
 }
 
-/* Column count is driven by width, not by a fixed number, so a 1280px laptop
-   gets two and an ultrawide gets three without a separate breakpoint each. */
+/* Measured, not stretched. Commentary set to a 1600px line is unreadable in a
+   way a narrow column never is, so the extra width becomes margin: the text
+   keeps a sane measure and sits in the middle of the window.
+
+   Columns were tried first and are wrong here. CSS multi-column inside a
+   vertically scrolling box flows sideways — at 1680px the body laid out
+   seventeen columns and reading meant scrolling right, which is worse than the
+   440px panel it replaced. */
 .drawer-overlay[data-expanded="true"] .drawer-body {
-  column-width: 34rem;
-  column-gap: var(--sp-7, 40px);
-  column-rule: 1px solid var(--line);
-  padding-inline: max(var(--sp-6, 32px), calc((100% - 108rem) / 2));
+  padding-inline: max(var(--sp-6, 32px), calc((100% - 46rem) / 2));
 }
 
-/* A verse card broken across a column boundary loses the tie between the
-   Arabic and its commentary, which is the one thing the card exists to keep
-   together. */
-.drawer-overlay[data-expanded="true"] .drawer-verse {
-  break-inside: avoid;
-}
 
 /* The header stops being a narrow stack and becomes a single line, because at
    full width there is no reason to wrap three fields under each other. */
