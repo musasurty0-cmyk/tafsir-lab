@@ -81,6 +81,13 @@ export default function AppSidebar({ user }: { user: SidebarUser | null }) {
               className="app-sidebar-item"
               data-active={active ? "true" : "false"}
               aria-current={active ? "page" : undefined}
+              /* Named here as well as in the span, because the span is
+                 display:none below 720px and display:none is not merely
+                 invisible — it removes the text from the accessibility tree.
+                 Without this the whole bottom bar announced as six unnamed
+                 buttons on a phone. The two strings are the same one, so the
+                 spoken name matches the visible one where both exist. */
+              aria-label={label}
               onClick={() => { if (!active) pushWithSplash(router, href); }}
             >
               <Icon size={20} strokeWidth={1.6} aria-hidden />
@@ -90,7 +97,13 @@ export default function AppSidebar({ user }: { user: SidebarUser | null }) {
         })}
       </div>
 
-      <button className="app-sidebar-item app-sidebar-out" onClick={signOut} disabled={signingOut}>
+      <button
+        className="app-sidebar-item app-sidebar-out"
+        onClick={signOut}
+        disabled={signingOut}
+        aria-label="Logout"
+        aria-busy={signingOut}
+      >
         <LogOut size={20} strokeWidth={1.6} aria-hidden />
         <span className="app-sidebar-label">{signingOut ? "…" : "Logout"}</span>
       </button>
