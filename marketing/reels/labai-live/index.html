@@ -311,11 +311,28 @@
         white-space: nowrap;
       }
       .qline--1 { font-size: 84px; }
-      .qline--2 { font-size: 58px; }
-      .qline--3 { font-size: 76px; }
+      /* B2/B3 caption the STACK from above it; B1 and the turn line own
+         the centre. */
+      .qline--2 { font-size: 54px; align-items: flex-start; padding-top: 86px; }
+      .qline--3 { font-size: 68px; align-items: flex-start; padding-top: 78px; }
       /* The turn line — italic, like the close's "Seconds, not hours.",
          which it sets up. */
       .qline--4 { font-size: 84px; font-style: italic; }
+
+      /* ── The stack — twelve real tafsīr volumes, the problem made
+         physical. Spines drop in with mass, sit as a looming pile, and
+         sweep away on the current at the turn. */
+      .stack { position: absolute; inset: 0; }
+      .book {
+        position: absolute; left: 50%;
+        height: 42px; border-radius: 5px;
+        display: flex; align-items: center; justify-content: center;
+        font-family: var(--serif); font-style: italic;
+        font-size: 20px; color: var(--bg-elev);
+        letter-spacing: 0.02em;
+        box-shadow: 0 6px 18px rgba(41, 38, 33, 0.18);
+        white-space: nowrap;
+      }
       .qline .qw { display: inline-block; }
       .qw--em { font-style: italic; }
 
@@ -432,8 +449,12 @@
                  their geometric overlap is the pattern, not a bug. -->
             <div class="q-stage" data-layout-allow-overflow="true">
               <div class="qline qline--1" id="q1" data-layout-allow-overlap="true" data-layout-allow-occlusion="true"><span class="qw" data-layout-allow-overlap="true" data-layout-allow-occlusion="true">One</span> <span class="qw" data-layout-allow-overlap="true" data-layout-allow-occlusion="true">question.</span></div>
-              <div class="qline qline--2" id="q2" data-layout-allow-overlap="true" data-layout-allow-occlusion="true"><span class="qw" data-layout-allow-overlap="true" data-layout-allow-occlusion="true">The</span> <span class="qw" data-layout-allow-overlap="true" data-layout-allow-occlusion="true">answer</span> <span class="qw" data-layout-allow-overlap="true" data-layout-allow-occlusion="true">sits</span> <span class="qw" data-layout-allow-overlap="true" data-layout-allow-occlusion="true">in</span> <span class="qw qw--em" data-layout-allow-overlap="true" data-layout-allow-occlusion="true">twelve</span> <span class="qw qw--em" data-layout-allow-overlap="true" data-layout-allow-occlusion="true">books.</span></div>
+              <div class="qline qline--2" id="q2" data-layout-allow-overlap="true" data-layout-allow-occlusion="true"><span class="qw" data-layout-allow-overlap="true" data-layout-allow-occlusion="true">The</span> <span class="qw" data-layout-allow-overlap="true" data-layout-allow-occlusion="true">answer</span> <span class="qw" data-layout-allow-overlap="true" data-layout-allow-occlusion="true">is</span> <span class="qw" data-layout-allow-overlap="true" data-layout-allow-occlusion="true">in</span> <span class="qw qw--em" data-layout-allow-overlap="true" data-layout-allow-occlusion="true">here.</span></div>
               <div class="qline qline--3" id="q3" data-layout-allow-overlap="true" data-layout-allow-occlusion="true"><span class="qw" data-layout-allow-overlap="true" data-layout-allow-occlusion="true">Finding</span> <span class="qw" data-layout-allow-overlap="true" data-layout-allow-occlusion="true">it</span> <span class="qw" data-layout-allow-overlap="true" data-layout-allow-occlusion="true">takes</span> <span class="qw qw--em" data-layout-allow-overlap="true" data-layout-allow-occlusion="true">hours.</span></div>
+              <!-- The stack: twelve real tafsīr volumes. Built by script so
+                   the spines carry real names, real widths and the pile's
+                   geometry stays one source of truth. -->
+              <div class="stack" id="stack" data-layout-allow-overflow="true"></div>
               <!-- The TURN — the pain is contradicted BEFORE the product
                    appears, so what follows reads as the proof, not the
                    continuation of the problem. -->
@@ -582,8 +603,16 @@
       <audio id="au-01" data-start="0" data-duration="20.7" data-volume="0.55" src="audio/bed-nasheed.mp3"></audio>
       <audio id="au-02" data-start="1.55" data-duration="0.6" data-volume="0.16" src="audio/whoosh-short.mp3"></audio>
       <audio id="au-03" data-start="3.2" data-duration="0.6" data-volume="0.16" src="audio/whoosh-short.mp3"></audio>
-      <audio id="au-04" data-start="4.2" data-duration="0.6" data-volume="0.18" src="audio/whoosh-short.mp3"></audio>
-      <audio id="au-05" data-start="5.15" data-duration="0.6" data-volume="0.16" src="audio/whoosh-short.mp3"></audio>
+      <!-- The pile landing: four thuds under the twelve drops (every third
+           book), so the stack has weight without becoming a drum solo. -->
+      <audio id="au-b1" data-start="1.92" data-duration="0.5" data-volume="0.3" src="audio/thud.mp3"></audio>
+      <audio id="au-b2" data-start="2.31" data-duration="0.5" data-volume="0.26" src="audio/thud.mp3"></audio>
+      <audio id="au-b3" data-start="2.70" data-duration="0.5" data-volume="0.22" src="audio/thud.mp3"></audio>
+      <audio id="au-b4" data-start="3.09" data-duration="0.5" data-volume="0.18" src="audio/thud.mp3"></audio>
+      <audio id="au-04" data-start="4.55" data-duration="0.6" data-volume="0.18" src="audio/whoosh-short.mp3"></audio>
+      <!-- The sweep: the pile clearing off frame. -->
+      <audio id="au-sw" data-start="4.18" data-duration="1.3" data-volume="0.3" src="audio/whoosh-morph.mp3"></audio>
+      <audio id="au-05" data-start="5.3" data-duration="0.6" data-volume="0.16" src="audio/whoosh-short.mp3"></audio>
       <audio id="au-06" data-start="5.9" data-duration="1.3" data-volume="0.22" src="audio/whoosh-morph.mp3"></audio>
       <audio id="au-07" data-start="7.95" data-duration="1.8" data-volume="0.75" src="audio/typing.mp3"></audio>
       <audio id="au-08" data-start="9.58" data-duration="0.4" data-volume="0.9" src="audio/click.mp3"></audio>
@@ -635,6 +664,39 @@
         chars.push(s);
       }
 
+      /* ── The stack: twelve tafsīr volumes, bottom to top ──────────────
+         Real works, real proportions — the wide foundational commentaries
+         at the base, the shorter ones toward the top, so the pile reads as
+         a library rather than a bar chart. Built here so the geometry has
+         one source of truth: BOOK_H + GAP drive both the layout and the
+         drop choreography. */
+      const BOOKS = [
+        ["al-Ṭabarī",        520], ["Ibn Kathīr",       486],
+        ["al-Qurṭubī",       502], ["al-Baghawī",       448],
+        ["al-Rāzī",          470], ["al-Suyūṭī",        424],
+        ["Ibn ʿĀshūr",       458], ["al-Shawkānī",      412],
+        ["al-Saʿdī",         386], ["al-Baiḍāwī",       404],
+        ["al-Jalālayn",      360], ["Ibn ʿAṭiyya",      382],
+      ];
+      const BOOK_H = 42, BOOK_GAP = 5, STACK_BASE = 762;
+      const stackEl = document.getElementById("stack");
+      const books = BOOKS.map(([name, w], i) => {
+        const el = document.createElement("div");
+        el.className = "book";
+        el.id = "bk" + i;
+        el.textContent = name;
+        el.style.width = w + "px";
+        el.style.marginLeft = -(w / 2) + "px";
+        el.style.top = (STACK_BASE - i * (BOOK_H + BOOK_GAP)) + "px";
+        /* Alternating ink weights: a shelf of different bindings, not a
+           gradient. Deterministic by index — no randomness in a render. */
+        el.style.background = ["#33302a", "#3f3a33", "#2b2823", "#474139"][i % 4];
+        el.setAttribute("data-layout-allow-overlap", "true");
+        el.setAttribute("data-layout-allow-occlusion", "true");
+        stackEl.appendChild(el);
+        return el;
+      });
+
       const tl = gsap.timeline({ paused: true });
 
       /* Build-time hidden states — set once, reveal with to() (seek-safe).
@@ -647,6 +709,7 @@
       gsap.set("#caret", { autoAlpha: 0 });
       gsap.set("#q1 .qw", { autoAlpha: 0 });
       gsap.set(["#q2 .qw", "#q3 .qw", "#q4 .qw"], { x: 230, autoAlpha: 0 });
+      gsap.set(books, { autoAlpha: 0 });
       gsap.set(["#close-line .cw", "#close-payoff .pw", "#close-url", "#close-brand"], { autoAlpha: 0 });
       gsap.set("#cam", { scale: 1, x: 0, y: 0 });
       /* The vehicle. All three pills centre via xPercent (GSAP owns the
@@ -689,15 +752,52 @@
         tl.fromTo(w, { y: yOff }, { y: 0, duration: d, ease: "power4.out" }, t0);
       });
 
-      /* The CONVEYOR — the anti-slideshow rule. No line ever sits still:
-         each beat's whole line rides a slow constant leftward creep (the
-         film's current made visible) from its ignition to its exit, and
-         the word entries/exits compose on top. Pause at any second and
-         something is mid-motion. Each creep starts while its line is
-         still invisible, so the jump to +18 never shows. */
-      [["#q1", 0.25, 1.75], ["#q2", 1.65, 3.5], ["#q3", 3.3, 4.4], ["#q4", 4.3, 5.35]].forEach(([sel, t0, t1]) => {
+      /* ── THE STACK BUILDS — the problem made physical ──────────────────
+         Text alone was a slideshow; the pile is the story. Twelve real
+         tafsīr volumes drop in one after another, each landing with mass
+         (overshoot + settle) and squashing the pile a touch beneath it —
+         the frame gains a book every 0.13s, so the eye watches the problem
+         GROW rather than reads about it. The caption sits above and rides
+         the current the words already ride. */
+      const DROP0 = 1.62;
+      books.forEach((b, i) => {
+        const t0 = DROP0 + i * 0.13;
+        tl.set(b, { autoAlpha: 1 }, t0);
+        /* From above the frame, decelerating hard into its slot: the
+           further-travelled lower volumes feel heaviest. */
+        tl.fromTo(b, { y: -(760 + i * 26), scaleY: 1.12 },
+          { y: 0, scaleY: 1, duration: 0.34, ease: "power4.out", immediateRender: false }, t0);
+        // The landing shoves the pile below it down a hair, then it recovers.
+        if (i > 0) {
+          const below = books.slice(0, i);
+          tl.to(below, { y: 3, duration: 0.07, ease: "power2.in" }, t0 + 0.3);
+          tl.to(below, { y: 0, duration: 0.22, ease: "power3.out" }, t0 + 0.37);
+        }
+      });
+
+      /* The camera creeps INTO the pile as it grows — the weight closing
+         in — and keeps creeping under "hours." so the beat is never still.
+         c1-mv is the act's camera; it hands off to the seam push at 5.5. */
+      tl.fromTo("#c1-mv", { scale: 1 },
+        { scale: 1.055, duration: 2.5, ease: "none", immediateRender: false }, 1.6);
+      tl.fromTo("#c1-mv", { scale: 1.055 },
+        { scale: 1.1, duration: 0.9, ease: "none", immediateRender: false }, 4.1);
+
+      /* The captions still ride the current (the conveyor), so nothing in
+         the frame is ever parked — but now they caption an event. */
+      [["#q1", 0.25, 1.75], ["#q2", 1.65, 3.5], ["#q3", 3.3, 4.4], ["#q4", 4.65, 5.5]].forEach(([sel, t0, t1]) => {
         tl.fromTo(sel, { x: 18 },
           { x: -18, duration: t1 - t0, ease: "none", immediateRender: false }, t0);
+      });
+
+      /* THE SWEEP — "Not any more." does not just replace the pile, it
+         CLEARS it: the whole stack accelerates off left on the film's
+         current, top volumes first (the pile peels rather than slides as a
+         block), and the ask bar rides in through the space they leave. */
+      books.slice().reverse().forEach((b, i) => {
+        const t0 = 4.18 + i * 0.022;
+        tl.to(b, { x: -1320, duration: 0.4, ease: "power3.in" }, t0);
+        tl.to(b, { autoAlpha: 0, duration: 0.2, ease: "none" }, t0 + 0.22);
       });
 
       // A word-level waterfall cut: OUT words peel left, IN words ride in.
@@ -723,20 +823,25 @@
       waterfallCut("#q2 .qw", "#q3 .qw", 3.2);   // → "Finding it takes hours."
       // THE TURN: "hours." is answered before the product ever appears —
       // otherwise the cut to the AI reads as "the AI takes hours".
-      waterfallCut("#q3 .qw", "#q4 .qw", 4.2);   // → "Not any more."
+      waterfallCut("#q3 .qw", "#q4 .qw", 4.55);  // → "Not any more."
 
       // SEAM 1 (t=5.8): no blur-cut. The turn line peels away on the
       // current and the ASK BAR rides in on the same current — the proof of
       // "not any more" begins. It settles centred; the cut lands on
       // identical frames (same bar, same desk, both sides).
       gsap.utils.toArray("#q4 .qw").forEach((w, i) => {
-        const t0 = 5.15 + i * 0.022;
+        const t0 = 5.3 + i * 0.022;
         tl.fromTo(w, { x: 0 },
           { x: -230, duration: 0.34, ease: "power4.in", immediateRender: false }, t0);
         tl.to(w, { autoAlpha: 0, duration: 0.18, ease: "none" }, t0);
       });
       tl.fromTo("#pill1", { x: 260, autoAlpha: 0.35 },
-        { x: 0, autoAlpha: 1, duration: 0.34, ease: "power4.out", immediateRender: false }, 5.25);
+        { x: 0, autoAlpha: 1, duration: 0.34, ease: "power4.out", immediateRender: false }, 5.4);
+      /* The weight lifts: the camera releases from its creep back to
+         EXACTLY 1 by 5.6 — the bar lives inside this wrapper, so any
+         residual zoom at the cut would break the match with c2's bar. */
+      tl.fromTo("#c1-mv", { scale: 1.1 },
+        { scale: 1, duration: 0.65, ease: "power3.out", immediateRender: false }, 5.05);
 
       /* ═══ 2 · THE TURN — the bar BECOMES the app. c2 opens on c1's exact
          last frame (bar centred on the dot desk); the bar then morphs into

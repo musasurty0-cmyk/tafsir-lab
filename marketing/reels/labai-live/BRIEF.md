@@ -114,6 +114,24 @@ the word-by-word stream with citations, stillness, close.
   across the act and lands at exactly scale 1 on the cut frame, keeping
   the invisible seam.
 
+- v11: owner's note — "the beginning scenes just feel like text moving
+  across the screen, reimagine it." Diagnosis: the act was typography with
+  motion applied, not staging. Rebuilt around an OBJECT: twelve real
+  tafsīr volumes (al-Ṭabarī, Ibn Kathīr, al-Qurṭubī, al-Baghawī, al-Rāzī,
+  al-Suyūṭī, Ibn ʿĀshūr, al-Shawkānī, al-Saʿdī, al-Baiḍāwī, al-Jalālayn,
+  Ibn ʿAṭiyya) drop in one by one with real mass — overshoot, settle, and
+  a squash through the pile beneath each landing — while the camera creeps
+  into the growing weight. The captions move up top and caption the event
+  ("The answer is in here." / "Finding it takes hours."). At the turn the
+  whole pile SWEEPS off left on the current, top volumes peeling first,
+  and the ask bar rides in through the space it leaves; the camera
+  releases back to exactly 1 so the invisible cut into c2 survives
+  (verified: hint-text spans identical, 224–791, on both seam frames).
+  Four thuds under the drops + a sweep whoosh. Cycle-1 fixes: full stack
+  collided with the caption (stack lowered to base 762, captions to the
+  top band); the turn line landed inside the pile (sweep moved earlier and
+  faster, turn line to 4.55 — pile is clear before the words arrive).
+
 ## Notes (audio)
 
 - The bed is `[ZapCap AI] - فيّ حبٌ ‖ عبدالله الجارالله - أحمد النفيس`
