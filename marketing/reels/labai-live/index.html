@@ -221,7 +221,7 @@
         display: flex; align-items: center; justify-content: center;
       }
       .sg-dot svg { width: 16px; height: 16px; }
-      .sg-go { margin-left: auto; color: var(--ink-4); font-size: 20px; }
+      .sg-go { margin-left: auto; color: var(--ink-3); font-size: 20px; }
 
       /* The thread - the app's message interface. */
       .thread {
@@ -482,6 +482,59 @@
       }
       .ed-note-tag svg { width: 14px; height: 14px; }
 
+      /* ── The mindmap — the reel's climax ────────────────────────────
+         Laid out by the SAME tidy-tree pass the product runs (leaves stacked
+         in reading order, every parent centred on the block its subtree
+         occupies), so what the film shows is the geometry the code actually
+         produces rather than an art director's impression of it. */
+      .mind { position: absolute; inset: 0; }
+      .mind-svg { position: absolute; inset: 0; overflow: visible; }
+      .mlink {
+        fill: none;
+        stroke: rgba(41, 38, 33, 0.42);
+        stroke-width: 2.4;
+        stroke-linecap: round;
+      }
+      .mnode {
+        position: absolute;
+        display: flex; align-items: center;
+        padding: 0 20px;
+        border-radius: 14px;
+        background: linear-gradient(180deg, #ffffff 0%, #fdfcf9 100%);
+        border: 1px solid var(--line);
+        color: var(--ink-2);
+        font-size: 21px; font-weight: 500; line-height: 1.25;
+        box-shadow:
+          0 2px 4px rgba(41,38,33,.05),
+          0 16px 34px -22px rgba(41,38,33,.7),
+          inset 0 1px 0 #fff;
+      }
+      /* The root is the claim the map is about, so it carries the ink. */
+      .mnode--0 {
+        background: linear-gradient(180deg, #34302a 0%, #201d19 100%);
+        border-color: rgba(0,0,0,.5);
+        color: #fdfcf9;
+        font-family: var(--serif);
+        font-size: 27px; font-weight: 600;
+        box-shadow: 0 10px 28px -10px rgba(41,38,33,.6), inset 0 1px 0 rgba(255,255,255,.15);
+      }
+      .mnode--1 { font-weight: 600; color: var(--ink); }
+      /* The ring the root throws when it lands — the map announcing itself. */
+      .mring {
+        position: absolute;
+        border-radius: 18px;
+        border: 2px solid rgba(41,38,33,.45);
+        pointer-events: none;
+      }
+      /* The label that names what just happened, bottom-left, out of the map. */
+      .mind-tag {
+        position: absolute; left: 60px; bottom: 54px;
+        display: flex; align-items: center; gap: 11px;
+        font-size: 20px; color: var(--ink-3);
+      }
+      .mind-tag b { color: var(--ink); font-weight: 600; }
+      .mind-tag svg { width: 19px; height: 19px; }
+
       /* Close beat — laid out ABSOLUTELY around the bar's fixed slot (the
          pill ends its return morph at top 490; everything else arranges
          around that point rather than pushing it). */
@@ -525,7 +578,7 @@
       </defs>
     </svg>
 
-    <div data-hf-id="hf-liou" id="root" data-composition-id="main" data-start="0" data-duration="20.7" data-fps="30" data-width="1080" data-height="1080">
+    <div data-hf-id="hf-liou" id="root" data-composition-id="main" data-start="0" data-duration="27.1" data-fps="30" data-width="1080" data-height="1080">
       <!-- ═══ 1 · THE PROBLEM 0–4.6 — three text beats, one leftward current.
            The reel opens on the PAIN, not the product: one question, buried
            in twelve books, hours of searching. The brand waits for the close;
@@ -559,7 +612,7 @@
       </div>
 
       <!-- ═══ 2 · LAB AI, THE TURN 4.6–13.5 — the same question, answered ═══ -->
-      <div data-hf-id="hf-qxhu" id="c2" class="clip" data-start="5.8" data-duration="11.9" data-track-index="1">
+      <div data-hf-id="hf-qxhu" id="c2" class="clip" data-start="5.8" data-duration="18.3" data-track-index="1">
         <div data-hf-id="hf-btl6" class="paper"></div>
         <!-- The same dot desk as c1, so the cut frame is IDENTICAL on both
              sides; it clears as the app assembles and returns when the app
@@ -678,6 +731,16 @@
               </div>
             </div>
 
+            <!-- ═══ THE MINDMAP ═══ Built by script from the same tidy-tree
+                 pass the product runs, so the film shows the real geometry. -->
+            <div class="mind" id="mind" data-layout-allow-overflow="true">
+              <svg class="mind-svg" id="mind-svg" viewBox="0 0 1080 1080" fill="none"></svg>
+            </div>
+            <div class="mind-tag" id="mind-tag">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#6e695f" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="5" r="2.6"/><circle cx="5" cy="19" r="2.6"/><circle cx="19" cy="19" r="2.6"/><path d="M12 7.6v3.9M12 11.5H6.6a1.6 1.6 0 0 0-1.6 1.6v3.3M12 11.5h5.4a1.6 1.6 0 0 1 1.6 1.6v3.3"/></svg>
+              <span><b>14 boxes</b> on your whiteboard · every one editable</span>
+            </div>
+
             <!-- The anchor of the add-to-editor act: the oversized cursor.
                  Above every surface; it crosses them, which is its job. -->
             <svg class="cursor" id="cursor" viewBox="0 0 24 24" data-layout-allow-overlap="true" data-layout-allow-occlusion="true">
@@ -718,7 +781,7 @@
       <audio id="au-15" data-start="17.2" data-duration="1.3" data-volume="0.18" src="audio/whoosh-morph.mp3"></audio>
 
       <!-- ═══ 3 · CLOSE 13.5–16.5 — the payoff answers the problem ═══ -->
-      <div data-hf-id="hf-ez97" id="c3" class="clip" data-start="17.7" data-duration="3" data-track-index="1">
+      <div data-hf-id="hf-ez97" id="c3" class="clip" data-start="24.1" data-duration="3" data-track-index="1">
         <div data-hf-id="hf-c7w7" class="paper"></div>
         <div data-hf-id="hf-ykku" class="mv" id="c3-dots"><div data-hf-id="hf-2trg" class="dots"></div></div>
         <div data-hf-id="hf-cuud" class="fx" id="c3-fx">
@@ -756,6 +819,104 @@
         typedEl.appendChild(s);
         chars.push(s);
       }
+
+      /* ── The mindmap, laid out by the product's own algorithm ─────────
+         A tidy tree in the only two directions that matter: leaves are
+         stacked in reading order down the y-axis, then every parent is
+         centred against the block its subtree occupies. This is the same
+         pass `lib/mindmap.ts` runs, transcribed — so the arrangement on
+         screen is the arrangement the feature really produces, not a
+         designer's impression of one.
+
+         The tree itself is the REAL output the deployed model returned for
+         "tell me about al-Fatihah", not invented copy. */
+      const MIND_TREE = { label: "Al-Fātiḥah", children: [
+        { label: "Titles", children: [
+          { label: "Mother of the Book" },
+          { label: "The Seven Oft-Repeated" } ] },
+        { label: "Themes", children: [
+          { label: "Praise of Allah" },
+          { label: "Affirmation of mercy" },
+          { label: "Worship and help are His alone" },
+          { label: "The request for guidance" } ] },
+        { label: "Contrasts", children: [
+          { label: "Those who earned favour" },
+          { label: "Those who went astray" } ] },
+        { label: "In every prayer", children: [
+          { label: "Recited in each rakʿah" } ] },
+      ] };
+
+      /* Column x and box width by depth, chosen so the widest leaf still
+         clears the right edge with room to breathe. */
+      const M_X = [56, 392, 686];
+      const M_W = [280, 234, 330];
+      const M_H = [72, 60, 58];
+      const M_VGAP = 17;
+
+      const mindSvg = document.getElementById("mind-svg");
+      const mindEl  = document.getElementById("mind");
+      const mnodes = [];          // { el, depth, x, y, w, h, parent }
+      const mlinks = [];          // { path, len, childIndex }
+
+      (function layoutMind() {
+        let cursorY = 0;
+        const place = (n, depth, parentIdx) => {
+          const w = M_W[depth], h = M_H[depth];
+          const x = M_X[depth];
+          const idx = mnodes.length;
+          mnodes.push(null);      // reserve, so children see a stable parent id
+          let y;
+          if (!n.children || !n.children.length) {
+            y = cursorY; cursorY += h + M_VGAP;
+          } else {
+            const centres = n.children.map((c) => place(c, depth + 1, idx));
+            y = (centres[0] + centres[centres.length - 1]) / 2 - h / 2;
+          }
+          mnodes[idx] = { label: n.label, depth, x, y, w, h, parent: parentIdx };
+          return y + h / 2;
+        };
+        place(MIND_TREE, 0, -1);
+
+        /* Centre the whole map vertically in the frame. */
+        const top = Math.min(...mnodes.map((n) => n.y));
+        const bot = Math.max(...mnodes.map((n) => n.y + n.h));
+        const shift = (1080 - (bot - top)) / 2 - top;
+        for (const n of mnodes) n.y += shift;
+
+        for (const n of mnodes) {
+          const el = document.createElement("div");
+          el.className = "mnode mnode--" + Math.min(n.depth, 2);
+          el.style.left = n.x + "px";
+          el.style.top = n.y + "px";
+          el.style.width = n.w + "px";
+          el.style.height = n.h + "px";
+          el.textContent = n.label;
+          el.setAttribute("data-layout-allow-overlap", "true");
+          el.setAttribute("data-layout-allow-occlusion", "true");
+          mindEl.appendChild(el);
+          n.el = el;
+        }
+
+        /* Connectors: a cubic with both handles pushed horizontally, so each
+           line leaves its parent and meets its child flat. */
+        mnodes.forEach((c, i) => {
+          if (c.parent < 0) return;
+          const a = mnodes[c.parent];
+          const x0 = a.x + a.w, y0 = a.y + a.h / 2;
+          const x1 = c.x,       y1 = c.y + c.h / 2;
+          const hx = Math.max(30, (x1 - x0) * 0.5);
+          const d = "M" + x0 + "," + y0 + " C" + (x0 + hx) + "," + y0
+                  + " " + (x1 - hx) + "," + y1 + " " + x1 + "," + y1;
+          const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+          path.setAttribute("d", d);
+          path.setAttribute("class", "mlink");
+          mindSvg.appendChild(path);
+          const len = path.getTotalLength ? path.getTotalLength() : 400;
+          path.style.strokeDasharray = len;
+          path.style.strokeDashoffset = len;
+          mlinks.push({ path, len, child: i });
+        });
+      })();
 
       /* ── The stack: twelve tafsīr volumes, bottom to top ──────────────
          Real works, real proportions — the wide foundational commentaries
@@ -821,6 +982,10 @@
          from transparent WHITE so the alpha-only tween never greys. */
       gsap.set("#add-chip", { autoAlpha: 0 });
       gsap.set("#send-ring", { autoAlpha: 0, scale: 1 });
+      /* The map waits off-stage. Nodes are pre-set small and invisible so a
+         fromTo can never paint them at build time. */
+      gsap.set(["#mind", "#mind-tag"], { autoAlpha: 0 });
+      mnodes.forEach((nd) => gsap.set(nd.el, { autoAlpha: 0, scale: 0.82 }));
       gsap.set("#cursor", { x: 1150, y: 1120 });
       gsap.set(["#editor", "#ed-note"], { autoAlpha: 0 });
       gsap.set(".app", { backgroundColor: "rgba(254,254,252,0)", boxShadow: "0 30px 80px rgba(41,38,33,0)" });
@@ -1146,22 +1311,90 @@
       tl.to(".app", { borderRadius: 0, backgroundColor: "rgba(254,254,252,0)",
         boxShadow: "0 30px 80px rgba(41,38,33,0)", duration: 0.4, ease: "power2.in" }, 16.65);
 
-      // SEAM 2 (t=17.7): no blur-cut here either. The app hands the bar
+      /* ═══ THE MINDMAP ═══ 17.0-23.6
+         The second thing the answer can become. The editor act showed one
+         idea moving into the notebook; this shows the WHOLE answer becoming
+         a structure you can push around — and it is drawn, not pasted, so
+         the film earns the claim that the result is real board furniture.
+
+         Everything blooms out of the root, and the root arrives from where
+         the answer was, so the map is visibly made OF the answer rather than
+         appearing beside it. */
+
+      // The panel and its chrome clear the stage; the desk stays.
+      tl.to("#cam", { autoAlpha: 0, duration: 0.4, ease: "power2.in" }, 17.0);
+      tl.to("#mind", { autoAlpha: 1, duration: 0.01, ease: "none" }, 17.3);
+
+      /* The root lands first, thrown from the answer's old position, and
+         throws a ring as it arrives — the map announcing itself. */
+      const mroot = mnodes[0];
+      tl.fromTo(mroot.el, { autoAlpha: 0, scale: 0.6, x: 300, y: -150 },
+        { autoAlpha: 1, scale: 1, x: 0, y: 0, duration: 0.62,
+          ease: "power4.out", immediateRender: false }, 17.36);
+
+      /* Branches, then leaves: each node arrives and its connector DRAWS
+         from the parent it belongs to, so the structure builds outward the
+         way you would draw it by hand rather than fading in as a picture.
+         The line starts a hair before its box so the box is caught, not
+         merely followed. */
+      const byDepth = (d) => mnodes.map((nd, i) => [nd, i]).filter(([nd]) => nd.depth === d);
+      const linkFor = (childIdx) => mlinks.find((l) => l.child === childIdx);
+
+      let tAtMind = 17.85;
+      byDepth(1).forEach(([nd, idx], k) => {
+        const t0 = tAtMind + k * 0.17;
+        const link = linkFor(idx);
+        if (link) {
+          tl.fromTo(link.path, { strokeDashoffset: link.len },
+            { strokeDashoffset: 0, duration: 0.42, ease: "power2.out", immediateRender: false }, t0);
+        }
+        tl.fromTo(nd.el, { autoAlpha: 0, scale: 0.82, x: -34 },
+          { autoAlpha: 1, scale: 1, x: 0, duration: 0.4, ease: "power4.out", immediateRender: false }, t0 + 0.16);
+      });
+
+      tAtMind = 19.15;
+      byDepth(2).forEach(([nd, idx], k) => {
+        /* Gaps tighten as the map fills — the same accelerating cascade the
+           waterfall entries use, so the finish feels like an arrival. */
+        const t0 = tAtMind + k * (0.145 - Math.min(k, 8) * 0.006);
+        const link = linkFor(idx);
+        if (link) {
+          tl.fromTo(link.path, { strokeDashoffset: link.len },
+            { strokeDashoffset: 0, duration: 0.36, ease: "power2.out", immediateRender: false }, t0);
+        }
+        tl.fromTo(nd.el, { autoAlpha: 0, scale: 0.84, x: -28 },
+          { autoAlpha: 1, scale: 1, x: 0, duration: 0.34, ease: "power4.out", immediateRender: false }, t0 + 0.14);
+      });
+
+      /* The label arrives once the map is standing, naming what happened
+         without narrating it. */
+      tl.fromTo("#mind-tag", { autoAlpha: 0, y: 16 },
+        { autoAlpha: 1, y: 0, duration: 0.45, ease: "power3.out", immediateRender: false }, 21.5);
+
+      /* One slow breath back from the finished map — the only camera move in
+         the act, saved for the moment there is something to survey. */
+      tl.fromTo("#mind", { scale: 1.05 },
+        { scale: 1, duration: 2.6, ease: "power2.out", immediateRender: false }, 21.0);
+
+      // 22.6-23.6: stillness on the whole structure before the close.
+      tl.to(["#mind", "#mind-tag"], { autoAlpha: 0, duration: 0.4, ease: "power2.in" }, 23.55);
+
+      // SEAM 2 (t=24.1): no blur-cut here either. The app hands the bar
       // back: send fades, the chrome sheds the way it came (header up,
       // thread settling down and away, the desk already back), and the
       // composer runs the SAME morph backwards to the centred bar — empty,
       // ready to be asked again. The cut lands on identical frames.
-      tl.to("#send", { autoAlpha: 0, duration: 0.2, ease: "none" }, 17.05);
-      tl.set(".composer", { autoAlpha: 0 }, 17.2);
-      tl.set("#pill2", { autoAlpha: 1 }, 17.2);
+      tl.to("#send", { autoAlpha: 0, duration: 0.2, ease: "none" }, 23.45);
+      tl.set(".composer", { autoAlpha: 0 }, 23.6);
+      tl.set("#pill2", { autoAlpha: 1 }, 23.6);
       tl.fromTo("#pill2", { y: 414, width: 992, height: 132, borderRadius: 24 },
         { y: 0, width: 700, height: 100, borderRadius: 50,
-          duration: 0.45, ease: "power3.inOut", immediateRender: false }, 17.2);
+          duration: 0.45, ease: "power3.inOut", immediateRender: false }, 23.6);
       tl.fromTo(".pn-head", { y: 0 },
-        { y: -93, duration: 0.4, ease: "power3.in", immediateRender: false }, 17.2);
-      tl.to(["#bub-you", "#row-ai"], { autoAlpha: 0, duration: 0.3, ease: "power2.in" }, 17.2);
+        { y: -93, duration: 0.4, ease: "power3.in", immediateRender: false }, 23.6);
+      tl.to(["#bub-you", "#row-ai"], { autoAlpha: 0, duration: 0.3, ease: "power2.in" }, 23.6);
       tl.fromTo(["#bub-you", "#row-ai"], { y: 0 },
-        { y: 26, duration: 0.35, ease: "power2.in", immediateRender: false }, 17.2);
+        { y: 26, duration: 0.35, ease: "power2.in", immediateRender: false }, 23.6);
 
       /* ═══ 3 · CLOSE — opens on c2's exact last frame (the bar home at
          centre, the desk back) — a third invisible cut on the same object.
@@ -1174,27 +1407,27 @@
       const pws = gsap.utils.toArray("#close-payoff .pw");
       const pwY   = [64, 44, 70];
       const pwDur = [0.18, 0.14, 0.2];
-      const pwAt  = [18.05, 18.18, 18.28];
+      const pwAt  = [24.45, 24.58, 24.68];
       pws.forEach((w, i) => {
         tl.set(w, { autoAlpha: 1 }, pwAt[i]);
         tl.fromTo(w, { y: pwY[i] }, { y: 0, duration: pwDur[i], ease: "power4.out" }, pwAt[i]);
       });
 
       // The lockup arrives beneath the bar — one composed unit.
-      tl.set("#close-brand", { autoAlpha: 1 }, 18.7);
+      tl.set("#close-brand", { autoAlpha: 1 }, 25.1);
       tl.fromTo("#close-brand", { y: 44 },
-        { y: 0, duration: 0.3, ease: "power4.out", immediateRender: false }, 18.7);
+        { y: 0, duration: 0.3, ease: "power4.out", immediateRender: false }, 25.1);
 
       const cws = gsap.utils.toArray("#close-line .cw");
       const cwY   = [64, 52, 38, 42, 70];   // travel by weight; "live." is the climax
       const cwDur = [0.18, 0.15, 0.12, 0.13, 0.2];
-      const cwAt  = [19.05, 19.18, 19.28, 19.36, 19.43]; // shrinking gaps
+      const cwAt  = [25.45, 25.58, 25.68, 25.76, 25.83]; // shrinking gaps
       cws.forEach((w, i) => {
         tl.set(w, { autoAlpha: 1 }, cwAt[i]);
         tl.fromTo(w, { y: cwY[i] }, { y: 0, duration: cwDur[i], ease: "power4.out" }, cwAt[i]);
       });
-      tl.set("#close-url", { autoAlpha: 1 }, 19.75);
-      tl.fromTo("#close-url", { y: 30 }, { y: 0, duration: 0.22, ease: "expo.out" }, 19.75);
+      tl.set("#close-url", { autoAlpha: 1 }, 26.15);
+      tl.fromTo("#close-url", { y: 30 }, { y: 0, duration: 0.22, ease: "expo.out" }, 26.15);
 
       tl.seek(0);
       window.__timelines["main"] = tl;
