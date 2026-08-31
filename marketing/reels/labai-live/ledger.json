@@ -1,35 +1,53 @@
-{
-  "current": "none — one continuous take",
-  "note": "v4 — maximum flow per the owner's brief: three clips, two Z-seams, everything else is in-scene morph. Light mode, no green, real app copy, the answer streams in the real chat interface. The push into the product and the pull back out are the only cuts, signs matched on both.",
-  "seams": [
-    {
-      "t": 3.4,
-      "name": "lockup→panel",
-      "axis": "z", "direction": "push",
-      "exit":  { "selector": "#c1-mv", "motion": "scale 1→1.22, blur 0→12, opacity linear →0.1, power3.in 0.3s" },
-      "entry": { "selector": "#c2-mv", "motion": "scale 0.86→1, blur 12→0, expo.out 0.7s — growing both sides" },
-      "technique": "zoom-through",
-      "why": "into the product — the only forward cut"
-    },
-    {
-      "t": 12.3,
-      "name": "panel→close",
-      "axis": "z", "direction": "pull",
-      "exit":  { "selector": "#c2-mv", "motion": "scale 1→0.9, blur 0→12, opacity linear →0.1, power3.in 0.3s" },
-      "entry": { "selector": "#c3-mv", "motion": "scale 1.12→1, blur 8→0, expo.out 0.6s — shrinking both sides" },
-      "technique": "inverse zoom-through",
-      "why": "back out to the mark — the only backward cut"
-    }
-  ],
-  "in_scene_flow": [
-    "0.15 tile scales in on paper + dot grid",
-    "1.35 tile glides left; the italic serif wordmark reveals beside it",
-    "3.9–4.7 empty state: mark, title, the real sub copy, three real suggestion chips cascade",
-    "5.1–6.55 typing in the real composer, caret blinking",
-    "6.9 SEND — the typed line itself flies up and becomes the user bubble (shared element)",
-    "7.5 the app's real Thinking… row, dots pulsing finitely",
-    "8.3 the trace: Searched 12 sources",
-    "8.8–11.3 the answer streams word by word in the chat bubble, citations landing inline",
-    "11.5–12.0 stillness on the finished answer"
-  ]
+﻿{
+    "current":  "none — one continuous take",
+    "note":  "v5 - the static middle take became a five-move camera performance; seams unchanged from v4 (both Z-seams, signs matched, previously gate-passed; all v5 changes live outside the seam windows).",
+    "seams":  [
+                  {
+                      "t":  3.4,
+                      "name":  "lockup→panel",
+                      "axis":  "z",
+                      "direction":  "push",
+                      "exit":  {
+                                   "selector":  "#c1-mv",
+                                   "motion":  "scale 1→1.22, blur 0→12, opacity linear →0.1, power3.in 0.3s"
+                               },
+                      "entry":  {
+                                    "selector":  "#c2-mv",
+                                    "motion":  "scale 0.86→1, blur 12→0, expo.out 0.7s — growing both sides"
+                                },
+                      "technique":  "zoom-through",
+                      "why":  "into the product — the only forward cut"
+                  },
+                  {
+                      "t":  12.3,
+                      "name":  "panel→close",
+                      "axis":  "z",
+                      "direction":  "pull",
+                      "exit":  {
+                                   "selector":  "#c2-mv",
+                                   "motion":  "scale 1→0.9, blur 0→12, opacity linear →0.1, power3.in 0.3s"
+                               },
+                      "entry":  {
+                                    "selector":  "#c3-mv",
+                                    "motion":  "scale 1.12→1, blur 8→0, expo.out 0.6s — shrinking both sides"
+                                },
+                      "technique":  "inverse zoom-through",
+                      "why":  "back out to the mark — the only backward cut"
+                  }
+              ],
+    "in_scene_flow":  [
+                          "0.15 tile scales in on paper + dot grid",
+                          "1.35 tile glides left; the italic serif wordmark reveals beside it",
+                          "3.9-4.7 empty state: the real copy, three suggestion chips cascade",
+                          "4.8 caret wakes (cause) -\u003e CAM1 punch down-in, left+bottom pinned: typing framed large",
+                          "5.55-7.1 typing at the closer framing; empty state dims out of focus",
+                          "6.7 CAM1b: the line finishes -\u003e camera glances right to the send button",
+                          "7.18 SEND -\u003e same frame: flyer lifts, empty state sheds upward, CAM2 dollies UP the panel with the message (bottom-pin to top-pin, right edge held)",
+                          "7.87 the flyer lands whole on the bubble slot; impact settle",
+                          "8.1 CAM2b: the reply forms at the left -\u003e settle back to 1.08 centred; thinking row + avatar arrive with the frame",
+                          "8.85 trace: Searched 12 sources",
+                          "9.45-11.2 the answer streams word by word; CAM3 pulls wide over the stream, arriving at rest on the whole conversation",
+                          "11.3-12.0 stillness on the finished answer (only the camera\u0027s deceleration tail)",
+                          "12.9-13.5 close: \u0027Lab AI is now live.\u0027 waterfall-enters word by word, url snaps in"
+                      ]
 }

@@ -38,6 +38,13 @@ the word-by-word stream with citations, stillness, close.
   flight; stream left the bubble half-empty too long. All four fixed.
 - v4 cycle 2: seam audit at ±0.1s — both Z-seams mid-motion, signs matched.
 - v4 cycle 3: typing cadence humanised (patterned 24–48ms + word breaths).
+- v5: owner's note — "feels like an animated slideshow." Diagnosis: the 8.9s
+  middle was one static camera; every beat faded in place. Rebuilt as a
+  five-move camera performance (punch to the typing, glance to send, dolly up
+  riding the sent message, settle onto the reply, pull wide over the stream),
+  each move caused by a story beat, every framing edge-pinned so wide content
+  survives the crop (cycle 1 caught the landed bubble clipping off-canvas at
+  centre-zoom). Close line now waterfall-enters word by word. Seams untouched.
 
 ## Notes
 
