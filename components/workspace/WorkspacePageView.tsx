@@ -41,6 +41,7 @@ import TourBubble  from "@/components/TourBubble";
 import { useRoom } from "@/lib/collab/useRoom";
 import { usePresence } from "@/lib/collab/usePresence";
 import { pageToMarkdown, downloadMarkdown } from "@/lib/export-markdown";
+import { DEFAULT_PEN_COLOR } from "./CanvasToolRail";
 
 // ── Shared types ──────────────────────────────────────────────────────────
 
@@ -165,6 +166,7 @@ export default function WorkspacePageView({
     return true;
   }, [activeEditor]);
 
+
   // Persist formatting toolbar open/closed state
   useEffect(() => {
     try { setFormattingOpen(localStorage.getItem("tl-editor-toolbar-open") === "true"); } catch { /* ignore */ }
@@ -276,6 +278,44 @@ export default function WorkspacePageView({
     recentCreatedRef.current.set(note.id, Date.now());
     setNotes((prev) => [...prev, note]);
   }, []);
+
+  /**
+   * Draw a Lab AI answer onto this page's whiteboard as a mindmap.
+   *
+   * Available in every mode, not only board mode. The notes endpoint creates
+   * the containers and the drawings endpoint merges the connectors by id, so
+   * a map asked for while reading lands on the board and is simply there when
+   * you open it — which is better than refusing the request, and better than
+   * dragging the reader into another view to satisfy the implementation.
+   *
+   * Each created container goes through handleNoteCreated so it is protected
+   * from the notes poll: a poll whose server read predates the creation would
+   * otherwise wipe a map seconds after it appeared.
+   */
+  const addAnswerToBoard = useCallback(async (
+    markdown: string, question: string,
+  ): Promise<boolean> => {
+    if (!activePageId) return false;
+    const { dropMindmap } = await import("@/lib/mindmap-drop");
+    const drop = await dropMindmap({
+      pageId:  activePageId,
+      text:    markdown,
+      subject: question,
+      /* Only the board's own containers matter for placement; the Mushaf's
+         anchored notes live in another space entirely. */
+      existing: notes
+        .filter((n) => n.anchorType === "whiteboard")
+        .map((n) => ({
+          offsetX: n.offsetX, offsetY: n.offsetY,
+          width: n.width, height: n.height ?? null,
+        })),
+      inkColor: DEFAULT_PEN_COLOR,
+    }).catch(() => null);
+
+    if (!drop) return false;
+    for (const n of drop.notes) handleNoteCreated(n as NoteData);
+    return true;
+  }, [activePageId, notes, handleNoteCreated]);
 
   const handleNoteUpdated = useCallback((updated: NoteData) => {
     setNotes((prev) => prev.map((n) => (n.id === updated.id ? { ...n, ...updated } : n)));
@@ -763,6 +803,9 @@ export default function WorkspacePageView({
                  board modes have no document — so the panel hides the
                  control rather than offering one that cannot work. */
               onAddToEditor={activeEditor ? addAnswerToEditor : undefined}
+              /* The board always exists for a page, so unlike the editor this
+                 is offered in every mode. */
+              onAddToBoard={page ? addAnswerToBoard : undefined}
               onClose={() => setAiOpen(false)}
             />
           )}

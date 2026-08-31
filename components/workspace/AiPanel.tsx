@@ -22,14 +22,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Sparkles, ArrowUp, X, SquarePen, ChevronDown, AlertCircle,
-  Search, BookOpen, FilePlus2, Check,
+  Search, BookOpen, FilePlus2, Check, Network,
 } from "lucide-react";
 import { useOverlayMotion } from "@/lib/use-overlay-motion";
 import { useDismissable } from "@/lib/use-dismissable";
 import { parseBlocks, type Inline } from "@/lib/lab-markdown";
 import { embedQuery, prefetch } from "@/lib/tafsir/browser-embed";
 import { useTypedText } from "@/lib/use-typed-text";
-import { asksForNotes } from "@/lib/lab-intent";
+import { asksForNotes, asksForBoard } from "@/lib/lab-intent";
 import { labMarkdownToTiptap } from "@/lib/lab-to-tiptap";
 
 interface CiteRef { n: number; sourceName: string; verseKey: string }
@@ -101,6 +101,13 @@ interface Props {
     markdown: string,
     cites: { n: number; sourceName: string; verseKey: string }[],
   ) => boolean;
+  /**
+   * Draw an answer onto this page's whiteboard as a mindmap. Async because it
+   * asks the model for a tree and then creates real board content; resolves
+   * false when nothing could be drawn, which the card reports as a retry
+   * rather than as breakage.
+   */
+  onAddToBoard?: (markdown: string, question: string) => Promise<boolean>;
   onClose:     () => void;
 }
 
@@ -201,10 +208,11 @@ function renderMarkdown(text: string, cites: CiteRef[]): React.ReactNode[] {
 
 // ── Component ──────────────────────────────────────────────────────────────
 
-export default function AiPanel({ pageId, surahNumber, surahName, onAddToEditor, onClose }: Props) {
+export default function AiPanel({ pageId, surahNumber, surahName, onAddToEditor, onAddToBoard, onClose }: Props) {
   const [turns, setTurns] = useState<Turn[]>([]);
   /* What has become of each notes offer. Absent means still standing. */
-  const [offers, setOffers] = useState<Record<string, "applied" | "dismissed">>({});
+  const [offers, setOffers] = useState<Record<string,
+    "applied" | "dismissed" | "working" | "failed">>({});
 
   /* The conversation survives closing the panel.
      It is per page, because that is what the answers are about: a thread on
@@ -470,7 +478,7 @@ export default function AiPanel({ pageId, surahNumber, surahName, onAddToEditor,
                         answer is finished — half a paragraph is not worth
                         filing, and the text arrives until running goes false. */}
                     {t.text && !t.running && onAddToEditor
-                      && asksForNotes(t.question)
+                      && asksForNotes(t.question) && !asksForBoard(t.question)
                       && offers[t.id] !== "dismissed" && (
                       <div className="lab-act" data-done={offers[t.id] === "applied" ? "true" : "false"}>
                         <div className="lab-act-head">
@@ -493,6 +501,58 @@ export default function AiPanel({ pageId, surahNumber, surahName, onAddToEditor,
                                 }}
                               >
                                 <Check size={13} aria-hidden /> Apply
+                              </button>
+                              <button
+                                type="button"
+                                className="lab-act-x"
+                                aria-label="Dismiss"
+                                onClick={() => setOffers((o) => ({ ...o, [t.id]: "dismissed" }))}
+                              >
+                                <X size={13} aria-hidden />
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    )}
+
+                    {/* The board's own offer. Same shape as the notes card so
+                        the two read as one idea with two destinations, and
+                        gated the same way: asked for, and only once the answer
+                        has finished arriving. */}
+                    {t.text && !t.running && onAddToBoard
+                      && asksForBoard(t.question)
+                      && offers[t.id] !== "dismissed" && (
+                      <div className="lab-act" data-done={offers[t.id] === "applied" ? "true" : "false"}>
+                        <div className="lab-act-head">
+                          <Network size={13} aria-hidden />
+                          {offers[t.id] === "applied" ? "Added to your whiteboard"
+                            : offers[t.id] === "working" ? "Drawing it…"
+                            : "Add to your whiteboard"}
+                        </div>
+                        <p className="lab-act-what">
+                          A mindmap of this answer, as movable boxes joined by arrows.
+                        </p>
+                        {offers[t.id] !== "applied" && (
+                          <>
+                            <p className="lab-act-hint">
+                              {offers[t.id] === "failed"
+                                ? "That did not come back as a map. Try again?"
+                                : "Lands below what is already on the board. Everything stays editable."}
+                            </p>
+                            <div className="lab-act-row">
+                              <button
+                                type="button"
+                                className="lab-act-apply"
+                                disabled={offers[t.id] === "working"}
+                                onClick={async () => {
+                                  setOffers((o) => ({ ...o, [t.id]: "working" }));
+                                  const ok = await onAddToBoard(t.text, t.question);
+                                  setOffers((o) => ({ ...o, [t.id]: ok ? "applied" : "failed" }));
+                                }}
+                              >
+                                <Check size={13} aria-hidden />
+                                {offers[t.id] === "working" ? "Drawing…" : "Draw it"}
                               </button>
                               <button
                                 type="button"

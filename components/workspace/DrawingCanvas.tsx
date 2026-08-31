@@ -62,6 +62,9 @@ export interface DrawingCanvasHandle {
   undo:  () => void;
   redo:  () => void;
   clear: () => void;
+  /** Drop finished strokes in as if they had just been drawn — used by the
+   *  mindmap, whose connectors are ordinary arrow ink. */
+  addStrokes: (strokes: InkStroke[]) => void;
 }
 
 // Stroke shape + rendering live in lib/ink (shared with the editor ink
@@ -867,7 +870,36 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
       scheduleSave();
       onHistoryRef.current?.(false, false);
     },
-  }), [scheduleSave]);  
+    /* Exactly what finishing a stroke does, minus the drawing: same refs in
+       the same order, one save, one broadcast each. Going through this path
+       rather than writing the arrays directly is what keeps generated ink
+       undoable, erasable and visible to the people you are drawing with —
+       and it inherits the rule the ref is the source of truth, which is what
+       stopped strokes vanishing during fast writing. */
+    addStrokes(incoming: InkStroke[]) {
+      const add = incoming.filter((st) => st.points.length > 1);
+      if (!add.length) return;
+      redoStackRef.current = [];
+      allMyStrokesRef.current = [...allMyStrokesRef.current, ...add];
+      /* Only the ones belonging to the page on screen join the visible set;
+         the rest still persist, exactly as a stroke drawn on another Mushaf
+         page would. */
+      const here = add.filter((st) => (st.mushafPage ?? 0) === mushafPageRef.current);
+      if (here.length) {
+        const next = [...myStrokesRef.current, ...here];
+        myStrokesRef.current = next;
+        setMyStrokes(next);
+      }
+      scheduleSave();
+      notifyHistory();
+      if (roomSocket?.readyState === WebSocket.OPEN) {
+        for (const st of add) {
+          roomSocket.send(JSON.stringify({ type: "stroke-complete", stroke: st }));
+        }
+      }
+      scheduleRender();
+    },
+  }), [scheduleSave, roomSocket]);  
 
   // ── Coordinate helpers ─────────────────────────────────────────────────
 
