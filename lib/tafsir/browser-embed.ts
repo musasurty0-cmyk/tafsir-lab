@@ -1,211 +1,145 @@
 "use client";
 
 /**
- * Embedding the reader's question, in the reader's browser.
+ * The main-thread side of browser embedding — a thin client to the worker.
  *
- * The corpus side of semantic search is done: 90,092 passages carry vectors
- * from `intfloat/multilingual-e5-small`. Searching them needs the QUESTION put
- * through the same model, and that half used to live on a Hugging Face Space —
- * until Hugging Face began requiring a paid plan to create one.
+ * This module used to do the work itself, and that shipped the bug the app
+ * became known for on this machine: opening Lab AI imported and initialised
+ * a 118 MB ONNX model ON the UI thread, and every question ran inference
+ * there before its request could be sent. The app froze on open and froze
+ * again on ask. All of that now lives in `embed.worker.ts`; what remains
+ * here is postMessage plumbing and the ability to say "no".
  *
- * So it runs here instead. The model is small enough: 118 MB of quantised ONNX
- * plus a 17 MB tokenizer, fetched once from Hugging Face's CDN and cached by
- * the browser thereafter. After that a query embeds in tens of milliseconds
- * locally, with no server, no cold start and no bill.
+ * The contract with retrieval is unchanged and deliberate:
  *
- * Two things make that download acceptable rather than rude:
+ *   embedQuery() returning null is a NORMAL answer. It means "search by
+ *   keyword this time" — the model is still warming, the worker failed to
+ *   spawn, the network dropped. Nothing upstream waits on it and nothing
+ *   breaks; the trace tells the reader what happened.
  *
- *   It is never on the critical path. Retrieval already treats the embedding
- *   as best-effort — `embed` returning null drops the search to keyword
- *   matching, which works and says so in the trace. So the model can arrive
- *   whenever it arrives; the first question is answered by keyword and the
- *   ones after it are answered by meaning. Nothing waits, nothing spins.
- *
- *   It is not downloaded for people who never ask anything. `prefetch()` runs
- *   when the assistant is opened, not when the app boots, and it declines on a
- *   metered or very slow connection. `warmUp()` — the one an actual question
- *   calls — ignores that, because by then the reader has asked for it.
- *
- * THE PREFIX IS NOT OPTIONAL. e5 is trained asymmetrically: the corpus was
- * embedded with `passage: ` and a query must carry `query: `. Getting this
- * wrong does not error, it quietly returns worse neighbours — which reads as
- * "the search is a bit rubbish" for months rather than as a bug. It is applied
- * in `embedQuery` and should stay in exactly one place.
+ * prefetch() warms the model when the panel opens, from an idle callback so
+ * even the worker spawn never competes with the opening animation. A reader
+ * on a metered or 2g-class connection is not prefetched — 135 MB is a real
+ * imposition — but an actual question still warms it via embedQuery, because
+ * by then they have asked for it.
  */
 
-/** e5-small's output width. The column is `halfvec(384)`; anything else is a bug. */
+/** e5-small's output width; anything else never reaches the server. */
 const DIM = 384;
+/** How long a question waits for a still-warming model before going keyword. */
+const DEFAULT_WAIT_MS = 2_000;
 
-/** The ONNX conversion of the same weights the corpus was embedded with. */
-const MODEL = "Xenova/multilingual-e5-small";
-
-/** `q8` selects model_quantized.onnx — 118 MB against 470 MB for fp32. */
-const DTYPE = "q8";
-
-export type EmbedState = "idle" | "loading" | "ready" | "unavailable";
-
-export interface EmbedStatus {
-  state: EmbedState;
-  /** 0–1 while loading. Aggregated across files, so it is not monotonic. */
-  progress: number;
-  /** Set only when `state` is "unavailable", and safe to show a reader. */
-  reason: string;
+interface Pending {
+  resolve: (v: number[] | null) => void;
+  timer: ReturnType<typeof setTimeout> | null;
 }
 
-/* A single cached object rather than a fresh one per read: useSyncExternalStore
-   compares snapshots by identity and will loop forever if this allocates. */
-let status: EmbedStatus = { state: "idle", progress: 0, reason: "" };
-const listeners = new Set<() => void>();
+let worker: Worker | null = null;
+let workerFailed = false;
+let nextId = 1;
+const pending = new Map<number, Pending>();
 
-function set(next: Partial<EmbedStatus>): void {
-  const merged = { ...status, ...next };
-  if (
-    merged.state === status.state &&
-    merged.reason === status.reason &&
-    Math.abs(merged.progress - status.progress) < 0.01
-  ) return;
-  status = merged;
-  for (const fn of listeners) fn();
-}
+function getWorker(): Worker | null {
+  if (worker) return worker;
+  if (workerFailed) return null;
+  if (typeof window === "undefined" || typeof Worker === "undefined") return null;
 
-export function subscribe(fn: () => void): () => void {
-  listeners.add(fn);
-  return () => { listeners.delete(fn); };
-}
+  try {
+    worker = new Worker(new URL("./embed.worker.ts", import.meta.url), { type: "module" });
+  } catch {
+    workerFailed = true;
+    return null;
+  }
 
-export function getStatus(): EmbedStatus {
-  return status;
-}
+  worker.onmessage = (e: MessageEvent) => {
+    const { id, ok, vector } = (e.data ?? {}) as { id?: number; ok?: boolean; vector?: unknown };
+    if (typeof id !== "number") return;
+    const p = pending.get(id);
+    if (!p) return; // timed out earlier — the reply warms the model, nothing more
+    pending.delete(id);
+    if (p.timer) clearTimeout(p.timer);
+    p.resolve(ok ? sane(vector) : null);
+  };
 
-/** The server snapshot for useSyncExternalStore — never loading, never ready. */
-const SERVER_STATUS: EmbedStatus = { state: "idle", progress: 0, reason: "" };
-export function getServerStatus(): EmbedStatus {
-  return SERVER_STATUS;
-}
-
-type Extractor = (
-  text: string,
-  opts: { pooling: "mean"; normalize: boolean },
-) => Promise<{ data: ArrayLike<number> }>;
-
-let loading: Promise<Extractor | null> | null = null;
-
-/**
- * Load the model, once. Concurrent callers share the same promise, and a
- * failed load is remembered rather than retried on every keystroke.
- */
-export function warmUp(): Promise<Extractor | null> {
-  if (loading) return loading;
-
-  loading = (async (): Promise<Extractor | null> => {
-    if (typeof window === "undefined") return null;
-
-    try {
-      set({ state: "loading", progress: 0, reason: "" });
-
-      /* Imported here, not at module scope, for two reasons: the package is
-         several megabytes of JavaScript that nobody who skips the assistant
-         should pay for, and its Node build pulls onnxruntime-node, which has
-         no business being resolved during a server render. */
-      const tf = await import("@huggingface/transformers");
-
-      /* Already false in a browser and in a web worker, so this changes
-         nothing today. It is here as a statement of intent: everything is
-         fetched from Hugging Face, and nothing should ever start probing our
-         own origin for /models/... if this module is later used somewhere the
-         default does not hold. */
-      tf.env.allowLocalModels = false;
-
-      const extractor = await tf.pipeline("feature-extraction", MODEL, {
-        dtype: DTYPE,
-        progress_callback: (p: { status?: string; progress?: number }) => {
-          if (p?.status === "progress" && typeof p.progress === "number") {
-            set({ progress: Math.max(0, Math.min(1, p.progress / 100)) });
-          }
-        },
-      });
-
-      set({ state: "ready", progress: 1 });
-      return extractor as unknown as Extractor;
-    } catch (err) {
-      /* Offline, blocked by an extension, out of storage quota, CDN down.
-         All the same to the caller: search stays on keywords. */
-      set({
-        state: "unavailable",
-        progress: 0,
-        reason: err instanceof Error && err.message
-          ? err.message.slice(0, 200)
-          : "the model could not be loaded",
-      });
-      return null;
+  /* A worker that dies takes its replies with it: resolve everything open as
+     null (keyword search) rather than leaving asks hanging forever. */
+  worker.onerror = () => {
+    for (const [, p] of pending) {
+      if (p.timer) clearTimeout(p.timer);
+      p.resolve(null);
     }
-  })();
+    pending.clear();
+    worker?.terminate();
+    worker = null;
+    workerFailed = true;
+  };
 
-  return loading;
+  return worker;
+}
+
+/** 384 finite numbers or nothing — a malformed vector must not leave here. */
+function sane(v: unknown): number[] | null {
+  if (!Array.isArray(v) || v.length !== DIM) return null;
+  for (const n of v) if (typeof n !== "number" || !Number.isFinite(n)) return null;
+  return v as number[];
+}
+
+function send(msg: { type: "load" } | { type: "embed"; text: string }, waitMs: number | null): Promise<number[] | null> {
+  const w = getWorker();
+  if (!w) return Promise.resolve(null);
+
+  return new Promise((resolve) => {
+    const id = nextId++;
+    const entry: Pending = { resolve, timer: null };
+    if (waitMs !== null) {
+      entry.timer = setTimeout(() => {
+        /* Give up on THIS request — the reader gets keyword search now — but
+           the worker keeps loading, so the next question is answered by
+           meaning. Deleting the entry makes the late reply a no-op. */
+        pending.delete(id);
+        resolve(null);
+      }, waitMs);
+    }
+    pending.set(id, entry);
+    w.postMessage({ id, ...msg });
+  });
 }
 
 /**
- * Start loading if the connection looks willing. Called when the assistant is
- * opened, so the model is often ready by the time a question is finished.
+ * Warm the model without ever standing in the UI's way.
  *
- * Declines on Save-Data or a 2g-class connection: 135 MB is a real imposition
- * on a metered phone, and someone who then asks a question gets it anyway via
- * `warmUp`, which does not consult this.
+ * Deferred to an idle moment so the worker spawn does not share a frame with
+ * the panel's opening animation, and declined on connections where a 135 MB
+ * download is impolite. No timeout: the load takes as long as it takes.
  */
 export function prefetch(): void {
-  if (typeof navigator === "undefined") return;
-  if (loading) return;
+  if (typeof window === "undefined") return;
 
   const conn = (navigator as Navigator & {
     connection?: { saveData?: boolean; effectiveType?: string };
   }).connection;
-
   if (conn?.saveData) return;
   if (conn?.effectiveType && /(^|-)2g$/.test(conn.effectiveType)) return;
 
-  void warmUp();
+  const start = () => { void send({ type: "load" }, null); };
+  if ("requestIdleCallback" in window) {
+    (window as Window & { requestIdleCallback: (cb: () => void) => void }).requestIdleCallback(start);
+  } else {
+    setTimeout(start, 250);
+  }
 }
 
 /**
- * A question in, 384 floats out — or null, which is a normal answer here and
- * means "search with keywords instead".
+ * A question in, 384 floats out — or null, meaning "keyword search this time".
  *
- * `timeoutMs` bounds the wait for the MODEL, not for the embedding. Once the
- * model is loaded this resolves in tens of milliseconds and the timeout never
- * comes into it; while it is still downloading, the default is deliberately
- * far too short to wait one out. That is the point. Holding a reader's first
- * question for half a minute to answer it slightly better is a worse trade
- * than answering it now by keyword and having the model ready for the second.
+ * `waitMs` bounds how long the QUESTION waits for a warming model, not the
+ * inference itself: once warm, the round trip is tens of milliseconds and the
+ * timer never matters. Two seconds is deliberately too short to sit out a
+ * cold download — answering now by keyword beats holding the reader's
+ * question hostage to a better answer later.
  */
-export async function embedQuery(
-  text: string,
-  timeoutMs = 2_000,
-): Promise<number[] | null> {
+export async function embedQuery(text: string, waitMs = DEFAULT_WAIT_MS): Promise<number[] | null> {
   const q = text.trim();
   if (!q) return null;
-
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const extractor = await Promise.race([
-    warmUp(),
-    new Promise<null>((resolve) => { timer = setTimeout(() => resolve(null), timeoutMs); }),
-  ]);
-  if (timer) clearTimeout(timer);
-  if (!extractor) return null;
-
-  try {
-    /* mean pooling + L2 normalise: what sentence-transformers does for e5, and
-       therefore what the stored vectors were produced with. Cosine distance
-       assumes it. */
-    const out = await extractor(`query: ${q}`, { pooling: "mean", normalize: true });
-    const vec = Array.from(out.data, Number);
-
-    /* A wrong-width or non-finite vector would be rejected by pgvector as an
-       opaque error much later, or silently poison the ranking. Drop it here
-       and let keyword search answer. */
-    if (vec.length !== DIM) return null;
-    if (!vec.every(Number.isFinite)) return null;
-    return vec;
-  } catch {
-    return null;
-  }
+  return send({ type: "embed", text: q }, waitMs);
 }

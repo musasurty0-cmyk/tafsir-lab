@@ -107,9 +107,13 @@ export function useTypedText(full: string, live: boolean): string {
 
       const target = targetRef.current;
       if (countRef.current < target) {
+        const prev = Math.floor(countRef.current);
         const next = revealStep(countRef.current, target, dt);
         countRef.current = next;
-        setCount(Math.floor(next));
+        /* Only render when a whole character changed: a fractional advance
+           re-rendered the panel — and re-parsed the markdown — sixty times a
+           second for nothing. */
+        if (Math.floor(next) !== prev) setCount(Math.floor(next));
       }
 
       /* Stop when caught up rather than idling a frame loop per turn. A later
