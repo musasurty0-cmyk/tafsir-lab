@@ -838,6 +838,10 @@
               <span class="board-tool"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><rect x="4" y="5" width="16" height="14" rx="2"/></svg></span>
               <span class="board-tool"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><path d="M12 8v8M8 12h8"/></svg></span>
             </div>
+            <!-- The bar the map collapses into: the film's vehicle, waiting
+                 where the close will open on it. Outside the camera, because
+                 by now the panel has gone. -->
+            <div class="pill" id="pill3" data-layout-allow-overlap="true" data-layout-allow-occlusion="true"><span class="pill-hint">Ask about the Qur'an, or search your notes…</span></div>
             <div class="mind" id="mind" data-layout-allow-overflow="true">
               <svg class="mind-svg" id="mind-svg" viewBox="0 0 1080 1080" fill="none"></svg>
             </div>
@@ -1094,7 +1098,8 @@
       gsap.set("#cam", { scale: 1, x: 0, y: 0 });
       /* The vehicle. All three pills centre via xPercent (GSAP owns the
          transform; a CSS translateX would be overwritten by the x tween). */
-      gsap.set(["#pill1", "#pill2", "#pill4"], { xPercent: -50 });
+      gsap.set(["#pill1", "#pill2", "#pill3", "#pill4"], { xPercent: -50 });
+      gsap.set("#pill3", { autoAlpha: 0 });
       gsap.set("#pill1", { x: 260, autoAlpha: 0 });
       gsap.set("#pill2", { top: 490, width: 700, height: 100, borderRadius: 50 });
       /* The real composer stays hidden until the bar has BECOME it; its send
@@ -1317,7 +1322,7 @@
          later presses "Add to editor", so the film has one protagonist
          rather than a hand that appears once and is never explained. */
       tl.fromTo("#cursor", { x: 1180, y: 1160 },
-        { x: 905, y: 862, duration: 0.72, ease: "power3.out", immediateRender: false }, 8.72);
+        { x: 939, y: 932, duration: 0.72, ease: "power3.out", immediateRender: false }, 8.72);
       /* A breath on the target before the press — a cursor that arrives and
          clicks in the same instant reads as a script, not a hand. */
       tl.to("#cursor", { scale: 0.84, duration: 0.1, ease: "power2.in", transformOrigin: "21% 14%" }, 9.58);
@@ -1331,7 +1336,12 @@
       tl.to("#send-ring", { scale: 2.1, autoAlpha: 0, duration: 0.5, ease: "power2.out" }, 9.6);
       /* Job done, the hand withdraws down-right, out of the answer's way. */
       tl.to("#cursor", { x: 1180, y: 1160, duration: 0.6, ease: "power2.in" }, 9.95);
+      /* display:none, not just hidden. autoAlpha leaves visibility:hidden,
+         which still occupies layout - so the first question kept its 44
+         characters of space in the composer and the SECOND question wrapped
+         around them onto another line. */
       tl.set(chars, { autoAlpha: 0 }, 9.65);
+      tl.set("#typed", { display: "none" }, 9.65);
       tl.set("#caret", { autoAlpha: 0 }, 9.65);
       tl.set("#flyer", { autoAlpha: 1 }, 9.65);
       /* From over the composer's text line (left 76, top ≈ 886 within the
@@ -1382,8 +1392,12 @@
       // CAM3: the growing answer pushes the camera back — pull wide over the
       // whole stream, arriving at rest on the full conversation as the last
       // words land.
+      /* 0.9s, not 2.3s. Pulling back over 2.3 seconds moved the answer by
+         0.0005 of scale per frame — under the shimmer threshold, so the
+         tafsīr text vibrated instead of gliding. A camera move has to be
+         fast enough to read AS a move. */
       tl.fromTo("#cam", { scale: 1.08, x: 0, y: 43 },
-        { scale: 1, x: 0, y: 0, duration: 2.3, ease: "power2.inOut", immediateRender: false }, 12.05);
+        { scale: 1, x: 0, y: 0, duration: 0.9, ease: "power3.out", immediateRender: false }, 12.05);
       /* ═══ ADD TO EDITOR — the cursor-led act. The answer offers itself to
          your notes (the app's real affordance); the oversized cursor enters
          the room, clicks it, and the click ignites the split: the panel
@@ -1445,7 +1459,10 @@
          app really works: a second question, the app's own offer card in
          reply, and the map only after someone presses Draw it. */
 
-      // The caret wakes again and the follow-up is typed.
+      // The caret wakes again and the follow-up is typed. The placeholder
+      // goes FIRST: it is what the typing replaces, and leaving it up meant
+      // the question appeared alongside the prompt telling you to ask one.
+      tl.to("#cp-hint", { autoAlpha: 0, duration: 0.16, ease: "none" }, 17.12);
       tl.to("#caret", { autoAlpha: 1, duration: 0.1, ease: "none" }, 17.1);
       let tAt2 = 17.28;
       chars2.forEach((c, i) => {
@@ -1457,7 +1474,7 @@
       /* The hand returns for the second send — same button, same tap, so the
          gesture is already familiar by the time it matters. */
       tl.fromTo("#cursor", { x: 1180, y: 1160 },
-        { x: 905, y: 862, duration: 0.66, ease: "power3.out", immediateRender: false }, 18.15);
+        { x: 964, y: 959, duration: 0.66, ease: "power3.out", immediateRender: false }, 18.15);
       tl.to("#cursor", { scale: 0.84, duration: 0.1, ease: "power2.in", transformOrigin: "21% 14%" }, 18.95);
       tl.to("#cursor", { scale: 1, duration: 0.22, ease: "power2.out", transformOrigin: "21% 14%" }, 19.05);
       tl.to("#send", { scale: 0.9, duration: 0.1, ease: "power2.in" }, 18.95);
@@ -1540,31 +1557,56 @@
       tl.fromTo("#mind-tag", { autoAlpha: 0, y: 16 },
         { autoAlpha: 1, y: 0, duration: 0.45, ease: "power3.out", immediateRender: false }, 24.75);
 
-      /* One slow breath back over the finished map — the only camera move in
-         the act, saved for the moment there is something to survey. */
-      tl.fromTo("#mind", { scale: 1.045 },
-        { scale: 1, duration: 2.6, ease: "power2.out", immediateRender: false }, 24.1);
+      /* NO breath over the map. It snapped to 1.045 and crawled back to 1
+         across 2.6 seconds — the snap read as a sudden zoom, and 0.0005 of
+         scale per frame on fourteen boxes of type is the same sub-pixel
+         resampling that made the opening shimmer. The map is finished; a
+         finished thing is allowed to be still. */
 
       // 25.6-26.6: stillness on the whole structure before the close.
       tl.to(["#mind", "#mind-tag", "#board-bar", "#board-name"],
         { autoAlpha: 0, duration: 0.4, ease: "power2.in" }, 26.55);
 
-      // SEAM 2 (t=27.1): no blur-cut here either. The app hands the bar
-      // back: send fades, the chrome sheds the way it came (header up,
-      // thread settling down and away, the desk already back), and the
-      // composer runs the SAME morph backwards to the centred bar — empty,
-      // ready to be asked again. The cut lands on identical frames.
-      tl.to("#send", { autoAlpha: 0, duration: 0.2, ease: "none" }, 23.45);
-      tl.set(".composer", { autoAlpha: 0 }, 23.6);
-      tl.set("#pill2", { autoAlpha: 1 }, 23.6);
-      tl.fromTo("#pill2", { y: 414, width: 992, height: 132, borderRadius: 24 },
-        { y: 0, width: 700, height: 100, borderRadius: 50,
-          duration: 0.45, ease: "power3.inOut", immediateRender: false }, 23.6);
-      tl.fromTo(".pn-head", { y: 0 },
-        { y: -93, duration: 0.4, ease: "power3.in", immediateRender: false }, 23.6);
-      tl.to(["#bub-you", "#row-ai"], { autoAlpha: 0, duration: 0.3, ease: "power2.in" }, 23.6);
-      tl.fromTo(["#bub-you", "#row-ai"], { y: 0 },
-        { y: 26, duration: 0.35, ease: "power2.in", immediateRender: false }, 23.6);
+      /* ═══ THE COLLAPSE ═══ 25.7-27.1
+         The map had no way back to the close: the old seam ran the
+         composer's morph, and the composer had been gone since 21.1, so the
+         film cut from a board to a bar with nothing carrying the eye across.
+
+         Now the map collapses INTO the bar. Every box flies to the centre
+         and shrinks out, leaves first so the structure folds inward rather
+         than blinking off, the connectors un-draw themselves the way they
+         were drawn, and the ask bar grows out of the point they all vanish
+         into — the film's vehicle, back for the last time, in the exact
+         place the close opens on it. */
+      const centreOf = (nd) => ({ x: 540 - (nd.x + nd.w / 2), y: 540 - (nd.y + nd.h / 2) });
+
+      // Leaves fold first, then branches, then the root: inward, in order.
+      [2, 1, 0].forEach((depth, ring) => {
+        mnodes.filter((nd) => nd.depth === depth).forEach((nd, k) => {
+          const c = centreOf(nd);
+          const t0 = 25.7 + ring * 0.16 + k * 0.026;
+          tl.to(nd.el, {
+            x: c.x, y: c.y, scale: 0.12, autoAlpha: 0,
+            duration: 0.55, ease: "power2.in",
+          }, t0);
+        });
+      });
+      // The lines retract along themselves — drawing, run backwards.
+      mlinks.forEach((l, i) => {
+        tl.to(l.path, { strokeDashoffset: l.len, duration: 0.4, ease: "power2.in" }, 25.7 + i * 0.018);
+      });
+      tl.to(["#mind-tag", "#board-bar", "#board-name"],
+        { autoAlpha: 0, duration: 0.35, ease: "power2.in" }, 25.9);
+      /* The connector layer goes with them: a retracted dash still paints a
+         speck where its round cap sits, and four specks on an empty board
+         read as dirt on the lens. */
+      tl.to("#mind-svg", { autoAlpha: 0, duration: 0.3, ease: "power2.in" }, 26.2);
+
+      /* The bar grows out of the point the map vanished into. */
+      tl.set("#pill3", { autoAlpha: 1 }, 26.42);
+      tl.fromTo("#pill3", { scale: 0.24, autoAlpha: 0 },
+        { scale: 1, autoAlpha: 1, duration: 0.5, ease: "power3.out", immediateRender: false }, 26.42);
+      // 26.9-27.1: the bar alone, centred — c3 opens on this exact frame.
 
       /* ═══ 3 · CLOSE — opens on c2's exact last frame (the bar home at
          centre, the desk back) — a third invisible cut on the same object.
