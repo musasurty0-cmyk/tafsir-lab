@@ -22,7 +22,7 @@ import { getBookPdf, putBookPdf } from "@/lib/books/pdf-store";
 import WhiteboardPage from "./WhiteboardPage";
 import PdfPages from "./PdfPages";
 import PdfFilmstrip from "./PdfFilmstrip";
-import type { PdfPageBox } from "./PdfPages";
+import type { PdfPageBox, PdfThumbApi } from "./PdfPages";
 import TafsirDrawer from "./TafsirDrawer";
 
 interface Props {
@@ -58,6 +58,7 @@ export default function BookShell({
      are anchored to those coordinates — so "page by page" is a camera move,
      not a re-layout. */
   const [pages, setPages]   = useState<PdfPageBox[]>([]);
+  const [thumbs, setThumbs] = useState<PdfThumbApi | null>(null);
   const [current, setCurrent] = useState(0);
   const [focus, setFocus]   = useState<{ x: number; y: number; w: number; h: number; nonce: number } | null>(null);
   const nonceRef = useRef(0);
@@ -199,14 +200,15 @@ export default function BookShell({
               showBlankHint={false}
               focus={focus}
               background={source.kind === "ready"
-                ? <PdfPages src={source.data} onLayout={setPages} />
+                ? <PdfPages
+            onThumbs={setThumbs} src={source.data} onLayout={setPages} />
                 : null}
             />
           </EditorContextProvider>
         )}
 
         {source.kind === "ready" && (
-          <PdfFilmstrip pages={pages} current={current} onGo={goToPage} />
+          <PdfFilmstrip pages={pages} current={current} onGo={goToPage} thumbs={thumbs} />
         )}
       </div>
 

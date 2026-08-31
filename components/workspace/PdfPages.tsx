@@ -36,6 +36,22 @@ function loadMupdf(): Promise<Mupdf> {
 /** Where a page sits in world space, so a caller can navigate to it. */
 export interface PdfPageBox { index: number; x: number; y: number; w: number; h: number }
 
+/**
+ * Tiny page previews for the filmstrip, rendered by this component because it
+ * owns the document. Deliberately a *request* API: thumbnails rasterise on
+ * the same main thread as the pages, so they queue behind page renders and
+ * behind the pointer's quiet-time rule -- a preview never costs a stroke.
+ */
+export interface PdfThumbApi {
+  get(index: number): string | undefined;
+  request(index: number): void;
+  /** Notifies whenever any thumbnail lands; returns the unsubscribe. */
+  subscribe(cb: () => void): () => void;
+}
+
+/** Device pixels; about 2x the strip tile's CSS width, so it reads crisp. */
+const THUMB_W = 96;
+
 interface Props {
   src:        string | ArrayBuffer;
   /** World-space width of each page (height derives from the page ratio). */
@@ -45,6 +61,8 @@ interface Props {
      one-per-screen would silently move every annotation ever made. Page-by-
      page reading is navigation over this layout, not a different layout. */
   onLayout?:  (pages: PdfPageBox[]) => void;
+  /** Handed the thumbnail API once the document is open. */
+  onThumbs?:  (api: PdfThumbApi) => void;
 }
 
 const OVERSAMPLE = 2;   // rasterise at 2× so zoom-in stays sharp
@@ -58,7 +76,7 @@ interface MuPage {
 
 type HostEl = HTMLDivElement & { __done?: boolean };
 
-export default function PdfPages({ src, pageWidth = 900, onLayout }: Props) {
+export default function PdfPages({ src, pageWidth = 900, onLayout, onThumbs }: Props) {
   const [dims, setDims]   = useState<{ w: number; h: number }[]>([]);
   const [error, setError] = useState<string | null>(null);
   const docRef    = useRef<MuDoc | null>(null);
@@ -72,6 +90,11 @@ export default function PdfPages({ src, pageWidth = 900, onLayout }: Props) {
   const queuedRef  = useRef<Set<number>>(new Set());
   const pumpingRef = useRef(false);
   const lastBusyRef = useRef(0);
+  // Thumbnails: a second, LOWER-priority lane through the same pump.
+  const thumbsRef      = useRef<Map<number, string>>(new Map());
+  const thumbQueueRef  = useRef<number[]>([]);
+  const thumbQueuedRef = useRef<Set<number>>(new Set());
+  const thumbSubsRef   = useRef<Set<() => void>>(new Set());
 
   // Any held-button pointer activity (pen stroke, mouse drag, finger pan)
   // marks the canvas "busy" — rasters wait for a quiet moment.
@@ -102,23 +125,52 @@ export default function PdfPages({ src, pageWidth = 900, onLayout }: Props) {
         const doc = mupdf.Document.openDocument(new Uint8Array(buf), "application/pdf") as unknown as MuDoc;
         docRef.current = doc;
 
+        onThumbs?.({
+          get: (i) => thumbsRef.current.get(i),
+          request: (i) => {
+            if (thumbsRef.current.has(i) || thumbQueuedRef.current.has(i)) return;
+            thumbQueuedRef.current.add(i);
+            thumbQueueRef.current.push(i);
+            pump();
+          },
+          subscribe: (cb) => {
+            thumbSubsRef.current.add(cb);
+            return () => { thumbSubsRef.current.delete(cb); };
+          },
+        });
+
         const n = doc.countPages();
+        /* Measured in CHUNKS, yielding to the event loop between them. One
+           synchronous loop over every page held the main thread for the whole
+           book: on a long Arabic PDF that was seconds of frozen UI before a
+           single page appeared, which read as "PDFs take too long to load"
+           because nothing was allowed to paint. Pages are a vertical stack,
+           so batches appended below never move the pages already showing --
+           page one can be rasterising while page ninety is still being
+           measured. */
+        const CHUNK = 12;
         const ds: { w: number; h: number }[] = [];
-        for (let i = 0; i < n; i++) {
-          const b = doc.loadPage(i).getBounds();
-          const wPt = b[2] - b[0], hPt = b[3] - b[1];
-          ds.push({ w: pageWidth, h: Math.max(60, Math.round((hPt / wPt) * pageWidth)) });
-        }
-        if (alive) {
-          setDims(ds);
-          if (onLayout) {
-            let y = 0;
-            onLayout(ds.map((d, i) => {
-              const box = { index: i, x: 0, y, w: d.w, h: d.h };
-              y += d.h + GAP;
-              return box;
-            }));
+        for (let i = 0; i < n; i += CHUNK) {
+          const end = Math.min(n, i + CHUNK);
+          for (let j = i; j < end; j++) {
+            const b = doc.loadPage(j).getBounds();
+            const wPt = b[2] - b[0], hPt = b[3] - b[1];
+            ds.push({ w: pageWidth, h: Math.max(60, Math.round((hPt / wPt) * pageWidth)) });
           }
+          if (!alive) return;
+          setDims(ds.slice());
+          if (end < n) await new Promise((r) => setTimeout(r, 0));
+        }
+        if (alive && onLayout) {
+          /* The full layout still lands once, complete: its consumers (the
+             filmstrip, annotation anchoring) want the whole book, not a book
+             that keeps growing under them. */
+          let y = 0;
+          onLayout(ds.map((d, i) => {
+            const box = { index: i, x: 0, y, w: d.w, h: d.h };
+            y += d.h + GAP;
+            return box;
+          }));
         }
       } catch (e) {
         if (alive) setError(String(e));
@@ -203,19 +255,45 @@ export default function PdfPages({ src, pageWidth = 900, onLayout }: Props) {
     pump();
   }
 
-  // Drain the queue one page per tick, only while the pointer is quiet.
+  // Drain the queues one raster per tick, only while the pointer is quiet.
+  // Pages always outrank thumbnails: the page being read is the product; the
+  // strip's previews are a courtesy that can wait a few ticks.
   function pump() {
     if (pumpingRef.current) return;
     pumpingRef.current = true;
     const step = () => {
-      if (!queueRef.current.length) { pumpingRef.current = false; return; }
+      if (!queueRef.current.length && !thumbQueueRef.current.length) {
+        pumpingRef.current = false;
+        return;
+      }
       if (Date.now() - lastBusyRef.current < 250) { setTimeout(step, 250); return; }
-      const idx = queueRef.current.shift()!;
-      queuedRef.current.delete(idx);
-      renderPage(idx);
+      if (queueRef.current.length) {
+        const idx = queueRef.current.shift()!;
+        queuedRef.current.delete(idx);
+        renderPage(idx);
+      } else {
+        const idx = thumbQueueRef.current.shift()!;
+        thumbQueuedRef.current.delete(idx);
+        renderThumb(idx);
+      }
       setTimeout(step, 0);
     };
     setTimeout(step, 0);
+  }
+
+  function renderThumb(idx: number) {
+    const doc = docRef.current, mupdf = mupdfRef.current;
+    if (!doc || !mupdf || thumbsRef.current.has(idx)) return;
+    try {
+      const page = doc.loadPage(idx);
+      const b = page.getBounds();
+      const scale = THUMB_W / (b[2] - b[0]);
+      const pix = page.toPixmap(mupdf.Matrix.scale(scale, scale), mupdf.ColorSpace.DeviceRGB, false);
+      const url = URL.createObjectURL(new Blob([pix.asPNG() as BlobPart], { type: "image/png" }));
+      urlsRef.current.push(url); // revoked with the rest on unmount
+      thumbsRef.current.set(idx, url);
+      for (const cb of thumbSubsRef.current) cb();
+    } catch { /* a strip tile stays numbered -- never worth an error state */ }
   }
 
   function renderPage(idx: number) {

@@ -7,27 +7,55 @@
  * means hunting: there is no way to get to page 94 except by dragging past
  * ninety-three others. This is the index that was missing.
  *
- * The tiles are numbered rather than rasterised. A 129-page book would be 129
- * extra MuPDF rasters to draw thumbnails nobody can read at 44px wide, on the
- * same main thread that renders the page you are actually looking at — the
- * cost lands on the reading, and buys a picture too small to recognise. The
- * tile keeps the page's real proportions so the strip still looks like the
- * book it belongs to.
+ * The tiles carry real page previews, rendered LAZILY: only the tiles
+ * scrolled into the strip's view ask for a thumbnail, and those requests ride
+ * a lower-priority lane of the document's own raster queue — behind page
+ * renders, behind the pointer's quiet-time rule — so a preview never costs
+ * the page being read or a stroke being drawn. Until its image lands, a tile
+ * shows the page number on the page's real proportions.
  */
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import type { PdfPageBox } from "./PdfPages";
+import type { PdfPageBox, PdfThumbApi } from "./PdfPages";
 
 interface Props {
   pages:   PdfPageBox[];
   current: number;
   onGo:    (index: number) => void;
+  thumbs?: PdfThumbApi | null;
 }
 
-export default function PdfFilmstrip({ pages, current, onGo }: Props) {
+export default function PdfFilmstrip({ pages, current, onGo, thumbs }: Props) {
   const stripRef = useRef<HTMLDivElement>(null);
   const activeRef = useRef<HTMLButtonElement>(null);
+  /* Bumped whenever a thumbnail lands, so tiles re-read the cache. The
+     version number itself is meaningless; changing is its whole job. */
+  const [, setThumbTick] = useState(0);
+
+  useEffect(() => {
+    if (!thumbs) return;
+    return thumbs.subscribe(() => setThumbTick((t) => t + 1));
+  }, [thumbs]);
+
+  /* Ask for previews only for tiles actually visible in the strip (plus a
+     margin), in strip order. The requests queue behind page rasters, so
+     scrolling the strip through a long book stays cheap. */
+  useEffect(() => {
+    if (!thumbs || !stripRef.current) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (!e.isIntersecting) continue;
+          const idx = Number((e.target as HTMLElement).dataset.tile);
+          if (Number.isFinite(idx)) thumbs.request(idx);
+        }
+      },
+      { root: stripRef.current, rootMargin: "0px 240px" },
+    );
+    for (const el of stripRef.current.querySelectorAll("[data-tile]")) io.observe(el);
+    return () => io.disconnect();
+  }, [thumbs, pages.length]);
 
   /* Keep the current page in view when it changes from outside the strip —
      the arrows, or a keyboard shortcut — so the strip never shows a selection
@@ -77,14 +105,20 @@ export default function PdfFilmstrip({ pages, current, onGo }: Props) {
             className="film-tile"
             type="button"
             tabIndex={p.index === current ? 0 : -1}
+            data-tile={p.index}
             data-active={p.index === current ? "true" : "false"}
             onClick={() => onGo(p.index)}
             aria-label={`Page ${p.index + 1}`}
             aria-current={p.index === current ? "true" : undefined}
           >
             {/* The tile carries the page's own proportions, so a landscape
-                plate in a portrait book is visibly a different shape. */}
-            <span className="film-sheet" style={{ aspectRatio: `${p.w} / ${p.h}` }} />
+                plate in a portrait book is visibly a different shape. The
+                preview fills it once the lazy raster lands. */}
+            <span className="film-sheet" style={{ aspectRatio: `${p.w} / ${p.h}` }}>
+              {thumbs?.get(p.index) && (
+                <img className="film-thumb" src={thumbs.get(p.index)} alt="" draggable={false} />
+              )}
+            </span>
             <span className="film-num">{p.index + 1}</span>
           </button>
         ))}
