@@ -7,8 +7,8 @@ destination: instagram-reel
 aspect: "1:1"
 canvas: 1080x1080
 language: en
-length: 14s
-angle: announcement
+length: 16.5s
+angle: problem-solution
 ---
 
 ## Intent (v4 — current)
@@ -45,6 +45,18 @@ the word-by-word stream with citations, stillness, close.
   each move caused by a story beat, every framing edge-pinned so wide content
   survives the crop (cycle 1 caught the landed bubble clipping off-canvas at
   centre-zoom). Close line now waterfall-enters word by word. Seams untouched.
+- v6: owner's note — "doesnt feel like it solves any problems, just feels
+  like a new feature." Diagnosis: the reel opened on a logo and demoed;
+  nothing was at stake. Restructured as problem → turn → payoff (16.5s): the
+  logo intro is gone (the brand signs the close), the open is three kinetic
+  text beats — "One question." / "The answer sits in twelve books." /
+  "Finding it takes hours." — chained by word-level waterfall cuts on one
+  leftward current; the Z-push into the panel is now the TURN, the panel
+  answers that exact question, "Searched 12 sources" pays off "twelve
+  books", and the close answers the open: "Seconds, not hours." Cycle 1
+  caught the §4 immediateRender ghost (future beats visible at 0.35 alpha
+  from frame zero) — fixed with immediateRender: false + build-time rest
+  states.
 
 ## Notes
 

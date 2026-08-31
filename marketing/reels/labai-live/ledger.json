@@ -1,10 +1,10 @@
 ﻿{
     "current":  "none — one continuous take",
-    "note":  "v5 - the static middle take became a five-move camera performance; seams unchanged from v4 (both Z-seams, signs matched, previously gate-passed; all v5 changes live outside the seam windows).",
+    "note":  "v6 - problem -\u003e turn -\u003e payoff. Opens on the pain (kinetic text, word-level waterfall cuts riding one leftward current), Z-pushes into the product answering that exact question, closes on \u0027Seconds, not hours.\u0027 Seam mechanics unchanged from the gate-passed v4; times moved to 4.6 and 13.5.",
     "seams":  [
                   {
-                      "t":  3.4,
-                      "name":  "lockup→panel",
+                      "t":  4.6,
+                      "name":  "problem-\u003epanel",
                       "axis":  "z",
                       "direction":  "push",
                       "exit":  {
@@ -16,10 +16,10 @@
                                     "motion":  "scale 0.86→1, blur 12→0, expo.out 0.7s — growing both sides"
                                 },
                       "technique":  "zoom-through",
-                      "why":  "into the product — the only forward cut"
+                      "why":  "the turn - into the product, which answers the question just posed"
                   },
                   {
-                      "t":  12.3,
+                      "t":  13.5,
                       "name":  "panel→close",
                       "axis":  "z",
                       "direction":  "pull",
