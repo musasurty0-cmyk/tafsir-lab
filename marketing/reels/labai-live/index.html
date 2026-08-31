@@ -125,91 +125,145 @@
       .app { position: absolute; inset: 0; background: transparent; }
       .pn-head {
         position: absolute; top: 0; left: 0; right: 0;
-        height: 92px;
-        display: flex; align-items: center; gap: 16px;
-        padding: 0 44px;
-        border-bottom: 1px solid var(--line);
+        height: 96px;
+        display: flex; align-items: center; gap: 14px;
+        padding: 0 40px;
         background: var(--bg);
+        /* A hairline plus a soft drop, not a hard border: at this scale a
+           plain 1px rule reads as a seam between two documents, where a
+           graded edge reads as one surface catching light. */
+        box-shadow: 0 1px 0 var(--line), 0 10px 24px -18px rgba(41,38,33,.5);
       }
-      .pn-title { font-size: 27px; font-weight: 700; color: var(--ink); display: flex; align-items: center; gap: 13px; }
-      .pn-title svg { width: 26px; height: 26px; }
-      .pn-chip {
-        display: inline-flex; align-items: center; gap: 8px;
-        padding: 8px 16px;
-        border: 1px solid var(--line-strong);
-        border-radius: 999px;
-        color: var(--ink-2);
-        font-size: 19px; font-weight: 500;
-      }
-      .pn-x { margin-left: auto; color: var(--ink-4); font-size: 26px; }
-
-      /* Empty state — the app's real copy. */
-      .empty {
-        position: absolute; left: 0; right: 0; top: 150px;
-        display: flex; flex-direction: column; align-items: center;
-        gap: 22px;
-        text-align: center;
-      }
-      .empty-mark {
-        width: 76px; height: 76px; border-radius: 22px;
-        background: rgba(41, 38, 33, 0.06);
+      /* The mark sits in its own tile, the way the app's does. An icon
+         floating loose in a header always looks like a placeholder. */
+      .pn-mark {
+        width: 44px; height: 44px; border-radius: 13px;
         display: flex; align-items: center; justify-content: center;
+        background: linear-gradient(180deg, #34302a 0%, #1f1c18 100%);
+        box-shadow: 0 4px 12px rgba(41,38,33,.28), inset 0 1px 0 rgba(255,255,255,.14);
       }
-      .empty-mark svg { width: 34px; height: 34px; }
-      .empty-title { font-size: 34px; font-weight: 700; color: var(--ink); }
-      .empty-sub {
-        max-width: 620px;
-        font-size: 22.5px; line-height: 1.55;
-        color: var(--ink-3);
+      .pn-mark svg { width: 23px; height: 23px; }
+      .pn-titles { display: flex; flex-direction: column; gap: 3px; }
+      .pn-title {
+        font-size: 24px; font-weight: 700; color: var(--ink);
+        letter-spacing: -0.015em; line-height: 1;
       }
-      .suggest { display: flex; flex-direction: column; gap: 13px; margin-top: 10px; }
-      .sg {
-        display: inline-flex; align-items: center; justify-content: center;
-        height: 62px; padding: 0 30px;
-        border: 1px solid var(--line-strong);
+      .pn-sub {
+        display: flex; align-items: center; gap: 7px;
+        /* ink-3, not ink-4: at 15px the lighter grey fails 4.5:1 on paper. */
+        font-size: 15px; color: var(--ink-3); line-height: 1;
+      }
+      /* The one piece of colour in the chrome, and it means something. */
+      .pn-dot {
+        width: 7px; height: 7px; border-radius: 50%;
+        background: #4f9d69;
+        box-shadow: 0 0 0 3px rgba(79,157,105,.16);
+      }
+      .pn-chip {
+        margin-left: auto;
+        display: inline-flex; align-items: center; gap: 9px;
+        padding: 9px 17px;
+        border: 1px solid var(--line);
         border-radius: 999px;
         background: var(--bg-elev);
         color: var(--ink-2);
-        font-size: 21.5px; font-weight: 500;
-        box-shadow: 0 2px 10px rgba(41, 38, 33, 0.05);
+        font-size: 18px; font-weight: 500;
+        box-shadow: 0 1px 2px rgba(41,38,33,.05), inset 0 1px 0 rgba(255,255,255,.8);
+      }
+      .pn-x {
+        width: 38px; height: 38px; border-radius: 11px;
+        display: flex; align-items: center; justify-content: center;
+        color: var(--ink-3); font-size: 22px;
+        background: rgba(41,38,33,.04);
       }
 
-      /* The thread — the app's message interface. */
+      /* Empty state - the app's real copy. */
+      .empty {
+        position: absolute; left: 0; right: 0; top: 168px;
+        display: flex; flex-direction: column; align-items: center;
+        gap: 20px;
+        text-align: center;
+      }
+      .empty-mark {
+        width: 82px; height: 82px; border-radius: 24px;
+        background: linear-gradient(180deg, #ffffff 0%, #f3f1ea 100%);
+        border: 1px solid var(--line);
+        display: flex; align-items: center; justify-content: center;
+        box-shadow: 0 12px 30px -14px rgba(41,38,33,.45), inset 0 1px 0 #fff;
+      }
+      .empty-mark svg { width: 36px; height: 36px; }
+      .empty-title {
+        font-size: 33px; font-weight: 700; color: var(--ink);
+        letter-spacing: -0.02em;
+      }
+      .empty-sub {
+        max-width: 600px;
+        font-size: 21px; line-height: 1.6;
+        color: var(--ink-3);
+      }
+      .suggest { display: flex; flex-direction: column; gap: 12px; margin-top: 14px; }
+      /* Suggestions read as things you can press: a leading spark, the text
+         left-aligned like a real row, and a chevron parked at the end. */
+      .sg {
+        display: flex; align-items: center; gap: 14px;
+        width: 640px; height: 64px; padding: 0 22px;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: linear-gradient(180deg, #ffffff 0%, #fdfcf9 100%);
+        color: var(--ink-2);
+        font-size: 21px; font-weight: 500;
+        text-align: left;
+        box-shadow: 0 2px 4px rgba(41,38,33,.04), 0 12px 26px -20px rgba(41,38,33,.5), inset 0 1px 0 #fff;
+      }
+      .sg-dot {
+        flex: none; width: 30px; height: 30px; border-radius: 9px;
+        background: rgba(41,38,33,.05);
+        display: flex; align-items: center; justify-content: center;
+      }
+      .sg-dot svg { width: 16px; height: 16px; }
+      .sg-go { margin-left: auto; color: var(--ink-4); font-size: 20px; }
+
+      /* The thread - the app's message interface. */
       .thread {
         position: absolute; left: 0; right: 0; top: 118px; bottom: 210px;
-        padding: 0 46px;
+        padding: 0 44px;
       }
       .bub-you {
-        position: absolute; top: 26px; right: 46px;
+        position: absolute; top: 26px; right: 44px;
         max-width: 760px;
-        padding: 18px 26px;
-        border-radius: 20px 20px 6px 20px;
-        background: rgba(41, 38, 33, 0.07);
-        border: 1px solid var(--line);
+        padding: 19px 27px;
+        border-radius: 22px 22px 7px 22px;
+        /* Warm, not grey. A neutral fill on warm paper looks like a colour
+           token nobody got round to setting. */
+        background: linear-gradient(180deg, #ece8de 0%, #e5e0d4 100%);
+        border: 1px solid rgba(41,38,33,.10);
         color: var(--ink);
-        font-size: 26px; line-height: 1.4;
+        font-size: 25px; line-height: 1.42;
+        box-shadow: 0 10px 24px -16px rgba(41,38,33,.55), inset 0 1px 0 rgba(255,255,255,.6);
       }
       .row-ai {
-        position: absolute; top: 132px; left: 46px; right: 46px;
-        display: flex; gap: 16px; align-items: flex-start;
+        position: absolute; top: 136px; left: 44px; right: 44px;
+        display: flex; gap: 15px; align-items: flex-start;
       }
       .avatar {
         flex: none;
         width: 46px; height: 46px; border-radius: 14px;
-        background: rgba(41, 38, 33, 0.06);
+        background: linear-gradient(180deg, #ffffff 0%, #f2f0e9 100%);
         border: 1px solid var(--line);
         display: flex; align-items: center; justify-content: center;
+        box-shadow: 0 4px 12px -6px rgba(41,38,33,.4), inset 0 1px 0 #fff;
       }
-      .avatar svg { width: 24px; height: 24px; }
-      .ai-col { display: flex; flex-direction: column; gap: 14px; max-width: 860px; }
+      .avatar svg { width: 23px; height: 23px; }
+      .ai-col { display: flex; flex-direction: column; gap: 13px; max-width: 858px; }
       .thinking {
         display: inline-flex; align-items: center; gap: 12px;
         align-self: flex-start;
         padding: 15px 22px;
-        border-radius: 6px 20px 20px 20px;
-        background: rgba(41, 38, 33, 0.05);
+        border-radius: 7px 20px 20px 20px;
+        background: rgba(41, 38, 33, 0.045);
+        border: 1px solid rgba(41,38,33,.06);
         color: var(--ink-3);
-        font-size: 22px;
+        font-size: 21px;
       }
       .tdots { display: inline-flex; gap: 5px; }
       .tdots i {
@@ -217,38 +271,51 @@
         background: var(--ink-3);
         display: inline-block;
       }
+      /* The trace, built like a real status row: a search glyph, the label,
+         then the count as its own badge. A number set in running text was
+         the detail that made this read as unfinished. */
       .trace {
-        display: inline-flex; align-items: center; gap: 10px;
+        display: inline-flex; align-items: center; gap: 11px;
         align-self: flex-start;
-        padding: 12px 19px;
+        padding: 11px 15px 11px 17px;
         border: 1px solid var(--line);
-        border-radius: 13px;
+        border-radius: 999px;
         background: var(--bg-elev);
         color: var(--ink-3);
-        font-size: 19px;
+        font-size: 18px;
+        box-shadow: 0 1px 2px rgba(41,38,33,.04), inset 0 1px 0 rgba(255,255,255,.85);
       }
-      .trace svg { width: 17px; height: 17px; }
+      .trace svg { width: 16px; height: 16px; }
+      .trace-n {
+        display: inline-flex; align-items: center; justify-content: center;
+        min-width: 26px; height: 26px; padding: 0 8px;
+        border-radius: 999px;
+        background: var(--ink); color: var(--bg);
+        font-size: 14.5px; font-weight: 700;
+      }
       .bub-ai {
-        padding: 20px 26px;
-        border-radius: 6px 20px 20px 20px;
-        background: var(--bg-elev);
+        padding: 22px 27px;
+        border-radius: 7px 22px 22px 22px;
+        background: linear-gradient(180deg, #ffffff 0%, #fdfcfa 100%);
         border: 1px solid var(--line);
         color: var(--ink);
-        font-size: 25px; line-height: 1.62;
+        font-size: 24px; line-height: 1.65;
+        box-shadow: 0 14px 34px -22px rgba(41,38,33,.6), inset 0 1px 0 #fff;
       }
       .bub-ai .wd { display: inline; }
       .cite {
         display: inline-flex; align-items: center; justify-content: center;
-        min-width: 27px; height: 27px; padding: 0 8px;
-        border-radius: 8px;
-        background: rgba(41, 38, 33, 0.08);
+        min-width: 25px; height: 25px; padding: 0 7px;
+        border-radius: 7px;
+        background: #ece8de;
+        border: 1px solid rgba(41,38,33,.10);
         color: var(--ink-2);
-        font-size: 15.5px; font-weight: 700;
-        vertical-align: 2px;
-        margin: 0 2px;
+        font-size: 14.5px; font-weight: 700;
+        vertical-align: 3px;
+        margin: 0 3px;
       }
 
-      /* Composer — the app's, pinned at the bottom. */
+      /* Composer - the app's, pinned at the bottom. */
       .composer {
         position: absolute; left: 44px; right: 44px; bottom: 44px;
         min-height: 132px;
@@ -256,7 +323,12 @@
         border: 1px solid var(--line-strong);
         border-radius: 24px;
         padding: 28px 116px 28px 32px;
-        box-shadow: 0 18px 50px rgba(41, 38, 33, 0.09);
+        /* Two shadows and an inner sheen: the composer is the thing you act
+           in, so it sits highest in the stack. */
+        box-shadow:
+          0 2px 6px rgba(41,38,33,.05),
+          0 24px 60px -28px rgba(41,38,33,.7),
+          inset 0 1px 0 #fff;
       }
       .cp-text {
         font-size: 27px; line-height: 1.45; color: var(--ink);
@@ -269,8 +341,9 @@
       }
       .caret {
         display: inline-block;
-        width: 3.5px; height: 30px;
+        width: 3px; height: 30px;
         background: var(--ink);
+        border-radius: 2px;
         vertical-align: -4px; margin-left: 3px;
       }
       .send {
@@ -278,10 +351,23 @@
         width: 64px; height: 64px;
         margin-top: -32px;
         border-radius: 50%;
-        background: var(--ink);
+        background: linear-gradient(180deg, #3a352e 0%, #22201b 100%);
         display: flex; align-items: center; justify-content: center;
+        box-shadow:
+          0 6px 16px -4px rgba(41,38,33,.45),
+          inset 0 1px 0 rgba(255,255,255,.18);
       }
       .send svg { width: 28px; height: 28px; }
+      /* The ring that blooms out of the send button when it is pressed -
+         the click made visible, so the cursor's tap has a consequence you
+         can see rather than only infer. */
+      .send-ring {
+        position: absolute; right: 24px; top: 50%;
+        width: 64px; height: 64px; margin-top: -32px;
+        border-radius: 50%;
+        border: 2px solid rgba(41,38,33,.5);
+        pointer-events: none;
+      }
 
       /* The flying line — the typed text becoming the user bubble. */
       .flyer {
@@ -432,6 +518,10 @@
           <path data-hf-id="hf-hhq3" d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" />
           <path data-hf-id="hf-r3z8" d="M20 3v4" /><path data-hf-id="hf-6c9h" d="M22 5h-4" /><path data-hf-id="hf-viov" d="M4 17v2" /><path data-hf-id="hf-bkmk" d="M5 18H3" />
         </g>
+        <g id="spark-l" fill="none" stroke="#fcfbf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" />
+          <path d="M20 3v4" /><path d="M22 5h-4" /><path d="M4 17v2" /><path d="M5 18H3" />
+        </g>
       </defs>
     </svg>
 
@@ -501,9 +591,10 @@
               <div data-hf-id="hf-gk5l" class="app">
                 <!-- Header — the panel's real chrome. -->
                 <div data-hf-id="hf-g7xt" class="pn-head">
-                  <span data-hf-id="hf-vnex" class="pn-title">
-                    <svg data-hf-id="hf-y9f5" viewBox="0 0 24 24"><use data-hf-id="hf-f72f" href="#spark" /></svg>
-                    Lab AI
+                  <span class="pn-mark"><svg viewBox="0 0 24 24"><use href="#spark-l" /></svg></span>
+                  <span class="pn-titles">
+                    <span data-hf-id="hf-vnex" class="pn-title">Lab AI</span>
+                    <span class="pn-sub"><i class="pn-dot"></i> Reading your library</span>
                   </span>
                   <span data-hf-id="hf-vzhh" class="pn-chip">
                     <svg data-hf-id="hf-gfno" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#57534b" stroke-width="2"><path data-hf-id="hf-608j" d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path data-hf-id="hf-1cru" d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" /></svg>
@@ -518,9 +609,9 @@
                   <div data-hf-id="hf-kq3t" class="empty-title">Lab AI</div>
                   <div data-hf-id="hf-dced" class="empty-sub">Ask about any verse or search your notes. Every answer is drawn from the tafsīr in your library and cites what it used.</div>
                   <div data-hf-id="hf-01ku" class="suggest">
-                    <div data-hf-id="hf-et3z" class="sg">What are the main themes in Al-Fatihah?</div>
-                    <div data-hf-id="hf-6kl5" class="sg">Summarise my notes on this page</div>
-                    <div data-hf-id="hf-adpj" class="sg">Explain this passage simply</div>
+                    <div class="sg"><span class="sg-dot"><svg viewBox="0 0 24 24"><use href="#spark" /></svg></span>What are the main themes in Al-Fatihah?<span class="sg-go">›</span></div>
+                    <div class="sg"><span class="sg-dot"><svg viewBox="0 0 24 24"><use href="#spark" /></svg></span>Summarise my notes on this page<span class="sg-go">›</span></div>
+                    <div class="sg"><span class="sg-dot"><svg viewBox="0 0 24 24"><use href="#spark" /></svg></span>Explain this passage simply<span class="sg-go">›</span></div>
                   </div>
                 </div>
 
@@ -536,7 +627,7 @@
                       </div>
                       <div data-hf-id="hf-9otq" class="trace" id="trace">
                         <svg data-hf-id="hf-dnig" viewBox="0 0 24 24" fill="none" stroke="#6e695f" stroke-width="2"><circle data-hf-id="hf-7tjq" cx="11" cy="11" r="8" /><path data-hf-id="hf-61mr" d="m21 21-4.3-4.3" /></svg>
-                        Searched 12 sources
+                        Searched <span class="trace-n">12</span> sources
                       </div>
                       <div data-hf-id="hf-tkpe" class="bub-ai" id="bub-ai">
                         <span data-hf-id="hf-2apf" class="wd">Ibn</span> <span data-hf-id="hf-dwld" class="wd">Kathīr</span> <span data-hf-id="hf-z6vl" class="wd">reads</span>
@@ -571,6 +662,8 @@
                   <div data-hf-id="hf-7ksy" class="send" id="send">
                     <svg data-hf-id="hf-l46m" viewBox="0 0 24 24" fill="none" stroke="#fcfbf8" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path data-hf-id="hf-436h" d="M12 19V5M5 12l7-7 7 7" /></svg>
                   </div>
+                  <!-- The click, made visible. -->
+                  <div class="send-ring" id="send-ring"></div>
                 </div>
 
                 <!-- The typed line, flying up to become the user bubble. -->
@@ -727,6 +820,7 @@
          enters the room, never fades in). The app's dock treatments start
          from transparent WHITE so the alpha-only tween never greys. */
       gsap.set("#add-chip", { autoAlpha: 0 });
+      gsap.set("#send-ring", { autoAlpha: 0, scale: 1 });
       gsap.set("#cursor", { x: 1150, y: 1120 });
       gsap.set(["#editor", "#ed-note"], { autoAlpha: 0 });
       gsap.set(".app", { backgroundColor: "rgba(254,254,252,0)", boxShadow: "0 30px 80px rgba(41,38,33,0)" });
@@ -913,11 +1007,28 @@
         tAt += beat + pause;
       });
 
-      // SEND at 9.58 — the button presses; the click IGNITES everything at
-      // once: the typed line lifts out of the composer, the empty state is
-      // shed upward, and the CAMERA rides up the panel with the message.
+      /* THE CURSOR ARRIVES TO SEND. The button used to press itself, which
+         is the one moment in the film where something happened with no cause
+         on screen. Now the pointer enters from off-frame while the last
+         characters are still landing, crosses to the send button, and the
+         TAP is what ignites everything after it. It is the same cursor that
+         later presses "Add to editor", so the film has one protagonist
+         rather than a hand that appears once and is never explained. */
+      tl.fromTo("#cursor", { x: 1180, y: 1160 },
+        { x: 905, y: 862, duration: 0.72, ease: "power3.out", immediateRender: false }, 8.72);
+      /* A breath on the target before the press — a cursor that arrives and
+         clicks in the same instant reads as a script, not a hand. */
+      tl.to("#cursor", { scale: 0.84, duration: 0.1, ease: "power2.in", transformOrigin: "21% 14%" }, 9.58);
+      tl.to("#cursor", { scale: 1, duration: 0.22, ease: "power2.out", transformOrigin: "21% 14%" }, 9.68);
+      // The button answers the tap, same frame.
       tl.to("#send", { scale: 0.9, duration: 0.1, ease: "power2.in" }, 9.58);
       tl.to("#send", { scale: 1, duration: 0.24, ease: "power2.out" }, 9.68);
+      /* And the press blooms a ring — the click made visible, so the tap has
+         a consequence you can see rather than only infer. */
+      tl.set("#send-ring", { autoAlpha: 1, scale: 1 }, 9.6);
+      tl.to("#send-ring", { scale: 2.1, autoAlpha: 0, duration: 0.5, ease: "power2.out" }, 9.6);
+      /* Job done, the hand withdraws down-right, out of the answer's way. */
+      tl.to("#cursor", { x: 1180, y: 1160, duration: 0.6, ease: "power2.in" }, 9.95);
       tl.set(chars, { autoAlpha: 0 }, 9.65);
       tl.set("#caret", { autoAlpha: 0 }, 9.65);
       tl.set("#flyer", { autoAlpha: 1 }, 9.65);
@@ -983,7 +1094,9 @@
 
       // Enter off bottom-right, one continuous vector to the chip; the tip
       // (21%/14% of the box) lands on the chip's centre.
-      tl.fromTo("#cursor", { x: 1150, y: 1120 },
+            /* Returning, not arriving: the same pointer that sent the message
+         comes back for the answer's offer. */
+      tl.fromTo("#cursor", { x: 1180, y: 1160 },
         { x: 184, y: 545, duration: 0.62, ease: "power3.out", immediateRender: false }, 13.75);
       // CLICK — asymmetric tap on the tip; the chip presses back, parallel.
       tl.to("#cursor", { scale: 0.84, duration: 0.1, ease: "power2.in", transformOrigin: "21% 14%" }, 14.5);
