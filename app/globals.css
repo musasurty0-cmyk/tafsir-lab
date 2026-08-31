@@ -461,9 +461,29 @@ input, textarea { font: inherit; color: inherit; }
   flex: 1; display: flex; overflow: hidden; position: relative;
 }
 
-/* ── Topbar ── */
+/* ── Topbar — auto-hide, Windows-taskbar style ──
+   The bar takes no layout height at all: it overlays the top of the board and
+   slides into view only while the pointer is at the top edge (or focus is
+   inside it), then slides away. No button, no remembered state — the edge is
+   the control. The hot zone is a thin always-hittable strip; once the bar is
+   revealed, hovering ANY of its contents keeps .topbar-zone:hover true (hover
+   marks every DOM ancestor, whatever the geometry), so inline dropdowns like
+   the surah menu hold it open while in use. */
+.topbar-zone {
+  position: absolute; top: 0; left: 0; right: 0;
+  z-index: 40;
+  /* The zone spans the whole width but must never eat clicks meant for the
+     content under it — only its children are interactive. */
+  pointer-events: none;
+}
+.topbar-hotzone {
+  position: absolute; top: 0; left: 0; right: 0;
+  height: 10px;
+  pointer-events: auto;
+}
 .topbar {
-  position: sticky; top: 0; z-index: 4;
+  position: relative;
+  pointer-events: auto;
   /* Opaque, and the same colour as the page. The translucent fill plus a
      backdrop blur rendered as a lighter band across the top in dark mode
      instead of disappearing into the background. */
@@ -472,46 +492,24 @@ input, textarea { font: inherit; color: inherit; }
   display: flex; align-items: center;
   padding: 10px 20px; gap: 10px;
   min-height: 48px;
+  /* -102% not -100%: transform percentages round, and a rounded -100% can
+     leave a 1px sliver of the bar's border showing along the edge. */
+  transform: translateY(-102%);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0);
+  /* The .3s delay is the hide grace — skimming the edge on the way to
+     something else must not flap the bar. Revealing zeroes it: the bar
+     answers the pointer immediately, and only lingers on the way out. */
+  transition: transform .22s var(--ease-soft) .3s,
+              box-shadow .22s var(--ease-soft) .3s;
 }
-
-/* Collapsed — the banner goes, not just its contents.
-   Two things had to be right here and neither was. The rule lived ABOVE
-   .topbar, so at equal specificity the base won and min-height: 48px stood:
-   the strip stayed exactly as tall, only emptied. And zeroing the height is
-   not enough on its own — the handle has to come out of flow, or it holds the
-   bar open by its own height. Doubled class for specificity, absolute handle
-   overlaying the content it sits above. */
-.topbar.topbar--collapsed {
-  min-height: 0;
-  height: 0;
-  padding: 0;
-  border-bottom: 0;
-  overflow: visible;
-  justify-content: center;
+.topbar-zone:hover .topbar,
+.topbar-zone:focus-within .topbar {
+  transform: translateY(0);
+  /* Floating over content now, so it needs the depth the border alone gave
+     it when it sat in flow. */
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.10);
+  transition-delay: 0s;
 }
-.topbar-handle {
-  position: absolute;
-  top: 0; left: 50%;
-  transform: translateX(-50%);
-  z-index: 5;
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 54px; height: 15px;
-  color: var(--ink-4);
-  background: var(--bg);
-  border: 1px solid var(--line); border-top: 0;
-  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
-  cursor: pointer;
-  transition: color var(--dur-fast) var(--ease-soft),
-              background var(--dur-fast) var(--ease-soft);
-}
-.topbar-handle:hover {
-  color: var(--ink);
-  background: color-mix(in oklab, var(--ink) 8%, var(--bg));
-}
-/* The collapse control sits with the actions but reads as chrome, not as one
-   of the things you came here to press. */
-.tb-btn--collapse { color: var(--ink-4); }
-.tb-btn--collapse:hover { color: var(--ink-2); }
 /* Sized to content, not greedy: the page navigator sits immediately to its
    right, so the crumbs must not grow and push it away. Slack is taken by
    .topbar-actions' auto margin instead, which keeps the actions right-aligned

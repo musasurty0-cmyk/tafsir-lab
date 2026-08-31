@@ -3,13 +3,18 @@
 /**
  * TopBar — workspace page header.
  *
+ * Auto-hidden, Windows-taskbar style: the bar lives out of view and slides in
+ * while the pointer is at the top edge (or focus is inside it), then slides
+ * away. No toggle button and no remembered state — the edge itself is the
+ * control. The bar stays MOUNTED while hidden, deliberately: the canvas mode
+ * portals its page navigator into #topbar-canvas-slot, and unmounting the bar
+ * (as the old button-collapse did) silently destroyed that slot.
+ *
  * Breadcrumbs are clickable Links.
- * Share button removed (was never implemented).
  * Mode toggle: Editor | Canvas | Split.
  */
 
 import Link from "next/link";
-import { ChevronsUpDown } from "lucide-react";
 import SurahCrumbMenu from "./SurahCrumbMenu";
 import type { Chapter } from "@/lib/types";
 import PresenceBar from "./PresenceBar";
@@ -93,9 +98,6 @@ const BoardIcon = ({ size = 17 }: { size?: number }) => (
 );
 
 interface Props {
-  /** Collapsed to a handle, so the page gets the height back. */
-  collapsed?:         boolean;
-  onToggleCollapse?:  () => void;
   workspaceId:        string;
   surahNumber:        number;
   workspaceName:      string;
@@ -143,33 +145,18 @@ export default function TopBar({
   onToggleFormatting,
   presenceOthers = [],
   liveStatus,
-  collapsed = false,
-  onToggleCollapse,
 }: Props) {
   const t = useT();
 
-  /* Collapsed, the bar keeps only the handle. Everything else unmounts rather
-     than being hidden: a toolbar you cannot see should not still be catching
-     Tab, and the page navigator underneath it should not still be live. */
-  if (collapsed) {
-    return (
-      <div className="topbar topbar--collapsed">
-        <button
-          type="button"
-          className="topbar-handle"
-          onClick={onToggleCollapse}
-          title="Show the toolbar"
-          aria-label="Show the toolbar"
-          aria-expanded={false}
-        >
-          <ChevronsUpDown size={13} aria-hidden />
-        </button>
-      </div>
-    );
-  }
-
   return (
-    <div className="topbar">
+    <div className="topbar-zone">
+      {/* The strip that stands in for the bar while it is hidden — a few
+          pixels of the top edge that stay under the pointer at all times.
+          Hovering it (or anything in the bar, once revealed) is what holds
+          the bar open; there is nothing to click. */}
+      <div className="topbar-hotzone" aria-hidden />
+
+      <div className="topbar">
 
       {/* ── Breadcrumbs — every crumb is a real link ── */}
       <div className="crumbs">
@@ -226,19 +213,6 @@ export default function TopBar({
 
       {/* ── Actions ── */}
       <div className="topbar-actions">
-        {onToggleCollapse && (
-          <button
-            type="button"
-            className="tb-btn tb-btn--collapse"
-            onClick={onToggleCollapse}
-            title="Hide the toolbar"
-            aria-label="Hide the toolbar"
-            aria-expanded
-          >
-            <ChevronsUpDown size={15} aria-hidden />
-          </button>
-        )}
-
         {/* Mode toggle */}
         <div className="mode-toggle" role="group" aria-label="View mode">
           <button
@@ -343,6 +317,7 @@ export default function TopBar({
             crowded the bar with things that are not per-page actions; language
             and appearance now live in dashboard settings. The trailing
             divider went with them so the bar does not end on a separator. */}
+      </div>
       </div>
     </div>
   );

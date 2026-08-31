@@ -132,22 +132,8 @@ export default function WorkspacePageView({
     } catch { /* ignore */ }
   }, []);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  /* The toolbar collapses to a handle. Remembered, because someone who wants
-     the height back wants it back every time — and unlike the surah view, the
-     collapsed state announces itself: the handle is right there. */
-  const [topbarCollapsed, setTopbarCollapsed] = useState(false);
-  useEffect(() => {
-    try {
-      if (localStorage.getItem("tl-topbar") === "collapsed") setTopbarCollapsed(true);
-    } catch { /* private mode — expanded is the default */ }
-  }, []);
-  const toggleTopbar = useCallback(() => {
-    setTopbarCollapsed((was) => {
-      const next = !was;
-      try { localStorage.setItem("tl-topbar", next ? "collapsed" : "open"); } catch { /* fine */ }
-      return next;
-    });
-  }, []);
+  /* The topbar needs no collapse state here any more: it auto-hides on its
+     own, taskbar-style — hidden until the pointer visits the top edge. */
   const [formattingOpen, setFormattingOpen] = useState(false);
   const [activeEditor, setActiveEditor]     = useState<Editor | null>(null);
 
@@ -703,8 +689,6 @@ export default function WorkspacePageView({
           </button>
         )}
         <TopBar
-          collapsed={topbarCollapsed}
-          onToggleCollapse={toggleTopbar}
           workspaceId={workspaceId}
           surahNumber={surahNumber}
           workspaceName={workspace.name}
