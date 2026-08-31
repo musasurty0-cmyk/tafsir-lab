@@ -93,8 +93,36 @@
       .wordmark--sm { font-size: 84px; }
       .wm-clip { overflow: hidden; }
 
-      /* ── The Lab AI panel — the app's real interface, light ──────────── */
-      .app { position: absolute; inset: 0; background: var(--bg); }
+      /* ── The ask bar — the reel's vehicle ────────────────────────────────
+         One container carries every screen change: the problem act resolves
+         into it, it morphs into the app's composer (same width, height,
+         radius and centre at the swap — the same object, continued), and at
+         the close it returns to centre, empty, ready to be asked again.
+         Geometry here IS the morph's endpoint A: w700 h100 r50, centre
+         (540, 540); endpoint B is the composer's slot exactly (w992 h132
+         r24, top 904). The hint sits at left 32 / top 30 because that is
+         where .cp-hint sits in the composer — at h100 that is ALSO dead
+         centre, so the text never jumps at either end of the morph. */
+      .pill {
+        position: absolute;
+        left: 50%;
+        top: 490px; width: 700px; height: 100px;
+        border-radius: 50px;
+        background: var(--bg-elev);
+        border: 1px solid var(--line-strong);
+        box-shadow: 0 18px 50px rgba(41, 38, 33, 0.09);
+      }
+      .pill-hint {
+        position: absolute; left: 32px; top: 30px;
+        font-size: 27px; color: var(--ink-4);
+        white-space: nowrap;
+      }
+
+      /* ── The Lab AI panel — the app's real interface, light ────────────
+         Transparent ground: the panel assembles AROUND the morphing bar on
+         the same paper the problem act used, so nothing pops at the seam.
+         Every chrome piece paints its own surface. */
+      .app { position: absolute; inset: 0; background: transparent; }
       .pn-head {
         position: absolute; top: 0; left: 0; right: 0;
         height: 92px;
@@ -288,13 +316,25 @@
       .qline .qw { display: inline-block; }
       .qw--em { font-style: italic; }
 
-      /* Close beat. */
-      .close-stack { display: flex; flex-direction: column; align-items: center; gap: 44px; }
+      /* Close beat — laid out ABSOLUTELY around the bar's fixed slot (the
+         pill ends its return morph at top 490; everything else arranges
+         around that point rather than pushing it). */
       .close-payoff {
+        position: absolute; left: 0; right: 0; top: 352px;
+        display: flex; justify-content: center; gap: 0.3em;
         font-family: var(--serif); font-style: italic;
         font-size: 42px; color: var(--ink);
       }
       .close-payoff .pw { display: inline-block; }
+      .close-brand {
+        position: absolute; left: 0; right: 0; top: 648px;
+        display: flex; justify-content: center;
+      }
+      .close-line {
+        position: absolute; left: 0; right: 0; top: 788px;
+        display: flex; justify-content: center; gap: 0.32em;
+      }
+      .close-url { position: absolute; left: 0; right: 0; top: 848px; text-align: center; }
       .close-line {
         font-size: 30px; color: var(--ink-2); font-weight: 500;
         letter-spacing: 0.01em;
@@ -332,6 +372,10 @@
               <div class="qline qline--2" id="q2" data-layout-allow-overlap="true" data-layout-allow-occlusion="true"><span class="qw" data-layout-allow-overlap="true" data-layout-allow-occlusion="true">The</span> <span class="qw" data-layout-allow-overlap="true" data-layout-allow-occlusion="true">answer</span> <span class="qw" data-layout-allow-overlap="true" data-layout-allow-occlusion="true">sits</span> <span class="qw" data-layout-allow-overlap="true" data-layout-allow-occlusion="true">in</span> <span class="qw qw--em" data-layout-allow-overlap="true" data-layout-allow-occlusion="true">twelve</span> <span class="qw qw--em" data-layout-allow-overlap="true" data-layout-allow-occlusion="true">books.</span></div>
               <div class="qline qline--3" id="q3" data-layout-allow-overlap="true" data-layout-allow-occlusion="true"><span class="qw" data-layout-allow-overlap="true" data-layout-allow-occlusion="true">Finding</span> <span class="qw" data-layout-allow-overlap="true" data-layout-allow-occlusion="true">it</span> <span class="qw" data-layout-allow-overlap="true" data-layout-allow-occlusion="true">takes</span> <span class="qw qw--em" data-layout-allow-overlap="true" data-layout-allow-occlusion="true">hours.</span></div>
             </div>
+            <!-- The vehicle arrives: "hours" peels away and the ask bar rides
+                 in on the same current — the way out of the problem. It holds
+                 through the cut; c2 opens on this exact bar. -->
+            <div class="pill" id="pill1" data-layout-allow-overlap="true" data-layout-allow-occlusion="true"><span class="pill-hint">Ask about the Qur'an, or search your notes…</span></div>
           </div>
         </div>
       </div>
@@ -339,6 +383,10 @@
       <!-- ═══ 2 · LAB AI, THE TURN 4.6–13.5 — the same question, answered ═══ -->
       <div data-hf-id="hf-qxhu" id="c2" class="clip" data-start="4.6" data-duration="8.9" data-track-index="1">
         <div data-hf-id="hf-btl6" class="paper"></div>
+        <!-- The same dot desk as c1, so the cut frame is IDENTICAL on both
+             sides; it clears as the app assembles and returns when the app
+             sheds its chrome at the end. -->
+        <div class="mv" id="c2-dots" data-layout-allow-overflow="true"><div class="dots"></div></div>
         <div data-hf-id="hf-s2e6" class="fx" id="c2-fx">
           <div data-hf-id="hf-wnd8" class="mv" id="c2-mv">
             <!-- The camera: punches in and dollies, so the app intentionally
@@ -415,6 +463,13 @@
 
                 <!-- The typed line, flying up to become the user bubble. -->
                 <div data-hf-id="hf-7l05" class="flyer" id="flyer">what does ibn kathir say about the basmalah</div>
+
+                <!-- The vehicle, mid-journey: continues c1's bar (identical
+                     geometry at the cut), morphs into the composer's exact
+                     slot as the app assembles, swaps for the real composer
+                     same-frame — and runs the whole morph backwards at the
+                     end, chrome falling away around it. -->
+                <div class="pill" id="pill2" data-layout-allow-overlap="true" data-layout-allow-occlusion="true"><span class="pill-hint">Ask about the Qur'an, or search your notes…</span></div>
               </div>
             </div>
           </div>
@@ -427,21 +482,23 @@
         <div data-hf-id="hf-ykku" class="mv" id="c3-dots"><div data-hf-id="hf-2trg" class="dots"></div></div>
         <div data-hf-id="hf-cuud" class="fx" id="c3-fx">
           <div data-hf-id="hf-5p73" class="mv" id="c3-mv">
-            <div data-hf-id="hf-rdqz" class="center">
-              <div data-hf-id="hf-k3tr" class="close-stack">
-                <div class="close-payoff" id="close-payoff">
-                  <span class="pw">Seconds,</span> <span class="pw">not</span> <span class="pw">hours.</span>
-                </div>
-                <div data-hf-id="hf-75kc" class="brand-row">
-                  <div data-hf-id="hf-3amy" class="tile tile--sm"><span data-hf-id="hf-vpjd" class="t">T</span></div>
-                  <div data-hf-id="hf-gx4u" class="wordmark wordmark--sm">TafsirLab</div>
-                </div>
-                <div data-hf-id="hf-wm5i" class="close-line" id="close-line">
-                  <span data-hf-id="hf-fyoi" class="cw">Lab</span> <span data-hf-id="hf-qvv1" class="cw">AI</span> <span data-hf-id="hf-9gqv" class="cw">is</span> <span data-hf-id="hf-qllp" class="cw">now</span> <span data-hf-id="hf-a3yl" class="cw">live.</span>
-                </div>
-                <div data-hf-id="hf-7igc" class="close-url" id="close-url">tafsir-lab.com</div>
+            <!-- The vehicle, home: c2's last frame IS this bar — centred,
+                 empty, ready to be asked again. The close arranges around
+                 its fixed slot; nothing pushes it. -->
+            <div class="pill" id="pill4" data-layout-allow-overlap="true" data-layout-allow-occlusion="true"><span class="pill-hint">Ask about the Qur'an, or search your notes…</span></div>
+            <div class="close-payoff" id="close-payoff">
+              <span class="pw">Seconds,</span> <span class="pw">not</span> <span class="pw">hours.</span>
+            </div>
+            <div class="close-brand" id="close-brand">
+              <div data-hf-id="hf-75kc" class="brand-row">
+                <div data-hf-id="hf-3amy" class="tile tile--sm"><span data-hf-id="hf-vpjd" class="t">T</span></div>
+                <div data-hf-id="hf-gx4u" class="wordmark wordmark--sm">TafsirLab</div>
               </div>
             </div>
+            <div data-hf-id="hf-wm5i" class="close-line" id="close-line">
+              <span data-hf-id="hf-fyoi" class="cw">Lab</span> <span data-hf-id="hf-qvv1" class="cw">AI</span> <span data-hf-id="hf-9gqv" class="cw">is</span> <span data-hf-id="hf-qllp" class="cw">now</span> <span data-hf-id="hf-a3yl" class="cw">live.</span>
+            </div>
+            <div data-hf-id="hf-7igc" class="close-url" id="close-url">tafsir-lab.com</div>
           </div>
         </div>
       </div>
@@ -471,8 +528,19 @@
       gsap.set("#caret", { autoAlpha: 0 });
       gsap.set("#q1 .qw", { autoAlpha: 0 });
       gsap.set(["#q2 .qw", "#q3 .qw"], { x: 230, autoAlpha: 0 });
-      gsap.set(["#close-line .cw", "#close-payoff .pw", "#close-url"], { autoAlpha: 0 });
+      gsap.set(["#close-line .cw", "#close-payoff .pw", "#close-url", "#close-brand"], { autoAlpha: 0 });
       gsap.set("#cam", { scale: 1, x: 0, y: 0 });
+      /* The vehicle. All three pills centre via xPercent (GSAP owns the
+         transform; a CSS translateX would be overwritten by the x tween). */
+      gsap.set(["#pill1", "#pill2", "#pill4"], { xPercent: -50 });
+      gsap.set("#pill1", { x: 260, autoAlpha: 0 });
+      gsap.set("#pill2", { top: 490, width: 700, height: 100, borderRadius: 50 });
+      /* The real composer stays hidden until the bar has BECOME it; its send
+         button arrives just after, and the chrome assembles around the morph. */
+      gsap.set(".composer", { autoAlpha: 0 });
+      gsap.set("#send", { scale: 0.6, autoAlpha: 0 });
+      gsap.set("#empty", { autoAlpha: 0 });
+      gsap.set(".pn-head", { y: -93 });
 
       /* ═══ 1 · THE PROBLEM — three beats, one leftward current.
          Beat 1 arrives as a waterfall ENTRY (from below, binary opacity);
@@ -511,18 +579,42 @@
       waterfallCut("#q1 .qw", "#q2 .qw", 1.55);  // → "The answer sits in twelve books."
       waterfallCut("#q2 .qw", "#q3 .qw", 3.2);   // → "Finding it takes hours."
 
-      // SEAM 1 (t=4.6, Z push): the problem grows into the cut — and the
-      // product arrives as the answer to it.
-      tl.to("#c1-mv", { scale: 1.22, duration: 0.3, ease: "power3.in" }, 4.3);
-      tl.to("#c1-fx", { filter: "blur(12px)", duration: 0.3, ease: "power3.in" }, 4.3);
-      tl.to("#c1-mv", { opacity: 0.1, duration: 0.3, ease: "none" }, 4.3);
-      tl.set("#c1-mv", { opacity: 0 }, 4.6);
-      tl.to("#c1-dots", { scale: 1.1, duration: 0.3, ease: "power3.in" }, 4.3);
+      // SEAM 1 (t=4.6): no blur-cut. "hours." peels away on the current and
+      // the ASK BAR rides in on the same current — the way out of the
+      // problem. It settles centred; the cut lands on identical frames
+      // (same bar, same desk, both sides), so no cut is seen at all.
+      gsap.utils.toArray("#q3 .qw").forEach((w, i) => {
+        const t0 = 4.0 + i * 0.022;
+        tl.fromTo(w, { x: 0 },
+          { x: -230, duration: 0.34, ease: "power4.in", immediateRender: false }, t0);
+        tl.to(w, { autoAlpha: 0, duration: 0.18, ease: "none" }, t0);
+      });
+      tl.fromTo("#pill1", { x: 260, autoAlpha: 0.35 },
+        { x: 0, autoAlpha: 1, duration: 0.34, ease: "power4.out", immediateRender: false }, 4.1);
 
-      /* ═══ 2 · THE TURN — arrives still growing; then one continuous take. */
-      tl.fromTo("#c2-mv", { scale: 0.86, opacity: 0.1 },
-        { scale: 1, opacity: 1, duration: 0.7, ease: "expo.out" }, 4.6);
-      tl.fromTo("#c2-fx", { filter: "blur(12px)" }, { filter: "blur(0px)", duration: 0.6, ease: "expo.out" }, 4.6);
+      /* ═══ 2 · THE TURN — the bar BECOMES the app. c2 opens on c1's exact
+         last frame (bar centred on the dot desk); the bar then morphs into
+         the composer's slot — same width, height, radius and centre at the
+         swap — while the panel assembles around it: header from above, empty
+         state rising, the desk clearing. The same object, continued. */
+      /* Vertical travel rides the transform (y 0→414 over the fixed top of
+         490 = the composer's 904): layout `top` snaps to integer pixels
+         under seek-by-frame capture and stutters on the ease tails. */
+      tl.fromTo("#pill2", { y: 0, width: 700, height: 100, borderRadius: 50 },
+        { y: 414, width: 992, height: 132, borderRadius: 24,
+          duration: 0.7, ease: "power3.inOut", immediateRender: false }, 4.7);
+      tl.fromTo(".pn-head", { y: -93 },
+        { y: 0, duration: 0.55, ease: "power3.out", immediateRender: false }, 4.85);
+      tl.to("#empty", { autoAlpha: 1, duration: 0.35, ease: "none" }, 4.95);
+      tl.fromTo("#empty", { y: 34 },
+        { y: 0, duration: 0.5, ease: "power3.out", immediateRender: false }, 4.95);
+      tl.to("#c2-dots", { autoAlpha: 0, duration: 0.5, ease: "none" }, 4.85);
+      // The swap: the bar IS the composer now — pixel-identical geometry —
+      // and gains its send button, the one piece the bare bar never had.
+      tl.set("#pill2", { autoAlpha: 0 }, 5.4);
+      tl.set(".composer", { autoAlpha: 1 }, 5.4);
+      tl.fromTo("#send", { scale: 0.6, autoAlpha: 0 },
+        { scale: 1, autoAlpha: 1, duration: 0.35, ease: "back.out(1.6)", immediateRender: false }, 5.45);
 
       // The empty state's chips cascade — the app animates them in too.
       [".sg:nth-child(1)", ".sg:nth-child(2)", ".sg:nth-child(3)"].forEach((sel, i) => {
@@ -548,13 +640,14 @@
       tl.to("#caret", { autoAlpha: 0, duration: 0.25, repeat: 2, yoyo: true, ease: "none" }, 6.12);
       // CAM1: left+bottom pinned — the typed line grows into centre frame.
       tl.fromTo("#cam", { scale: 1, x: 0, y: 0 },
-        { scale: 1.25, x: 135, y: -135, duration: 0.7, ease: "power3.inOut" }, 6.05);
+        { scale: 1.25, x: 135, y: -135, duration: 0.7, ease: "power3.inOut", immediateRender: false }, 6.05);
       // The empty state falls out of focus as attention moves below it.
-      tl.fromTo("#empty", { autoAlpha: 1 }, { autoAlpha: 0.55, duration: 0.5, ease: "power2.inOut" }, 6.05);
+      tl.fromTo("#empty", { autoAlpha: 1 },
+        { autoAlpha: 0.55, duration: 0.5, ease: "power2.inOut", immediateRender: false }, 6.05);
       // CAM1b: the line is finishing — the camera glances at the button
       // that will be pressed (right edge pinned, same zoom, pure pan).
       tl.fromTo("#cam", { scale: 1.25, x: 135, y: -135 },
-        { scale: 1.25, x: -135, y: -135, duration: 0.5, ease: "power2.inOut" }, 7.92);
+        { scale: 1.25, x: -135, y: -135, duration: 0.5, ease: "power2.inOut", immediateRender: false }, 7.92);
 
       // Typing — characters step in, the hint yields. The question is the
       // ONE the problem act posed — the promise being kept.
@@ -586,10 +679,10 @@
       // DOWN the frame while the message flies UP: the eye rides the flyer,
       // and the camera lands with it.
       tl.fromTo("#cam", { scale: 1.25, x: -135, y: -135 },
-        { scale: 1.25, x: -135, y: 135, duration: 0.66, ease: "power3.inOut" }, 8.45);
+        { scale: 1.25, x: -135, y: 135, duration: 0.66, ease: "power3.inOut", immediateRender: false }, 8.45);
       // The empty state exits on the same upward current as the flight.
       tl.fromTo("#empty", { y: 0, autoAlpha: 0.55 },
-        { y: -90, autoAlpha: 0, duration: 0.38, ease: "power3.in" }, 8.45);
+        { y: -90, autoAlpha: 0, duration: 0.38, ease: "power3.in", immediateRender: false }, 8.45);
       tl.to("#cp-hint", { autoAlpha: 1, duration: 0.4, ease: "none" }, 8.9);
       // The flyer lands exactly on the bubble's slot; swap same-frame, and
       // the bubble takes the impact — a small settle, mass received.
@@ -601,7 +694,7 @@
       // CAM2b: the reply is forming at the LEFT — the camera settles back
       // and left to meet it (at 1.08 centred, the whole thread width fits).
       tl.fromTo("#cam", { scale: 1.25, x: -135, y: 135 },
-        { scale: 1.08, x: 0, y: 43, duration: 0.7, ease: "power3.inOut" }, 9.3);
+        { scale: 1.08, x: 0, y: 43, duration: 0.7, ease: "power3.inOut", immediateRender: false }, 9.3);
       tl.to("#row-ai", { autoAlpha: 1, duration: 0.25, ease: "power2.out" }, 9.35);
       tl.fromTo("#row-ai", { y: 16 }, { y: 0, duration: 0.32, ease: "power3.out" }, 9.35);
       [["#d1", 0], ["#d2", 0.14], ["#d3", 0.28]].forEach(([sel, d]) => {
@@ -626,46 +719,60 @@
       // whole stream, arriving at rest on the full conversation as the last
       // words land.
       tl.fromTo("#cam", { scale: 1.08, x: 0, y: 43 },
-        { scale: 1, x: 0, y: 0, duration: 2.3, ease: "power2.inOut" }, 10.85);
-      // 12.5–13.2: stillness on the finished answer (the camera's long
+        { scale: 1, x: 0, y: 0, duration: 2.3, ease: "power2.inOut", immediateRender: false }, 10.85);
+      // 12.5–13.0: stillness on the finished answer (the camera's long
       // deceleration tail is the only motion — the dramatic comma).
 
-      // SEAM 2 (t=13.5, Z pull): the panel recedes.
-      tl.to("#c2-mv", { scale: 0.9, duration: 0.3, ease: "power3.in" }, 13.2);
-      tl.to("#c2-fx", { filter: "blur(12px)", duration: 0.3, ease: "power3.in" }, 13.2);
-      tl.to("#c2-mv", { opacity: 0.1, duration: 0.3, ease: "none" }, 13.2);
-      tl.set("#c2-mv", { opacity: 0 }, 13.5);
+      // SEAM 2 (t=13.5): no blur-cut here either. The app hands the bar
+      // back: send fades, the chrome sheds the way it came (header up,
+      // thread settling down and away, the desk returning), and the
+      // composer runs the SAME morph backwards to the centred bar — empty,
+      // ready to be asked again. The cut lands on identical frames.
+      tl.to("#send", { autoAlpha: 0, duration: 0.2, ease: "none" }, 12.85);
+      tl.set(".composer", { autoAlpha: 0 }, 13.0);
+      tl.set("#pill2", { autoAlpha: 1 }, 13.0);
+      tl.fromTo("#pill2", { y: 414, width: 992, height: 132, borderRadius: 24 },
+        { y: 0, width: 700, height: 100, borderRadius: 50,
+          duration: 0.45, ease: "power3.inOut", immediateRender: false }, 13.0);
+      tl.fromTo(".pn-head", { y: 0 },
+        { y: -93, duration: 0.4, ease: "power3.in", immediateRender: false }, 13.0);
+      tl.to(["#bub-you", "#row-ai"], { autoAlpha: 0, duration: 0.3, ease: "power2.in" }, 13.0);
+      tl.fromTo(["#bub-you", "#row-ai"], { y: 0 },
+        { y: 26, duration: 0.35, ease: "power2.in", immediateRender: false }, 13.0);
+      tl.to("#c2-dots", { autoAlpha: 1, duration: 0.4, ease: "none" }, 13.05);
 
-      /* ═══ 3 · CLOSE — lands shrinking (pull matched), settles, then the
-         PAYOFF answers the problem act — "Seconds, not hours." — before the
-         brand line signs it. Waterfall arrivals: binary opacity, y snap,
-         gaps tightening, the heavy words travelling furthest. Only the
-         lockup rides the retraction (composed, sign-clean). */
-      tl.fromTo("#c3-mv", { scale: 1.12, opacity: 0.1 },
-        { scale: 1, opacity: 1, duration: 0.6, ease: "expo.out" }, 13.5);
-      tl.fromTo("#c3-fx", { filter: "blur(8px)" }, { filter: "blur(0px)", duration: 0.5, ease: "expo.out" }, 13.5);
-      tl.fromTo("#c3-dots", { scale: 1.08 }, { scale: 1, duration: 0.8, ease: "power2.out" }, 13.5);
+      /* ═══ 3 · CLOSE — opens on c2's exact last frame (the bar home at
+         centre, the desk back) — a third invisible cut on the same object.
+         Then the PAYOFF answers the problem act above the bar, and the brand
+         signs it below. Waterfall arrivals: binary opacity, y snap, gaps
+         tightening, the heavy words travelling furthest. The reel ends on
+         the empty bar: asked, answered, ready to be asked again. */
 
       // The payoff first — it is the argument's last word.
       const pws = gsap.utils.toArray("#close-payoff .pw");
       const pwY   = [64, 44, 70];
       const pwDur = [0.18, 0.14, 0.2];
-      const pwAt  = [14.05, 14.18, 14.28];
+      const pwAt  = [13.85, 13.98, 14.08];
       pws.forEach((w, i) => {
         tl.set(w, { autoAlpha: 1 }, pwAt[i]);
         tl.fromTo(w, { y: pwY[i] }, { y: 0, duration: pwDur[i], ease: "power4.out" }, pwAt[i]);
       });
 
+      // The lockup arrives beneath the bar — one composed unit.
+      tl.set("#close-brand", { autoAlpha: 1 }, 14.5);
+      tl.fromTo("#close-brand", { y: 44 },
+        { y: 0, duration: 0.3, ease: "power4.out", immediateRender: false }, 14.5);
+
       const cws = gsap.utils.toArray("#close-line .cw");
       const cwY   = [64, 52, 38, 42, 70];   // travel by weight; "live." is the climax
       const cwDur = [0.18, 0.15, 0.12, 0.13, 0.2];
-      const cwAt  = [14.6, 14.73, 14.83, 14.91, 14.98]; // shrinking gaps
+      const cwAt  = [14.85, 14.98, 15.08, 15.16, 15.23]; // shrinking gaps
       cws.forEach((w, i) => {
         tl.set(w, { autoAlpha: 1 }, cwAt[i]);
         tl.fromTo(w, { y: cwY[i] }, { y: 0, duration: cwDur[i], ease: "power4.out" }, cwAt[i]);
       });
-      tl.set("#close-url", { autoAlpha: 1 }, 15.35);
-      tl.fromTo("#close-url", { y: 30 }, { y: 0, duration: 0.22, ease: "expo.out" }, 15.35);
+      tl.set("#close-url", { autoAlpha: 1 }, 15.55);
+      tl.fromTo("#close-url", { y: 30 }, { y: 0, duration: 0.22, ease: "expo.out" }, 15.55);
 
       tl.seek(0);
       window.__timelines["main"] = tl;

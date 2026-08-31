@@ -1,38 +1,38 @@
 ﻿{
     "current":  "none — one continuous take",
-    "note":  "v6 - problem -\u003e turn -\u003e payoff. Opens on the pain (kinetic text, word-level waterfall cuts riding one leftward current), Z-pushes into the product answering that exact question, closes on \u0027Seconds, not hours.\u0027 Seam mechanics unchanged from the gate-passed v4; times moved to 4.6 and 13.5.",
+    "note":  "v7 - one vehicle carries every seam: the ask bar. Both clip boundaries are INVISIBLE match cuts on it (identical frames both sides, same dot desk), and the screen changes are hand-authored shared-element morphs: bar -\u003e composer slot (w700 h100 r50 centre -\u003e w992 h132 r24 top904) as the app assembles, and the same morph backwards as the chrome sheds. Tier-A morphs per doctrine; the velocity-cut rules do not apply to these seams.",
     "seams":  [
                   {
                       "t":  4.6,
-                      "name":  "problem-\u003epanel",
-                      "axis":  "z",
-                      "direction":  "push",
+                      "name":  "problem-\u003epanel (match cut + morph)",
+                      "axis":  "none",
+                      "direction":  "match",
                       "exit":  {
                                    "selector":  "#c1-mv",
-                                   "motion":  "scale 1→1.22, blur 0→12, opacity linear →0.1, power3.in 0.3s"
+                                   "motion":  "q3 waterfalls out left; the bar rides in on the same current, settles centred, holds through the cut"
                                },
                       "entry":  {
                                     "selector":  "#c2-mv",
-                                    "motion":  "scale 0.86→1, blur 12→0, expo.out 0.7s — growing both sides"
+                                    "motion":  "identical bar continues; morphs into the composer slot 4.7-5.4 while the chrome assembles"
                                 },
-                      "technique":  "zoom-through",
-                      "why":  "the turn - into the product, which answers the question just posed"
+                      "technique":  "shared-element morph on the ask bar",
+                      "why":  "the way out of the problem IS the product\u0027s own ask bar"
                   },
                   {
                       "t":  13.5,
-                      "name":  "panel→close",
-                      "axis":  "z",
-                      "direction":  "pull",
+                      "name":  "panel-\u003eclose (match cut + reverse morph)",
+                      "axis":  "none",
+                      "direction":  "match",
                       "exit":  {
                                    "selector":  "#c2-mv",
-                                   "motion":  "scale 1→0.9, blur 0→12, opacity linear →0.1, power3.in 0.3s"
+                                   "motion":  "send fades, chrome sheds the way it came, composer morphs back to the centred bar 13.0-13.45, desk returns"
                                },
                       "entry":  {
                                     "selector":  "#c3-mv",
-                                    "motion":  "scale 1.12→1, blur 8→0, expo.out 0.6s — shrinking both sides"
+                                    "motion":  "identical bar continues; the close arranges around its fixed slot"
                                 },
-                      "technique":  "inverse zoom-through",
-                      "why":  "back out to the mark — the only backward cut"
+                      "technique":  "the same morph backwards",
+                      "why":  "asked, answered, ready to be asked again - the reel ends on the empty bar"
                   }
               ],
     "in_scene_flow":  [

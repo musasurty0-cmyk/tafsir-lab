@@ -57,6 +57,22 @@ the word-by-word stream with citations, stillness, close.
   caught the §4 immediateRender ghost (future beats visible at 0.35 alpha
   from frame zero) — fixed with immediateRender: false + build-time rest
   states.
+- v7: owner's note — "doesnt flow seamlessly; every screen should transition
+  into the next around a point — review the links reel's search bar as a
+  vehicle." Applied the SearchIntro pattern (trailer/src/reel/SearchIntro):
+  ONE container carries every screen change. The ask bar arrives out of the
+  problem act (riding the same leftward current "hours." exits on), holds
+  through an invisible match cut, morphs into the composer's exact slot —
+  same width/height/radius/centre at the swap — while the app assembles
+  around it (header from above, empty state rising, the dot desk clearing),
+  then runs the SAME morph backwards at the end (chrome shedding the way it
+  came, desk returning) into a second invisible cut; the close arranges
+  around the bar's fixed slot and the reel ends on it, empty — asked,
+  answered, ready to be asked again. Both Z blur-cuts deleted. Audit caught
+  a latent camera bug the invisible cuts exposed: cam fromTos rendered their
+  from-states at build (last-created won — c2 opened at scale 1.08/y 43
+  since v5); all cam tweens now immediateRender: false. Vertical morph
+  travel rides transform y, not `top` (layout snapping under seek capture).
 
 ## Notes
 
