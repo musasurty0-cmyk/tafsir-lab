@@ -12682,6 +12682,35 @@ input, textarea { font: inherit; color: inherit; }
    A card rather than a link, because it is a proposal to write into the
    reader's own document and should say what it will do before it does it. It
    appears only when the reader asked for something to be added. */
+/* The board, read back. Deliberately quiet and monospaced: this is a
+   transcription of the reader's own handwriting, not an answer, and it has to
+   be scannable against the board itself. */
+.lab-board-read {
+  margin: var(--sp-2) 0 var(--sp-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: color-mix(in oklab, var(--ink) 3%, var(--bg-elev));
+  overflow: hidden;
+}
+.lab-board-read-head {
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 12px;
+  font-size: 11.5px; font-weight: 600; letter-spacing: .02em;
+  color: var(--ink-3);
+  border-bottom: 1px solid var(--line);
+}
+.lab-board-read-text {
+  margin: 0; padding: 12px;
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 12.5px; line-height: 1.55;
+  color: var(--ink);
+  /* The layout is part of the meaning — wrap long lines but keep the
+     indentation and the arrows exactly as they were written. */
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 320px; overflow: auto;
+}
+
 .lab-act {
   margin: 2px 0 4px;
   padding: 11px 13px;

@@ -89,3 +89,52 @@ export function asksForBoard(question: string): boolean {
   if (q.length > 400) return false;
   return BOARD_PATTERNS.some((re) => re.test(q));
 }
+
+/* ── Reading the board ───────────────────────────────────────────────────
+   The opposite direction of travel: not "put something there" but "look at
+   what is already there". Kept explicit rather than inferred from being on
+   the board, because reading handwriting costs a call to a vision model and
+   sends a picture of the reader's private notes — both are things to do when
+   asked, not by default. */
+
+/** What the writing lives on, or is. */
+const WRITTEN = String.raw`(?:board|white-?board|canvas|hand-?writing|writing|scribbles?|notes on (?:the|my) board)`;
+
+const READ_PATTERNS: RegExp[] = [
+  /* "read my board", "can you read my handwriting", "look at my board" */
+  new RegExp(String.raw`\b(?:read|look at|check|see|scan|view)\b[\s\S]{0,24}?\b(?:my|the|this)\s+${WRITTEN}\b`, "i"),
+
+  /* "what did I write", "what have I written", "what does this say" */
+  new RegExp(String.raw`\bwhat\b[\s\S]{0,30}?\b(?:did|have)\s+i\s+(?:write|written|scribble|note|jot)`, "i"),
+  new RegExp(String.raw`\bwhat\s+does\s+(?:this|that|it|my\s+\w+)\s+say\b`, "i"),
+
+  /* "what's on my board", "whats on my board", "what is on the whiteboard".
+     The apostrophe is optional because people typing quickly omit it, and a
+     curly one is as common as a straight one on a tablet keyboard. */
+  new RegExp(String.raw`\bwhat(?:['’]?s|\s+is|\s+are)?[\s\S]{0,20}?\bon\s+(?:my|the)\s+${WRITTEN}\b`, "i"),
+
+  /* "summarise my board", "explain my handwriting", "tidy up my board" */
+  new RegExp(String.raw`\b(?:summar(?:ise|ize)|explain|tidy|clean up|organi[sz]e|go through)\b[\s\S]{0,24}?\b(?:my|the|this)\s+${WRITTEN}\b`, "i"),
+
+  /* "transcribe my board" — the literal ask. */
+  new RegExp(String.raw`\btranscribe\b`, "i"),
+];
+
+/**
+ * Did the reader ask Lab AI to LOOK at their board?
+ *
+ * Deliberately narrow where the others are generous. A false positive here
+ * does not cost a dismissible card — it uploads a picture of someone's notes
+ * and spends a vision call, so it has to be something they actually asked
+ * for. "Explain the straight path" while a board is open is a question about
+ * the Qur'an, not about their handwriting.
+ */
+export function asksToReadBoard(question: string): boolean {
+  const q = question.trim();
+  if (!q) return false;
+  if (q.length > 300) return false;
+  /* "add a mindmap to my board" is putting, not reading — and it matches
+     some of the phrasings above, so the writing intent wins outright. */
+  if (asksForBoard(q)) return false;
+  return READ_PATTERNS.some((re) => re.test(q));
+}

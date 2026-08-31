@@ -22,14 +22,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Sparkles, ArrowUp, X, SquarePen, ChevronDown, AlertCircle,
-  Search, BookOpen, FilePlus2, Check, Network,
+  Search, BookOpen, FilePlus2, Check, Network, ScanLine,
 } from "lucide-react";
 import { useOverlayMotion } from "@/lib/use-overlay-motion";
 import { useDismissable } from "@/lib/use-dismissable";
 import { parseBlocks, type Inline } from "@/lib/lab-markdown";
 import { embedQuery, prefetch } from "@/lib/tafsir/browser-embed";
 import { useTypedText } from "@/lib/use-typed-text";
-import { asksForNotes, asksForBoard } from "@/lib/lab-intent";
+import { asksForNotes, asksForBoard, asksToReadBoard } from "@/lib/lab-intent";
 import { labMarkdownToTiptap } from "@/lib/lab-to-tiptap";
 
 interface CiteRef { n: number; sourceName: string; verseKey: string }
@@ -47,6 +47,8 @@ interface Turn {
   warning?: string;
   note?: string;
   error?: string;
+  /** Transcribed handwriting, when this turn read the board. */
+  boardText?: string;
   running: boolean;
   openTrace: boolean;
 }
@@ -313,24 +315,49 @@ export default function AiPanel({ pageId, surahNumber, surahName, onAddToEditor,
     }]);
     setQ("");
 
-    /* The question is embedded here, in the browser, and the vector travels
-       with it. Null is an ordinary outcome — the model is still downloading —
-       and the server answers by keyword when it sees no vector. */
-    const vector = await embedQuery(question);
+    /* Asking about your own handwriting is a different pipeline: no corpus,
+       no embedding, a picture instead. The board is only ever photographed
+       when the question asked for it — reading it costs a vision call and
+       uploads the reader's private notes, so it is never done speculatively. */
+    let res: Response | null = null;
+    if (pageId && asksToReadBoard(question)) {
+      patch(id, (t) => ({
+        ...t,
+        steps: [...t.steps, { step: "read", detail: "Photographing your board" }],
+      }));
+      const { snapshotBoard } = await import("@/lib/board-snapshot");
+      const shot = await snapshotBoard(pageId).catch(() => null);
+      if (!shot) {
+        patch(id, (t) => ({
+          ...t, running: false,
+          note: "There is no handwriting on this board yet.",
+        }));
+        return;
+      }
+      res = await fetch("/api/assistant/read-board", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image: shot.base64, question, history }),
+      }).catch(() => null);
+    } else {
+      /* The question is embedded here, in the browser, and the vector travels
+         with it. Null is an ordinary outcome — the model is still downloading —
+         and the server answers by keyword when it sees no vector. */
+      const vector = await embedQuery(question);
 
-    const res = await fetch("/api/assistant", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        question, history,
-        queryVector: vector ?? undefined,
-        // What you have open. The server treats this as a default that a
-        // reference inside the question can override.
-        surah: surahNumber,
-        surahName,
-        pageId,
-        includeNotes: true,
-      }),
-    }).catch(() => null);
+      res = await fetch("/api/assistant", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          question, history,
+          queryVector: vector ?? undefined,
+          // What you have open. The server treats this as a default that a
+          // reference inside the question can override.
+          surah: surahNumber,
+          surahName,
+          pageId,
+          includeNotes: true,
+        }),
+      }).catch(() => null);
+    }
 
     if (!res?.ok || !res.body) {
       /* Prefer the server's own words. It usually explains itself, and a
@@ -373,6 +400,11 @@ export default function AiPanel({ pageId, surahNumber, surahName, onAddToEditor,
             next.cites = a.cites; next.text = "";
           }
           if (typeof ev.token === "string") next.text = next.text + ev.token;
+          /* What was actually read off the board, kept separate from the
+             answer: handwriting recognition is fallible, and a conclusion
+             drawn from a misread word is indistinguishable from a correct one
+             unless the reader can see the reading. */
+          if (typeof ev.boardText === "string") next.boardText = ev.boardText;
           if (ev.answer) {
             next.sentences = (ev.answer as { sentences: Turn["sentences"] }).sentences;
           }
@@ -513,6 +545,20 @@ export default function AiPanel({ pageId, surahNumber, surahName, onAddToEditor,
                             </div>
                           </>
                         )}
+                      </div>
+                    )}
+
+                    {/* What was read off the board, shown before whatever was
+                        concluded from it. Presented as a quotation of the
+                        reader's own writing — monospaced and preformatted,
+                        because the arrangement of a mindmap is part of what
+                        it says and reflowing it would destroy that. */}
+                    {t.boardText && (
+                      <div className="lab-board-read">
+                        <div className="lab-board-read-head">
+                          <ScanLine size={13} aria-hidden /> Read from your board
+                        </div>
+                        <pre className="lab-board-read-text" dir="auto">{t.boardText}</pre>
                       </div>
                     )}
 
