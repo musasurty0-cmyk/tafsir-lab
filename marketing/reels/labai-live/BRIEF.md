@@ -7,7 +7,7 @@ destination: instagram-reel
 aspect: "1:1"
 canvas: 1080x1080
 language: en
-length: 16.5s
+length: 19.5s
 angle: problem-solution
 ---
 
@@ -73,6 +73,20 @@ the word-by-word stream with citations, stillness, close.
   from-states at build (last-created won — c2 opened at scale 1.08/y 43
   since v5); all cam tweens now immediateRender: false. Vertical morph
   travel rides transform y, not `top` (layout snapping under seek capture).
+- v8: owner's note — "show off the embed to notes feature, use a mouse as
+  the anchor." New act inside the panel take (total 19.5s), authored to the
+  oversized-cursor spec: the answer offers "Add to editor" (the app's real
+  affordance), the 7%-frame cursor enters off bottom-right on one vector,
+  tip-clicks the chip (asymmetric tap, chip presses back), and the click
+  ignites the split — the panel docks right as a floating card, the editor
+  page ("The Names of al-Fātiḥah", the demo's real page) rises to receive,
+  and the note block flies from the answer into the page with its citations
+  and an "Added from Lab AI · 12 sources" tag, the cursor leading and then
+  exiting off-frame; its exit cues the room to settle back before the bar
+  comes home. Audit fixes: docked panel overlapped the editor (page → 480
+  wide, dock → 0.5× flush at x 520); cursor tip landed low on the chip;
+  cursor rested on the note's tag (parked below the block); eyebrow + tag
+  ink-4 failed 4.5:1 (→ ink-3).
 
 ## Notes
 

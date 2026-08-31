@@ -1,6 +1,6 @@
 ﻿{
     "current":  "none — one continuous take",
-    "note":  "v7 - one vehicle carries every seam: the ask bar. Both clip boundaries are INVISIBLE match cuts on it (identical frames both sides, same dot desk), and the screen changes are hand-authored shared-element morphs: bar -\u003e composer slot (w700 h100 r50 centre -\u003e w992 h132 r24 top904) as the app assembles, and the same morph backwards as the chrome sheds. Tier-A morphs per doctrine; the velocity-cut rules do not apply to these seams.",
+    "note":  "v8 - the add-to-editor act, cursor-anchored. 19.5s. Seams unchanged in kind (two invisible match cuts on the ask bar, now at 4.6 and 16.5); the new act lives inside c2: oversized cursor enters off-screen, clicks Add to editor, the click docks the panel right as a card while the editor page rises, the note flies from the answer into the page (cursor leading), cursor exits, room settles, bar comes home.",
     "seams":  [
                   {
                       "t":  4.6,
@@ -19,7 +19,7 @@
                       "why":  "the way out of the problem IS the product\u0027s own ask bar"
                   },
                   {
-                      "t":  13.5,
+                      "t":  16.5,
                       "name":  "panel-\u003eclose (match cut + reverse morph)",
                       "axis":  "none",
                       "direction":  "match",
