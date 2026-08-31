@@ -133,7 +133,13 @@ export default function SurahSpotlight({
 
   /* Focus the box on open so the arrow keys work without a click first —
      the whole point of this view is that it is driven from the keyboard. */
-  useEffect(() => { boxRef.current?.focus(); paint(); }, [paint]);
+  useEffect(() => { boxRef.current?.focus(); }, []);
+  /* After EVERY render, not just on mount. The transform and the highlight
+     are written imperatively, but React owns these nodes: any re-render
+     recreates the rows with data-current="false" and replaces the element
+     litRef points at, so the position has to be re-asserted or the column
+     silently loses its highlight until the next move. */
+  useEffect(() => { paint(); });
   useEffect(() => stopAnim, [stopAnim]);
 
   useEffect(() => {
@@ -189,7 +195,10 @@ export default function SurahSpotlight({
     drag.current = { y: e.clientY, from: pos.current };
     dragged.current = false;
     trail.current = [{ t: performance.now(), y: e.clientY }];
-    e.currentTarget.setPointerCapture(e.pointerId);
+    /* Best-effort: throws NotFoundError if the pointer is already gone by
+       the time the handler runs. Capture is a convenience — the drag works
+       without it — so it must never take the gesture down with it. */
+    try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* fine */ }
   }
 
   function onPointerMove(e: React.PointerEvent) {
@@ -213,9 +222,11 @@ export default function SurahSpotlight({
     const d = drag.current;
     if (!d) return;
     drag.current = null;
-    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
-      e.currentTarget.releasePointerCapture(e.pointerId);
-    }
+    try {
+      if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      }
+    } catch { /* the pointer was already released */ }
     if (!dragged.current) return;     // a tap; the row handles it
 
     /* Velocity over the tail of the gesture, in rows per millisecond. */
