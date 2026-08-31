@@ -3,12 +3,14 @@
 /**
  * TopBar — workspace page header.
  *
- * Auto-hidden, Windows-taskbar style: the bar lives out of view and slides in
- * while the pointer is at the top edge (or focus is inside it), then slides
- * away. No toggle button and no remembered state — the edge itself is the
- * control. The bar stays MOUNTED while hidden, deliberately: the canvas mode
- * portals its page navigator into #topbar-canvas-slot, and unmounting the bar
- * (as the old button-collapse did) silently destroyed that slot.
+ * Two behaviours by mode. On the drawing surfaces (canvas, board) it is
+ * auto-hidden, Windows-taskbar style: out of view, sliding in while the
+ * pointer is at the top edge (or focus is inside it) — the drawing gets the
+ * full height, and the edge itself is the control. In the text modes
+ * (editor, split, read) it is an ordinary always-visible header. Either way
+ * the bar stays MOUNTED, deliberately: the canvas mode portals its page
+ * navigator into #topbar-canvas-slot, and unmounting the bar (as the old
+ * button-collapse did) silently destroyed that slot.
  *
  * Breadcrumbs are clickable Links.
  * Mode toggle: Editor | Canvas | Split.
@@ -148,12 +150,17 @@ export default function TopBar({
 }: Props) {
   const t = useT();
 
+  /* Auto-hide only where the full height is worth taking: the surfaces you
+     draw on. The editor keeps its header — text work wants stable chrome. */
+  const autoHide = mode === "canvas" || mode === "board";
+
   return (
-    <div className="topbar-zone">
+    <div className={`topbar-zone${autoHide ? " topbar-zone--float" : ""}`}>
       {/* The strip that stands in for the bar while it is hidden — a few
           pixels of the top edge that stay under the pointer at all times.
           Hovering it (or anything in the bar, once revealed) is what holds
-          the bar open; there is nothing to click. */}
+          the bar open; there is nothing to click. Display: none outside
+          float mode, so it never steals a click from a visible header. */}
       <div className="topbar-hotzone" aria-hidden />
 
       <div className="topbar">
