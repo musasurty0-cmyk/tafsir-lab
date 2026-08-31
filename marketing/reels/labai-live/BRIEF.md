@@ -101,11 +101,25 @@ the word-by-word stream with citations, stillness, close.
   add-to-editor click + dock, the note landing, the chrome shed, and the
   payoff line.
 
+- v10: owner's notes — "use the ila rabbi nasheed", "the whoosh is too
+  loud", "the last sound effect is bad", and "the first three scenes up
+  till the search bar feel like a slide show". (a) Bed re-cut from the
+  al-Jarallah/al-Nufais nasheed (the "ila rabbi" one — the owner's other
+  ZapCap download), from 10s in, same loudnorm/fades. (b) Every whoosh
+  roughly halved (0.16–0.22). (c) The sparkle under the close line
+  deleted, nothing in its place. (d) The CONVEYOR: no problem-act line
+  ever sits still — each beat's whole line rides a slow constant leftward
+  creep (+18 → −18px, the current made visible) from ignition to exit,
+  with word entries/exits composing on top; the dot ground drifts to rest
+  across the act and lands at exactly scale 1 on the cut frame, keeping
+  the invisible seam.
+
 ## Notes (audio)
 
-- The bed is `[ZapCap AI] - On My Way (Nasheed Instrumental)` from the
-  owner's Downloads — AI-generated, so no licensing exposure; swap
-  `audio/bed-nasheed.mp3` and re-render to change the track.
+- The bed is `[ZapCap AI] - فيّ حبٌ ‖ عبدالله الجارالله - أحمد النفيس`
+  ("ila rabbi") from the owner's Downloads — AI-generated cover, so no
+  licensing exposure; swap `audio/bed-nasheed.mp3` and re-render to
+  change the track. The previous bed was the "On My Way" instrumental.
 
 ## Notes
 
