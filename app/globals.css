@@ -13517,6 +13517,13 @@ input, textarea { font: inherit; color: inherit; }
 
 .spot-stage {
   position: relative; overflow: hidden;
+  /* The column is dragged, not scrolled, so the browser must not claim the
+     vertical gesture: without this, Safari on iPad treats a finger drag as a
+     page scroll and no pointermove ever reaches the handler — which is why
+     the arrows were the only way through 114 sūrahs on a touch screen. */
+  touch-action: none;
+  -webkit-user-select: none; user-select: none;
+  cursor: grab;
   /* Never shrink. Its height is the seven rows it draws; as a flex child in a
      full-height column it was being compressed on a short window until the
      rows were clipped to a sliver. The card scrolls instead. */

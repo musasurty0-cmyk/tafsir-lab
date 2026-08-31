@@ -15,6 +15,13 @@
  * than wherever momentum stopped. Wheel gestures are quantised to one step for
  * the same reason: a trackpad flick that jumps eleven sūrahs is precisely the
  * behaviour the grid already has.
+ *
+ * A finger DRAGS that column directly. Because the list is translated rather
+ * than scrolled, there was nothing for touch to grab: no scroll container, and
+ * a finger raises no wheel event, so on an iPad the only way through 114
+ * sūrahs was tapping the arrow once per sūrah. The drag follows the finger
+ * live and then snaps to the nearest row on release — direct to touch, and
+ * still landing on exactly one sūrah, which is the whole point of this view.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -87,7 +94,50 @@ export default function SurahSpotlight({
     }
   }
 
+  /* Touch/pen/mouse drag. Pointer events rather than touch events so one
+     path serves all three, and `setPointerCapture` keeps the gesture alive
+     when the finger leaves the stage mid-drag. */
+  const dragFrom = useRef<{ y: number; i: number } | null>(null);
+  const dragged  = useRef(false);
+  const [dragBy, setDragBy] = useState(0);
+
+  function onPointerDown(e: React.PointerEvent) {
+    /* Not the arrows or the open button — they are their own gesture. */
+    if ((e.target as HTMLElement).closest("button")) return;
+    dragFrom.current = { y: e.clientY, i };
+    dragged.current = false;
+    e.currentTarget.setPointerCapture(e.pointerId);
+  }
+
+  function onPointerMove(e: React.PointerEvent) {
+    const from = dragFrom.current;
+    if (!from) return;
+    const dy = e.clientY - from.y;
+    /* A few pixels of slack, so a tap that trembles still opens a sūrah
+       instead of being read as a drag. */
+    if (!dragged.current && Math.abs(dy) < 4) return;
+    dragged.current = true;
+    /* Clamped to the ends: the column cannot be pulled into empty space,
+       which would otherwise leave a blank stage under the centre line. */
+    setDragBy(Math.max(-(last - from.i) * ROW, Math.min(from.i * ROW, dy)));
+  }
+
+  function endDrag(e: React.PointerEvent) {
+    const from = dragFrom.current;
+    if (!from) return;
+    dragFrom.current = null;
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    }
+    /* Snap to whichever row the finger left nearest the centre line. No
+       momentum: this view exists to stop on a chosen sūrah. */
+    setI(Math.min(last, Math.max(0, from.i - Math.round(dragBy / ROW))));
+    setDragBy(0);
+  }
+
   const current = chapters[i];
+  /* Where the column sits right now, in rows — fractional mid-drag. */
+  const shown = i - dragBy / ROW;
   if (!current) return null;
 
   return (
@@ -125,16 +175,33 @@ export default function SurahSpotlight({
           <ChevronUp size={18} aria-hidden />
         </button>
 
-        <div className="spot-stage" style={{ height: ROW * (WINGS * 2 + 1) }}>
+        <div
+          className="spot-stage"
+          style={{ height: ROW * (WINGS * 2 + 1) }}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={endDrag}
+          onPointerCancel={endDrag}
+        >
           {/* `top` puts row 0 on the centre line; the transform then slides the
               column so row `i` lands there. Both come from ROW rather than the
               stylesheet so the geometry has a single source. */}
           <div
             className="spot-list"
-            style={{ top: ROW * WINGS, transform: `translateY(${-i * ROW}px)` }}
+            style={{
+              top: ROW * WINGS,
+              transform: `translateY(${-i * ROW + dragBy}px)`,
+              /* The eased transition is what makes a keypress land softly;
+                 under a finger it would lag behind the touch. */
+              transition: dragFrom.current ? "none" : undefined,
+            }}
           >
             {chapters.map((ch, n) => {
-              const away = Math.abs(n - i);
+              /* Measured from where the column actually IS, not from the
+                 committed index, so under a finger the dimming and the
+                 highlight travel with the drag rather than snapping at the
+                 end of it. They agree exactly once dragBy is 0. */
+              const away = Math.abs(n - shown);
               /* Rows beyond the wings exist in the DOM but are never seen; not
                  rendering them would make the column jump as it re-windowed. */
               return (
@@ -144,9 +211,12 @@ export default function SurahSpotlight({
                   role="option"
                   aria-selected={n === i}
                   className="spot-row"
-                  data-current={n === i ? "true" : "false"}
+                  data-current={n === Math.round(shown) ? "true" : "false"}
                   style={{ height: ROW, opacity: away > WINGS ? 0 : 1 - away * 0.26 }}
-                  onClick={() => (n === i ? onPick(ch) : setI(n))}
+                  onClick={() => {
+                    if (dragged.current) return;   // that was a drag, not a tap
+                    return n === i ? onPick(ch) : setI(n);
+                  }}
                 >
                   <span className="spot-num">{ch.id}</span>
                   <span className="spot-name">{ch.name_simple}</span>
