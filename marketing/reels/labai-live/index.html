@@ -330,13 +330,16 @@
           0 24px 60px -28px rgba(41,38,33,.7),
           inset 0 1px 0 #fff;
       }
+      /* The placeholder is absolutely positioned and the typed line is in
+         flow, so the two only agree if they are given the SAME box. They
+         were not, and the caret sat a line below the text it belongs to. */
       .cp-text {
-        font-size: 27px; line-height: 1.45; color: var(--ink);
+        font-size: 27px; line-height: 40px; color: var(--ink);
         min-height: 40px;
       }
       .cp-hint {
-        position: absolute; left: 32px; top: 30px;
-        font-size: 27px; color: var(--ink-4);
+        position: absolute; left: 32px; top: 28px;
+        font-size: 27px; line-height: 40px; color: var(--ink-4);
         white-space: nowrap;
       }
       .caret {
@@ -344,7 +347,7 @@
         width: 3px; height: 30px;
         background: var(--ink);
         border-radius: 2px;
-        vertical-align: -4px; margin-left: 3px;
+        vertical-align: -6px; margin-left: 3px;
       }
       .send {
         position: absolute; right: 24px; top: 50%;
@@ -1086,7 +1089,7 @@
       /* Build-time hidden states — set once, reveal with to() (seek-safe).
          q2/q3 words are pre-set to their off-path start (x+230) at build:
          immediateRender alone leaves un-started words visible at rest. */
-      gsap.set(chars, { autoAlpha: 0 });
+      gsap.set(chars, { display: "none" });
       gsap.set(".sg", { autoAlpha: 0 });
       gsap.set(["#bub-you", "#row-ai", "#trace", "#bub-ai", "#flyer"], { autoAlpha: 0 });
       gsap.set("#bub-ai .wd", { autoAlpha: 0 });
@@ -1100,6 +1103,7 @@
          transform; a CSS translateX would be overwritten by the x tween). */
       gsap.set(["#pill1", "#pill2", "#pill3", "#pill4"], { xPercent: -50 });
       gsap.set("#pill3", { autoAlpha: 0 });
+      gsap.set("#pill3 .pill-hint", { autoAlpha: 0 });
       gsap.set("#pill1", { x: 260, autoAlpha: 0 });
       gsap.set("#pill2", { top: 490, width: 700, height: 100, borderRadius: 50 });
       /* The real composer stays hidden until the bar has BECOME it; its send
@@ -1116,7 +1120,7 @@
       /* The map waits off-stage. Nodes are pre-set small and invisible so a
          fromTo can never paint them at build time. */
       gsap.set(["#mind", "#mind-tag", "#board-bar", "#board-name"], { autoAlpha: 0 });
-      gsap.set(chars2, { autoAlpha: 0 });
+      gsap.set(chars2, { display: "none" });
       gsap.set(["#bub-you2", "#offer"], { autoAlpha: 0 });
       mnodes.forEach((nd) => gsap.set(nd.el, { autoAlpha: 0, scale: 0.82 }));
       gsap.set("#cursor", { x: 1150, y: 1120 });
@@ -1169,18 +1173,14 @@
         }
       });
 
-      /* The creep is on the PILE, not the camera. Scaling the whole scene
-         scaled the captions with it — a fraction of a pixel of growth per
-         frame, which is the same glyph resampling the conveyor caused, just
-         by another route. The books carry it instead: they are the weight
-         closing in, and a stack of rectangles resamples cleanly where type
-         does not. The ask bar, which lives in the camera wrapper, now never
-         transforms at all — so the invisible cut into c2 is guaranteed by
-         construction instead of by a release tween landing exactly on 1. */
-      tl.fromTo("#stack", { scale: 1 },
-        { scale: 1.055, duration: 2.5, ease: "none", immediateRender: false }, 1.6);
-      tl.fromTo("#stack", { scale: 1.055 },
-        { scale: 1.1, duration: 0.9, ease: "none", immediateRender: false }, 4.1);
+      /* NO creep at all.
+         Moving it off the camera and onto the pile did not fix the shimmer,
+         it relocated it: every volume carries its author's name, so scaling
+         the stack by 0.0007 per frame re-rasterises twelve lines of serif
+         type exactly the way scaling the whole scene did. The books already
+         have motion — they DROP, with weight and a settle. A scene with real
+         movement in it does not need a slow zoom on top, and type cannot
+         survive one. */
 
       /* NO conveyor on the captions.
          It used to slide each line 36px across its beat — 0.65px per frame,
@@ -1238,11 +1238,7 @@
       });
       tl.fromTo("#pill1", { x: 260, autoAlpha: 0.35 },
         { x: 0, autoAlpha: 1, duration: 0.34, ease: "power4.out", immediateRender: false }, 5.4);
-      /* The weight lifts as the pile clears. Only the stack is released now,
-         and by this point it has already swept off frame — so this is the
-         tail of the gesture rather than something the eye tracks. */
-      tl.fromTo("#stack", { scale: 1.1 },
-        { scale: 1, duration: 0.65, ease: "power3.out", immediateRender: false }, 5.05);
+      /* (The release went with the creep — there is nothing to release.) */
 
       /* ═══ 2 · THE TURN — the bar BECOMES the app. c2 opens on c1's exact
          last frame (bar centred on the dot desk); the bar then morphs into
@@ -1308,7 +1304,7 @@
          runs, tiny hesitations after spaces — instead of a metronome. */
       let tAt = 7.95;
       chars.forEach((c, i) => {
-        tl.set(c, { autoAlpha: 1 }, tAt);
+        tl.set(c, { display: "inline" }, tAt);
         const beat = 0.021 + ((i * 7) % 5) * 0.005;      // 21–41ms, patterned
         const pause = c.textContent === " " ? 0.028 : 0; // breath at words
         tAt += beat + pause;
@@ -1466,7 +1462,7 @@
       tl.to("#caret", { autoAlpha: 1, duration: 0.1, ease: "none" }, 17.1);
       let tAt2 = 17.28;
       chars2.forEach((c, i) => {
-        tl.set(c, { autoAlpha: 1 }, tAt2);
+        tl.set(c, { display: "inline" }, tAt2);
         const beat = 0.019 + ((i * 7) % 5) * 0.005;
         tAt2 += beat + (c.textContent === " " ? 0.026 : 0);
       });
@@ -1483,7 +1479,8 @@
       tl.to("#send-ring", { scale: 2.1, autoAlpha: 0, duration: 0.5, ease: "power2.out" }, 18.97);
 
       // The question leaves the composer and joins the thread.
-      tl.set(chars2, { autoAlpha: 0 }, 19.02);
+      tl.set(chars2, { display: "none" }, 19.02);
+      tl.set("#typed2", { display: "none" }, 19.02);
       tl.set("#caret", { autoAlpha: 0 }, 19.02);
       tl.set("#bub-you2", { autoAlpha: 1 }, 19.02);
       tl.fromTo("#bub-you2", { y: 300, scale: 0.96 },
@@ -1567,45 +1564,66 @@
       tl.to(["#mind", "#mind-tag", "#board-bar", "#board-name"],
         { autoAlpha: 0, duration: 0.4, ease: "power2.in" }, 26.55);
 
-      /* ═══ THE COLLAPSE ═══ 25.7-27.1
-         The map had no way back to the close: the old seam ran the
-         composer's morph, and the composer had been gone since 21.1, so the
-         film cut from a board to a bar with nothing carrying the eye across.
+      /* ═══ THE MAP BECOMES THE BAR ═══ 25.7-27.1
+         Not a collapse into nothing followed by a bar appearing — that is a
+         replacement, and the eye reads it as a cut. The map TURNS INTO the
+         bar: the leaves fold into their branches, the branches into the
+         root, and then the root itself — already a dark rounded rectangle —
+         travels to the centre and morphs into the ask bar, widening,
+         flattening, losing its ink and gaining the placeholder as it goes.
+         One object the whole way, which is the same shared-element trick the
+         opening uses to get into the app, run one last time to get out. */
 
-         Now the map collapses INTO the bar. Every box flies to the centre
-         and shrinks out, leaves first so the structure folds inward rather
-         than blinking off, the connectors un-draw themselves the way they
-         were drawn, and the ask bar grows out of the point they all vanish
-         into — the film's vehicle, back for the last time, in the exact
-         place the close opens on it. */
-      const centreOf = (nd) => ({ x: 540 - (nd.x + nd.w / 2), y: 540 - (nd.y + nd.h / 2) });
-
-      // Leaves fold first, then branches, then the root: inward, in order.
-      [2, 1, 0].forEach((depth, ring) => {
+      /* Leaves fold into the branch that owns them, branches into the root:
+         each box travels to its PARENT rather than to the middle, so the
+         tree gathers itself up limb by limb instead of imploding. */
+      const boxOf = (nd) => ({ cx: nd.x + nd.w / 2, cy: nd.y + nd.h / 2 });
+      [2, 1].forEach((depth, ring) => {
         mnodes.filter((nd) => nd.depth === depth).forEach((nd, k) => {
-          const c = centreOf(nd);
-          const t0 = 25.7 + ring * 0.16 + k * 0.026;
+          const parent = mnodes[nd.parent];
+          const a = boxOf(nd), b = boxOf(parent);
+          const t0 = 25.7 + ring * 0.3 + k * 0.03;
           tl.to(nd.el, {
-            x: c.x, y: c.y, scale: 0.12, autoAlpha: 0,
-            duration: 0.55, ease: "power2.in",
+            x: b.cx - a.cx, y: b.cy - a.cy, scale: 0.2, autoAlpha: 0,
+            duration: 0.5, ease: "power2.in",
           }, t0);
         });
       });
-      // The lines retract along themselves — drawing, run backwards.
+      // The lines retract along themselves — the drawing, run backwards.
       mlinks.forEach((l, i) => {
-        tl.to(l.path, { strokeDashoffset: l.len, duration: 0.4, ease: "power2.in" }, 25.7 + i * 0.018);
+        tl.to(l.path, { strokeDashoffset: l.len, duration: 0.4, ease: "power2.in" }, 25.72 + i * 0.016);
       });
-      tl.to(["#mind-tag", "#board-bar", "#board-name"],
-        { autoAlpha: 0, duration: 0.35, ease: "power2.in" }, 25.9);
-      /* The connector layer goes with them: a retracted dash still paints a
-         speck where its round cap sits, and four specks on an empty board
-         read as dirt on the lens. */
-      tl.to("#mind-svg", { autoAlpha: 0, duration: 0.3, ease: "power2.in" }, 26.2);
+      tl.to(["#mind-tag", "#board-name"], { autoAlpha: 0, duration: 0.35, ease: "power2.in" }, 25.9);
+      tl.to("#mind-svg", { autoAlpha: 0, duration: 0.3, ease: "power2.in" }, 26.15);
 
-      /* The bar grows out of the point the map vanished into. */
-      tl.set("#pill3", { autoAlpha: 1 }, 26.42);
-      tl.fromTo("#pill3", { scale: 0.24, autoAlpha: 0 },
-        { scale: 1, autoAlpha: 1, duration: 0.5, ease: "power3.out", immediateRender: false }, 26.42);
+      /* THE MORPH. The bar takes over the root's exact box and colour on the
+         swap frame, so nothing moves at the handover, and then becomes
+         itself: 280x72 at the root's place, to 700x100 at the centre.
+         Geometry is measured off the laid-out root rather than typed in, so
+         the two halves cannot drift if the tree ever changes. */
+      const rootBox = boxOf(mnodes[0]);
+      const R_W = mnodes[0].w, R_H = mnodes[0].h;
+
+      tl.to(mnodes[0].el, { autoAlpha: 0, duration: 0.01, ease: "none" }, 26.28);
+      tl.set("#pill3", { autoAlpha: 1 }, 26.28);
+      tl.fromTo("#pill3", {
+        /* Where the root is: the pill centres itself on 540, so the offset
+           is simply the difference between the two centres. */
+        x: rootBox.cx - 540, y: rootBox.cy - 540,
+        width: R_W, height: R_H, borderRadius: 14,
+        backgroundColor: "#2b2721", borderColor: "rgba(0,0,0,0.5)",
+      }, {
+        x: 0, y: 0,
+        width: 700, height: 100, borderRadius: 50,
+        backgroundColor: "#fefefc", borderColor: "rgba(41,38,33,0.25)",
+        duration: 0.62, ease: "power3.inOut", immediateRender: false,
+      }, 26.28);
+      /* The placeholder arrives as the shape finishes becoming a field —
+         late, so it reads as the bar's own text rather than a label that
+         was always there. */
+      tl.fromTo("#pill3 .pill-hint", { autoAlpha: 0 },
+        { autoAlpha: 1, duration: 0.28, ease: "none", immediateRender: false }, 26.66);
+      tl.to("#board-bar", { autoAlpha: 0, duration: 0.3, ease: "power2.in" }, 26.4);
       // 26.9-27.1: the bar alone, centred — c3 opens on this exact frame.
 
       /* ═══ 3 · CLOSE — opens on c2's exact last frame (the bar home at
