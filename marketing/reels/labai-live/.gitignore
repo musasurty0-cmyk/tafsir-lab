@@ -1,0 +1,4 @@
+.thumbnails/
+snapshots/
+renders/*.mp4.tmp
+context.log

@@ -7,7 +7,7 @@ destination: instagram-reel
 aspect: "1:1"
 canvas: 1080x1080
 language: en
-length: 11.5s
+length: 14s
 angle: announcement
 ---
 
