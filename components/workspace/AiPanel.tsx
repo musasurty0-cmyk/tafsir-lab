@@ -325,7 +325,20 @@ export default function AiPanel({ pageId, surahNumber, surahName, onAddToEditor,
     }).catch(() => null);
 
     if (!res?.ok || !res.body) {
-      patch(id, (t) => ({ ...t, running: false, error: "Could not reach Lab AI." }));
+      /* Prefer the server's own words. It usually explains itself, and a
+         rejected question is not an unreachable service: reporting every
+         non-OK response as "could not reach" sent a validation error to the
+         reader as a connection failure, which is unfixable-looking advice
+         for something they could fix by typing more. */
+      let message = "Could not reach Lab AI.";
+      if (res) {
+        const said = await res.json().then(
+          (j: unknown) => (j as { error?: unknown })?.error,
+          () => undefined,
+        );
+        if (typeof said === "string" && said.trim()) message = said.trim();
+      }
+      patch(id, (t) => ({ ...t, running: false, error: message }));
       return;
     }
 

@@ -176,7 +176,11 @@ export async function POST(req: NextRequest) {
     : [];
 
   const question = typeof body.question === "string" ? body.question.trim() : "";
-  if (question.length < 3) {
+  /* Two, not three. "hi" is the commonest opener there is, and at three it
+     was rejected here before it could ever reach isSmallTalk — which exists
+     precisely to answer greetings conversationally. The floor is only here
+     to stop an empty or stray-keystroke submission becoming a model call. */
+  if (question.length < 2) {
     return new Response(JSON.stringify({ error: "Ask a longer question." }), {
       status: 400, headers: { "Content-Type": "application/json" },
     });
