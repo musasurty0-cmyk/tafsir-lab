@@ -1,52 +1,61 @@
 {
   "current": "left",
+  "note": "v3 — reference is the Gemini 3 announcement reel (13.9s): glyph card → dark lockup → oversized greeting closeup → composer + chips → glowing input pill → thinking pill → result document card → lockup close. Recreated with TafsirLab's aesthetic and Lab AI's real UI states. Lateral camera language = LEFT current; Z spends mark entering the product and the payoff arrival.",
   "seams": [
     {
-      "t": 2.8,
-      "name": "wordmark→composer",
+      "t": 1.4,
+      "name": "glyph-light→lockup-dark",
       "axis": "z", "direction": "push",
-      "exit":  { "selector": "#sc-wordmark .wm-stack", "motion": "scale 1→1.2, blur 0→10, opacity linear →0.15, power3.in 0.2s" },
-      "entry": { "selector": "#sc-composer .composer-wrap", "motion": "scale 0.78→1, blur 10→0, opacity 0.15→1, expo.out 0.5s" },
+      "carrier": "the sparkle glyph, held centred across the invert",
+      "exit":  { "selector": "#s1-mv", "motion": "glyph scale 1→1.06 power1.in — still growing at the cut" },
+      "entry": { "selector": "#s2-glyph-mv", "motion": "scale 1.06→1.14 then settles — same growing sign" },
+      "technique": "match-cut inversion (Tier-A)",
+      "why": "the reference's light→dark flip; the glyph carries the eye"
+    },
+    {
+      "t": 3.4,
+      "name": "lockup→greeting",
+      "axis": "z", "direction": "push",
+      "exit":  { "selector": "#s2-mv", "motion": "scale 1→1.18, blur 0→10, opacity linear →0.15, power3.in 0.2s" },
+      "entry": { "selector": "#s3-mv", "motion": "scale 0.82→1, blur 10→0, expo.out 0.5s" },
       "technique": "zoom-through",
-      "why": "pushing deeper into the product — reserved vector spent on entering the demo"
+      "why": "pushing into the product"
     },
     {
-      "t": 4.7,
-      "name": "composer→mark",
-      "axis": "z", "direction": "pull",
-      "cause": "cursor click at 4.42 (recoil licenses the direction change)",
-      "exit":  { "selector": "#sc-composer .composer-wrap", "motion": "scale 1→0.9, blur 0→14, opacity linear →0.15, power3.in 0.22s" },
-      "entry": { "selector": "#sc-mark .mark-badge", "motion": "scale 1.18→1, blur 8→0, expo.out 0.5s" },
-      "technique": "inverse-zoom-through + ground inversion",
-      "why": "ARRIVAL — the brand beat lands; both sides shrinking (pull sign matched)"
-    },
-    {
-      "t": 6.5,
-      "name": "capsule→pill",
-      "axis": "z", "direction": "push",
-      "carrier": "the capsule geometry, held at matched rect across the cut",
-      "exit":  { "selector": "#sc-capsule .cap", "motion": "scale 1→1.045 slow drift, power1.in" },
-      "entry": { "selector": "#sc-pill .cap", "motion": "scale 1.045→1.09→settle 1, matched velocity then expo.out" },
-      "technique": "match-cut inversion (Tier-A hand-authored)",
-      "why": "same surface, state swap — colors invert, label swaps, shape carries"
-    },
-    {
-      "t": 7.3,
-      "name": "pill→live",
+      "t": 5.4,
+      "name": "greeting→composer",
       "axis": "x", "direction": "left",
-      "exit":  { "selector": "#sc-pill .cap", "motion": "x 0→-130 (12% of 1080), fade done by 30% travel, power4.in 0.3s" },
-      "entry": { "selector": "#sc-live .type-row", "motion": "x +130→0, opacity from 0.35, power4.out 0.34s" },
+      "exit":  { "selector": "#s3-mv", "motion": "x continues the pan −130, power4.in 0.3s, fade dies at cut" },
+      "entry": { "selector": "#s4-mv", "motion": "x +130→0 power4.out 0.34s, opacity from 0.35" },
       "technique": "cut-the-curve (the current)",
-      "why": "ordinary forward progress into the payoff line"
+      "why": "the reference's lateral camera language"
     },
     {
-      "t": 10.3,
-      "name": "live→close",
-      "axis": "y", "direction": "up",
-      "exit":  { "selector": "#sc-live .wall", "motion": "y 0→-130, fade early, power4.in 0.3s (cards already travelling up)" },
-      "entry": { "selector": "#sc-close .close-stack", "motion": "y +130→0, opacity from 0.35, power4.out 0.4s" },
-      "technique": "cut-the-curve vertical",
-      "why": "elevation — the conclusion rises; matches the wall's existing upward drift"
+      "t": 7.4,
+      "name": "composer→hero-pill",
+      "axis": "z", "direction": "push",
+      "exit":  { "selector": "#s4-mv", "motion": "scale 1→1.2, blur 0→12, opacity linear →0.15, power3.in 0.22s" },
+      "entry": { "selector": "#s5-mv", "motion": "scale 0.8→1, blur 12→0, expo.out 0.5s" },
+      "technique": "zoom-through",
+      "why": "deeper still — into the input itself"
+    },
+    {
+      "t": 10.9,
+      "name": "hero→result",
+      "axis": "z", "direction": "pull",
+      "exit":  { "selector": "#s5-mv", "motion": "scale 1→0.88, blur 0→12, opacity linear →0.15, power3.in 0.22s" },
+      "entry": { "selector": "#s6-mv", "motion": "scale 1.15→1, blur 8→0, expo.out 0.5s — shrinking both sides" },
+      "technique": "inverse zoom-through",
+      "why": "ARRIVAL — the answer lands (the reference's document card beat)"
+    },
+    {
+      "t": 12.5,
+      "name": "result→close",
+      "axis": "x", "direction": "left",
+      "exit":  { "selector": "#s6-mv", "motion": "x 0→−130 power4.in 0.3s, fade dies at cut" },
+      "entry": { "selector": "#s7-mv", "motion": "x +120→0 power4.out 0.4s, opacity from 0.35" },
+      "technique": "cut-the-curve (the current)",
+      "why": "back to the mark"
     }
   ]
 }

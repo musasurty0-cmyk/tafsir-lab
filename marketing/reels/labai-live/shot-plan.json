@@ -1,33 +1,27 @@
 {
   "category": "kinetic-type",
-  "duration_s": 11.5,
+  "version": 3,
+  "reference": "Gemini 3 announcement reel (13.9s) — structure and pacing only; all content, brand and UI are TafsirLab's",
+  "duration_s": 14,
   "fps": 30,
   "canvas": { "w": 1080, "h": 1080, "aspect": "1:1" },
-  "style": "premium launch reel; dark ink ground with a warm dawn horizon; hard light/dark inversion cuts; italic heavyweight kinetic type; one oversized cursor drives the demo beat",
-  "palette": ["#07080a", "#0d0f12", "#f6f5f2", "#a7a29b", "#4f9a7a", "#f2e3a4"],
-  "font": "system-ui stack (kit) + Georgia serif for the wordmark",
-  "beats": [2.8, 4.42, 4.7, 6.5, 7.3, 8.3, 10.3],
+  "style": "TafsirLab's own aesthetic: dark ink app chrome, warm-white text, sage-green accent and glow, serif display for the greeting, real Lab AI UI states throughout",
+  "palette": ["#0b0d0f", "#14171a", "#f2f0eb", "#a9a49c", "#4f9a7a", "#f6f5f2"],
+  "font": "Calibri/Segoe UI (the app's sans) + Georgia serif display",
+  "beats": [1.4, 3.4, 5.4, 7.4, 10.9, 12.5],
   "export": "mp4",
   "asset_needs": [],
   "block": null,
   "customize": {},
   "content": {
     "scenes": [
-      { "id": "ident",    "start": 0.0,  "end": 1.75, "text": "",                "emotion": "anticipation", "motion": "fade_blur glyph drift; defocus resolves; horizon glow wakes", "beats": [] },
-      { "id": "wordmark", "start": 1.75, "end": 2.8,  "text": "TafsirLab",       "emotion": "arrival",      "motion": "fade_blur wordmark; glyph docks upper-left; dawn rises", "beats": [2.8] },
-      { "id": "composer", "start": 2.8,  "end": 4.7,  "text": "what does ibn kathir say about the basmalah", "emotion": "focus", "motion": "zoom-through entry; typewriter; cursor-led action; click ignites at 4.42", "beats": [4.42] },
-      { "id": "mark",     "start": 4.7,  "end": 5.5,  "text": "",                "emotion": "impact",       "motion": "inversion to light ground; mark lands shrinking 1.18→1; stillness 0.3s", "beats": [4.7] },
-      { "id": "capsule",  "start": 5.5,  "end": 6.5,  "text": "ASK LAB AI",      "emotion": "build",        "motion": "circle stretches to pill; label waterfall entry", "beats": [6.5] },
-      { "id": "pill",     "start": 6.5,  "end": 7.3,  "text": "LAB AI",          "emotion": "build",        "motion": "match-cut inversion, capsule is the carrier; slow push through the cut", "beats": [7.3] },
-      { "id": "live",     "start": 7.3,  "end": 10.3, "text": "IS NOW LIVE",     "emphasis_words": ["LIVE"], "emotion": "payoff", "motion": "leftward cut-the-curve entry; LIVE centres and holds as carrier; dawn ground and five source cards rise (staged reveal, parallax)", "beats": [8.3] },
-      { "id": "close",    "start": 10.3, "end": 11.5, "text": "TafsirLab",       "emotion": "resolve",      "motion": "upward cut-the-curve; wordmark rises and settles on light ground", "beats": [] }
-    ],
-    "cards": [
-      { "name": "Ibn Kathīr",  "meta": "18,900 passages", "initial": "IK" },
-      { "name": "al-Ṭabarī",   "meta": "28,400 passages", "initial": "Ṭ"  },
-      { "name": "al-Jalālayn", "meta": "12,400 passages", "initial": "J"  },
-      { "name": "al-Bayḍāwī",  "meta": "17,200 passages", "initial": "B"  },
-      { "name": "al-Mukhtaṣar","meta": "13,100 passages", "initial": "M"  }
+      { "id": "glyph-light", "start": 0.0,  "end": 1.4,  "text": "", "motion": "sparkle centred on paper + dot grid; soft scale-in; match-cut invert with the glyph as carrier" },
+      { "id": "lockup",      "start": 1.4,  "end": 3.4,  "text": "Lab AI", "motion": "dark; glyph settles, wordmark blooms in with a sage glow" },
+      { "id": "greeting",    "start": 3.4,  "end": 5.4,  "text": "Salaam, Musa — What are we studying today?", "motion": "oversized serif greeting closeup, slow lateral pan (frame-cropped like the reference)" },
+      { "id": "composer",    "start": 5.4,  "end": 7.4,  "text": "what does ibn kathir say about the basmalah", "motion": "the panel composer types; the app's real suggestion chips ride the bottom; slight drift" },
+      { "id": "hero",        "start": 7.4,  "end": 10.9, "text": "Searching the tafsīr…", "motion": "the input pill centred and glowing; content swaps to the real trace state with a ring spinner (sequenced UI life)" },
+      { "id": "result",      "start": 10.9, "end": 12.5, "text": "The basmalah — in Ibn Kathīr", "motion": "the answer document card lands (inverse-zoom arrival): section labels, body lines, citation chips" },
+      { "id": "close",       "start": 12.5, "end": 14.0, "text": "Lab AI · TafsirLab", "motion": "glyph + lockup settle; url line; hold" }
     ]
   }
 }
