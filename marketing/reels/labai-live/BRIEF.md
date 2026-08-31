@@ -11,34 +11,36 @@ length: 11.5s
 angle: announcement
 ---
 
-## Intent
+## Intent (v4 — current)
 
-Recreate the structure and motion grammar of an 11.5s square integration-announcement
-reel (frame-analysed at 2fps; Lovable × Shopify), rebranded entirely as TafsirLab / Lab
-AI. Nothing of the reference's brand is carried over — only its beat order, seam
-choices, and pacing: blur-in glyph ident → wordmark + dawn ground → Z-push into a
-composer closeup → typed prompt → oversized cursor click ignites → inversion to a light
-ground, mark lands → capsule stretches to a labelled pill → match-cut inversion →
-leftward kinetic "IS NOW LIVE" → LIVE holds as carrier while a wall of source cards
-rises → upward cut to a light close on the wordmark.
+Light mode, no green, the real product throughout. Reference (an assistant-launch
+reel) supplies structure and pacing only: mark card → lockup reveal → into the
+assistant → typing → send → thinking → the answer streaming in the chat → close.
+Every visual is TafsirLab's: the T tile + italic serif wordmark, the app's light
+tokens, Inter + Source Serif 4, and Lab AI's real UI states with its real copy
+(empty-state text, suggestion chips, placeholder, "Thinking…", "Searched 12
+sources"). Close: "Lab AI is now live." + tafsir-lab.com.
 
-## Mapping
+## Flow
 
-| Reference element      | Lab AI element                                              |
-| ---------------------- | ----------------------------------------------------------- |
-| Heart glyph            | Lab AI sparkle glyph (own SVG, accent green)                |
-| "Lovable" wordmark     | "TafsirLab" (serif)                                         |
-| Store-prompt composer  | Lab AI composer, prompt: "what does ibn kathir say about the basmalah" |
-| Partner badge at send  | Sparkle badge                                               |
-| "USE SHOPIFY" capsule  | "ASK LAB AI" capsule                                        |
-| "INTEGRATION" pill     | "✦ LAB AI" pill                                             |
-| Remix-count site cards | Tafsīr source cards (Ibn Kathīr, al-Ṭabarī, Jalālayn, al-Bayḍāwī, al-Mukhtaṣar) with passage counts |
-| Merchant logo close    | TafsirLab wordmark                                          |
+Three clips, two Z-seams (push in at 3.4, pull out at 12.3), everything else
+continuous: the row-slide wordmark reveal, chip cascade, humanised typing, the
+typed line itself flying up to become the user bubble, thinking dots, the trace,
+the word-by-word stream with citations, stillness, close.
+
+## Iteration log
+
+- v1: abstract clone of first reference — rejected (not the aesthetic, "random").
+- v2: workspace + drawer board — superseded by the new reference mid-build.
+- v3: dark/green Gemini-structure build — rejected (dark, green, invented glyph).
+- v4 cycle 1: light rebuild, real UI. Critique: lockup reveal mangled the two
+  T's; flyer landed ~130px off its bubble slot; empty state lingered under the
+  flight; stream left the bubble half-empty too long. All four fixed.
+- v4 cycle 2: seam audit at ±0.1s — both Z-seams mid-motion, signs matched.
+- v4 cycle 3: typing cadence humanised (patterned 24–48ms + word breaths).
 
 ## Notes
 
-- Per-card passage counts are plausible placeholders (the real corpus total is 90,092
-  across these editions); correct before publishing if per-edition accuracy matters.
-- House palette from marketing/reels/shared/kit (ink ground, warm white, #4f9a7a
-  accent, #f2e3a4 highlight). Dawn ground = ink → green/gold horizon.
-- Deterministic system fonts only; wordmark in Georgia serif.
+- Silent — supply a track and the beats are on clean timestamps.
+- The answer text is a tightened paraphrase of Lab AI's real output from the
+  live test earlier this session; "Searched 12 sources" is its real trace.

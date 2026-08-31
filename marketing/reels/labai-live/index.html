@@ -3,238 +3,289 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=1080, height=1080" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,500;0,8..60,600;1,8..60,500&display=swap" rel="stylesheet" />
     <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
     <style>
       /* ══════════════════════════════════════════════════════════════════
-         labai-live v3 — 14s square. The reference reel supplies structure
-         and pacing only; everything on screen is TafsirLab's: its glyph,
-         its palette, its serif, and Lab AI's real UI states — greeting,
-         composer with the app's own suggestion chips, the trace state, a
-         cited answer card.
+         labai-live v4 — 14s square, LIGHT.
+         The product as it is: light mode, no green, the app's real fonts
+         (Inter + Source Serif 4), its real copy, its real chat interface —
+         and one continuous flow: three clips, two Z-seams, every other
+         change happens inside the scene.
 
-         Wrapper discipline: .fx carries blur, .mv carries transforms —
-         they never share an element, and no CSS transform collides with a
-         GSAP tween. Centring is flex, never translate.
+         Wrapper discipline: .fx carries blur, .mv carries transforms;
+         centring is flex, never translate.
          ══════════════════════════════════════════════════════════════════ */
       * { margin: 0; padding: 0; box-sizing: border-box; }
 
       :root {
-        --ink-0: #0b0d0f;
-        --panel: #14171a;
-        --panel-2: #191d21;
-        --line: rgba(246, 245, 242, 0.09);
-        --line-strong: rgba(246, 245, 242, 0.17);
-        --fg: #f2f0eb;
-        --fg-dim: #a9a49c;
-        --fg-faint: #6f6a63;
-        --accent: #4f9a7a;
-        --accent-soft: rgba(79, 154, 122, 0.16);
-        --paper: #f6f5f2;
-        --font: "Calibri", -apple-system, "Segoe UI", system-ui, Arial, sans-serif;
-        --serif: Georgia, "Times New Roman", serif;
+        /* The app's own LIGHT tokens (app/globals.css), green excluded per
+           the owner's brief. */
+        --bg: #fcfbf8;
+        --bg-elev: #fefefc;
+        --ink: #292621;
+        --ink-2: #57534b;
+        --ink-3: #6e695f;
+        --ink-4: #8a8579;
+        --line: rgba(41, 38, 33, 0.13);
+        --line-strong: rgba(41, 38, 33, 0.25);
+        --sans: "Inter", -apple-system, "Segoe UI", system-ui, Arial, sans-serif;
+        --serif: "Source Serif 4", Georgia, serif;
       }
 
       html, body {
         width: 1080px; height: 1080px;
         overflow: hidden;
-        background: var(--ink-0);
-        font-family: var(--font);
+        background: var(--bg);
+        font-family: var(--sans);
         -webkit-font-smoothing: antialiased;
       }
       #root {
         position: relative;
         width: 1080px; height: 1080px;
-        background: var(--ink-0); /* opaque stage ground */
+        background: var(--bg); /* opaque stage ground */
       }
       .clip { position: absolute; inset: 0; overflow: hidden; }
       .fx { position: absolute; inset: 0; }
       .mv { position: absolute; inset: 0; }
       .center { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
 
-      .ground-dark {
-        position: absolute; inset: 0;
-        background:
-          radial-gradient(120% 85% at 50% 30%, rgba(79, 154, 122, 0.08), transparent 62%),
-          var(--ink-0);
+      /* Paper ground with the reference's fine dot grid, in warm ink. */
+      .paper { position: absolute; inset: 0; background: var(--bg); }
+      .dots {
+        position: absolute; inset: -60px;
+        background: radial-gradient(rgba(41, 38, 33, 0.10) 1.5px, transparent 1.5px);
+        background-size: 30px 30px;
       }
-      /* Scene 1's light card: paper with a fine dot grid, as the reference
-         opens — but in the house paper + a sage-tinted grid. */
-      .ground-paper {
-        position: absolute; inset: 0;
-        background:
-          radial-gradient(rgba(79, 154, 122, 0.18) 1.6px, transparent 1.6px),
-          var(--paper);
-        background-size: 26px 26px, auto;
-      }
-      /* The grid fades toward the centre so the glyph sits in clean paper. */
-      .ground-paper::after {
+      .dots::after {
         content: "";
         position: absolute; inset: 0;
-        background: radial-gradient(70% 70% at 50% 50%, var(--paper) 30%, transparent 100%);
+        background: radial-gradient(62% 62% at 50% 50%, var(--bg) 26%, transparent 100%);
       }
 
-      .sparkle-lg { width: 132px; height: 132px; }
-      .glow-sage { filter: drop-shadow(0 0 34px rgba(79, 154, 122, 0.55)); }
-
-      .lockup {
-        display: flex; align-items: center; gap: 26px;
+      /* ── The mark: the app's tile + italic serif wordmark ────────────── */
+      .tile {
+        width: 148px; height: 148px;
+        border-radius: 34px;
+        background: var(--ink);
+        display: flex; align-items: center; justify-content: center;
+        box-shadow: 0 26px 60px rgba(41, 38, 33, 0.22);
       }
-      .lockup .word {
-        font-size: 104px; font-weight: 800; letter-spacing: -0.015em;
-        color: var(--fg);
-      }
-      .lockup .sparkle-lg { width: 96px; height: 96px; }
-
-      /* ── Greeting closeup ────────────────────────────────────────────── */
-      .greet {
-        position: absolute; inset: 0;
-        display: flex; flex-direction: column; justify-content: center;
-        padding-left: 96px;
-        gap: 34px;
-      }
-      .greet-hi {
-        display: flex; align-items: center; gap: 18px;
-        font-size: 44px; font-weight: 600; color: var(--fg-dim);
-      }
-      .greet-hi svg { width: 44px; height: 44px; }
-      .greet-q {
+      .tile .t {
         font-family: var(--serif);
-        font-size: 150px; font-weight: 600; letter-spacing: -0.015em;
-        line-height: 1.06;
-        color: var(--fg);
-        white-space: nowrap; /* oversized on purpose — crops off-frame like the reference */
+        font-size: 92px; font-weight: 600; font-style: normal;
+        color: var(--bg);
+        line-height: 1;
+        padding-bottom: 8px;
+      }
+      .tile--sm { width: 96px; height: 96px; border-radius: 24px; }
+      .tile--sm .t { font-size: 60px; padding-bottom: 5px; }
+      .brand-row { display: flex; align-items: center; gap: 34px; }
+      .wordmark {
+        font-family: var(--serif);
+        font-style: italic; font-weight: 500;
+        font-size: 108px; letter-spacing: -0.02em;
+        color: var(--ink);
+        white-space: nowrap;
+      }
+      .wordmark--sm { font-size: 84px; }
+      .wm-clip { overflow: hidden; }
+
+      /* ── The Lab AI panel — the app's real interface, light ──────────── */
+      .app { position: absolute; inset: 0; background: var(--bg); }
+      .pn-head {
+        position: absolute; top: 0; left: 0; right: 0;
+        height: 92px;
+        display: flex; align-items: center; gap: 16px;
+        padding: 0 44px;
+        border-bottom: 1px solid var(--line);
+        background: var(--bg);
+      }
+      .pn-title { font-size: 27px; font-weight: 700; color: var(--ink); display: flex; align-items: center; gap: 13px; }
+      .pn-title svg { width: 26px; height: 26px; }
+      .pn-chip {
+        display: inline-flex; align-items: center; gap: 8px;
+        padding: 8px 16px;
+        border: 1px solid var(--line-strong);
+        border-radius: 999px;
+        color: var(--ink-2);
+        font-size: 19px; font-weight: 500;
+      }
+      .pn-x { margin-left: auto; color: var(--ink-4); font-size: 26px; }
+
+      /* Empty state — the app's real copy. */
+      .empty {
+        position: absolute; left: 0; right: 0; top: 150px;
+        display: flex; flex-direction: column; align-items: center;
+        gap: 22px;
+        text-align: center;
+      }
+      .empty-mark {
+        width: 76px; height: 76px; border-radius: 22px;
+        background: rgba(41, 38, 33, 0.06);
+        display: flex; align-items: center; justify-content: center;
+      }
+      .empty-mark svg { width: 34px; height: 34px; }
+      .empty-title { font-size: 34px; font-weight: 700; color: var(--ink); }
+      .empty-sub {
+        max-width: 620px;
+        font-size: 22.5px; line-height: 1.55;
+        color: var(--ink-3);
+      }
+      .suggest { display: flex; flex-direction: column; gap: 13px; margin-top: 10px; }
+      .sg {
+        display: inline-flex; align-items: center; justify-content: center;
+        height: 62px; padding: 0 30px;
+        border: 1px solid var(--line-strong);
+        border-radius: 999px;
+        background: var(--bg-elev);
+        color: var(--ink-2);
+        font-size: 21.5px; font-weight: 500;
+        box-shadow: 0 2px 10px rgba(41, 38, 33, 0.05);
       }
 
-      /* ── Composer ────────────────────────────────────────────────────── */
-      .cp-wrap {
-        position: absolute; inset: 0;
-        display: flex; flex-direction: column; justify-content: center; align-items: center;
-        gap: 44px;
+      /* The thread — the app's message interface. */
+      .thread {
+        position: absolute; left: 0; right: 0; top: 118px; bottom: 210px;
+        padding: 0 46px;
       }
+      .bub-you {
+        position: absolute; top: 26px; right: 46px;
+        max-width: 760px;
+        padding: 18px 26px;
+        border-radius: 20px 20px 6px 20px;
+        background: rgba(41, 38, 33, 0.07);
+        border: 1px solid var(--line);
+        color: var(--ink);
+        font-size: 26px; line-height: 1.4;
+      }
+      .row-ai {
+        position: absolute; top: 132px; left: 46px; right: 46px;
+        display: flex; gap: 16px; align-items: flex-start;
+      }
+      .avatar {
+        flex: none;
+        width: 46px; height: 46px; border-radius: 14px;
+        background: rgba(41, 38, 33, 0.06);
+        border: 1px solid var(--line);
+        display: flex; align-items: center; justify-content: center;
+      }
+      .avatar svg { width: 24px; height: 24px; }
+      .ai-col { display: flex; flex-direction: column; gap: 14px; max-width: 860px; }
+      .thinking {
+        display: inline-flex; align-items: center; gap: 12px;
+        align-self: flex-start;
+        padding: 15px 22px;
+        border-radius: 6px 20px 20px 20px;
+        background: rgba(41, 38, 33, 0.05);
+        color: var(--ink-3);
+        font-size: 22px;
+      }
+      .tdots { display: inline-flex; gap: 5px; }
+      .tdots i {
+        width: 7px; height: 7px; border-radius: 50%;
+        background: var(--ink-3);
+        display: inline-block;
+      }
+      .trace {
+        display: inline-flex; align-items: center; gap: 10px;
+        align-self: flex-start;
+        padding: 12px 19px;
+        border: 1px solid var(--line);
+        border-radius: 13px;
+        background: var(--bg-elev);
+        color: var(--ink-3);
+        font-size: 19px;
+      }
+      .trace svg { width: 17px; height: 17px; }
+      .bub-ai {
+        padding: 20px 26px;
+        border-radius: 6px 20px 20px 20px;
+        background: var(--bg-elev);
+        border: 1px solid var(--line);
+        color: var(--ink);
+        font-size: 25px; line-height: 1.62;
+      }
+      .bub-ai .wd { display: inline; }
+      .cite {
+        display: inline-flex; align-items: center; justify-content: center;
+        min-width: 27px; height: 27px; padding: 0 8px;
+        border-radius: 8px;
+        background: rgba(41, 38, 33, 0.08);
+        color: var(--ink-2);
+        font-size: 15.5px; font-weight: 700;
+        vertical-align: 2px;
+        margin: 0 2px;
+      }
+
+      /* Composer — the app's, pinned at the bottom. */
       .composer {
-        width: 880px;
-        background: var(--panel);
+        position: absolute; left: 44px; right: 44px; bottom: 44px;
+        min-height: 132px;
+        background: var(--bg-elev);
         border: 1px solid var(--line-strong);
-        border-radius: 26px;
-        padding: 44px 42px 36px;
-        box-shadow: 0 40px 90px rgba(0, 0, 0, 0.55);
+        border-radius: 24px;
+        padding: 28px 116px 28px 32px;
+        box-shadow: 0 18px 50px rgba(41, 38, 33, 0.09);
       }
-      .prompt {
-        font-size: 37px; font-weight: 500; line-height: 1.4;
-        color: var(--fg);
-        min-height: 104px;
+      .cp-text {
+        font-size: 27px; line-height: 1.45; color: var(--ink);
+        min-height: 40px;
+      }
+      .cp-hint {
+        position: absolute; left: 32px; top: 30px;
+        font-size: 27px; color: var(--ink-4);
+        white-space: nowrap;
       }
       .caret {
         display: inline-block;
-        width: 4px; height: 40px;
-        background: var(--accent);
-        vertical-align: -6px; margin-left: 4px;
+        width: 3.5px; height: 30px;
+        background: var(--ink);
+        vertical-align: -4px; margin-left: 3px;
       }
-      .cp-row { display: flex; align-items: center; margin-top: 30px; }
-      /* Brighter than --fg-faint: the hint sits on the panel and 6f6a63
-         measured 3.36:1 there — below AA. */
-      .cp-hint { font-size: 21px; color: #8a857d; }
       .send {
-        margin-left: auto;
-        width: 66px; height: 66px; border-radius: 50%;
-        background: var(--accent);
+        position: absolute; right: 24px; top: 50%;
+        width: 64px; height: 64px;
+        margin-top: -32px;
+        border-radius: 50%;
+        background: var(--ink);
         display: flex; align-items: center; justify-content: center;
       }
-      .send svg { width: 30px; height: 30px; }
-      .chips {
-        display: flex; gap: 14px;
+      .send svg { width: 28px; height: 28px; }
+
+      /* The flying line — the typed text becoming the user bubble. */
+      .flyer {
+        /* Positioned at its DESTINATION — the user bubble's exact slot —
+           and flown in from the composer with offsets, so the landing swap
+           is pixel-perfect by construction. */
+        position: absolute; right: 46px; top: 144px;
+        padding: 18px 26px;
+        border-radius: 20px 20px 6px 20px;
+        background: rgba(41, 38, 33, 0.07);
+        border: 1px solid var(--line);
+        color: var(--ink);
+        font-size: 26px; line-height: 1.4;
         white-space: nowrap;
       }
-      .chip {
-        display: inline-flex; align-items: center; gap: 10px;
-        height: 62px; padding: 0 24px;
-        border: 1px solid var(--line-strong);
-        border-radius: 999px;
-        background: var(--panel);
-        color: var(--fg-dim);
-        font-size: 21px; font-weight: 500;
-      }
-      .chip svg { width: 19px; height: 19px; flex: none; }
 
-      /* ── The hero pill (input → thinking state) ──────────────────────── */
-      .pill {
-        display: flex; align-items: center; gap: 18px;
-        height: 128px; padding: 0 52px;
-        border-radius: 999px;
-        background: var(--panel-2);
-        border: 1.5px solid rgba(79, 154, 122, 0.55);
-        box-shadow:
-          0 0 60px rgba(79, 154, 122, 0.38),
-          0 0 140px rgba(79, 154, 122, 0.18),
-          inset 0 0 34px rgba(79, 154, 122, 0.12);
-        font-size: 37px; font-weight: 500; color: var(--fg);
-        position: relative;
+      /* Close beat. */
+      .close-stack { display: flex; flex-direction: column; align-items: center; gap: 44px; }
+      .close-line {
+        font-size: 30px; color: var(--ink-2); font-weight: 500;
+        letter-spacing: 0.01em;
       }
-      .pill-text { white-space: nowrap; }
-      .pill .caret { height: 38px; }
-      .think { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 18px; }
-      .spinner { width: 42px; height: 42px; flex: none; }
-      .spinner circle {
-        fill: none;
-        stroke: var(--accent); stroke-width: 4.5;
-        stroke-linecap: round;
-        stroke-dasharray: 82 40;
-      }
-      .think-text { font-size: 37px; color: var(--fg); white-space: nowrap; }
-
-      /* ── The result card ─────────────────────────────────────────────── */
-      .doc {
-        width: 780px;
-        background: var(--panel);
-        border: 1px solid var(--line-strong);
-        border-radius: 20px;
-        padding: 44px 48px;
-        box-shadow: 0 46px 110px rgba(0, 0, 0, 0.6);
-        display: flex; flex-direction: column; gap: 26px;
-      }
-      .doc-title {
-        font-family: var(--serif);
-        font-size: 40px; font-weight: 600; color: var(--fg);
-        padding-bottom: 20px;
-        border-bottom: 1px solid var(--line);
-      }
-      .doc-sec { display: flex; flex-direction: column; gap: 10px; }
-      .doc-label {
-        font-size: 17px; font-weight: 700; letter-spacing: 0.09em;
-        color: var(--accent);
-      }
-      .doc-body { font-size: 21.5px; line-height: 1.55; color: var(--fg-dim); }
-      .doc-body b { color: var(--fg); font-weight: 600; }
-      .cite {
-        display: inline-flex; align-items: center; justify-content: center;
-        min-width: 26px; height: 26px; padding: 0 7px;
-        border-radius: 8px;
-        background: var(--accent-soft);
-        color: var(--accent);
-        font-size: 15px; font-weight: 700;
-        vertical-align: 2px; margin: 0 2px;
-      }
-      .doc-foot {
-        display: flex; align-items: center; gap: 10px;
-        font-size: 18px; color: var(--fg-faint);
-      }
-      .doc-foot svg { width: 17px; height: 17px; }
-
-      .close-stack { display: flex; flex-direction: column; align-items: center; gap: 30px; }
-      .close-url { font-size: 24px; color: var(--fg-faint); letter-spacing: 0.05em; }
+      .close-url { font-size: 24px; color: var(--ink-4); letter-spacing: 0.04em; }
     </style>
   </head>
   <body>
     <svg width="0" height="0" style="position:absolute">
       <defs>
-        <g id="sparkle">
-          <path d="M32 2 C34.6 18.4 40.2 23.9 56 26.4 C40.2 28.9 34.6 34.4 32 50.8 C29.4 34.4 23.8 28.9 8 26.4 C23.8 23.9 29.4 18.4 32 2 Z"/>
-          <path d="M50 40 C51.2 46.4 53.6 48.8 60 50 C53.6 51.2 51.2 53.6 50 60 C48.8 53.6 46.4 51.2 40 50 C46.4 48.8 48.8 46.4 50 40 Z" opacity="0.85"/>
+        <!-- The app's Lab AI mark (lucide sparkles geometry, mono ink). -->
+        <g id="spark" fill="none" stroke="#292621" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/>
+          <path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/>
         </g>
-        <linearGradient id="spark-grad" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stop-color="#4f9a7a"/>
-          <stop offset="100%" stop-color="#8fc3a8"/>
-        </linearGradient>
       </defs>
     </svg>
 
@@ -247,140 +298,126 @@
       data-width="1080"
       data-height="1080"
     >
-      <!-- ═══ 1 · GLYPH ON PAPER 0–1.4 ═══ -->
-      <div id="s1" class="clip" data-start="0" data-duration="1.4" data-track-index="1">
-        <div class="ground-paper"></div>
-        <div class="mv" id="s1-mv">
-          <div class="center">
-            <svg class="sparkle-lg" viewBox="0 0 64 64"><use href="#sparkle" fill="url(#spark-grad)"/></svg>
-          </div>
-        </div>
-      </div>
-
-      <!-- ═══ 2 · LOCKUP 1.4–3.4 ═══ -->
-      <div id="s2" class="clip" data-start="1.4" data-duration="2.0" data-track-index="1">
-        <div class="ground-dark"></div>
-        <div class="fx" id="s2-fx">
-          <div class="mv" id="s2-mv">
+      <!-- ═══ 1 · THE MARK 0–3.4 — tile, then the lockup, one scene ═══ -->
+      <div id="c1" class="clip" data-start="0" data-duration="3.4" data-track-index="1">
+        <div class="paper"></div>
+        <div class="mv" id="c1-dots" data-layout-allow-overflow="true"><div class="dots"></div></div>
+        <div class="fx" id="c1-fx">
+          <div class="mv" id="c1-mv">
             <div class="center">
-              <div class="lockup">
-                <div class="mv" id="s2-glyph-mv" style="position:relative; inset:auto;">
-                  <svg class="sparkle-lg glow-sage" viewBox="0 0 64 64"><use href="#sparkle" fill="url(#spark-grad)"/></svg>
-                </div>
-                <div class="word" id="s2-word">Lab AI</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ═══ 3 · GREETING CLOSEUP 3.4–5.4 ═══ -->
-      <div id="s3" class="clip" data-start="3.4" data-duration="2.0" data-track-index="1">
-        <div class="ground-dark"></div>
-        <div class="fx" id="s3-fx">
-          <div class="mv" id="s3-mv">
-            <div class="greet" data-layout-allow-overflow="true">
-              <div class="greet-hi">
-                <svg viewBox="0 0 64 64"><use href="#sparkle" fill="#4f9a7a"/></svg>
-                Salaam, Musa
-              </div>
-              <div class="greet-q" data-layout-allow-overflow="true">What are we studying today?</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ═══ 4 · COMPOSER 5.4–7.4 ═══ -->
-      <div id="s4" class="clip" data-start="5.4" data-duration="2.0" data-track-index="1">
-        <div class="ground-dark"></div>
-        <div class="fx" id="s4-fx">
-          <div class="mv" id="s4-mv">
-            <div class="cp-wrap">
-              <div class="composer">
-                <div class="prompt" id="prompt"><span class="caret" id="caret"></span></div>
-                <div class="cp-row">
-                  <span class="cp-hint">Ask about the Qurʾān, or search your notes…</span>
-                  <div class="send">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="#f6f5f2" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+              <div class="mv" id="row-mv" style="position:relative; inset:auto;">
+                <div class="brand-row">
+                  <div class="tile"><span class="t">T</span></div>
+                  <div class="wm-clip" id="wm-clip" data-layout-allow-overflow="true">
+                    <div class="mv" id="wm-mv" style="position:relative; inset:auto;">
+                      <div class="wordmark" data-layout-allow-overlap="true" data-layout-allow-occlusion="true">TafsirLab</div>
+                    </div>
                   </div>
                 </div>
               </div>
-              <!-- The app's real suggestion chips. -->
-              <div class="chips" id="chips" data-layout-allow-overflow="true">
-                <div class="chip">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#4f9a7a" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
-                  Summarise my notes on this page
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ 2 · LAB AI, AT WORK 3.4–12.3 — one continuous take ═══ -->
+      <div id="c2" class="clip" data-start="3.4" data-duration="8.9" data-track-index="1">
+        <div class="paper"></div>
+        <div class="fx" id="c2-fx">
+          <div class="mv" id="c2-mv">
+            <div class="mv" id="cam">
+              <div class="app">
+                <!-- Header — the panel's real chrome. -->
+                <div class="pn-head">
+                  <span class="pn-title">
+                    <svg viewBox="0 0 24 24"><use href="#spark"/></svg>
+                    Lab AI
+                  </span>
+                  <span class="pn-chip">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#57534b" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                    Al-Fatihah
+                  </span>
+                  <span class="pn-x">✕</span>
                 </div>
-                <div class="chip">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#4f9a7a" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-                  What does al-Ṭabarī say here?
+
+                <!-- Empty state — the app's real copy, until the first turn. -->
+                <div class="empty" id="empty">
+                  <div class="empty-mark"><svg viewBox="0 0 24 24"><use href="#spark"/></svg></div>
+                  <div class="empty-title">Lab AI</div>
+                  <div class="empty-sub">Ask about any verse or search your notes. Every answer is drawn from the tafsīr in your library and cites what it used.</div>
+                  <div class="suggest">
+                    <div class="sg">What are the main themes in Al-Fatihah?</div>
+                    <div class="sg">Summarise my notes on this page</div>
+                    <div class="sg">Explain this passage simply</div>
+                  </div>
                 </div>
-                <div class="chip">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#4f9a7a" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-                  Find patience in this sūrah
+
+                <!-- The thread — the app's message interface. -->
+                <div class="thread">
+                  <div class="bub-you" id="bub-you">what does ibn kathir say about the basmalah</div>
+                  <div class="row-ai" id="row-ai">
+                    <div class="avatar"><svg viewBox="0 0 24 24"><use href="#spark"/></svg></div>
+                    <div class="ai-col">
+                      <div class="thinking" id="thinking">
+                        <span class="tdots"><i id="d1"></i><i id="d2"></i><i id="d3"></i></span>
+                        Thinking…
+                      </div>
+                      <div class="trace" id="trace">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="#6e695f" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                        Searched 12 sources
+                      </div>
+                      <div class="bub-ai" id="bub-ai">
+                        <span class="wd">Ibn</span> <span class="wd">Kathīr</span> <span class="wd">reads</span>
+                        <span class="wd">the</span> <span class="wd">basmalah</span> <span class="wd">as</span>
+                        <span class="wd">the</span> <span class="wd">opening</span> <span class="wd">of</span>
+                        <span class="wd">the</span> <span class="wd">sūrah</span><span class="wd"><span class="cite">1</span>.</span>
+                        <span class="wd">His</span> <span class="wd">fuller</span> <span class="wd">discussion</span>
+                        <span class="wd">sits</span> <span class="wd">at</span> <span class="wd">1:1,</span>
+                        <span class="wd">where</span> <span class="wd">he</span> <span class="wd">weighs</span>
+                        <span class="wd">whether</span> <span class="wd">it</span> <span class="wd">is</span>
+                        <span class="wd">a</span> <span class="wd">verse</span> <span class="wd">of</span>
+                        <span class="wd">al-Fātiḥah</span><span class="wd"><span class="cite">2</span>,</span>
+                        <span class="wd">and</span> <span class="wd">he</span> <span class="wd">returns</span>
+                        <span class="wd">to</span> <span class="wd">it</span> <span class="wd">among</span>
+                        <span class="wd">the</span> <span class="wd">sūrah's</span> <span class="wd">names</span>
+                        <span class="wd">—</span> <span class="wd">Umm</span> <span class="wd">al-Kitāb</span><span class="wd"><span class="cite">3</span>.</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
+
+                <!-- The composer — the app's, with its real placeholder. -->
+                <div class="composer">
+                  <div class="cp-hint" id="cp-hint" data-layout-allow-overlap="true">Ask about the Qur'an, or search your notes…</div>
+                  <div class="cp-text"><span id="typed"></span><span class="caret" id="caret"></span></div>
+                  <div class="send" id="send">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#fcfbf8" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+                  </div>
+                </div>
+
+                <!-- The typed line, flying up to become the user bubble. -->
+                <div class="flyer" id="flyer">what does ibn kathir say about the basmalah</div>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- ═══ 5 · HERO PILL → THINKING 7.4–10.9 ═══ -->
-      <div id="s5" class="clip" data-start="7.4" data-duration="3.5" data-track-index="1">
-        <div class="ground-dark"></div>
-        <div class="fx" id="s5-fx">
-          <div class="mv" id="s5-mv">
+      <!-- ═══ 3 · CLOSE 12.3–14 ═══ -->
+      <div id="c3" class="clip" data-start="12.3" data-duration="1.7" data-track-index="1">
+        <div class="paper"></div>
+        <div class="mv" id="c3-dots"><div class="dots"></div></div>
+        <div class="fx" id="c3-fx">
+          <div class="mv" id="c3-mv">
             <div class="center">
-              <div class="pill" id="pill">
-                <span class="pill-text" id="pill-q">what does ibn kathir say about the basmalah</span>
-                <span class="caret" id="pill-caret"></span>
-                <div class="think" id="think">
-                  <svg class="spinner" id="spinner" viewBox="0 0 48 48"><circle cx="24" cy="24" r="19"/></svg>
-                  <span class="think-text">Searching the tafsīr…</span>
+              <div class="close-stack">
+                <div class="brand-row">
+                  <div class="tile tile--sm"><span class="t">T</span></div>
+                  <div class="wordmark wordmark--sm">TafsirLab</div>
                 </div>
+                <div class="close-line">Lab AI is now live.</div>
+                <div class="close-url">tafsir-lab.com</div>
               </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ═══ 6 · THE ANSWER CARD 10.9–12.5 ═══ -->
-      <div id="s6" class="clip" data-start="10.9" data-duration="1.6" data-track-index="1">
-        <div class="ground-dark"></div>
-        <div class="fx" id="s6-fx">
-          <div class="mv" id="s6-mv">
-            <div class="center">
-              <div class="doc">
-                <div class="doc-title">The basmalah — in Ibn Kathīr</div>
-                <div class="doc-sec">
-                  <div class="doc-label">WHAT HE SAYS</div>
-                  <div class="doc-body">Ibn Kathīr treats the basmalah as the <b>opening invocation</b> of the sūrah, not a standalone verse <span class="cite">1</span>.</div>
-                </div>
-                <div class="doc-sec">
-                  <div class="doc-label">ON AL-FĀTIḤAH</div>
-                  <div class="doc-body">His passages dwell on its names — <b>Umm al-Kitāb</b> — and the duʿāʾ of its closing verses <span class="cite">2</span><span class="cite">3</span>.</div>
-                </div>
-                <div class="doc-foot">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#6f6a63" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-                  Searched 12 sources · every claim cited
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ═══ 7 · CLOSE 12.5–14 ═══ -->
-      <div id="s7" class="clip" data-start="12.5" data-duration="1.5" data-track-index="1">
-        <div class="ground-dark"></div>
-        <div class="mv" id="s7-mv">
-          <div class="center">
-            <div class="close-stack">
-              <div class="lockup">
-                <svg class="sparkle-lg glow-sage" viewBox="0 0 64 64" style="width:84px;height:84px"><use href="#sparkle" fill="url(#spark-grad)"/></svg>
-                <div class="word" style="font-size:96px">Lab AI</div>
-              </div>
-              <div class="close-url">TafsirLab · tafsir-lab.vercel.app</div>
             </div>
           </div>
         </div>
@@ -388,15 +425,14 @@
     </div>
 
     <script>
-      // Per-character prompt spans (deterministic, build-time).
+      // The prompt, typed per character (deterministic, build-time spans).
       const PROMPT = "what does ibn kathir say about the basmalah";
-      const promptEl = document.getElementById("prompt");
-      const caret = document.getElementById("caret");
+      const typedEl = document.getElementById("typed");
       const chars = [];
       for (const c of PROMPT) {
         const s = document.createElement("span");
         s.textContent = c;
-        promptEl.insertBefore(s, caret);
+        typedEl.appendChild(s);
         chars.push(s);
       }
 
@@ -404,88 +440,105 @@
 
       /* Build-time hidden states — set once, reveal with to() (seek-safe). */
       gsap.set(chars, { autoAlpha: 0 });
-      gsap.set("#s2-word", { autoAlpha: 0 });
-      gsap.set("#chips .chip", { autoAlpha: 0 });
-      gsap.set("#think", { autoAlpha: 0 });
+      gsap.set("#wm-mv", { xPercent: -104 });
+      gsap.set(".sg", { autoAlpha: 0 });
+      gsap.set(["#bub-you", "#row-ai", "#trace", "#bub-ai", "#flyer"], { autoAlpha: 0 });
+      gsap.set("#bub-ai .wd", { autoAlpha: 0 });
+      gsap.set("#caret", { autoAlpha: 0 });
 
-      /* ═══ 1 · GLYPH ON PAPER — a quiet arrival, then the carrier cut. */
-      tl.fromTo("#s1-mv", { scale: 0.82, opacity: 0 },
-        { scale: 1, opacity: 1, duration: 0.55, ease: "power3.out" }, 0.05);
-      // SEAM 1 (t=1.4, Z push, carrier = the glyph): still growing at the cut.
-      tl.to("#s1-mv", { scale: 1.06, duration: 0.25, ease: "power1.in" }, 1.15);
+      /* ═══ 1 · THE MARK — tile in, then the wordmark unrolls beside it. */
+      tl.fromTo("#c1-mv", { scale: 0.86, opacity: 0 },
+        { scale: 1, opacity: 1, duration: 0.7, ease: "power3.out" }, 0.1);
+      tl.fromTo("#c1-dots", { scale: 1.06 }, { scale: 1, duration: 1.2, ease: "power2.out" }, 0.1);
+      /* The reveal, without the crossing that mangled both T's: the ROW
+         moves as one unit (tile centred → lockup centred) while the wordmark
+         wipes open rightward out of the tile's edge. Tile and text never
+         trade places; the mask does the work. */
+      tl.fromTo("#row-mv", { x: 330 }, { x: 0, duration: 0.95, ease: "power3.inOut" }, 1.35);
+      tl.to("#wm-mv", { xPercent: 0, duration: 0.95, ease: "power3.inOut" }, 1.35);
+      // SEAM 1 (t=3.4, Z push): the lockup grows into the cut.
+      tl.to("#c1-mv", { scale: 1.22, duration: 0.3, ease: "power3.in" }, 3.1);
+      tl.to("#c1-fx", { filter: "blur(12px)", duration: 0.3, ease: "power3.in" }, 3.1);
+      tl.to("#c1-mv", { opacity: 0.1, duration: 0.3, ease: "none" }, 3.1);
+      tl.set("#c1-mv", { opacity: 0 }, 3.4);
+      tl.to("#c1-dots", { scale: 1.1, duration: 0.3, ease: "power3.in" }, 3.1);
 
-      /* ═══ 2 · LOCKUP — the glyph continues growing through the invert,
-         then settles; the wordmark blooms in beside it. */
-      tl.fromTo("#s2-glyph-mv", { scale: 1.06 }, { scale: 1.14, duration: 0.12, ease: "none" }, 1.4);
-      tl.to("#s2-glyph-mv", { scale: 1, duration: 0.4, ease: "expo.out" }, 1.52);
-      tl.to("#s2-word", { autoAlpha: 1, duration: 0.5, ease: "power2.out" }, 1.75);
-      tl.fromTo("#s2-word", { x: 40 }, { x: 0, duration: 0.55, ease: "power3.out" }, 1.75);
-      // SEAM 2 (t=3.4, Z push): the lockup grows into the cut.
-      tl.to("#s2-mv", { scale: 1.18, duration: 0.2, ease: "power3.in" }, 3.2);
-      tl.to("#s2-fx", { filter: "blur(10px)", duration: 0.2, ease: "power3.in" }, 3.2);
-      tl.to("#s2-mv", { opacity: 0.15, duration: 0.2, ease: "none" }, 3.2);
-      tl.set("#s2-mv", { opacity: 0 }, 3.4);
+      /* ═══ 2 · THE PANEL — arrives still growing; then one continuous take. */
+      tl.fromTo("#c2-mv", { scale: 0.86, opacity: 0.1 },
+        { scale: 1, opacity: 1, duration: 0.7, ease: "expo.out" }, 3.4);
+      tl.fromTo("#c2-fx", { filter: "blur(12px)" }, { filter: "blur(0px)", duration: 0.6, ease: "expo.out" }, 3.4);
 
-      /* ═══ 3 · GREETING — arrives still growing (matched sign), then a slow
-         lateral pan across the oversized line: camera with intent. */
-      tl.fromTo("#s3-mv", { scale: 0.82, opacity: 0.15 },
-        { scale: 1, opacity: 1, duration: 0.5, ease: "expo.out" }, 3.4);
-      tl.fromTo("#s3-fx", { filter: "blur(10px)" }, { filter: "blur(0px)", duration: 0.5, ease: "expo.out" }, 3.4);
-      tl.fromTo("#s3-mv", { x: 60 }, { x: -240, duration: 1.5, ease: "sine.inOut" }, 3.9);
-      // SEAM 3 (t=5.4, X left): the pan accelerates out; fade dies at the cut.
-      tl.to("#s3-mv", { x: -370, duration: 0.3, ease: "power4.in" }, 5.1);
-      tl.to("#s3-mv", { opacity: 0, duration: 0.2, ease: "none" }, 5.19);
-      tl.set("#s3-mv", { opacity: 0 }, 5.4);
+      // The empty state's chips cascade — the app animates them in too.
+      [".sg:nth-child(1)", ".sg:nth-child(2)", ".sg:nth-child(3)"].forEach((sel, i) => {
+        const t0 = 3.95 + i * 0.12;
+        tl.set(sel, { autoAlpha: 1 }, t0);
+        tl.fromTo(sel, { y: 42 }, { y: 0, duration: 0.34 - i * 0.03, ease: "power4.out" }, t0);
+      });
 
-      /* ═══ 4 · COMPOSER — enters continuing left at matched velocity. */
-      tl.fromTo("#s4-mv", { x: 130 }, { x: 0, duration: 0.34, ease: "power4.out" }, 5.4);
-      tl.fromTo("#s4-mv", { opacity: 0.35 }, { opacity: 1, duration: 0.25, ease: "none" }, 5.4);
-      // The chips cascade in — waterfall entry, binary alpha.
-      ["#chips .chip:nth-child(1)", "#chips .chip:nth-child(2)", "#chips .chip:nth-child(3)"]
-        .forEach((sel, i) => {
-          const t0 = 5.62 + i * 0.11;
-          tl.set(sel, { autoAlpha: 1 }, t0);
-          tl.fromTo(sel, { y: 46 }, { y: 0, duration: 0.16 - i * 0.015, ease: "power4.out" }, t0);
-        });
-      // Typing — stepped, seek-safe; caret blinks finitely.
-      chars.forEach((c, i) => tl.set(c, { autoAlpha: 1 }, 5.75 + i * 0.03));
-      tl.to("#caret", { autoAlpha: 0, duration: 0.28, repeat: 3, yoyo: true, ease: "none" }, 5.7);
-      // SEAM 4 (t=7.4, Z push): into the input itself.
-      tl.to("#s4-mv", { scale: 1.2, duration: 0.22, ease: "power3.in" }, 7.18);
-      tl.to("#s4-fx", { filter: "blur(12px)", duration: 0.22, ease: "power3.in" }, 7.18);
-      tl.to("#s4-mv", { opacity: 0.15, duration: 0.22, ease: "none" }, 7.18);
-      tl.set("#s4-mv", { opacity: 0 }, 7.4);
+      // Typing — the caret wakes, characters step in, the hint yields.
+      tl.to("#caret", { autoAlpha: 1, duration: 0.12, ease: "none" }, 4.85);
+      tl.to("#cp-hint", { autoAlpha: 0, duration: 0.2, ease: "none" }, 5.05);
+      /* Human cadence, deterministically: a fixed rhythm formula — quick
+         runs, tiny hesitations after spaces — instead of a metronome. */
+      let tAt = 5.1;
+      chars.forEach((c, i) => {
+        tl.set(c, { autoAlpha: 1 }, tAt);
+        const beat = 0.024 + ((i * 7) % 5) * 0.006;      // 24–48ms, patterned
+        const pause = c.textContent === " " ? 0.03 : 0;  // breath at words
+        tAt += beat + pause;
+      });
+      tl.to("#caret", { autoAlpha: 0, duration: 0.26, repeat: 3, yoyo: true, ease: "none" }, 4.95);
 
-      /* ═══ 5 · HERO PILL — arrives still growing; the glow is the hero. */
-      tl.fromTo("#s5-mv", { scale: 0.8, opacity: 0.15 },
-        { scale: 1, opacity: 1, duration: 0.5, ease: "expo.out" }, 7.4);
-      tl.fromTo("#s5-fx", { filter: "blur(12px)" }, { filter: "blur(0px)", duration: 0.5, ease: "expo.out" }, 7.4);
-      // 8.15: the state swap — question out, the real trace state in.
-      tl.to(["#pill-q", "#pill-caret"], { autoAlpha: 0, duration: 0.22, ease: "power2.in" }, 8.15);
-      tl.to("#think", { autoAlpha: 1, duration: 0.28, ease: "power2.out" }, 8.32);
-      // Sequenced UI life: the spinner turns while it works (finite).
-      tl.fromTo("#spinner", { rotation: 0 }, { rotation: 900, duration: 2.4, ease: "none" }, 8.32);
-      // One glow swell as the work lands — an event, not an idle loop.
-      tl.to("#pill", { boxShadow: "0 0 90px rgba(79,154,122,0.55), 0 0 200px rgba(79,154,122,0.28), inset 0 0 40px rgba(79,154,122,0.2)", duration: 0.5, ease: "sine.out" }, 10.1);
-      // SEAM 5 (t=10.9, Z pull): the pill recedes; the answer lands.
-      tl.to("#s5-mv", { scale: 0.88, duration: 0.22, ease: "power3.in" }, 10.68);
-      tl.to("#s5-fx", { filter: "blur(12px)", duration: 0.22, ease: "power3.in" }, 10.68);
-      tl.to("#s5-mv", { opacity: 0.15, duration: 0.22, ease: "none" }, 10.68);
-      tl.set("#s5-mv", { opacity: 0 }, 10.9);
+      // SEND at 6.75 — the button presses, and the typed line itself lifts
+      // out of the composer to become the user bubble (one shared element).
+      tl.to("#send", { scale: 0.9, duration: 0.1, ease: "power2.in" }, 6.75);
+      tl.to("#send", { scale: 1, duration: 0.24, ease: "power2.out" }, 6.85);
+      tl.set(chars, { autoAlpha: 0 }, 6.88);
+      tl.set("#caret", { autoAlpha: 0 }, 6.88);
+      tl.to("#cp-hint", { autoAlpha: 1, duration: 0.4, ease: "none" }, 7.3);
+      tl.set("#flyer", { autoAlpha: 1 }, 6.88);
+      /* From over the composer's text line (left 76, top ≈ 886 within the
+         app) to its destination at (right 46, top 144): the deltas below. */
+      tl.fromTo("#flyer", { x: -358, y: 742, scale: 1 },
+        { x: 0, y: 0, scale: 1, duration: 0.62, ease: "power3.inOut" }, 6.88);
+      // The flyer lands exactly on the bubble's slot; swap same-frame.
+      tl.set("#flyer", { autoAlpha: 0 }, 7.5);
+      tl.set("#bub-you", { autoAlpha: 1 }, 7.5);
+      // The empty state clears as the conversation begins — as in the app.
+      tl.to("#empty", { autoAlpha: 0, duration: 0.25, ease: "power2.in" }, 6.82);
+      tl.fromTo("#empty", { y: 0 }, { y: -26, duration: 0.25, ease: "power2.in" }, 6.82);
 
-      /* ═══ 6 · THE ANSWER CARD — oversized, shrinking into place (pull). */
-      tl.fromTo("#s6-mv", { scale: 1.15, opacity: 0.15 },
-        { scale: 1, opacity: 1, duration: 0.5, ease: "expo.out" }, 10.9);
-      tl.fromTo("#s6-fx", { filter: "blur(8px)" }, { filter: "blur(0px)", duration: 0.4, ease: "expo.out" }, 10.9);
-      // 11.4–12.2: stillness — the answer, resting. (The comma before the close.)
-      // SEAM 6 (t=12.5, X left).
-      tl.to("#s6-mv", { x: -130, duration: 0.3, ease: "power4.in" }, 12.2);
-      tl.to("#s6-mv", { opacity: 0, duration: 0.2, ease: "none" }, 12.29);
-      tl.set("#s6-mv", { opacity: 0 }, 12.5);
+      // Thinking — the app's real state: avatar row, dots pulsing (finite).
+      tl.to("#row-ai", { autoAlpha: 1, duration: 0.25, ease: "power2.out" }, 7.75);
+      tl.fromTo("#row-ai", { y: 16 }, { y: 0, duration: 0.32, ease: "power3.out" }, 7.75);
+      [["#d1", 0], ["#d2", 0.14], ["#d3", 0.28]].forEach(([sel, d]) => {
+        tl.fromTo(sel, { y: 0 }, { y: -6, duration: 0.3, repeat: 5, yoyo: true, ease: "sine.inOut" }, 7.9 + d);
+      });
+      tl.to("#trace", { autoAlpha: 1, duration: 0.25, ease: "power2.out" }, 8.45);
+      tl.fromTo("#trace", { y: 12 }, { y: 0, duration: 0.3, ease: "power3.out" }, 8.45);
 
-      /* ═══ 7 · CLOSE — continues left at matched velocity, settles. */
-      tl.fromTo("#s7-mv", { x: 120 }, { x: 0, duration: 0.4, ease: "power4.out" }, 12.5);
-      tl.fromTo("#s7-mv", { opacity: 0.35 }, { opacity: 1, duration: 0.28, ease: "none" }, 12.5);
+      // The answer streams, word by word, in the app's own bubble. The
+      // thinking chip yields to it — exactly the product's behaviour.
+      tl.to("#thinking", { autoAlpha: 0, duration: 0.22, ease: "power2.in" }, 8.85);
+      tl.set("#thinking", { display: "none" }, 9.05);
+      tl.to("#bub-ai", { autoAlpha: 1, duration: 0.2, ease: "none" }, 9.0);
+      const words = gsap.utils.toArray("#bub-ai .wd");
+      words.forEach((w, i) => tl.set(w, { autoAlpha: 1 }, 9.05 + i * 0.047));
+      // A whisper of push-in while it writes — attention, not wobble.
+      tl.fromTo("#cam", { scale: 1 }, { scale: 1.022, duration: 2.4, ease: "sine.inOut" }, 9.1);
+      // 11.6–12.0: stillness on the finished answer.
+
+      // SEAM 2 (t=12.3, Z pull): the panel recedes.
+      tl.to("#c2-mv", { scale: 0.9, duration: 0.3, ease: "power3.in" }, 12.0);
+      tl.to("#c2-fx", { filter: "blur(12px)", duration: 0.3, ease: "power3.in" }, 12.0);
+      tl.to("#c2-mv", { opacity: 0.1, duration: 0.3, ease: "none" }, 12.0);
+      tl.set("#c2-mv", { opacity: 0 }, 12.3);
+
+      /* ═══ 3 · CLOSE — lands shrinking (pull matched), settles, holds. */
+      tl.fromTo("#c3-mv", { scale: 1.12, opacity: 0.1 },
+        { scale: 1, opacity: 1, duration: 0.6, ease: "expo.out" }, 12.3);
+      tl.fromTo("#c3-fx", { filter: "blur(8px)" }, { filter: "blur(0px)", duration: 0.5, ease: "expo.out" }, 12.3);
+      tl.fromTo("#c3-dots", { scale: 1.08 }, { scale: 1, duration: 0.8, ease: "power2.out" }, 12.3);
 
       tl.seek(0);
       window.__timelines["main"] = tl;

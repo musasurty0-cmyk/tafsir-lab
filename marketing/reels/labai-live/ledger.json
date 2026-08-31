@@ -1,61 +1,35 @@
 {
-  "current": "left",
-  "note": "v3 — reference is the Gemini 3 announcement reel (13.9s): glyph card → dark lockup → oversized greeting closeup → composer + chips → glowing input pill → thinking pill → result document card → lockup close. Recreated with TafsirLab's aesthetic and Lab AI's real UI states. Lateral camera language = LEFT current; Z spends mark entering the product and the payoff arrival.",
+  "current": "none — one continuous take",
+  "note": "v4 — maximum flow per the owner's brief: three clips, two Z-seams, everything else is in-scene morph. Light mode, no green, real app copy, the answer streams in the real chat interface. The push into the product and the pull back out are the only cuts, signs matched on both.",
   "seams": [
     {
-      "t": 1.4,
-      "name": "glyph-light→lockup-dark",
-      "axis": "z", "direction": "push",
-      "carrier": "the sparkle glyph, held centred across the invert",
-      "exit":  { "selector": "#s1-mv", "motion": "glyph scale 1→1.06 power1.in — still growing at the cut" },
-      "entry": { "selector": "#s2-glyph-mv", "motion": "scale 1.06→1.14 then settles — same growing sign" },
-      "technique": "match-cut inversion (Tier-A)",
-      "why": "the reference's light→dark flip; the glyph carries the eye"
-    },
-    {
       "t": 3.4,
-      "name": "lockup→greeting",
+      "name": "lockup→panel",
       "axis": "z", "direction": "push",
-      "exit":  { "selector": "#s2-mv", "motion": "scale 1→1.18, blur 0→10, opacity linear →0.15, power3.in 0.2s" },
-      "entry": { "selector": "#s3-mv", "motion": "scale 0.82→1, blur 10→0, expo.out 0.5s" },
+      "exit":  { "selector": "#c1-mv", "motion": "scale 1→1.22, blur 0→12, opacity linear →0.1, power3.in 0.3s" },
+      "entry": { "selector": "#c2-mv", "motion": "scale 0.86→1, blur 12→0, expo.out 0.7s — growing both sides" },
       "technique": "zoom-through",
-      "why": "pushing into the product"
+      "why": "into the product — the only forward cut"
     },
     {
-      "t": 5.4,
-      "name": "greeting→composer",
-      "axis": "x", "direction": "left",
-      "exit":  { "selector": "#s3-mv", "motion": "x continues the pan −130, power4.in 0.3s, fade dies at cut" },
-      "entry": { "selector": "#s4-mv", "motion": "x +130→0 power4.out 0.34s, opacity from 0.35" },
-      "technique": "cut-the-curve (the current)",
-      "why": "the reference's lateral camera language"
-    },
-    {
-      "t": 7.4,
-      "name": "composer→hero-pill",
-      "axis": "z", "direction": "push",
-      "exit":  { "selector": "#s4-mv", "motion": "scale 1→1.2, blur 0→12, opacity linear →0.15, power3.in 0.22s" },
-      "entry": { "selector": "#s5-mv", "motion": "scale 0.8→1, blur 12→0, expo.out 0.5s" },
-      "technique": "zoom-through",
-      "why": "deeper still — into the input itself"
-    },
-    {
-      "t": 10.9,
-      "name": "hero→result",
+      "t": 12.3,
+      "name": "panel→close",
       "axis": "z", "direction": "pull",
-      "exit":  { "selector": "#s5-mv", "motion": "scale 1→0.88, blur 0→12, opacity linear →0.15, power3.in 0.22s" },
-      "entry": { "selector": "#s6-mv", "motion": "scale 1.15→1, blur 8→0, expo.out 0.5s — shrinking both sides" },
+      "exit":  { "selector": "#c2-mv", "motion": "scale 1→0.9, blur 0→12, opacity linear →0.1, power3.in 0.3s" },
+      "entry": { "selector": "#c3-mv", "motion": "scale 1.12→1, blur 8→0, expo.out 0.6s — shrinking both sides" },
       "technique": "inverse zoom-through",
-      "why": "ARRIVAL — the answer lands (the reference's document card beat)"
-    },
-    {
-      "t": 12.5,
-      "name": "result→close",
-      "axis": "x", "direction": "left",
-      "exit":  { "selector": "#s6-mv", "motion": "x 0→−130 power4.in 0.3s, fade dies at cut" },
-      "entry": { "selector": "#s7-mv", "motion": "x +120→0 power4.out 0.4s, opacity from 0.35" },
-      "technique": "cut-the-curve (the current)",
-      "why": "back to the mark"
+      "why": "back out to the mark — the only backward cut"
     }
+  ],
+  "in_scene_flow": [
+    "0.15 tile scales in on paper + dot grid",
+    "1.35 tile glides left; the italic serif wordmark reveals beside it",
+    "3.9–4.7 empty state: mark, title, the real sub copy, three real suggestion chips cascade",
+    "5.1–6.55 typing in the real composer, caret blinking",
+    "6.9 SEND — the typed line itself flies up and becomes the user bubble (shared element)",
+    "7.5 the app's real Thinking… row, dots pulsing finitely",
+    "8.3 the trace: Searched 12 sources",
+    "8.8–11.3 the answer streams word by word in the chat bubble, citations landing inline",
+    "11.5–12.0 stillness on the finished answer"
   ]
 }
