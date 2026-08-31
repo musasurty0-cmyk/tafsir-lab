@@ -13524,6 +13524,13 @@ input, textarea { font: inherit; color: inherit; }
   touch-action: none;
   -webkit-user-select: none; user-select: none;
   cursor: grab;
+  /* The neighbours recede toward the edges. This was a per-row opacity
+     computed from the centre; as a mask it costs nothing per frame, which
+     is what a column moving at sixty frames a second needs. */
+  -webkit-mask-image: linear-gradient(to bottom,
+    transparent 0%, rgba(0,0,0,.35) 12%, #000 34%, #000 66%, rgba(0,0,0,.35) 88%, transparent 100%);
+  mask-image: linear-gradient(to bottom,
+    transparent 0%, rgba(0,0,0,.35) 12%, #000 34%, #000 66%, rgba(0,0,0,.35) 88%, transparent 100%);
   /* Never shrink. Its height is the seven rows it draws; as a flex child in a
      full-height column it was being compressed on a short window until the
      rows were clipped to a sliver. The card scrolls instead. */
@@ -13540,7 +13547,10 @@ input, textarea { font: inherit; color: inherit; }
 
 .spot-list {
   position: absolute; left: 44px; right: 44px;
-  transition: transform 190ms var(--ease-overlay);
+  /* No transition. The column is driven frame by frame now — the flick's
+     deceleration IS the animation, and a CSS transition on top of it would
+     be a second opinion about where the column is. */
+  will-change: transform;
 }
 .spot-row {
   display: flex; align-items: center; gap: var(--sp-3);
