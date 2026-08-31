@@ -1,9 +1,9 @@
 ﻿{
     "current":  "none — one continuous take",
-    "note":  "v8 - the add-to-editor act, cursor-anchored. 19.5s. Seams unchanged in kind (two invisible match cuts on the ask bar, now at 4.6 and 16.5); the new act lives inside c2: oversized cursor enters off-screen, clicks Add to editor, the click docks the panel right as a card while the editor page rises, the note flies from the answer into the page (cursor leading), cursor exits, room settles, bar comes home.",
+    "note":  "v9 - the turn beat + sound. 20.7s. A fourth problem line answers the pain BEFORE the product appears (\u0027Finding it takes hours.\u0027 -\u003e \u0027Not any more.\u0027 -\u003e the bar), so the AI reads as the proof, not the continuation. Seams shift to 5.8 and 17.7, unchanged in kind. Audio: the owner\u0027s AI-generated nasheed as the bed (trimmed, faded, loudnorm -18) + SFX pinned to story beats (text cuts, morphs, typing, send click + flight, trace payoff, add-to-editor click, note landing, close line).",
     "seams":  [
                   {
-                      "t":  4.6,
+                      "t":  5.8,
                       "name":  "problem-\u003epanel (match cut + morph)",
                       "axis":  "none",
                       "direction":  "match",
@@ -19,7 +19,7 @@
                       "why":  "the way out of the problem IS the product\u0027s own ask bar"
                   },
                   {
-                      "t":  16.5,
+                      "t":  17.7,
                       "name":  "panel-\u003eclose (match cut + reverse morph)",
                       "axis":  "none",
                       "direction":  "match",

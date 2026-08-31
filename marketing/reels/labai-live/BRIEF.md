@@ -7,7 +7,7 @@ destination: instagram-reel
 aspect: "1:1"
 canvas: 1080x1080
 language: en
-length: 19.5s
+length: 20.7s
 angle: problem-solution
 ---
 
@@ -87,6 +87,25 @@ the word-by-word stream with citations, stillness, close.
   wide, dock → 0.5× flush at x 520); cursor tip landed low on the chip;
   cursor rested on the note's tag (parked below the block); eyebrow + tag
   ink-4 failed 4.5:1 (→ ink-3).
+- v9: owner's notes — "finding it takes hours? then show the ai? does the
+  ai take hours?" and "add sfx and nasheed". (a) The turn beat: a fourth
+  problem line — "Not any more." (italic, setting up the close's "Seconds,
+  not hours.") — contradicts the pain BEFORE the product appears, so the
+  panel reads as the proof. Everything from the old seam shifts +1.2s
+  (20.7s total; seams now 5.8 / 17.7). (b) Sound: the owner's own
+  AI-generated nasheed (Downloads) as the bed — trimmed to 20.7s from 12s
+  in, loudnorm −18 LUFS, 1.2s/1.7s fades — plus the owner's downloaded
+  typing/whoosh/click SFX and bundled pop/ping/notification/sparkle,
+  pinned to beats: the three text cuts, the bar's morphs, typing, the send
+  click + flight, the bubble landing, "Searched 12 sources", the
+  add-to-editor click + dock, the note landing, the chrome shed, and the
+  payoff line.
+
+## Notes (audio)
+
+- The bed is `[ZapCap AI] - On My Way (Nasheed Instrumental)` from the
+  owner's Downloads — AI-generated, so no licensing exposure; swap
+  `audio/bed-nasheed.mp3` and re-render to change the track.
 
 ## Notes
 
