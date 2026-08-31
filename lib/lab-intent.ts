@@ -51,3 +51,41 @@ export function asksForNotes(question: string): boolean {
   if (q.length > 400) return false;
   return PATTERNS.some((re) => re.test(q));
 }
+
+/* ── The board ───────────────────────────────────────────────────────────
+   A second destination, and a different question: not "file this" but "draw
+   this". The two overlap in English — "add that to my notes" and "add that
+   to the board" differ by one word — so the board is tested FIRST and the
+   notes offer stands down when it matches, rather than two cards appearing
+   under one answer and making the reader choose twice. */
+
+/** The surface you draw on. */
+const BOARD = String.raw`(?:white-?board|board|canvas|mind[\s-]?map)`;
+
+const BOARD_PATTERNS: RegExp[] = [
+  /* "add this to the whiteboard as a mindmap", "put that on the board" —
+     the verb, then the board, in that order. */
+  new RegExp(String.raw`\b${VERB}\b[\s\S]{0,80}?\b(?:to|in|into|on|onto)\b\s+(?:my|the|our)?\s*${BOARD}\b`, "i"),
+
+  /* Board first: "on my whiteboard, map this out". */
+  new RegExp(String.raw`\b(?:my|the)\s+${BOARD}\b[\s\S]{0,40}?\b${VERB}\b`, "i"),
+
+  /* The map is named as the thing wanted, wherever it is going: "make a
+     mindmap of this", "turn that into a mind map", "map this out". */
+  new RegExp(String.raw`\b(?:make|draw|build|create|generate|turn|render)\b[\s\S]{0,30}?\bmind[\s-]?map\b`, "i"),
+  new RegExp(String.raw`\bmind[\s-]?map\b[\s\S]{0,24}?\b(?:this|that|it|of|for)\b`, "i"),
+  new RegExp(String.raw`\bmap\s+(?:this|that|it)\s+out\b`, "i"),
+];
+
+/**
+ * Did the reader ask for this to be drawn on the board?
+ *
+ * Same contract as `asksForNotes`: mechanical, cheap, testable, and slightly
+ * generous, because the result is a card they can dismiss.
+ */
+export function asksForBoard(question: string): boolean {
+  const q = question.trim();
+  if (!q) return false;
+  if (q.length > 400) return false;
+  return BOARD_PATTERNS.some((re) => re.test(q));
+}

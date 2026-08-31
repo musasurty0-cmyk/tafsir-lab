@@ -57,6 +57,24 @@ export function provider(): Provider {
 }
 
 /**
+ * Can we look at a picture?
+ *
+ * Separate from `provider()` on purpose. That one answers "who writes the
+ * prose", and its answer is Groq wherever a Groq key exists — the chat models
+ * we run there are fast and good at Arabic, and they are also text-only. A
+ * board full of handwriting is a different question asked of a different
+ * model, so the two are chosen independently: text can be Groq while sight is
+ * Gemini, which is exactly the arrangement the keys usually describe.
+ *
+ * Returns null when nothing here can see, and every caller treats that as an
+ * ordinary outcome — the board is simply not read, and the reader is told so
+ * rather than shown a failure.
+ */
+export function visionProvider(): "gemini" | null {
+  return process.env.GEMINI_API_KEY ? "gemini" : null;
+}
+
+/**
  * The instruction.
  *
  * The hard part was never stopping the model inventing. It is stopping that
@@ -418,6 +436,67 @@ export async function isSmallTalk(
   } catch {
     // A classifier that fails must not cost anyone their answer.
     return false;
+  }
+}
+
+/**
+ * Turn a finished answer into a mindmap tree.
+ *
+ * A second call rather than asking the first one to emit JSON alongside its
+ * prose: the answer is streamed to a reader and must stay readable, and a
+ * model asked to do both at once reliably damages one of them. This runs only
+ * when the reader has asked for a map, so the extra call is never on the path
+ * of an ordinary question.
+ *
+ * Returns null on anything unexpected — no provider, malformed JSON, a shape
+ * that is not a tree. The caller treats that as "no map offered", because a
+ * broken mindmap dumped onto someone's board is worse than none.
+ */
+const MINDMAP_SYSTEM = `You turn a passage of study notes into a mindmap.
+
+Reply with JSON ONLY — no prose, no code fence. The shape is exactly:
+{"label":"<the subject>","children":[{"label":"<branch>","children":[{"label":"<leaf>"}]}]}
+
+Rules:
+- The root label names the subject in under six words.
+- Three to six branches. Each branch has two to four leaves, or none.
+- Never deeper than root -> branch -> leaf.
+- A label is a PHRASE, not a sentence: under nine words, no trailing full stop.
+- Use only what the passage says. Do not add scholars, rulings or claims it
+  does not contain. Transliterate Arabic the way the passage does.`;
+
+export async function mindmapFrom(
+  text: string, subject?: string,
+): Promise<{ label: string; children?: unknown[] } | null> {
+  if (provider() === "none") return null;
+
+  const messages = [
+    { role: "system", content: MINDMAP_SYSTEM },
+    {
+      role: "user",
+      content: (subject ? `Subject: ${subject}
+
+` : "") + text.slice(0, 6000),
+    },
+  ];
+
+  try {
+    let out = "";
+    for await (const piece of dispatch(messages)) {
+      out += piece;
+      if (out.length > 4000) break;
+    }
+    /* Models fence JSON even when told not to, and some narrate first. Take
+       the outermost braces rather than trusting the reply to be bare. */
+    const a = out.indexOf("{"), b = out.lastIndexOf("}");
+    if (a === -1 || b <= a) return null;
+    const parsed: unknown = JSON.parse(out.slice(a, b + 1));
+    if (!parsed || typeof parsed !== "object") return null;
+    const root = parsed as { label?: unknown; children?: unknown };
+    if (typeof root.label !== "string" || !root.label.trim()) return null;
+    return root as { label: string; children?: unknown[] };
+  } catch {
+    return null;
   }
 }
 
