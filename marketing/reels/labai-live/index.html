@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=1080, height=1080">
+    <meta name="viewport" content="width=1080, height=1920">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,500;0,8..60,600;1,8..60,500&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
@@ -36,7 +36,7 @@
       }
 
       html, body {
-        width: 1080px; height: 1080px;
+        width: 1080px; height: 1920px;
         overflow: hidden;
         background: var(--bg);
         font-family: var(--sans);
@@ -44,7 +44,7 @@
       }
       #root {
         position: relative;
-        width: 1080px; height: 1080px;
+        width: 1080px; height: 1920px;
         background: var(--bg); /* opaque stage ground */
       }
       .clip { position: absolute; inset: 0; overflow: hidden; }
@@ -106,7 +106,7 @@
       .pill {
         position: absolute;
         left: 50%;
-        top: 490px; width: 700px; height: 100px;
+        top: 910px; width: 700px; height: 100px;
         border-radius: 50px;
         background: var(--bg-elev);
         border: 1px solid var(--line-strong);
@@ -179,7 +179,7 @@
 
       /* Empty state - the app's real copy. */
       .empty {
-        position: absolute; left: 0; right: 0; top: 168px;
+        position: absolute; left: 0; right: 0; top: 560px;
         display: flex; flex-direction: column; align-items: center;
         gap: 20px;
         text-align: center;
@@ -402,8 +402,8 @@
       .qline--1 { font-size: 84px; }
       /* B2/B3 caption the STACK from above it; B1 and the turn line own
          the centre. */
-      .qline--2 { font-size: 54px; align-items: flex-start; padding-top: 86px; }
-      .qline--3 { font-size: 68px; align-items: flex-start; padding-top: 78px; }
+      .qline--2 { font-size: 54px; align-items: flex-start; padding-top: 445px; }
+      .qline--3 { font-size: 68px; align-items: flex-start; padding-top: 430px; }
       /* The turn line — italic, like the close's "Seconds, not hours.",
          which it sets up. */
       .qline--4 { font-size: 84px; font-style: italic; }
@@ -414,10 +414,10 @@
       .stack { position: absolute; inset: 0; }
       .book {
         position: absolute; left: 50%;
-        height: 42px; border-radius: 5px;
+        height: 56px; border-radius: 6px;
         display: flex; align-items: center; justify-content: center;
         font-family: var(--serif); font-style: italic;
-        font-size: 20px; color: var(--bg-elev);
+        font-size: 25px; color: var(--bg-elev);
         letter-spacing: 0.02em;
         box-shadow: 0 6px 18px rgba(41, 38, 33, 0.18);
         white-space: nowrap;
@@ -490,7 +490,7 @@
          screen: a mindmap that simply appears has not demonstrated a
          feature, it has demonstrated a transition. */
       .bub-you2 {
-        position: absolute; top: 512px; right: 44px;
+        position: absolute; top: 900px; right: 44px;
         max-width: 700px;
         padding: 19px 27px;
         border-radius: 22px 22px 7px 22px;
@@ -504,7 +504,7 @@
         /* High enough that Draw it clears the composer: the button the
            film asks you to watch being pressed cannot sit behind another
            surface. */
-        position: absolute; top: 604px; left: 105px;
+        position: absolute; top: 992px; left: 105px;
         width: 660px;
         padding: 22px 24px;
         border-radius: 18px;
@@ -619,21 +619,21 @@
          pill ends its return morph at top 490; everything else arranges
          around that point rather than pushing it). */
       .close-payoff {
-        position: absolute; left: 0; right: 0; top: 352px;
+        position: absolute; left: 0; right: 0; top: 772px;
         display: flex; justify-content: center; gap: 0.3em;
         font-family: var(--serif); font-style: italic;
         font-size: 42px; color: var(--ink);
       }
       .close-payoff .pw { display: inline-block; }
       .close-brand {
-        position: absolute; left: 0; right: 0; top: 648px;
+        position: absolute; left: 0; right: 0; top: 1068px;
         display: flex; justify-content: center;
       }
       .close-line {
-        position: absolute; left: 0; right: 0; top: 788px;
+        position: absolute; left: 0; right: 0; top: 1208px;
         display: flex; justify-content: center; gap: 0.32em;
       }
-      .close-url { position: absolute; left: 0; right: 0; top: 848px; text-align: center; }
+      .close-url { position: absolute; left: 0; right: 0; top: 1268px; text-align: center; }
       .close-line {
         font-size: 30px; color: var(--ink-2); font-weight: 500;
         letter-spacing: 0.01em;
@@ -658,7 +658,7 @@
       </defs>
     </svg>
 
-    <div data-hf-id="hf-liou" id="root" data-composition-id="main" data-start="0" data-duration="30.1" data-fps="30" data-width="1080" data-height="1080">
+    <div data-hf-id="hf-liou" id="root" data-composition-id="main" data-start="0" data-duration="30.1" data-fps="30" data-width="1080" data-height="1920">
       <!-- ═══ 1 · THE PROBLEM 0–4.6 — three text beats, one leftward current.
            The reel opens on the PAIN, not the product: one question, buried
            in twelve books, hours of searching. The brand waits for the close;
@@ -846,7 +846,7 @@
                  by now the panel has gone. -->
             <div class="pill" id="pill3" data-layout-allow-overlap="true" data-layout-allow-occlusion="true"><span class="pill-hint">Ask about the Qur'an, or search your notes…</span></div>
             <div class="mind" id="mind" data-layout-allow-overflow="true">
-              <svg class="mind-svg" id="mind-svg" viewBox="0 0 1080 1080" fill="none"></svg>
+              <svg class="mind-svg" id="mind-svg" viewBox="0 0 1080 1920" fill="none"></svg>
             </div>
             <div class="mind-tag" id="mind-tag">
               <svg viewBox="0 0 24 24" fill="none" stroke="#6e695f" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="5" r="2.6"/><circle cx="5" cy="19" r="2.6"/><circle cx="19" cy="19" r="2.6"/><path d="M12 7.6v3.9M12 11.5H6.6a1.6 1.6 0 0 0-1.6 1.6v3.3M12 11.5h5.4a1.6 1.6 0 0 1 1.6 1.6v3.3"/></svg>
@@ -1002,7 +1002,7 @@
         /* Centre the whole map vertically in the frame. */
         const top = Math.min(...mnodes.map((n) => n.y));
         const bot = Math.max(...mnodes.map((n) => n.y + n.h));
-        const shift = (1080 - (bot - top)) / 2 - top;
+        const shift = (1920 - (bot - top)) / 2 - top;
         for (const n of mnodes) n.y += shift;
 
         for (const n of mnodes) {
@@ -1054,7 +1054,7 @@
         ["al-Saʿdī",         386], ["al-Baiḍāwī",       404],
         ["al-Jalālayn",      360], ["Ibn ʿAṭiyya",      382],
       ];
-      const BOOK_H = 42, BOOK_GAP = 5, STACK_BASE = 762;
+      const BOOK_H = 56, BOOK_GAP = 7, STACK_BASE = 1500;
       const stackEl = document.getElementById("stack");
       const books = BOOKS.map(([name, w], i) => {
         const el = document.createElement("div");
@@ -1249,7 +1249,7 @@
          490 = the composer's 904): layout `top` snaps to integer pixels
          under seek-by-frame capture and stutters on the ease tails. */
       tl.fromTo("#pill2", { y: 0, width: 700, height: 100, borderRadius: 50 },
-        { y: 414, width: 992, height: 132, borderRadius: 24,
+        { y: 1254, width: 992, height: 132, borderRadius: 24,
           duration: 0.7, ease: "power3.inOut", immediateRender: false }, 5.9);
       tl.fromTo(".pn-head", { y: -93 },
         { y: 0, duration: 0.55, ease: "power3.out", immediateRender: false }, 6.05);
@@ -1317,8 +1317,8 @@
          TAP is what ignites everything after it. It is the same cursor that
          later presses "Add to editor", so the film has one protagonist
          rather than a hand that appears once and is never explained. */
-      tl.fromTo("#cursor", { x: 1180, y: 1160 },
-        { x: 939, y: 932, duration: 0.72, ease: "power3.out", immediateRender: false }, 8.72);
+      tl.fromTo("#cursor", { x: 1180, y: 2000 },
+        { x: 939, y: 1772, duration: 0.72, ease: "power3.out", immediateRender: false }, 8.72);
       /* A breath on the target before the press — a cursor that arrives and
          clicks in the same instant reads as a script, not a hand. */
       tl.to("#cursor", { scale: 0.84, duration: 0.1, ease: "power2.in", transformOrigin: "21% 14%" }, 9.58);
@@ -1331,7 +1331,7 @@
       tl.set("#send-ring", { autoAlpha: 1, scale: 1 }, 9.6);
       tl.to("#send-ring", { scale: 2.1, autoAlpha: 0, duration: 0.5, ease: "power2.out" }, 9.6);
       /* Job done, the hand withdraws down-right, out of the answer's way. */
-      tl.to("#cursor", { x: 1180, y: 1160, duration: 0.6, ease: "power2.in" }, 9.95);
+      tl.to("#cursor", { x: 1180, y: 2000, duration: 0.6, ease: "power2.in" }, 9.95);
       /* display:none, not just hidden. autoAlpha leaves visibility:hidden,
          which still occupies layout - so the first question kept its 44
          characters of space in the composer and the SECOND question wrapped
@@ -1342,7 +1342,7 @@
       tl.set("#flyer", { autoAlpha: 1 }, 9.65);
       /* From over the composer's text line (left 76, top ≈ 886 within the
          app) to its destination at (right 46, top 144): the deltas below. */
-      tl.fromTo("#flyer", { x: -358, y: 742, scale: 1 },
+      tl.fromTo("#flyer", { x: -358, y: 1582, scale: 1 },
         { x: 0, y: 0, scale: 1, duration: 0.62, ease: "power3.inOut" }, 9.65);
       // CAM2: same zoom, pure vertical dolly — bottom-pin to top-pin, x
       // holding the right edge where the bubble will land. The app streams
@@ -1408,7 +1408,7 @@
       // (21%/14% of the box) lands on the chip's centre.
             /* Returning, not arriving: the same pointer that sent the message
          comes back for the answer's offer. */
-      tl.fromTo("#cursor", { x: 1180, y: 1160 },
+      tl.fromTo("#cursor", { x: 1180, y: 2000 },
         { x: 184, y: 545, duration: 0.62, ease: "power3.out", immediateRender: false }, 13.75);
       // CLICK — asymmetric tap on the tip; the chip presses back, parallel.
       tl.to("#cursor", { scale: 0.84, duration: 0.1, ease: "power2.in", transformOrigin: "21% 14%" }, 14.5);
@@ -1440,7 +1440,7 @@
 
       // Job done, the cursor leaves the way it never came (physical exit);
       // its departure cues the room to settle back.
-      tl.to("#cursor", { x: -140, y: 1160, duration: 0.5, ease: "power2.in" }, 16.15);
+      tl.to("#cursor", { x: -140, y: 2000, duration: 0.5, ease: "power2.in" }, 16.15);
       tl.fromTo("#editor", { y: 0 },
         { y: 130, duration: 0.4, ease: "power3.in", immediateRender: false }, 16.55);
       tl.to("#editor", { autoAlpha: 0, duration: 0.3, ease: "none" }, 16.6);
@@ -1469,8 +1469,8 @@
 
       /* The hand returns for the second send — same button, same tap, so the
          gesture is already familiar by the time it matters. */
-      tl.fromTo("#cursor", { x: 1180, y: 1160 },
-        { x: 964, y: 959, duration: 0.66, ease: "power3.out", immediateRender: false }, 18.15);
+      tl.fromTo("#cursor", { x: 1180, y: 2000 },
+        { x: 964, y: 1799, duration: 0.66, ease: "power3.out", immediateRender: false }, 18.15);
       tl.to("#cursor", { scale: 0.84, duration: 0.1, ease: "power2.in", transformOrigin: "21% 14%" }, 18.95);
       tl.to("#cursor", { scale: 1, duration: 0.22, ease: "power2.out", transformOrigin: "21% 14%" }, 19.05);
       tl.to("#send", { scale: 0.9, duration: 0.1, ease: "power2.in" }, 18.95);
@@ -1494,13 +1494,13 @@
         { y: 0, scale: 1, duration: 0.42, ease: "power3.out", immediateRender: false }, 19.72);
 
       // The cursor crosses to Draw it, waits a beat, and presses.
-      tl.to("#cursor", { x: 182, y: 836, duration: 0.6, ease: "power2.inOut" }, 20.05);
+      tl.to("#cursor", { x: 180, y: 1226, duration: 0.6, ease: "power2.inOut" }, 20.05);
       tl.to("#cursor", { scale: 0.84, duration: 0.1, ease: "power2.in", transformOrigin: "21% 14%" }, 20.92);
       tl.to("#cursor", { scale: 1, duration: 0.22, ease: "power2.out", transformOrigin: "21% 14%" }, 21.02);
       tl.to("#offer-go", { scale: 0.95, duration: 0.1, ease: "power2.in" }, 20.92);
       tl.to("#offer-go", { scale: 1, duration: 0.24, ease: "power2.out" }, 21.02);
       // Job done — the hand leaves before the board fills.
-      tl.to("#cursor", { x: -160, y: 1180, duration: 0.55, ease: "power2.in" }, 21.15);
+      tl.to("#cursor", { x: -160, y: 2020, duration: 0.55, ease: "power2.in" }, 21.15);
 
       /* ═══ THE BOARD ═══ 21.1-26.9
          The press opens the whiteboard: the panel clears, the board names
@@ -1609,7 +1609,7 @@
       tl.fromTo("#pill3", {
         /* Where the root is: the pill centres itself on 540, so the offset
            is simply the difference between the two centres. */
-        x: rootBox.cx - 540, y: rootBox.cy - 540,
+        x: rootBox.cx - 540, y: rootBox.cy - 960,
         width: R_W, height: R_H, borderRadius: 14,
         backgroundColor: "#2b2721", borderColor: "rgba(0,0,0,0.5)",
       }, {

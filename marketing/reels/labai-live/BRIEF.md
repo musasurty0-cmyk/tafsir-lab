@@ -4,10 +4,10 @@ flow: automation
 storyboard: no
 message: "Lab AI is now live in TafsirLab"
 destination: instagram-reel
-aspect: "1:1"
-canvas: 1080x1080
+aspect: "9:16"
+canvas: 1080x1920
 language: en
-length: 20.7s
+length: 30.1s
 angle: problem-solution
 ---
 
