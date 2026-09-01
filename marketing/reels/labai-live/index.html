@@ -225,7 +225,7 @@
 
       /* The thread - the app's message interface. */
       .thread {
-        position: absolute; left: 0; right: 0; top: 118px; bottom: 210px;
+        position: absolute; left: 0; right: 0; top: 118px; bottom: 500px;
         padding: 0 44px;
       }
       .bub-you {
@@ -317,7 +317,10 @@
 
       /* Composer - the app's, pinned at the bottom. */
       .composer {
-        position: absolute; left: 44px; right: 44px; bottom: 44px;
+        /* 340, not 44: Instagram covers the bottom of a reel with its
+           own UI, and the composer is the one surface the film asks you
+           to watch being used. */
+        position: absolute; left: 44px; right: 44px; bottom: 340px;
         min-height: 132px;
         background: var(--bg-elev);
         border: 1px solid var(--line-strong);
@@ -457,7 +460,7 @@
         /* 480 wide so the docked panel (left edge 520 at its 0.5× dock)
            abuts it with no overlap — the note text stays fully readable. */
         position: absolute; left: 40px; top: 140px;
-        width: 480px; bottom: 140px;
+        width: 480px; bottom: 380px;
         background: var(--bg-elev);
         border: 1px solid var(--line);
         border-radius: 20px;
@@ -537,7 +540,7 @@
       /* The board's own chrome, so the map lands somewhere that is visibly
          the whiteboard and not a blank page. */
       .board-bar {
-        position: absolute; left: 50%; bottom: 44px;
+        position: absolute; left: 50%; bottom: 340px;
         transform: translateX(-50%);
         display: flex; align-items: center; gap: 8px;
         padding: 9px;
@@ -608,7 +611,7 @@
       /* The label that names what just happened, bottom-left, out of the map. */
       .mind-tag {
         /* Above the tool rail, which owns the bottom centre. */
-        position: absolute; left: 60px; bottom: 132px;
+        position: absolute; left: 60px; bottom: 430px;
         display: flex; align-items: center; gap: 11px;
         font-size: 20px; color: var(--ink-3);
       }
@@ -1054,7 +1057,7 @@
         ["al-Saʿdī",         386], ["al-Baiḍāwī",       404],
         ["al-Jalālayn",      360], ["Ibn ʿAṭiyya",      382],
       ];
-      const BOOK_H = 56, BOOK_GAP = 7, STACK_BASE = 1500;
+      const BOOK_H = 56, BOOK_GAP = 7, STACK_BASE = 1400;
       const stackEl = document.getElementById("stack");
       const books = BOOKS.map(([name, w], i) => {
         const el = document.createElement("div");
@@ -1105,7 +1108,12 @@
       gsap.set("#pill3", { autoAlpha: 0 });
       gsap.set("#pill3 .pill-hint", { autoAlpha: 0 });
       gsap.set("#pill1", { x: 260, autoAlpha: 0 });
-      gsap.set("#pill2", { top: 490, width: 700, height: 100, borderRadius: 50 });
+      /* 910, matching the stylesheet. This inline pin is what the morph
+         tweens FROM, so when the frame went portrait and the CSS moved the
+         bar to the centre, this stayed behind on the old square layout and
+         the bar jumped 420px at the cut — the one seam the whole film is
+         built to make invisible. */
+      gsap.set("#pill2", { top: 910, width: 700, height: 100, borderRadius: 50 });
       /* The real composer stays hidden until the bar has BECOME it; its send
          button arrives just after, and the chrome assembles around the morph. */
       gsap.set(".composer", { autoAlpha: 0 });
@@ -1249,7 +1257,7 @@
          490 = the composer's 904): layout `top` snaps to integer pixels
          under seek-by-frame capture and stutters on the ease tails. */
       tl.fromTo("#pill2", { y: 0, width: 700, height: 100, borderRadius: 50 },
-        { y: 1254, width: 992, height: 132, borderRadius: 24,
+        { y: 538, width: 992, height: 132, borderRadius: 24,
           duration: 0.7, ease: "power3.inOut", immediateRender: false }, 5.9);
       tl.fromTo(".pn-head", { y: -93 },
         { y: 0, duration: 0.55, ease: "power3.out", immediateRender: false }, 6.05);
@@ -1318,7 +1326,7 @@
          later presses "Add to editor", so the film has one protagonist
          rather than a hand that appears once and is never explained. */
       tl.fromTo("#cursor", { x: 1180, y: 2000 },
-        { x: 939, y: 1772, duration: 0.72, ease: "power3.out", immediateRender: false }, 8.72);
+        { x: 939, y: 1402, duration: 0.72, ease: "power3.out", immediateRender: false }, 8.72);
       /* A breath on the target before the press — a cursor that arrives and
          clicks in the same instant reads as a script, not a hand. */
       tl.to("#cursor", { scale: 0.84, duration: 0.1, ease: "power2.in", transformOrigin: "21% 14%" }, 9.58);
@@ -1342,7 +1350,7 @@
       tl.set("#flyer", { autoAlpha: 1 }, 9.65);
       /* From over the composer's text line (left 76, top ≈ 886 within the
          app) to its destination at (right 46, top 144): the deltas below. */
-      tl.fromTo("#flyer", { x: -358, y: 1582, scale: 1 },
+      tl.fromTo("#flyer", { x: -358, y: 1286, scale: 1 },
         { x: 0, y: 0, scale: 1, duration: 0.62, ease: "power3.inOut" }, 9.65);
       // CAM2: same zoom, pure vertical dolly — bottom-pin to top-pin, x
       // holding the right edge where the bubble will land. The app streams
@@ -1470,7 +1478,7 @@
       /* The hand returns for the second send — same button, same tap, so the
          gesture is already familiar by the time it matters. */
       tl.fromTo("#cursor", { x: 1180, y: 2000 },
-        { x: 964, y: 1799, duration: 0.66, ease: "power3.out", immediateRender: false }, 18.15);
+        { x: 964, y: 1503, duration: 0.66, ease: "power3.out", immediateRender: false }, 18.15);
       tl.to("#cursor", { scale: 0.84, duration: 0.1, ease: "power2.in", transformOrigin: "21% 14%" }, 18.95);
       tl.to("#cursor", { scale: 1, duration: 0.22, ease: "power2.out", transformOrigin: "21% 14%" }, 19.05);
       tl.to("#send", { scale: 0.9, duration: 0.1, ease: "power2.in" }, 18.95);
