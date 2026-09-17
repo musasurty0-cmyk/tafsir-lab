@@ -15,6 +15,7 @@ import { useRef, useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { getFirebaseAuth } from "@/lib/firebase/client";
 import NewWorkspaceModal from "@/components/NewWorkspaceModal";
+import { getHadith, HADITH_COUNT, COLLECTION_ARABIC, COLLECTION_ENGLISH } from "@/lib/hadith";
 import Toast from "@/components/Toast";
 import SettingsMenu from "@/components/SettingsMenu";
 import JoinWorkspaceModal from "@/components/JoinWorkspaceModal";
@@ -39,6 +40,7 @@ interface WorkspaceItem {
   type:            string;
   ownerId:         string;
   role:            MemberRole;
+  kind:            string;
   _count:          { members: number; surahs: number };
   lastSurahNumber: number | null;
   lastStudiedAt:   Date | string | null;
@@ -49,7 +51,7 @@ interface LastPage {
   title: string;
   workspaceSurah: {
     surahNumber: number;
-    workspace: { id: string; name: string };
+    workspace: { id: string; name: string; kind: string };
   };
 }
 
@@ -135,11 +137,17 @@ function WelcomeHero({
   // surahNumber 0 = the whiteboard sentinel — the page is a blank board,
   // not a surah. Show the workspace name and deep-link to the board.
   const lastIsBoard = lastPage?.workspaceSurah.surahNumber === 0;
+  /* The same column holds a sūrah number in one workspace and a hadith number
+     in another; only the workspace's kind can tell them apart. */
+  const lastIsHadith = !lastIsBoard && lastPage?.workspaceSurah.workspace.kind === "nawawi";
+  const lastHadith = lastIsHadith ? getHadith(lastPage!.workspaceSurah.surahNumber) : null;
 
   if (lastPage) {
     const sn = surahNames[lastPage.workspaceSurah.surahNumber];
     subtitle = lastIsBoard
       ? `Boards · ${lastPage.workspaceSurah.workspace.name}`
+      : lastIsHadith
+        ? `Studying ${COLLECTION_ENGLISH} · ${lastPage.workspaceSurah.workspace.name}`
       : sn ? `Studying ${sn.name} · ${lastPage.workspaceSurah.workspace.name}` : subtitle;
   } else if (totalSurahs > 0) {
     subtitle = `${totalSurahs} surah${totalSurahs > 1 ? "s" : ""} in progress.`;
@@ -149,7 +157,9 @@ function WelcomeHero({
     const { workspaceSurah: ws } = lastPage;
     const href = lastIsBoard
       ? `/workspaces/${ws.workspace.id}/whiteboard/${lastPage.id}`
-      : `/workspaces/${ws.workspace.id}/surahs/${ws.surahNumber}/pages/${lastPage.id}`;
+      : lastIsHadith
+        ? `/workspaces/${ws.workspace.id}/hadith/${ws.surahNumber}/pages/${lastPage.id}`
+        : `/workspaces/${ws.workspace.id}/surahs/${ws.surahNumber}/pages/${lastPage.id}`;
     const surah = surahNames[ws.surahNumber];
 
     return (
@@ -178,13 +188,21 @@ function WelcomeHero({
               <span className="hw-resume-surah-name">
                 {lastIsBoard
                   ? ws.workspace.name
-                  : surah?.name ?? `Surah ${ws.surahNumber}`}
+                  : lastIsHadith
+                    ? `Hadith ${ws.surahNumber}`
+                    : surah?.name ?? `Surah ${ws.surahNumber}`}
               </span>
-              {!lastIsBoard && surah?.arabic && (
-                <span className="hw-resume-surah-arabic" dir="rtl">
-                  {surah.arabic}
-                </span>
-              )}
+              {!lastIsBoard && (lastIsHadith
+                ? (
+                  <span className="hw-resume-surah-arabic" dir="rtl">
+                    {COLLECTION_ARABIC}
+                  </span>
+                )
+                : surah?.arabic && (
+                  <span className="hw-resume-surah-arabic" dir="rtl">
+                    {surah.arabic}
+                  </span>
+                ))}
             </div>
             <p className="hw-resume-page">{lastPage.title}</p>
             <p className="hw-resume-ws">{lastIsBoard ? "Blank board" : ws.workspace.name}</p>
@@ -308,8 +326,16 @@ function WorkspaceCard({
   }
 
   const initials    = ws.name.slice(0, 2).toUpperCase();
-  const lastSurah   = ws.lastSurahNumber ? surahNames[ws.lastSurahNumber] : null;
-  const surahText   = ws._count.surahs === 1 ? "1 surah" : `${ws._count.surahs} surahs`;
+  /* The same count means different things per kind, and a hadith workspace
+     reporting "0 surahs" is the app talking about the wrong book. */
+  const isHadithWs  = ws.kind === "nawawi";
+  const lastSurah   = !isHadithWs && ws.lastSurahNumber ? surahNames[ws.lastSurahNumber] : null;
+  const lastHadith  = isHadithWs && ws.lastSurahNumber ? getHadith(ws.lastSurahNumber) : null;
+  const surahText   = isHadithWs
+    ? (ws._count.surahs === 0
+        ? `${HADITH_COUNT} hadith`
+        : `${ws._count.surahs} of ${HADITH_COUNT} hadith`)
+    : ws._count.surahs === 1 ? "1 surah" : `${ws._count.surahs} surahs`;
   const lastDate    = ws.lastStudiedAt ? relativeDate(ws.lastStudiedAt) : null;
 
   const href        = `/workspaces/${ws.id}`;
@@ -391,9 +417,10 @@ function WorkspaceCard({
       </div>
 
       {/* Last studied */}
-      {(lastSurah || lastDate) && (
+      {(lastSurah || lastHadith || lastDate) && (
         <div className="hw-ws-card-last">
           {lastSurah && <span className="hw-ws-card-last-surah">{lastSurah.name}</span>}
+          {lastHadith && <span className="hw-ws-card-last-surah">{lastHadith.title}</span>}
           {lastDate  && <span className="hw-ws-card-last-date">{lastDate}</span>}
         </div>
       )}

@@ -45,7 +45,11 @@ export default async function HomePage() {
         workspaceSurah: {
           select: {
             surahNumber: true,
-            workspace: { select: { id: true, name: true } },
+            /* `kind` is what makes the number meaningful: 7 is al-Aʿrāf in a
+               Qurʾān workspace and the seventh hadith in a Nawawi one. Without
+               it the card resolved every number through the sūrah list and
+               told a reader studying hadith that they were in al-Fātiḥah. */
+            workspace: { select: { id: true, name: true, kind: true } },
           },
         },
       },
