@@ -15,6 +15,7 @@ import { fetchChapters } from "@/lib/quran-api";
 import WorkspaceHome from "@/components/workspace/WorkspaceHome";
 import BoardsHome from "@/components/workspace/BoardsHome";
 import BooksHome from "@/components/workspace/BooksHome";
+import HadithHome from "@/components/workspace/HadithHome";
 import * as PagesService from "@/lib/services/pages.service";
 
 export type WorkspaceSurahSummary = {
@@ -57,6 +58,33 @@ export default async function WorkspaceHomePage({
         workspace={gate.workspace}
         role={gate.role}
         books={books.map((b) => ({ id: b.id, title: b.title, pdfUrl: b.pdfUrl!, pdfName: b.pdfName, createdAt: b.createdAt }))}
+      />
+    );
+  }
+
+  /* Nawawi workspace -> the forty-two are home. The sessions that already
+     exist are read in one query so each card can say whether it has been
+     opened, exactly as the surah grid does. */
+  if (gate.workspace.kind === "nawawi") {
+    const rows = await db.workspaceSurah.findMany({
+      where:  { workspaceId, surahNumber: { gte: 1 } },
+      select: {
+        surahNumber: true,
+        _count: { select: { pages: true } },
+        pages: { orderBy: { orderIndex: "asc" }, take: 1, select: { id: true } },
+      },
+    });
+    return (
+      <HadithHome
+        workspaceId={workspaceId}
+        currentUserId={userId}
+        workspace={gate.workspace}
+        role={gate.role}
+        sessions={rows.map((r) => ({
+          hadithNumber: r.surahNumber,
+          pageCount:    r._count.pages,
+          firstPageId:  r.pages[0]?.id ?? null,
+        }))}
       />
     );
   }

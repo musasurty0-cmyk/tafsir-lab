@@ -13248,6 +13248,129 @@ input, textarea { font: inherit; color: inherit; }
   to   { opacity: 1; transform: translateX(-50%); }
 }
 
+/* ── al-Arbaʿūn an-Nawawiyya ─────────────────────────────────────────────
+   The grid of forty-two, and the sheet one hadith is studied on. Built from
+   the same tokens as the surah grid so the two read as one app; what differs
+   is that a hadith card has to carry WORDS, where a surah card carries a
+   name — so the card is wider and has a body, not just a title. */
+.hd-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+  gap: 12px;
+  padding: 4px 0 40px;
+}
+.hd-card {
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  grid-template-areas: "num body" "num meta";
+  gap: 2px 14px;
+  padding: 16px 18px;
+  text-align: left;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--bg-elev);
+  cursor: pointer;
+  transition: border-color var(--dur-fast) var(--ease-soft),
+              box-shadow var(--dur-fast) var(--ease-soft),
+              transform var(--dur-fast) var(--ease-soft);
+}
+.hd-card:hover:not(:disabled) {
+  border-color: var(--line-strong);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
+}
+.hd-card:disabled { cursor: default; }
+.hd-card[data-busy="true"] { opacity: .7; }
+/* Studied hadith carry the accent the surah cards use, so progress reads the
+   same way in both collections. */
+.hd-card[data-started="true"] { border-color: var(--line-strong); }
+.hd-card[data-started="true"] .hd-num { background: var(--ink); color: var(--bg); }
+.hd-num {
+  grid-area: num;
+  align-self: start;
+  display: flex; align-items: center; justify-content: center;
+  width: 44px; height: 44px; border-radius: 50%;
+  background: color-mix(in oklab, var(--ink) 6%, transparent);
+  color: var(--ink-2);
+  font-size: 15px; font-weight: 650; font-variant-numeric: tabular-nums;
+}
+.hd-body { grid-area: body; min-width: 0; }
+.hd-title {
+  display: block;
+  font-size: 15.5px; font-weight: 600; color: var(--ink);
+  line-height: 1.3;
+}
+.hd-preview {
+  display: block; margin-top: 5px;
+  font-size: 13px; line-height: 1.5; color: var(--ink-3);
+  /* Two lines, then stop: the card is a way in, not the hadith itself. */
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.hd-meta {
+  grid-area: meta; margin-top: 8px;
+  font-size: 12px; color: var(--ink-4);
+}
+
+/* ── The sheet ──────────────────────────────────────────────────────────
+   Sits in the canvas world space, behind the ink. Sized generously: this is
+   a page you draw on, so it must not feel like a card in a list. */
+.hd-sheet {
+  position: absolute;
+  padding: 54px 60px 46px;
+  background: var(--bg-elev);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 30px 70px -40px rgba(0,0,0,.45);
+}
+.hd-sheet-head {
+  display: flex; align-items: center; gap: 14px;
+  margin-bottom: 30px;
+}
+.hd-sheet-num {
+  display: flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px; border-radius: 50%;
+  background: var(--ink); color: var(--bg);
+  font-size: 16px; font-weight: 650; font-variant-numeric: tabular-nums;
+}
+.hd-sheet-title { font-size: 19px; font-weight: 600; color: var(--ink); }
+.hd-sheet-arabic {
+  font-family: var(--font-arabic, "Amiri", "Scheherazade New", serif);
+  font-size: 30px; line-height: 2.05; color: var(--ink);
+  text-align: right;
+}
+.hd-sheet-rule {
+  height: 1px; margin: 32px 0 26px;
+  background: var(--line);
+}
+.hd-sheet-english {
+  font-size: 17px; line-height: 1.75; color: var(--ink-2);
+}
+.hd-sheet-ref {
+  margin-top: 22px;
+  font-size: 13px; color: var(--ink-4); font-style: italic;
+}
+
+/* Shell header extras: stepping through the collection, and Ask. */
+.hd-bar-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.hd-step {
+  display: flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; border-radius: var(--radius-sm);
+  color: var(--ink-2);
+  transition: background var(--dur-fast) var(--ease-soft);
+}
+.hd-step:hover { background: var(--hover); color: var(--ink); }
+.hd-step[data-off="true"] { opacity: .3; pointer-events: none; }
+.hd-ask {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 32px; padding: 0 12px;
+  border-radius: var(--radius-sm);
+  color: var(--ink-2); font-size: 13px;
+  transition: background var(--dur-fast) var(--ease-soft);
+}
+.hd-ask:hover { background: var(--hover); color: var(--ink); }
+.hd-ask[data-active="true"] { background: var(--active); color: var(--ink); }
+
 /* The lazy preview inside a strip tile. */
 .film-sheet { position: relative; overflow: hidden; display: block; }
 .film-thumb {

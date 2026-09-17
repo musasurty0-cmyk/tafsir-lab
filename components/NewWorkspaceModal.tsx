@@ -29,7 +29,7 @@ export default function NewWorkspaceModal({ onClose, originPoint }: Props) {
 
   const [name,    setName]    = useState("");
   const [type,    setType]    = useState<"private" | "group">("private");
-  const [kind,    setKind]    = useState<"study" | "boards" | "books">("study");
+  const [kind,    setKind]    = useState<"study" | "boards" | "books" | "nawawi">("study");
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState<string | null>(null);
 
@@ -159,6 +159,11 @@ export default function NewWorkspaceModal({ onClose, originPoint }: Props) {
               name={t("modal.books")} caption={t("modal.booksDesc")}
               preview={<BookPreview />}
             />
+            <KindCard
+              active={kind === "nawawi"} disabled={loading} onSelect={() => setKind("nawawi")}
+              name={t("modal.nawawi")} caption={t("modal.nawawiDesc")}
+              preview={<NawawiPreview />}
+            />
           </div>
 
           {error && <p className="modal-error">{error}</p>}
@@ -231,6 +236,24 @@ function QuranPreview() {
       <rect x="20" y="8" width="80" height="3" rx="1.5" className="kp-rule" />
       <circle cx="14" cy="26" r="3" className="kp-mark" />
       <circle cx="14" cy="46" r="3" className="kp-mark kp-mark--2" />
+    </svg>
+  );
+}
+
+/* Forty-two numbered narrations, stacked. Deliberately NOT the Qurʾān
+   preview with different line lengths: the whole point of the card is that
+   this is a different text with a different shape. */
+function NawawiPreview() {
+  return (
+    <svg viewBox="0 0 120 84" className="kind-svg">
+      <rect x="0" y="0" width="120" height="84" rx="5" className="kp-page" />
+      {[0, 1, 2].map((i) => (
+        <g key={i}>
+          <circle cx="18" cy={20 + i * 22} r="6.5" className="kp-mark" />
+          <rect x="31" y={16 + i * 22} width="70" height="4" rx="2" className="kp-line" />
+          <rect x="31" y={24 + i * 22} width="46" height="3" rx="1.5" className="kp-rule" />
+        </g>
+      ))}
     </svg>
   );
 }

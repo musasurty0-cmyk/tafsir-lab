@@ -136,7 +136,7 @@ export async function createWorkspace(
   userId: string,
   name: string,
   type: "private" | "group",
-  kind: "study" | "boards" | "books" = "study",
+  kind: "study" | "boards" | "books" | "nawawi" = "study",
 ) {
   const workspace = await db.$transaction(async (tx) => {
     const ws = await tx.workspace.create({
@@ -168,6 +168,9 @@ export async function createWorkspace(
         data: { workspaceId: ws.id, surahNumber: 0 },
       });
     }
+    /* Nawawi workspace: nothing to scaffold. Its home is the forty-two, and
+       a hadith's session is created the first time someone opens it —
+       exactly how a sūrah works, so an untouched collection costs no rows. */
     return ws;
   });
 
