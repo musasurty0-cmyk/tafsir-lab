@@ -46,6 +46,16 @@ interface HadithDoc {
 
 const doc = raw as unknown as HadithDoc;
 
+/* Defensive, and not theoretical: the source edition carries `reference` as
+   an OBJECT ({book, hadith} — the position inside this collection, which is
+   not a takhrīj and not worth showing). Rendering it landed an object in JSX
+   and took the whole page down with React error #31. Anything that is not a
+   usable string is normalised away here, at the boundary, so no component can
+   be handed a shape it will try to render. */
+for (const h of doc.hadiths) {
+  if (typeof h.reference !== "string" || !h.reference.trim()) h.reference = null;
+}
+
 /** Arabic name of the collection, for headings. */
 export const COLLECTION_ARABIC = doc.collection;
 /** English name, for everywhere a Latin script reads better. */

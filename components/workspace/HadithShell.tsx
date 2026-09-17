@@ -45,6 +45,69 @@ interface Props {
 /** Where the sheet sits in world space. The canvas pans and zooms around it. */
 const SHEET = { x: 120, y: 120, w: 900 };
 
+/** What a tapped word offers to become. */
+interface WordPick {
+  word: string;
+  lang: "ar" | "en";
+  /** World-space position of the word, for placing the popover and the note. */
+  x: number;
+  y: number;
+}
+
+/**
+ * The narration, one word at a time.
+ *
+ * A hadith is studied word by word — which particle, which verb form, which
+ * phrase the commentary turns on — so every word is its own target rather
+ * than the whole paragraph being one block of text. Split on whitespace only:
+ * the Arabic keeps its own punctuation and diacritics inside the token,
+ * because breaking a word off its ḥarakāt would change what is on screen.
+ *
+ * Presses reach this layer only when the hand tool is active — the ink canvas
+ * takes pointer events for itself the moment a pen is chosen — so studying and
+ * drawing never fight over the same tap.
+ */
+function Words({
+  text, lang, onPick,
+}: {
+  text: string;
+  lang: "ar" | "en";
+  onPick: (w: WordPick) => void;
+}) {
+  return (
+    <>
+      {text.split(/(\s+)/).map((tok, i) => {
+        if (!tok.trim()) return <span key={i}>{tok}</span>;
+        return (
+          <span
+            key={i}
+            className="hd-w"
+            role="button"
+            tabIndex={0}
+            onClick={(e) => {
+              const el = e.currentTarget;
+              /* offsetLeft/Top are measured against the sheet, which is itself
+                 positioned in world space — so adding the sheet's origin gives
+                 world coordinates that survive any pan or zoom. */
+              const sheet = el.closest(".hd-sheet") as HTMLElement | null;
+              const x = SHEET.x + (el.offsetLeft ?? 0) + (sheet ? 0 : 0);
+              const y = SHEET.y + (el.offsetTop ?? 0);
+              onPick({ word: tok, lang, x, y });
+            }}
+            onKeyDown={(e) => {
+              if (e.key !== "Enter" && e.key !== " ") return;
+              e.preventDefault();
+              (e.currentTarget as HTMLElement).click();
+            }}
+          >
+            {tok}
+          </span>
+        );
+      })}
+    </>
+  );
+}
+
 export default function HadithShell({
   workspaceId, workspaceName, pageId, hadith, prevNumber, nextNumber,
   role, currentUserId, currentUserName,
@@ -52,6 +115,8 @@ export default function HadithShell({
   const [notes, setNotes] = useState<NoteData[]>([]);
   const recentCreatedRef = useRef<Map<string, number>>(new Map());
   const [aiOpen, setAiOpen] = useState(false);
+  const [pick, setPick] = useState<WordPick | null>(null);
+  const [noting, setNoting] = useState(false);
 
   const room = useRoom(pageId);
   const { others } = usePresence({
@@ -78,6 +143,49 @@ export default function HadithShell({
       .catch(() => {});
     return () => { live = false; };
   }, [pageId]);
+
+  /**
+   * Turn a tapped word into a note on the board.
+   *
+   * Goes through the ordinary notes endpoint, so what lands is an ordinary
+   * container: movable, editable, searchable from the workspace's notes view,
+   * and synced to whoever else is on the page. The word arrives as a heading
+   * with an empty line under it, because the point is what YOU are about to
+   * write about the word, not the word itself.
+   */
+  const noteOnWord = useCallback(async (w: WordPick) => {
+    if (noting) return;
+    setNoting(true);
+    try {
+      const body = {
+        noteType: "textbox",
+        anchorType: "whiteboard",
+        content: {
+          type: "doc",
+          content: [
+            { type: "heading", attrs: { level: 3 },
+              content: [{ type: "text", text: w.word }] },
+            { type: "paragraph" },
+          ],
+        },
+        /* To the right of the sheet, level with the word, so the note reads as
+           a margin gloss rather than something dropped in the middle. */
+        offsetX: Math.round(SHEET.x + SHEET.w + 70),
+        offsetY: Math.round(w.y),
+        width: 320,
+      };
+      const res = await fetch(`/api/pages/${pageId}/notes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json().catch(() => null) as { note?: NoteData } | null;
+      if (data?.note) handleNoteCreated(data.note);
+      setPick(null);
+    } finally {
+      setNoting(false);
+    }
+  }, [noting, pageId, handleNoteCreated]);
 
   const boardNotes = useMemo(
     () => notes.filter((n) => n.noteType === "textbox" && n.anchorType === "whiteboard"),
@@ -165,14 +273,50 @@ export default function HadithShell({
                   <span className="hd-sheet-title">{hadith.title}</span>
                 </div>
 
-                <p className="hd-sheet-arabic" dir="rtl" lang="ar">{hadith.arabic}</p>
+                <p className="hd-sheet-arabic" dir="rtl" lang="ar">
+                  <Words text={hadith.arabic} lang="ar" onPick={setPick} />
+                </p>
 
                 <div className="hd-sheet-rule" />
 
-                <p className="hd-sheet-english" dir="ltr" lang="en">{hadith.english}</p>
+                <p className="hd-sheet-english" dir="ltr" lang="en">
+                  <Words text={hadith.english} lang="en" onPick={setPick} />
+                </p>
 
                 {hadith.reference && (
                   <p className="hd-sheet-ref">{hadith.reference}</p>
+                )}
+
+                {/* The tapped word, and what can be done with it. Lives inside
+                    the sheet so it pans and zooms with the text it belongs
+                    to — a popover pinned to the screen would drift off its
+                    word the moment the board moved. */}
+                {pick && (
+                  <div
+                    className="hd-pop"
+                    style={{ left: pick.x - SHEET.x, top: pick.y - SHEET.y }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <span className="hd-pop-word" dir={pick.lang === "ar" ? "rtl" : "ltr"} lang={pick.lang}>
+                      {pick.word}
+                    </span>
+                    <div className="hd-pop-row">
+                      <button
+                        type="button"
+                        className="hd-pop-go"
+                        disabled={noting}
+                        onClick={() => noteOnWord(pick)}
+                      >
+                        {noting ? "Adding…" : "Note this word"}
+                      </button>
+                      <button
+                        type="button"
+                        className="hd-pop-x"
+                        aria-label="Dismiss"
+                        onClick={() => setPick(null)}
+                      >✕</button>
+                    </div>
+                  </div>
                 )}
               </div>
             }

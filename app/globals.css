@@ -13351,6 +13351,58 @@ input, textarea { font: inherit; color: inherit; }
   font-size: 13px; color: var(--ink-4); font-style: italic;
 }
 
+/* A word you can press. Deliberately invisible until touched: the sheet has
+   to read as a text, not as a page of buttons. */
+.hd-w {
+  border-radius: 4px;
+  padding: 0 1px;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-soft);
+}
+.hd-w:hover { background: color-mix(in oklab, var(--ink) 8%, transparent); }
+.hd-w:focus-visible {
+  outline: 2px solid var(--ink-3); outline-offset: 1px;
+}
+/* The pen owns the surface once it is chosen, so the words stop inviting a
+   press that would land as a stroke instead. */
+.mode-b-canvas:not([data-tool="hand"]) .hd-w { cursor: inherit; }
+.mode-b-canvas:not([data-tool="hand"]) .hd-w:hover { background: none; }
+
+/* What a pressed word offers. Positioned inside the sheet, so it travels with
+   the text under any pan or zoom. */
+.hd-pop {
+  position: absolute;
+  z-index: 5;
+  transform: translate(-50%, calc(-100% - 14px));
+  min-width: 190px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background: var(--bg-elev);
+  border: 1px solid var(--line-strong);
+  box-shadow: var(--shadow-lg);
+}
+.hd-pop-word {
+  display: block;
+  font-size: 22px; color: var(--ink); font-weight: 600;
+  margin-bottom: 10px;
+  word-break: break-word;
+}
+.hd-pop-row { display: flex; align-items: center; gap: 8px; }
+.hd-pop-go {
+  flex: 1;
+  height: 34px; padding: 0 12px;
+  border-radius: var(--radius-sm);
+  background: var(--ink); color: var(--bg);
+  font-size: 13px; font-weight: 550;
+}
+.hd-pop-go:disabled { opacity: .6; }
+.hd-pop-x {
+  width: 34px; height: 34px; border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  color: var(--ink-3); font-size: 13px;
+}
+.hd-pop-x:hover { background: var(--hover); color: var(--ink); }
+
 /* Shell header extras: stepping through the collection, and Ask. */
 .hd-bar-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
 .hd-step {
