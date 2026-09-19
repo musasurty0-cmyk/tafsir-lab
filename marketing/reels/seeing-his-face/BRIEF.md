@@ -33,18 +33,27 @@ no ornament that would read as marketing.
 
 - Starts on "Live this life", ends on "…show you His face." — the owner's two
   cut points, measured against the transcript, not eyeballed.
-- Volume raised: −14.8 LUFS → −11.1 LUFS with a speech-band presence lift and
-  compression, so the words carry on a phone speaker.
-- Every word captioned except nothing — all 83 words are on screen; there were
-  no stutters to drop in the chosen range.
+- Volume raised: the source sat at −14.8 LUFS; the delivered file is −12.0
+  LUFS at −1.5 dBTP, with the dynamic range pulled from LRA 5.3 to 2.9 and a
+  presence lift at 3 kHz, so the words carry on a phone speaker. The renderer
+  normalises the mix, so gain on the source track past that point does nothing
+  — the compression and the EQ are what buy the intelligibility.
+- Captions carry every word except the four runs the owner asked to be shown
+  another way: "First of all," and "And secondly," are circled numerals, and
+  "as if you are a traveller, just simply, merely a traveller." is the first
+  Arabic card, held from 4.0s to 7.9s with nothing else on screen.
+- "on return" → **"in return"**. The ASR misheard it; he is the speaker.
 - The two Arabic phrases the owner identified are set in Arabic with
   transliteration and gloss: مُجَرَّد مُسَافِر and تَعْظِيمُ اللهِ لِأَنَّهُ الله.
 
 ## Notes
 
-- No music bed. The ask was to make his voice easier to hear; a nasheed under a
-  khutbah excerpt would work against that. Silence around the speech is the
-  audio identity here, and it is a choice, not an omission.
+- Nasheed bed (`audio/bed-nasheed.mp3`, the same *ila rabbi* used in
+  labai-live), sitting 16.5 LU under the voice, with a 2.4s fade in and a
+  2.56s fade out baked into the file. It reads as atmosphere under the
+  speech and only becomes properly audible in his 1.3s silence at 23.9s.
+  It costs about 1 dB of voice level, because the renderer normalises the
+  sum of the tracks rather than passing them through.
 - No green — the app's emerald accent is excluded from reels by standing owner
   decision. The accent here is the app's warm ochre.
 - Bottom 340px and top 220px stay clear of content: Instagram's caption,

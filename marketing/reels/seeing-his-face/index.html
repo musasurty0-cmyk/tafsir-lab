@@ -14,10 +14,14 @@
          of the study app: warm paper, ink serif, a hairline that advances as
          he speaks, every word darkening at the instant it is said.
 
-         ONE clip, eleven beats. The surface, the rail and the rule never cut
-         — that continuity is what keeps eleven beats from reading as eleven
-         slides. Beats roll in the same direction (up and out, in from below)
-         so a swap reads as one motion, not a collision.
+         ONE clip, eleven beats. The surface, the rail and the rule never
+         cut — that continuity is what keeps eleven beats from reading as
+         eleven slides.
+         Beats roll in the same direction (up and out, in from below) so a
+         swap reads as one motion, not a collision.
+
+         Under it all, the nasheed, 16.5 LU below his voice, fading in and
+         out so it neither announces itself nor stops dead.
 
          Word timings are MEASURED, not authored: whisper word-level output
          over this exact trim (transcript.json), clamped monotonic.
@@ -62,18 +66,10 @@
            that bug twice. Nothing in the background moves. */
       }
 
-      /* ── The rail: ordinal · hairline · progress ─────────────────────── */
+      /* ── The rail: a hairline that fills as he speaks ─────────────────── */
       .rail {
         position: absolute; left: 96px; right: 96px; top: 352px;
-        display: flex; align-items: center; gap: 26px;
-      }
-      .ord {
-        position: relative; width: 48px; height: 34px; flex: none; opacity: 0;
-      }
-      .ord span {
-        position: absolute; left: 0; top: 0;
-        font-family: var(--sans); font-size: 28px; font-weight: 600;
-        letter-spacing: 0.14em; color: var(--accent); line-height: 34px;
+        display: flex; align-items: center;
       }
       .rail-track { position: relative; flex: 1; height: 2px; background: var(--line); }
       .rail-fill {
@@ -107,9 +103,19 @@
       .ln--face { font-size: 132px; line-height: 1.1; }
       .ln--held { font-size: 118px; line-height: 1.1; }
 
-      .gloss {
-        font-family: var(--serif); font-style: italic; font-weight: 400;
-        font-size: 38px; color: var(--ink-3); margin-top: 12px;
+      /* A counted point, drawn. The ring is an SVG so it can draw itself
+         from twelve o'clock; the digit is a sibling, not a stroke. */
+      .numeral {
+        position: relative; width: 240px; height: 240px;
+        display: flex; align-items: center; justify-content: center;
+      }
+      .numeral svg { position: absolute; inset: 0; transform: rotate(-90deg); }
+      .numeral circle {
+        fill: none; stroke: var(--accent); stroke-opacity: 0.55; stroke-width: 3;
+      }
+      .numeral em {
+        font-family: var(--serif); font-style: normal; font-weight: 600;
+        font-size: 118px; line-height: 1; color: var(--ink);
       }
 
       /* A word. .w takes layout + entrance transforms, .wi takes the ink the
@@ -166,14 +172,6 @@
         <div class="dots"></div>
 
         <div class="rail">
-          <!-- Two stacked digits rather than one element whose text changes:
-               GSAP reads a `textContent: "01"` as a number and writes `1`, and
-               a crossfade in place is the better move anyway — the mark stays
-               put while only its digits change. -->
-          <div class="ord" id="ord">
-            <span id="ord1">01</span>
-            <span id="ord2">02</span>
-          </div>
           <div class="rail-track"><div class="rail-fill" id="rail-fill"></div></div>
         </div>
 
@@ -181,8 +179,17 @@
           <!-- Beats are filled at build time from WORDS + LINES so the spans
                and the timing grid cannot drift apart. -->
           <div class="beat" id="b1" data-layout-allow-overlap="true"><div class="bmv"></div></div>
-          <div class="beat" id="b2" data-layout-allow-overlap="true"><div class="bmv"></div></div>
-          <div class="beat" id="b3" data-layout-allow-overlap="true"><div class="bmv"></div></div>
+
+          <div class="beat" id="b2" data-layout-allow-overlap="true">
+            <div class="bmv">
+              <div class="numeral">
+                <svg viewBox="0 0 240 240" width="240" height="240" aria-hidden="true">
+                  <circle id="ring1" cx="120" cy="120" r="114" />
+                </svg>
+                <em>1</em>
+              </div>
+            </div>
+          </div>
 
           <div class="beat" id="h1" data-layout-allow-overlap="true">
             <div class="bmv">
@@ -193,7 +200,16 @@
             </div>
           </div>
 
-          <div class="beat" id="b4" data-layout-allow-overlap="true"><div class="bmv"></div></div>
+          <div class="beat" id="b4" data-layout-allow-overlap="true">
+            <div class="bmv">
+              <div class="numeral">
+                <svg viewBox="0 0 240 240" width="240" height="240" aria-hidden="true">
+                  <circle id="ring2" cx="120" cy="120" r="114" />
+                </svg>
+                <em>2</em>
+              </div>
+            </div>
+          </div>
           <div class="beat" id="b5" data-layout-allow-overlap="true"><div class="bmv"></div></div>
           <div class="beat" id="b6" data-layout-allow-overlap="true"><div class="bmv"></div></div>
           <div class="beat" id="b7" data-layout-allow-overlap="true"><div class="bmv"></div></div>
@@ -220,6 +236,12 @@
 
       <audio id="au-voice" data-start="0" data-duration="28.16" data-volume="1"
              src="audio/voice.mp3"></audio>
+      <!-- The bed sits 16.5 LU under the voice and carries its own 2.4s fade
+           in and 2.56s fade out, baked into the file rather than tweened:
+           the renderer owns audio playback, so a fade that exists as a GSAP
+           tween would not be in the mix. -->
+      <audio id="au-bed" data-start="0" data-duration="28.16" data-volume="1"
+             src="audio/bed-nasheed.mp3"></audio>
     </div>
 
     <script>
@@ -252,7 +274,7 @@
         [21.28, 21.42, "you"],     [21.42, 21.70, "only"],    [21.70, 21.96, "because"],
         [21.96, 22.12, "you"],     [22.12, 22.18, "are"],     [22.18, 22.54, "Allah."],
         [22.54, 22.84, "Not"],     [22.84, 22.96, "for"],     [22.96, 23.28, "anything"],
-        [23.28, 23.46, "on"],      [23.46, 23.92, "return."], [25.22, 25.42, "So"],
+        [23.28, 23.46, "in"],      [23.46, 23.92, "return."], [25.22, 25.42, "So"],
         [25.42, 25.60, "that"],    [25.60, 25.74, "Allah"],   [25.74, 25.96, "has"],
         [25.96, 26.12, "no"],      [26.12, 26.48, "excuse"],  [26.48, 27.10, "but"],
         [27.10, 27.26, "to"],      [27.26, 27.38, "show"],    [27.38, 27.46, "you"],
@@ -266,13 +288,6 @@
       const LINES = [
         { beat: "b1",  cls: "ln ln--xl", range: [0, 2] },
         { beat: "b1",  cls: "ln ln--xl", range: [3, 5] },
-        { beat: "b1",  gloss: "dunya — this world, the lower one" },
-
-        { beat: "b2",  cls: "ln ln--xl", range: [6, 8] },
-
-        { beat: "b3",  cls: "ln", range: [9, 16], mark: [14, 14] },
-
-        { beat: "b4",  cls: "ln ln--xl", range: [20, 21] },
 
         { beat: "b5",  cls: "ln ln--sm", range: [22, 26] },
         { beat: "b5",  cls: "ln ln--sm", range: [27, 36], mark: [29, 30] },
@@ -293,10 +308,13 @@
         { beat: "b11", cls: "ln ln--face", range: [81, 82], id: "face-line" }
       ];
 
-      /* Words 17–19 ("merely a traveller.") and 50–53 ("taʿẓīm Allāh
-         li-annahu Allāh,") are on screen as the Arabic hero cards rather
-         than as a caption line — they ARE those phrases. Their windows are
-         the hero windows below, so every one of the 83 is accounted for. */
+      /* Not every word gets a caption line, by instruction. Words 6–8
+         ("First of all,") and 20–21 ("And secondly,") are the two circled
+         numerals — the numeral says what the words say, and says it faster.
+         Words 9–19 ("as if you are a traveller, just simply, merely a
+         traveller.") are the first Arabic card, which is up for the whole
+         stretch he spends arriving at the phrase. Words 50–53 are the second
+         Arabic card. Everything else is on screen, word by word. */
 
       const stage = document.getElementById("stage");
       const wordEls = new Array(WORDS.length).fill(null);
@@ -315,13 +333,6 @@
 
       for (const spec of LINES) {
         const host = document.querySelector("#" + spec.beat + " .bmv");
-        if (spec.gloss) {
-          const g = document.createElement("div");
-          g.className = "gloss";
-          g.textContent = spec.gloss;
-          host.appendChild(g);
-          continue;
-        }
         const line = document.createElement("div");
         line.className = spec.cls;
         if (spec.id) line.id = spec.id;
@@ -363,10 +374,14 @@
          word onset off the grid above — nothing here is hand-placed. */
       const BEATS = [
         { el: "#b1",  from: 0.00,  to: 2.72,  enter: "words" },
-        { el: "#b2",  from: 2.72,  to: 4.00,  enter: "snap"  },
-        { el: "#b3",  from: 4.00,  to: 6.60,  enter: "rise"  },
-        { el: "#h1",  from: 6.60,  to: 7.94,  enter: "hero"  },
-        { el: "#b4",  from: 7.94,  to: 8.86,  enter: "snap"  },
+        { el: "#b2",  from: 2.72,  to: 4.00,  enter: "mark"  },
+        /* The Arabic is up for the whole run-in, not just the two seconds he
+           spends saying it: he is describing the idea from 4.00 ("as if you
+           are a traveller…") and only names it at 6.60. Showing the phrase
+           while he circles it is the point — the card is what he is reaching
+           for, and the transliteration lands at the moment he reaches it. */
+        { el: "#h1",  from: 4.00,  to: 7.94,  enter: "hero"  },
+        { el: "#b4",  from: 7.94,  to: 8.86,  enter: "mark"  },
         { el: "#b5",  from: 8.86,  to: 13.58, enter: "side"  },
         { el: "#b6",  from: 13.58, to: 15.98, enter: "rise"  },
         { el: "#b7",  from: 15.98, to: 18.00, enter: "fast"  },
@@ -377,6 +392,10 @@
       ];
 
       const DUR = 28.16;
+      /* The circumference of the numeral ring: 2πr at r=114 in its own
+         240×240 viewBox. Declared here because the ring tweens are built
+         before the entrance table below. */
+      const RING_LEN = 716.28;
       const tl = gsap.timeline({ paused: true });
 
       /* ── The rule, which advances only while he is speaking ──────────
@@ -390,19 +409,20 @@
       tl.set("#foot", { opacity: 0 }, 0);
       tl.to("#foot", { opacity: 1, duration: 0.5, ease: "power2.out" }, 0.4);
 
-      /* ── The ordinal: the one thing that survives the cuts ───────────
-         It changes its digits in place rather than leaving and returning, so
-         the frame keeps an anchor across the two halves of the argument. */
-      tl.set("#ord",  { opacity: 0, y: 0 }, 0);
-      tl.set("#ord1", { opacity: 1 }, 0);
-      tl.set("#ord2", { opacity: 0 }, 0);
-      tl.fromTo("#ord", { y: 14 },
-        { y: 0, duration: 0.24, ease: "power3.out", immediateRender: false }, 2.72);
-      tl.to("#ord", { opacity: 1, duration: 0.24, ease: "power2.out" }, 2.72);
-      // 01 → 02 in place, on the word "secondly".
-      tl.to("#ord1", { opacity: 0, duration: 0.14, ease: "power2.inOut" }, 7.94);
-      tl.to("#ord2", { opacity: 1, duration: 0.14, ease: "power2.inOut" }, 7.98);
-      tl.to("#ord", { opacity: 0, duration: 0.3, ease: "power2.in" }, 24.9);
+      /* ── The two numerals ─────────────────────────────────────────────
+         The ring draws itself, then the digit lands inside it. A counted
+         point should look counted; the words "first of all" and "and
+         secondly" say nothing the numeral does not. */
+      [["#ring1", 2.74], ["#ring2", 7.96]].forEach(([ring, at]) => {
+        tl.set(ring, { strokeDasharray: RING_LEN, strokeDashoffset: RING_LEN }, 0);
+        tl.to(ring, { strokeDashoffset: 0, duration: 0.52, ease: "power2.inOut" }, at);
+      });
+      [["#b2", 2.94], ["#b4", 8.14]].forEach(([b, at]) => {
+        tl.set(b + " .numeral em", { opacity: 0 }, 0);
+        tl.fromTo(b + " .numeral em", { scale: 0.72, opacity: 0 },
+          { scale: 1, opacity: 1, duration: 0.30, ease: "back.out(2)",
+            immediateRender: false }, at);
+      });
 
       /* ── Beat entrances and exits ────────────────────────────────────
          Distinct entrance per beat (kinetic-beat-slam), but all of them
@@ -417,7 +437,10 @@
         side:  { y: 40, extra: { ease: "circ.out",   duration: 0.36 } },
         tilt:  { y: 52, extra: { ease: "power3.out", duration: 0.38 } },
         hero:  { y: 64, extra: { ease: "back.out(1.5)", duration: 0.42 } },
-        slam:  { y: 78, extra: { ease: "power4.out", duration: 0.40 } }
+        slam:  { y: 78, extra: { ease: "power4.out", duration: 0.40 } },
+        /* A numeral does not roll in — the ring drawing itself IS the
+           entrance, so the block only needs to be there to receive it. */
+        mark:  { y: 0,  extra: { ease: "power2.out", duration: 0.18 } }
       };
 
       BEATS.forEach((b, bi) => {
@@ -442,8 +465,6 @@
             tl.fromTo(wordEls[i].parentElement, { y: 52, opacity: 0 },
               { y: 0, opacity: 1, duration: 0.30, ease: "power3.out", immediateRender: false }, at);
           }
-          tl.fromTo("#b1 .gloss", { y: 20, opacity: 0 },
-            { y: 0, opacity: 1, duration: 0.34, ease: "power2.out", immediateRender: false }, 2.16);
         } else {
           tl.set(b.el, { opacity: 0 }, 0);
           tl.set(b.el, { opacity: 1 }, inAt);
@@ -465,22 +486,32 @@
         tl.set(id, { scaleX: 0 }, 0);
         tl.to(id, { scaleX: 1, duration: to - from, ease: "power1.out" }, from);
       }
-      sweep("#mkbar-b3", 5.86, 6.18);   // "traveller,"
       sweep("#mkbar-b5", 11.00, 11.74); // "no reason"
 
       /* The heroes' rules draw with the phrase, from the centre out. */
       tl.set("#h1-rule", { scaleX: 0 }, 0);
-      tl.to("#h1-rule", { scaleX: 1, duration: 0.38, ease: "power2.out" }, 6.66);
+      tl.to("#h1-rule", { scaleX: 1, duration: 0.38, ease: "power2.out" }, 4.08);
       tl.set("#h2-rule", { scaleX: 0 }, 0);
       tl.to("#h2-rule", { scaleX: 1, duration: 0.38, ease: "power2.out" }, 18.06);
 
-      /* Transliteration and gloss arrive after the Arabic has been seen —
-         the phrase first, then what it means. */
-      [["#h1", 6.60], ["#h2", 18.00]].forEach(([h, t]) => {
+      /* Transliteration and gloss arrive after the Arabic has been seen — the
+         phrase first, then what it means. On the first card they wait almost
+         three seconds, until the words leave his mouth: the transliteration
+         lands on "mujarrad" (6.60), the gloss on the breath after it. That
+         wait is what gives a card held for four seconds a second beat. */
+      [["#h1", 6.52, 7.10], ["#h2", 18.26, 18.40]].forEach(([h, tTr, tEn]) => {
+        /* An explicit hidden state at t=0. The first card's parent is on
+           screen from 4.00 but these two lines must not be, and a `fromTo`
+           with immediateRender:false paints nothing until its own start —
+           so without this they simply sit there at full opacity. The layout
+           box stays (opacity, not display), so the Arabic above them does
+           not move when they arrive. */
+        tl.set(h + " .hero-tr", { opacity: 0 }, 0);
+        tl.set(h + " .hero-en", { opacity: 0 }, 0);
         tl.fromTo(h + " .hero-tr", { y: 18, opacity: 0 },
-          { y: 0, opacity: 1, duration: 0.28, ease: "power2.out", immediateRender: false }, t + 0.26);
+          { y: 0, opacity: 1, duration: 0.28, ease: "power2.out", immediateRender: false }, tTr);
         tl.fromTo(h + " .hero-en", { y: 14, opacity: 0 },
-          { y: 0, opacity: 1, duration: 0.28, ease: "power2.out", immediateRender: false }, t + 0.40);
+          { y: 0, opacity: 1, duration: 0.28, ease: "power2.out", immediateRender: false }, tEn);
       });
 
       /* ── "so" ─────────────────────────────────────────────────────────

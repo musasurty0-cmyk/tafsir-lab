@@ -27,10 +27,11 @@ clears by a wide margin. The karaoke read comes from the *distance* between
 | role                     | family                | size / weight            |
 | ------------------------ | --------------------- | ------------------------ |
 | the running caption      | Source Serif 4        | 82px / 600, -0.02em      |
-| the climax line          | Source Serif 4        | 104px / 600              |
+| the climax line          | Source Serif 4        | 132px / 600              |
 | Arabic hero              | Amiri                 | 150px / 700              |
-| transliteration + gloss  | Source Serif 4 italic | 40px / 500               |
-| ordinals, eyebrow, mark  | Inter                 | 28px / 600, 0.14em caps  |
+| transliteration + gloss  | Source Serif 4 italic | 44px / 500               |
+| the circled numerals     | Source Serif 4        | 118px / 600              |
+| the running foot         | Inter                 | 24px / 500, 0.1em caps   |
 
 Serif performs, sans recedes — the app's own pairing, and the tension is the
 real one in the material: a spoken reminder (serif, read) inside a piece of
@@ -44,8 +45,10 @@ Sizes are in-feed sizes. The caption line never drops below 82px.
 1080×1920. Content lives between y=280 and y=1560 — Instagram's chrome owns
 everything outside that.
 
-- **y 360** — the rail: ordinal on the left, TafsirLab mark on the right,
-  a hairline between them that fills left→right across the whole 28s.
+- **y 360** — the rail: one hairline that fills left→right across the whole
+  28s, and stops while he is not speaking. No ordinal — the two circled
+  numerals in the caption stage carry the count, and a second set of digits
+  on the rail would only say the same thing twice.
 - **y 700–1240** — the caption stage. Beats are centred in this band and
   replace each other in place; nothing from a spent beat lingers.
 - **y 1500** — the footer hairline and the khutbah title, set small and quiet.
@@ -59,9 +62,14 @@ paid for twice.
 Blueprint `kinetic-type-beats`, sub-shape B (multi-beat statement build).
 Rules: `asr-keyword-glow` (karaoke variation — the per-word sync engine),
 `kinetic-beat-slam` (distinct entrance per beat, onsets read off the transcript
-instead of a musical pulse), `spring-pop-entrance` (the Arabic heroes),
-`scale-swap-transition` (the English word morphing into the Arabic at one
-centre), `css-marker-patterns` (the ochre marker sweep under "no reason").
+instead of a musical pulse), `spring-pop-entrance` (the Arabic heroes and the
+digits landing inside their rings), `svg-path-draw` (each numeral's ring
+drawing itself from twelve o'clock), `css-marker-patterns` (the ochre marker
+sweep under "no reason").
+
+A counted point is drawn, not described: a ring closes and a digit lands in
+it. The words "first of all" and "and secondly" say nothing the numeral does
+not, and the numeral says it in a quarter of the time.
 
 The whole piece is ONE clip on one paper surface. Beats change; the surface,
 the rule and the rail never cut — that continuity is what keeps 11 beats from
