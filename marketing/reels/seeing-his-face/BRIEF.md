@@ -53,11 +53,18 @@ no ornament that would read as marketing.
 ## Notes
 
 - Nasheed bed (`audio/bed-nasheed.mp3`, the same *ila rabbi* used in
-  labai-live), sitting 16.5 LU under the voice, with a 2.4s fade in and a
-  2.56s fade out baked into the file. It reads as atmosphere under the
-  speech and only becomes properly audible in his 1.3s silence at 23.9s.
-  It costs about 1 dB of voice level, because the renderer normalises the
-  sum of the tracks rather than passing them through.
+  labai-live), sitting 16.3 LU under the voice, with a 2.4s fade in and a
+  2.56s fade out baked into the file — the renderer owns audio playback, so
+  a fade that existed only as a GSAP tween would never reach the mix.
+- A train passes behind the first three seconds. It is broadband, loudest in
+  the 200–800 Hz band (+12 dB over the rest of the recording), and audible
+  only in the two gaps between words — under speech it is 40 dB down. A
+  downward expander ahead of the compressor takes 39–41 dB off those gaps
+  (`agate` at −36 dBFS, ratio 6, 10ms attack / 250ms release, 8 dB knee,
+  range capped at −30 dB). Every speech probe measures identical to the
+  untreated take, including the decay tail of "face." at 12.9s. Spectral
+  denoise was tried first and rejected: it bought 0.7 dB and cost 2 dB off
+  a word onset.
 - No green — the app's emerald accent is excluded from reels by standing owner
   decision. The accent here is the app's warm ochre.
 - Bottom 340px and top 220px stay clear of content: Instagram's caption,
