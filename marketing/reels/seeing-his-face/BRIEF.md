@@ -24,8 +24,10 @@ no ornament that would read as marketing.
 ## Assets
 
 - `audio/voice.mp3` — the speech, trimmed to the two boundaries the owner named
-  and loudness-raised. Source: `WhatsApp Video 2026-09-19 at 21.09.21.mp4`
-  (a screen recording of the voice note; no usable footage in it).
+  and loudness-raised. Source: `cleaned-video.mp4`, the owner's own denoise of
+  `WhatsApp Video 2026-09-19 at 21.09.21.mp4` (a screen recording of the voice
+  note; no usable footage in either). Same 33.055s timeline, verified word by
+  word against the original: mean drift +0.008s.
 - `transcript.json` — whisper word-level transcript of that exact trim, the grid
   every caption is synced to.
 
@@ -33,11 +35,13 @@ no ornament that would read as marketing.
 
 - Starts on "Live this life", ends on "…show you His face." — the owner's two
   cut points, measured against the transcript, not eyeballed.
-- Volume raised: the source sat at −14.8 LUFS; the delivered file is −12.0
-  LUFS at −1.5 dBTP, with the dynamic range pulled from LRA 5.3 to 2.9 and a
-  presence lift at 3 kHz, so the words carry on a phone speaker. The renderer
-  normalises the mix, so gain on the source track past that point does nothing
-  — the compression and the EQ are what buy the intelligibility.
+- Volume raised: the denoised source sits at −22.1 LUFS; the delivered file is
+  −10.4 LUFS at −1.7 dBTP, with the dynamic range pulled to LRA 3.2 and a
+  presence lift at 3 kHz. Removing the noise is what let it get this loud —
+  with hiss in the recording, every dB of gain raised the hiss too, and the
+  best the mix reached was −12.0.
+- Noise floor in his 1.3s pause: −45.5 dB, against −32.7 dB before the
+  denoise. That is the pause actually being a pause.
 - Captions carry every word except the four runs the owner asked to be shown
   another way: "First of all," and "And secondly," are circled numerals, and
   "as if you are a traveller, just simply, merely a traveller." is the first

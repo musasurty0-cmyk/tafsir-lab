@@ -246,39 +246,47 @@
 
     <script>
       /* ═══ 1 · The measured grid ═══════════════════════════════════════
-         whisper word-level output for audio/voice.mp3, clamped so every
-         window is monotonic and non-overlapping (asr-keyword-glow needs an
-         unambiguous envelope). 83 words — every word he speaks in the trim,
-         nothing dropped, nothing invented. */
+         whisper word-level output for audio/voice.mp3 — the DENOISED take,
+         which reads several boundaries the noisy one could not: "First" does
+         not begin until 3.04, and "life,"/"give" and "that,"/"Ya" no longer
+         overlap. Clamped at both ends so every window is monotonic and
+         non-overlapping (asr-keyword-glow needs an unambiguous envelope).
+
+         One measured override: whisper ends "return." at 25.62, straight
+         through his pause and over the top of the next word. 0.1s RMS windows
+         put the end of speech at 23.90 and the next onset at 25.2, so the
+         word ends where the sound does.
+
+         83 words — every word he speaks in the trim, nothing invented. */
       const WORDS = [
-        [0.00, 0.22, "Live"],      [0.22, 0.46, "this"],      [0.46, 1.68, "life,"],
-        [1.68, 1.84, "live"],      [1.84, 2.14, "this"],      [2.14, 2.50, "dunya."],
-        [2.72, 3.50, "First"],     [3.50, 3.64, "of"],        [3.64, 4.00, "all,"],
-        [4.00, 4.34, "as"],        [4.34, 5.42, "if"],        [5.42, 5.58, "you"],
-        [5.58, 5.70, "are"],       [5.70, 5.86, "a"],         [5.86, 6.18, "traveller,"],
-        [6.18, 6.26, "just"],      [6.26, 6.60, "simply"],    [6.60, 6.92, "merely"],
-        [6.92, 7.04, "a"],         [7.04, 7.86, "traveller."],[7.94, 8.12, "And"],
-        [8.12, 8.86, "secondly,"], [8.86, 9.12, "when"],      [9.12, 9.28, "you"],
-        [9.28, 9.44, "live"],      [9.44, 9.68, "this"],      [9.68, 10.50, "life,"],
-        [10.50, 10.68, "give"],    [10.68, 11.00, "Allah"],   [11.00, 11.38, "no"],
-        [11.38, 11.74, "reason"],  [11.74, 12.02, "not"],     [12.02, 12.22, "to"],
-        [12.22, 12.34, "show"],    [12.34, 12.46, "you"],     [12.46, 12.58, "His"],
-        [12.58, 13.58, "face."],   [13.58, 13.86, "Make"],    [13.86, 14.00, "it"],
-        [14.00, 15.14, "so"],      [15.14, 15.56, "obvious"], [15.56, 15.86, "that,"],
-        [15.86, 15.98, "Ya"],      [15.98, 16.76, "Allah,"],  [16.76, 17.20, "everything"],
-        [17.20, 17.40, "I’ve"],    [17.40, 17.60, "done"],    [17.60, 17.72, "for"],
-        [17.72, 17.88, "you"],     [17.88, 18.00, "is"],      [18.00, 18.50, "taʿẓīm"],
-        [18.50, 18.72, "Allāh"],   [18.72, 19.08, "li-annahu"],[19.08, 19.36, "Allāh,"],
-        [19.36, 19.70, "everything"],[19.70, 20.00, "I’ve"],  [20.00, 20.30, "done"],
-        [20.30, 20.74, "is"],      [20.74, 20.88, "to"],      [20.88, 21.28, "venerate"],
-        [21.28, 21.42, "you"],     [21.42, 21.70, "only"],    [21.70, 21.96, "because"],
-        [21.96, 22.12, "you"],     [22.12, 22.18, "are"],     [22.18, 22.54, "Allah."],
-        [22.54, 22.84, "Not"],     [22.84, 22.96, "for"],     [22.96, 23.28, "anything"],
-        [23.28, 23.46, "in"],      [23.46, 23.92, "return."], [25.22, 25.42, "So"],
-        [25.42, 25.60, "that"],    [25.60, 25.74, "Allah"],   [25.74, 25.96, "has"],
-        [25.96, 26.12, "no"],      [26.12, 26.48, "excuse"],  [26.48, 27.10, "but"],
-        [27.10, 27.26, "to"],      [27.26, 27.38, "show"],    [27.38, 27.46, "you"],
-        [27.46, 27.58, "His"],     [27.58, 28.08, "face."]
+        [0.00, 0.22, "Live"], [0.22, 0.46, "this"], [0.46, 1.68, "life,"],
+        [1.68, 1.82, "live"], [1.82, 2.14, "this"], [2.14, 2.46, "dunya."],
+        [3.04, 3.52, "First"], [3.52, 3.62, "of"], [3.62, 4.00, "all,"],
+        [4.00, 4.34, "as"], [4.34, 5.42, "if"], [5.42, 5.58, "you"],
+        [5.58, 5.74, "are"], [5.74, 5.88, "a"], [5.88, 6.18, "traveller,"],
+        [6.18, 6.28, "just"], [6.28, 6.60, "simply"], [6.60, 6.94, "merely"],
+        [6.94, 7.10, "a"], [7.10, 7.82, "traveller."], [7.94, 8.12, "And"],
+        [8.12, 8.90, "secondly,"], [8.90, 9.12, "when"], [9.12, 9.28, "you"],
+        [9.28, 9.44, "live"], [9.44, 9.68, "this"], [9.68, 9.94, "life,"],
+        [9.94, 10.68, "give"], [10.68, 11.02, "Allah"], [11.02, 11.38, "no"],
+        [11.38, 11.74, "reason"], [11.74, 12.02, "not"], [12.02, 12.22, "to"],
+        [12.22, 12.34, "show"], [12.34, 12.44, "you"], [12.44, 12.60, "His"],
+        [12.60, 13.54, "face."], [13.54, 13.86, "Make"], [13.86, 14.00, "it"],
+        [14.00, 15.12, "so"], [15.12, 15.56, "obvious"], [15.56, 15.62, "that,"],
+        [15.62, 15.98, "Ya"], [15.98, 16.72, "Allah,"], [16.72, 17.20, "everything"],
+        [17.20, 17.40, "I’ve"], [17.40, 17.60, "done"], [17.60, 17.74, "for"],
+        [17.74, 17.88, "you"], [17.88, 17.94, "is"], [17.94, 18.50, "taʿẓīm"],
+        [18.50, 18.72, "Allāh"], [18.72, 19.16, "li-annahu"], [19.16, 19.22, "Allāh,"],
+        [19.22, 19.70, "everything"], [19.70, 20.02, "I’ve"], [20.02, 20.34, "done"],
+        [20.34, 20.74, "is"], [20.74, 20.88, "to"], [20.88, 21.28, "venerate"],
+        [21.28, 21.42, "you"], [21.42, 21.70, "only"], [21.70, 21.98, "because"],
+        [21.98, 22.10, "you"], [22.10, 22.16, "are"], [22.16, 22.40, "Allah."],
+        [22.40, 22.84, "Not"], [22.84, 22.98, "for"], [22.98, 23.28, "anything"],
+        [23.28, 23.46, "in"], [23.46, 23.92, "return."], [25.20, 25.42, "So"],
+        [25.42, 25.60, "that"], [25.60, 25.74, "Allah"], [25.74, 25.96, "has"],
+        [25.96, 26.10, "no"], [26.10, 26.50, "excuse"], [26.50, 27.10, "but"],
+        [27.10, 27.28, "to"], [27.28, 27.38, "show"], [27.38, 27.44, "you"],
+        [27.44, 27.56, "His"], [27.56, 28.08, "face."]
       ];
 
       /* ═══ 2 · Which words sit on which line ═══════════════════════════
@@ -370,25 +378,25 @@
       }
 
       /* ═══ 3 · The beats ═══════════════════════════════════════════════
-         Windows tile 0 → 28.16 with no gap and no overlap. Every onset is a
-         word onset off the grid above — nothing here is hand-placed. */
+         Windows tile 0 → 28.16 with no gap and no overlap, and every
+         boundary is DERIVED: a beat runs from its first word's onset to the
+         next beat's first word's onset. Typing them by hand is how #b6 came
+         to end at 15.98 — the START of "Allah," rather than its end — so the
+         last word of "Ya Allah," was cleared off screen a beat before he
+         said it. Only #b2 is placed by hand, because a ring needs a moment
+         to draw before he speaks to it. */
       const BEATS = [
-        { el: "#b1",  from: 0.00,  to: 2.72,  enter: "words" },
-        { el: "#b2",  from: 2.72,  to: 4.00,  enter: "mark"  },
-        /* The Arabic is up for the whole run-in, not just the two seconds he
-           spends saying it: he is describing the idea from 4.00 ("as if you
-           are a traveller…") and only names it at 6.60. Showing the phrase
-           while he circles it is the point — the card is what he is reaching
-           for, and the transliteration lands at the moment he reaches it. */
-        { el: "#h1",  from: 4.00,  to: 7.94,  enter: "hero"  },
-        { el: "#b4",  from: 7.94,  to: 8.86,  enter: "mark"  },
-        { el: "#b5",  from: 8.86,  to: 13.58, enter: "side"  },
-        { el: "#b6",  from: 13.58, to: 15.98, enter: "rise"  },
-        { el: "#b7",  from: 15.98, to: 18.00, enter: "fast"  },
-        { el: "#h2",  from: 18.00, to: 19.36, enter: "hero"  },
-        { el: "#b9",  from: 19.36, to: 22.54, enter: "tilt"  },
-        { el: "#b10", from: 22.54, to: 25.22, enter: "rise"  },
-        { el: "#b11", from: 25.22, to: 28.16, enter: "slam"  }
+        { el: "#b1",   from:  0.00, to:  2.72, enter: "words" },
+        { el: "#b2",   from:  2.72, to:  4.00, enter: "mark"  },
+        { el: "#h1",   from:  4.00, to:  7.94, enter: "hero"  },
+        { el: "#b4",   from:  7.94, to:  8.90, enter: "mark"  },
+        { el: "#b5",   from:  8.90, to: 13.54, enter: "side"  },
+        { el: "#b6",   from: 13.54, to: 16.72, enter: "rise"  },
+        { el: "#b7",   from: 16.72, to: 17.94, enter: "fast"  },
+        { el: "#h2",   from: 17.94, to: 19.22, enter: "hero"  },
+        { el: "#b9",   from: 19.22, to: 22.40, enter: "tilt"  },
+        { el: "#b10",  from: 22.40, to: 25.20, enter: "rise"  },
+        { el: "#b11",  from: 25.20, to: 28.16, enter: "slam"  },
       ];
 
       const DUR = 28.16;
@@ -404,7 +412,7 @@
          telling the viewer something untrue about the recording. */
       tl.set("#rail-fill", { scaleX: 0 }, 0);
       tl.to("#rail-fill", { scaleX: 23.92 / DUR, duration: 23.92, ease: "none" }, 0);
-      tl.to("#rail-fill", { scaleX: 1, duration: DUR - 25.22, ease: "none" }, 25.22);
+      tl.to("#rail-fill", { scaleX: 1, duration: DUR - 25.20, ease: "none" }, 25.20);
 
       tl.set("#foot", { opacity: 0 }, 0);
       tl.to("#foot", { opacity: 1, duration: 0.5, ease: "power2.out" }, 0.4);
@@ -486,20 +494,20 @@
         tl.set(id, { scaleX: 0 }, 0);
         tl.to(id, { scaleX: 1, duration: to - from, ease: "power1.out" }, from);
       }
-      sweep("#mkbar-b5", 11.00, 11.74); // "no reason"
+      sweep("#mkbar-b5", 11.02, 11.74); // "no reason"
 
       /* The heroes' rules draw with the phrase, from the centre out. */
       tl.set("#h1-rule", { scaleX: 0 }, 0);
       tl.to("#h1-rule", { scaleX: 1, duration: 0.38, ease: "power2.out" }, 4.08);
       tl.set("#h2-rule", { scaleX: 0 }, 0);
-      tl.to("#h2-rule", { scaleX: 1, duration: 0.38, ease: "power2.out" }, 18.06);
+      tl.to("#h2-rule", { scaleX: 1, duration: 0.38, ease: "power2.out" }, 18.00);
 
       /* Transliteration and gloss arrive after the Arabic has been seen — the
          phrase first, then what it means. On the first card they wait almost
          three seconds, until the words leave his mouth: the transliteration
          lands on "mujarrad" (6.60), the gloss on the breath after it. That
          wait is what gives a card held for four seconds a second beat. */
-      [["#h1", 6.52, 7.10], ["#h2", 18.26, 18.40]].forEach(([h, tTr, tEn]) => {
+      [["#h1", 6.52, 7.10], ["#h2", 18.20, 18.34]].forEach(([h, tTr, tEn]) => {
         /* An explicit hidden state at t=0. The first card's parent is on
            screen from 4.00 but these two lines must not be, and a `fromTo`
            with immediateRender:false paints nothing until its own start —
@@ -521,12 +529,12 @@
          reading of a man pausing on a word anyway. */
       tl.set("#held-so", { scale: 1 }, 0);
       tl.to("#held-so", { scale: 1.34, duration: 0.18, ease: "power3.out" }, 14.00);
-      tl.to("#held-so", { scale: 1.0,  duration: 0.16, ease: "power2.inOut" }, 15.06);
+      tl.to("#held-so", { scale: 1.0,  duration: 0.16, ease: "power2.inOut" }, 15.04);
 
       /* "His face." is the sentence the whole clip is walking toward. It
          lands last, largest, and settles rather than bouncing. */
       tl.set("#face-line", { scale: 0.86 }, 0);
-      tl.to("#face-line", { scale: 1, duration: 0.42, ease: "power4.out" }, 27.42);
+      tl.to("#face-line", { scale: 1, duration: 0.42, ease: "power4.out" }, 27.40);
 
       /* ═══ 4 · The karaoke driver ══════════════════════════════════════
          ONE linear driver for all 83 words (asr-keyword-glow, karaoke
