@@ -23,11 +23,22 @@ no ornament that would read as marketing.
 
 ## Assets
 
-- `audio/voice.mp3` — the speech, trimmed to the two boundaries the owner named
-  and loudness-raised. Source: `cleaned-video.mp4`, the owner's own denoise of
-  `WhatsApp Video 2026-09-19 at 21.09.21.mp4` (a screen recording of the voice
-  note; no usable footage in either). Same 33.055s timeline, verified word by
-  word against the original: mean drift +0.008s.
+- `audio/voice.flac` — the speech. Source: `cleaned-video (2).mp4`, the owner's
+  second and much cleaner denoise, supplied already trimmed. It is **0.38s
+  ahead** of the caption grid — it keeps the "If you" before "Live this life" —
+  so it is cut at 0.38s rather than used as handed over.
+  That offset was measured acoustically, not inferred: cross-correlating the
+  two takes' 100 Hz amplitude envelopes gives a sharp peak at +0.38s (score
+  0.0415 against 0.0193 at zero lag) and every one of seven 4-second windows
+  agrees on the same value, so it is a uniform shift and not a re-time. The ASR
+  could not have told us this — its word boundaries disagree between passes and
+  on this take it lost the taʿẓīm phrase entirely, lumping three seconds into
+  one word.
+  Verified end to end afterwards: twelve distinctive word onsets against the
+  live grid, mean drift +0.023s, most of them exact. The two that move (0.22s)
+  both follow a pause, where onset detection is ambiguous either way.
+- Earlier sources, superseded: `cleaned-video.mp4` (first denoise) and the
+  original `WhatsApp Video 2026-09-19 at 21.09.21.mp4`.
 - `transcript.json` — whisper word-level transcript of that exact trim, the grid
   every caption is synced to.
 
@@ -35,7 +46,8 @@ no ornament that would read as marketing.
 
 - Starts on "Live this life", ends on "…show you His face." — the owner's two
   cut points, measured against the transcript, not eyeballed.
-- Volume raised: the denoised source sits at −22.1 LUFS; the delivered file is
+- Volume raised: the source sits at −18.9 LUFS (the second denoise needs 3.2 dB
+  less lift than the first, so it amplifies less of everything else); the delivered file is
   −11.6 LUFS at −2.1 dBTP, LRA 3.3. Removing the noise is what let it get this
   loud — with hiss in the recording, every dB of gain raised the hiss too.
 - Warmed, after the first pass came back tinny. The cause was the EQ curve
@@ -80,14 +92,15 @@ no ornament that would read as marketing.
   mostly resampling junk the old one was carrying rather than detail it was
   losing. The structural fix is right; the audible difference is small, and
   the change you can actually hear is the bed coming down.
-- A train passes behind the first three seconds. It is broadband, loudest in
-  the 200–800 Hz band (+12 dB over the rest of the recording), and audible
-  only in the two gaps between words — under speech it is 40 dB down. A
-  downward expander ahead of the compressor takes 39–41 dB off those gaps
-  (`agate` at −36 dBFS, ratio 6, 10ms attack / 250ms release, 8 dB knee,
-  range capped at −30 dB). Every speech probe measures identical to the
-  untreated take, including the decay tail of "face." at 12.9s. Spectral
-  denoise was tried first and rejected: it bought 0.7 dB and cost 2 dB off
+- A train passes behind the first three seconds. On the second denoise it is
+  already 19.8 dB further down than it was — 46.7 dB below the speech in the
+  first gap, against 26.9 — but it is still there, and the compressor's makeup
+  gain would bring it back up. So the downward expander stays: `agate` at
+  −36 dBFS, ratio 6, 10ms attack / 250ms release, 8 dB knee, range capped at
+  −30 dB, ahead of the compressor. Without it the residual floor sits only
+  26 dB under the speech; with it, 56 dB. Every speech probe — word onset,
+  mid-phrase boundary, decay tail — matches the ungated build to 0.1 dB.
+  Spectral denoise was tried and rejected: it bought 0.7 dB and cost 2 dB off
   a word onset.
 - No green — the app's emerald accent is excluded from reels by standing owner
   decision. The accent here is the app's warm ochre.
