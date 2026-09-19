@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=1080, height=1920">
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;1,8..60,400;1,8..60,500&family=Amiri:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;0,7..72,700;1,7..72,500;1,7..72,600&family=Source+Serif+4:ital,opsz,wght@1,8..60,500&family=Amiri:wght@400;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
     <style>
       /* ══════════════════════════════════════════════════════════════════
@@ -14,9 +14,9 @@
          of the study app: warm paper, ink serif, a hairline that advances as
          he speaks, every word darkening at the instant it is said.
 
-         ONE clip, eleven beats. The surface, the rail and the rule never
-         cut — that continuity is what keeps eleven beats from reading as
-         eleven slides.
+         ONE clip, eleven beats and a closing card. The surface, the rail and
+         the rule never cut — that continuity is what keeps eleven beats from
+         reading as eleven slides.
          Beats roll in the same direction (up and out, in from below) so a
          swap reads as one motion, not a collision.
 
@@ -40,7 +40,16 @@
         --accent: #a8762a;
 
         --sans:   "Inter", -apple-system, "Segoe UI", system-ui, Arial, sans-serif;
-        --serif:  "Source Serif 4", Georgia, serif;
+        /* Literata, not Source Serif 4. Same family of idea — a face built for
+           long-form reading on a warm ground — but shorter in the ascender,
+           sturdier in the stem, and it carries weight 700 without going
+           spindly in the thin strokes the way a higher-contrast serif does.
+           The words are the picture here, so they should have some mass. */
+        --serif:  "Literata", "Source Serif 4", Georgia, serif;
+        /* The wordmark stays in the app's own face: the mark is brand truth
+           and it has to match the other reel, whatever the captions are set
+           in. */
+        --brand:  "Source Serif 4", Georgia, serif;
         --arabic: "Amiri", "Amiri Quran", serif;
       }
 
@@ -94,14 +103,17 @@
       .bmv { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; }
 
       .ln {
-        font-family: var(--serif); font-weight: 600; font-size: 82px;
-        line-height: 1.24; letter-spacing: -0.02em;
+        font-family: var(--serif); font-weight: 700; font-size: 76px;
+        line-height: 1.26; letter-spacing: -0.022em;
         max-width: 900px;
       }
-      .ln--xl   { font-size: 104px; line-height: 1.18; }
-      .ln--sm   { font-size: 72px; }
-      .ln--face { font-size: 132px; line-height: 1.1; }
-      .ln--held { font-size: 118px; line-height: 1.1; }
+      /* Literata sets wider and with a taller x-height than Source Serif 4,
+         so every size comes down ~7% to hold the same line breaks while
+         reading heavier. */
+      .ln--xl   { font-size: 96px;  line-height: 1.18; }
+      .ln--sm   { font-size: 66px; }
+      .ln--face { font-size: 122px; line-height: 1.1; }
+      .ln--held { font-size: 110px; line-height: 1.1; }
 
       /* A counted point, drawn. The ring is an SVG so it can draw itself
          from twelve o'clock; the digit is a sibling, not a stroke. */
@@ -114,8 +126,8 @@
         fill: none; stroke: var(--accent); stroke-opacity: 0.55; stroke-width: 3;
       }
       .numeral em {
-        font-family: var(--serif); font-style: normal; font-weight: 600;
-        font-size: 118px; line-height: 1; color: var(--ink);
+        font-family: var(--serif); font-style: normal; font-weight: 700;
+        font-size: 110px; line-height: 1; color: var(--ink);
       }
 
       /* A word. .w takes layout + entrance transforms, .wi takes the ink the
@@ -144,12 +156,46 @@
         margin: 6px 0 20px; transform-origin: 50% 50%; transform: scaleX(0);
       }
       .hero-tr {
-        font-family: var(--serif); font-style: italic; font-weight: 500;
-        font-size: 44px; color: var(--ink-2); letter-spacing: -0.01em;
+        font-family: var(--serif); font-style: italic; font-weight: 600;
+        font-size: 42px; color: var(--ink-2); letter-spacing: -0.01em;
       }
       .hero-en {
-        font-family: var(--serif); font-weight: 400; font-size: 38px;
+        font-family: var(--serif); font-weight: 400; font-size: 36px;
         color: var(--ink-3); margin-top: 6px;
+      }
+
+      /* ── The closing card ───────────────────────────────────────────── */
+      .brand-row { display: flex; align-items: center; gap: 34px; }
+      .tile {
+        width: 148px; height: 148px; border-radius: 34px;
+        background: var(--ink);
+        display: flex; align-items: center; justify-content: center;
+        box-shadow: 0 26px 60px rgba(41, 38, 33, 0.22);
+      }
+      .tile .t {
+        font-family: var(--brand); font-style: normal; font-weight: 600;
+        font-size: 92px; line-height: 1; color: var(--bg); padding-bottom: 8px;
+      }
+      .wordmark {
+        font-family: var(--brand); font-style: italic; font-weight: 500;
+        font-size: 108px; letter-spacing: -0.02em; color: var(--ink);
+        white-space: nowrap;
+      }
+      /* Both reveals are clips, not fades. Fading a child inside a group that
+         is itself fading compounds the two, and a half-opaque glyph measures
+         as a contrast failure mid-entrance even though its resting state is
+         13:1. A clip slides at full ink the whole way. */
+      .wm-clip  { overflow: hidden; padding: 6px 0; }
+      .url-clip { overflow: hidden; }
+      /* The same ochre rule the two Arabic cards drew under their phrase —
+         the close rhymes with them rather than introducing a new device. */
+      .close-rule {
+        width: 360px; height: 3px; background: var(--accent); opacity: 0.5;
+        margin: 40px 0 22px; transform-origin: 50% 50%; transform: scaleX(0);
+      }
+      .close-url {
+        font-family: var(--sans); font-size: 30px; font-weight: 500;
+        letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3);
       }
 
       /* ── The running foot ───────────────────────────────────────────── */
@@ -164,10 +210,10 @@
     </style>
   </head>
   <body>
-    <div id="root" data-composition-id="main" data-start="0" data-duration="28.16"
+    <div id="root" data-composition-id="main" data-start="0" data-duration="30.4"
          data-fps="30" data-width="1080" data-height="1920">
 
-      <div id="scene" class="clip" data-start="0" data-duration="28.16" data-track-index="1">
+      <div id="scene" class="clip" data-start="0" data-duration="30.4" data-track-index="1">
         <div class="paper"></div>
         <div class="dots"></div>
 
@@ -226,6 +272,17 @@
           <div class="beat" id="b9" data-layout-allow-overlap="true"><div class="bmv"></div></div>
           <div class="beat" id="b10" data-layout-allow-overlap="true"><div class="bmv"></div></div>
           <div class="beat" id="b11" data-layout-allow-overlap="true"><div class="bmv"></div></div>
+
+          <div class="beat" id="close" data-layout-allow-overlap="true">
+            <div class="bmv">
+              <div class="brand-row">
+                <div class="tile"><span class="t">T</span></div>
+                <div class="wm-clip"><div class="wordmark">TafsirLab</div></div>
+              </div>
+              <div class="close-rule" id="close-rule"></div>
+              <div class="url-clip"><div class="close-url">tafsir-lab.com</div></div>
+            </div>
+          </div>
         </div>
 
         <div class="foot" id="foot">
@@ -240,7 +297,7 @@
            in and 2.56s fade out, baked into the file rather than tweened:
            the renderer owns audio playback, so a fade that exists as a GSAP
            tween would not be in the mix. -->
-      <audio id="au-bed" data-start="0" data-duration="28.16" data-volume="1"
+      <audio id="au-bed" data-start="0" data-duration="30.4" data-volume="1"
              src="audio/bed-nasheed.mp3"></audio>
     </div>
 
@@ -396,10 +453,15 @@
         { el: "#h2",   from: 17.94, to: 19.22, enter: "hero"  },
         { el: "#b9",   from: 19.22, to: 22.40, enter: "tilt"  },
         { el: "#b10",  from: 22.40, to: 25.20, enter: "rise"  },
-        { el: "#b11",  from: 25.20, to: 28.16, enter: "slam"  },
+        { el: "#b11",  from: 25.20, to: 28.60, enter: "slam"  },
+        { el: "#close",from: 28.60, to: 30.40, enter: "rise"  },
       ];
 
-      const DUR = 28.16;
+      const DUR = 30.4;
+      /* He stops speaking at 28.08; the card holds the rest. The two are
+         different numbers now and everything timed against the voice has to
+         use this one, not the composition's length. */
+      const SPEECH_END = 28.08;
       /* The circumference of the numeral ring: 2πr at r=114 in its own
          240×240 viewBox. Declared here because the ring tweens are built
          before the entrance table below. */
@@ -411,11 +473,16 @@
          him: a progress bar that kept crawling through a silence would be
          telling the viewer something untrue about the recording. */
       tl.set("#rail-fill", { scaleX: 0 }, 0);
-      tl.to("#rail-fill", { scaleX: 23.92 / DUR, duration: 23.92, ease: "none" }, 0);
-      tl.to("#rail-fill", { scaleX: 1, duration: DUR - 25.20, ease: "none" }, 25.20);
+      tl.to("#rail-fill", { scaleX: 23.92 / SPEECH_END, duration: 23.92, ease: "none" }, 0);
+      tl.to("#rail-fill", { scaleX: 1, duration: SPEECH_END - 25.20, ease: "none" }, 25.20);
+      /* Both bits of chrome leave before the card lands, so the mark is alone
+         on the paper — and the foot's "TafsirLab" does not sit under a
+         wordmark saying the same thing. */
+      tl.to(".rail", { opacity: 0, duration: 0.22, ease: "power2.in" }, 28.40);
 
       tl.set("#foot", { opacity: 0 }, 0);
       tl.to("#foot", { opacity: 1, duration: 0.5, ease: "power2.out" }, 0.4);
+      tl.to("#foot", { opacity: 0, duration: 0.22, ease: "power2.in" }, 28.40);
 
       /* ── The two numerals ─────────────────────────────────────────────
          The ring draws itself, then the digit lands inside it. A counted
@@ -535,6 +602,27 @@
          lands last, largest, and settles rather than bouncing. */
       tl.set("#face-line", { scale: 0.86 }, 0);
       tl.to("#face-line", { scale: 1, duration: 0.42, ease: "power4.out" }, 27.40);
+
+      /* ── The close ───────────────────────────────────────────────────
+         Four moves, in the order you would read them. The rule is the same
+         one the Arabic cards drew, which is what ties the ending to the
+         middle rather than bolting a logo onto the end. */
+      tl.set("#close .tile",      { scale: 0.82 }, 0);
+      tl.set("#close .wordmark",  { xPercent: -106 }, 0);
+      tl.set("#close-rule",       { scaleX: 0 }, 0);
+      tl.set("#close .close-url", { yPercent: 115 }, 0);
+
+      tl.fromTo("#close .tile", { scale: 0.82 },
+        { scale: 1, duration: 0.42, ease: "back.out(1.8)",
+          immediateRender: false }, 28.64);
+      // The wordmark slides out from behind the mark's edge.
+      tl.fromTo("#close .wordmark", { xPercent: -106 },
+        { xPercent: 0, duration: 0.44, ease: "power3.out",
+          immediateRender: false }, 28.72);
+      tl.to("#close-rule", { scaleX: 1, duration: 0.40, ease: "power2.out" }, 29.02);
+      tl.fromTo("#close .close-url", { yPercent: 115 },
+        { yPercent: 0, duration: 0.34, ease: "power3.out",
+          immediateRender: false }, 29.22);
 
       /* ═══ 4 · The karaoke driver ══════════════════════════════════════
          ONE linear driver for all 83 words (asr-keyword-glow, karaoke

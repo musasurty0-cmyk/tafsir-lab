@@ -26,19 +26,29 @@ clears by a wide margin. The karaoke read comes from the *distance* between
 
 | role                     | family                | size / weight            |
 | ------------------------ | --------------------- | ------------------------ |
-| the running caption      | Source Serif 4        | 82px / 600, -0.02em      |
-| the climax line          | Source Serif 4        | 132px / 600              |
+| the running caption      | Literata              | 76px / 700, -0.022em     |
+| the climax line          | Literata              | 122px / 700              |
 | Arabic hero              | Amiri                 | 150px / 700              |
-| transliteration + gloss  | Source Serif 4 italic | 44px / 500               |
-| the circled numerals     | Source Serif 4        | 118px / 600              |
-| the running foot         | Inter                 | 24px / 500, 0.1em caps   |
+| transliteration + gloss  | Literata italic       | 42px / 600               |
+| the circled numerals     | Literata              | 110px / 700              |
+| the wordmark             | Source Serif 4 italic | 108px / 500              |
+| the running foot, the URL| Inter                 | 24–30px / 500, tracked   |
 
-Serif performs, sans recedes — the app's own pairing, and the tension is the
-real one in the material: a spoken reminder (serif, read) inside a piece of
+Literata, not the app's Source Serif 4. Same family of idea — a face built for
+long-form reading on a warm ground — but shorter in the ascender and sturdier in
+the stem, so it carries weight 700 without the thin strokes going spindly the
+way a higher-contrast serif does. The words are the picture here; they should
+have some mass. It sets wider than Source Serif 4 and with a taller x-height,
+so every size comes down about 7% to hold the same line breaks.
+
+The **wordmark stays in Source Serif 4** — the mark is brand truth and has to
+match the other reel whatever the captions are set in.
+
+Serif performs, sans recedes: a spoken reminder (serif, read) inside a piece of
 software (sans, labelled). Arabic is Amiri because that is the face the app
 already sets Arabic in; it is not decoration, it is the same text surface.
 
-Sizes are in-feed sizes. The caption line never drops below 82px.
+Sizes are in-feed sizes. The caption line never drops below 66px.
 
 ## Layout
 
@@ -52,6 +62,9 @@ everything outside that.
 - **y 700–1240** — the caption stage. Beats are centred in this band and
   replace each other in place; nothing from a spent beat lingers.
 - **y 1500** — the footer hairline and the khutbah title, set small and quiet.
+  Both the rail and the foot clear at 28.40, before the closing card lands, so
+  the mark is alone on the paper — and the foot's "TafsirLab" is not sitting
+  under a wordmark saying the same thing.
 
 Background: the app's fine dot grid at 13% ink, **static**. No drift, no crawl —
 sub-pixel motion under 82px serif is the shimmer bug this project has already
@@ -70,6 +83,14 @@ sweep under "no reason").
 A counted point is drawn, not described: a ring closes and a digit lands in
 it. The words "first of all" and "and secondly" say nothing the numeral does
 not, and the numeral says it in a quarter of the time.
+
+The closing card builds in four moves: the mark scale-pops, the wordmark slides
+out from behind its edge, the ochre rule draws, the address rises. Both slides
+are **clips, not fades** — fading a child inside a group that is itself fading
+compounds the two, and a half-opaque glyph measures as a contrast failure
+mid-entrance even though its resting state is 13:1. The rule is the same one
+the two Arabic cards drew, which is what ties the ending to the middle rather
+than bolting a logo onto the end.
 
 The whole piece is ONE clip on one paper surface. Beats change; the surface,
 the rule and the rail never cut — that continuity is what keeps 11 beats from

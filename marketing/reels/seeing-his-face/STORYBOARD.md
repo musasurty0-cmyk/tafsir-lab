@@ -8,7 +8,7 @@ src: index.html
 blueprint: kinetic-type-beats
 ---
 
-# Storyboard — one surface, eleven beats
+# Storyboard — one surface, eleven beats and a card
 
 Every beat lives in the single `#scene` clip. `src:` is `index.html` for all of
 them: they are staged children of one continuous paper surface, not separate
@@ -18,7 +18,9 @@ grid rather than typed. Frame 2 is the one exception — a ring needs a moment t
 draw before he speaks to it.
 
 Under the whole thing, the nasheed — 16.3 LU below his voice, fading in over
-2.4s and out over 2.56s, only properly audible in the silence at Frame 10.
+2.4s and out over 2.4s — it is only properly audible in the silence at Frame 10,
+and it carries the closing card after he stops speaking, reaching silence on the
+last frame.
 
 ## Frame 1 — Live this life
 status: outline · src: index.html · 0.00–2.72
@@ -91,7 +93,15 @@ frame goes completely still; the only thing left is the nasheed, which is why
 it is there. Nothing moves until he speaks again.
 
 ## Frame 11 — so that He has no excuse
-status: outline · src: index.html · 25.20–28.16
+status: outline · src: index.html · 25.20–28.60
 rules: kinetic-beat-slam (scale-slam finale) + spring-pop-entrance
 "So that Allah has no excuse but to show you His face." "His face" lands
-largest, alone on its line, and holds to the last frame.
+largest, alone on its line, and holds half a second past his last word.
+
+## Frame 12 — the card
+status: outline · src: index.html · 28.60–30.40
+rules: spring-pop-entrance + svg-path-draw (the rule) + clip reveals
+The rail and the foot clear first so the paper is empty. Then four moves: the
+mark scale-pops, the wordmark slides out from behind its edge, the ochre rule
+draws — the same rule the two Arabic cards used — and the address rises. Holds
+to the last frame while the nasheed fades out under it.

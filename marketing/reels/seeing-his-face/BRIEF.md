@@ -6,7 +6,7 @@ message: "Travel light through this life, and venerate Allah for no reason but t
 destination: instagram-reels
 aspect: 1080x1920
 language: en
-length: 28.16s
+length: 30.4s
 angle: narrative
 ---
 
@@ -57,6 +57,11 @@ no ornament that would read as marketing.
 - "on return" → **"in return"**. The ASR misheard it; he is the speaker.
 - The two Arabic phrases the owner identified are set in Arabic with
   transliteration and gloss: مُجَرَّد مُسَافِر and تَعْظِيمُ اللهِ لِأَنَّهُ الله.
+- Set in Literata at 700 rather than the app's Source Serif 4 — the owner asked
+  for something slightly different and thicker. The wordmark stays in Source
+  Serif 4 so the mark matches the other reel.
+- Ends on the TafsirLab card, 28.60–30.40. The nasheed carries it and fades out
+  underneath, reaching silence on the last frame.
 
 ## Notes
 
