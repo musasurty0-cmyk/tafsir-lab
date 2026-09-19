@@ -65,10 +65,21 @@ no ornament that would read as marketing.
 
 ## Notes
 
-- Nasheed bed (`audio/bed-nasheed.mp3`, the same *ila rabbi* used in
-  labai-live), sitting 16.3 LU under the voice, with a 2.4s fade in and a
-  2.56s fade out baked into the file — the renderer owns audio playback, so
-  a fade that existed only as a GSAP tween would never reach the mix.
+- Nasheed bed (`audio/bed-nasheed.flac`, the same *ila rabbi* used in
+  labai-live), with a 2.4s fade in and a 1.8s fade out baked into the file —
+  the renderer owns audio playback, so a fade that existed only as a GSAP tween
+  would never reach the mix. Taken down 20% (−1.94 dB) on the owner's ear;
+  measured in the delivered file it now sits **13.2 dB below his voice**,
+  against 11.2 dB before.
+- Both tracks are FLAC rather than MP3. The voice arrives as 128k AAC and the
+  nasheed as 160k MP3, and the renderer encodes to AAC on the way out — handing
+  it an MP3 in between added a third lossy generation, and for the nasheed that
+  generation was MP3 at the *same bitrate as its source*, the worst case there
+  is. The 44.1→48k resample now goes through soxr at precision 28.
+  Measured honestly: above 16 kHz the new path is 2.8 dB cleaner, which is
+  mostly resampling junk the old one was carrying rather than detail it was
+  losing. The structural fix is right; the audible difference is small, and
+  the change you can actually hear is the bed coming down.
 - A train passes behind the first three seconds. It is broadband, loudest in
   the 200–800 Hz band (+12 dB over the rest of the recording), and audible
   only in the two gaps between words — under speech it is 40 dB down. A

@@ -49,7 +49,12 @@ lib/build-id.ts
 # Marketing reels — generated artifacts
 marketing/reels/*/node_modules/
 marketing/reels/*/kit/          # synced from shared/kit by sync-kit.mjs
-marketing/reels/*/snapshots/    # QA stills, regenerate with `hyperframes snapshot`
+# QA stills and per-run renders: regenerate with `hyperframes snapshot` /
+# `npm run render`. A trailing comment on the SAME line is not gitignore
+# syntax -- it became part of the pattern and matched nothing, so these
+# were never actually ignored.
+marketing/reels/*/snapshots/
+marketing/reels/*/renders/*_20*.mp4
 marketing/reels/_stills/
 
 # Large source clips for the lecture reels — rebuilt from the original on demand

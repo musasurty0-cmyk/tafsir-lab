@@ -18,7 +18,7 @@ grid rather than typed. Frame 2 is the one exception — a ring needs a moment t
 draw before he speaks to it.
 
 Under the whole thing, the nasheed — 16.3 LU below his voice, fading in over
-2.4s and out over 2.4s — it is only properly audible in the silence at Frame 10,
+2.4s and out over 1.8s — it is only properly audible in the silence at Frame 10,
 and it carries the closing card after he stops speaking, reaching silence on the
 last frame.
 

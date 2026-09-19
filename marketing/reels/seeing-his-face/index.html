@@ -292,13 +292,19 @@
       </div>
 
       <audio id="au-voice" data-start="0" data-duration="28.16" data-volume="1"
-             src="audio/voice.mp3"></audio>
-      <!-- The bed sits 16.3 LU under the voice and carries its own 2.4s fade
+             src="audio/voice.flac"></audio>
+      <!-- Both tracks are FLAC, not MP3. The voice arrives as 128k AAC and the
+           nasheed as 160k MP3, and the renderer encodes to AAC on the way out;
+           handing it an MP3 in between added a third lossy generation for no
+           reason, and for the nasheed that generation was MP3 at the SAME
+           bitrate as its source, which is the worst case there is.
+
+           The bed sits 16.9 LU under the voice and carries its own 2.4s fade
            in and 2.56s fade out, baked into the file rather than tweened:
            the renderer owns audio playback, so a fade that exists as a GSAP
            tween would not be in the mix. -->
       <audio id="au-bed" data-start="0" data-duration="30.4" data-volume="1"
-             src="audio/bed-nasheed.mp3"></audio>
+             src="audio/bed-nasheed.flac"></audio>
     </div>
 
     <script>
