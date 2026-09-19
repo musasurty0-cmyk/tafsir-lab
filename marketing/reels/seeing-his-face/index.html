@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=1080, height=1920">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;1,8..60,400;1,8..60,500&family=Amiri:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      /* ══════════════════════════════════════════════════════════════════
+         seeing-his-face — 28.16s, 1080×1920, LIGHT.
+
+         An excerpt from the khutbah "Seeing Allah in Jannah", set as a page
+         of the study app: warm paper, ink serif, a hairline that advances as
+         he speaks, every word darkening at the instant it is said.
+
+         ONE clip, eleven beats. The surface, the rail and the rule never cut
+         — that continuity is what keeps eleven beats from reading as eleven
+         slides. Beats roll in the same direction (up and out, in from below)
+         so a swap reads as one motion, not a collision.
+
+         Word timings are MEASURED, not authored: whisper word-level output
+         over this exact trim (transcript.json), clamped monotonic.
+         ══════════════════════════════════════════════════════════════════ */
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+
+      :root {
+        /* The app's own LIGHT tokens (app/globals.css). Green excluded per
+           the owner's standing brief; the accent here is the app's ochre. */
+        --bg:     #fcfbf8;
+        --ink:    #292621;
+        --ink-2:  #57534b;
+        --ink-3:  #6e695f;
+        --rest:   #7e7a6f;   /* a word not yet spoken — 3.9:1 on paper */
+        --line:   rgba(41, 38, 33, 0.13);
+        --accent: #a8762a;
+
+        --sans:   "Inter", -apple-system, "Segoe UI", system-ui, Arial, sans-serif;
+        --serif:  "Source Serif 4", Georgia, serif;
+        --arabic: "Amiri", "Amiri Quran", serif;
+      }
+
+      html, body {
+        width: 1080px; height: 1920px;
+        overflow: hidden;
+        background: var(--bg);
+        font-family: var(--sans);
+        -webkit-font-smoothing: antialiased;
+        text-rendering: optimizeLegibility;
+      }
+      #root { position: relative; width: 1080px; height: 1920px; background: var(--bg); }
+      .clip { position: absolute; inset: 0; overflow: hidden; }
+
+      /* ── The surface ────────────────────────────────────────────────── */
+      .paper { position: absolute; inset: 0; background: var(--bg); }
+      .dots {
+        position: absolute; inset: 0;
+        background: radial-gradient(rgba(41, 38, 33, 0.09) 1.5px, transparent 1.5px);
+        background-size: 30px 30px;
+        /* STATIC. A drifting grid under 80px serif re-rasterises the glyphs
+           every frame and reads as vibration — this project has paid for
+           that bug twice. Nothing in the background moves. */
+      }
+
+      /* ── The rail: ordinal · hairline · progress ─────────────────────── */
+      .rail {
+        position: absolute; left: 96px; right: 96px; top: 352px;
+        display: flex; align-items: center; gap: 26px;
+      }
+      .ord {
+        position: relative; width: 48px; height: 34px; flex: none; opacity: 0;
+      }
+      .ord span {
+        position: absolute; left: 0; top: 0;
+        font-family: var(--sans); font-size: 28px; font-weight: 600;
+        letter-spacing: 0.14em; color: var(--accent); line-height: 34px;
+      }
+      .rail-track { position: relative; flex: 1; height: 2px; background: var(--line); }
+      .rail-fill {
+        position: absolute; inset: 0;
+        background: var(--accent); opacity: 0.55;
+        transform-origin: 0% 50%; transform: scaleX(0);
+      }
+
+      /* ── The caption stage ──────────────────────────────────────────── */
+      .stage {
+        position: absolute; left: 90px; right: 90px; top: 620px; height: 700px;
+      }
+      .beat {
+        position: absolute; left: 0; right: 0; top: 50%;
+        transform: translateY(-50%);
+        display: flex; flex-direction: column; align-items: center; gap: 10px;
+        text-align: center;
+        opacity: 0;
+      }
+      /* .bmv carries the roll; .beat keeps the centring transform, so the two
+         never fight over the same transform matrix. */
+      .bmv { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; }
+
+      .ln {
+        font-family: var(--serif); font-weight: 600; font-size: 82px;
+        line-height: 1.24; letter-spacing: -0.02em;
+        max-width: 900px;
+      }
+      .ln--xl   { font-size: 104px; line-height: 1.18; }
+      .ln--sm   { font-size: 72px; }
+      .ln--face { font-size: 132px; line-height: 1.1; }
+      .ln--held { font-size: 118px; line-height: 1.1; }
+
+      .gloss {
+        font-family: var(--serif); font-style: italic; font-weight: 400;
+        font-size: 38px; color: var(--ink-3); margin-top: 12px;
+      }
+
+      /* A word. .w takes layout + entrance transforms, .wi takes the ink the
+         karaoke driver writes — one property each, so nothing is overwritten
+         from two places. */
+      .w  { display: inline-block; }
+      .wi { display: inline-block; color: var(--rest); }
+
+      /* The ochre marker: a child of the marked run, so it needs no measuring
+         and cannot drift off the words it belongs to. */
+      .mk { position: relative; display: inline-block; }
+      .mk-bar {
+        position: absolute; left: -4px; right: -4px; bottom: 2px; height: 6px;
+        background: var(--accent); opacity: 0.42;
+        transform-origin: 0% 50%; transform: scaleX(0);
+      }
+
+      /* ── The Arabic heroes ──────────────────────────────────────────── */
+      .hero-ar {
+        font-family: var(--arabic); font-weight: 700; font-size: 150px;
+        line-height: 1.5; color: var(--ink); direction: rtl;
+      }
+      .hero-ar--long { font-size: 122px; }
+      .hero-rule {
+        width: 420px; height: 3px; background: var(--accent); opacity: 0.5;
+        margin: 6px 0 20px; transform-origin: 50% 50%; transform: scaleX(0);
+      }
+      .hero-tr {
+        font-family: var(--serif); font-style: italic; font-weight: 500;
+        font-size: 44px; color: var(--ink-2); letter-spacing: -0.01em;
+      }
+      .hero-en {
+        font-family: var(--serif); font-weight: 400; font-size: 38px;
+        color: var(--ink-3); margin-top: 6px;
+      }
+
+      /* ── The running foot ───────────────────────────────────────────── */
+      .foot {
+        position: absolute; left: 96px; right: 96px; top: 1478px;
+        display: flex; align-items: center; justify-content: space-between;
+        font-family: var(--sans); font-size: 24px; font-weight: 500;
+        letter-spacing: 0.1em; text-transform: uppercase; color: #8a8579;
+        padding-top: 22px; border-top: 1px solid var(--line);
+        opacity: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="28.16"
+         data-fps="30" data-width="1080" data-height="1920">
+
+      <div id="scene" class="clip" data-start="0" data-duration="28.16" data-track-index="1">
+        <div class="paper"></div>
+        <div class="dots"></div>
+
+        <div class="rail">
+          <!-- Two stacked digits rather than one element whose text changes:
+               GSAP reads a `textContent: "01"` as a number and writes `1`, and
+               a crossfade in place is the better move anyway — the mark stays
+               put while only its digits change. -->
+          <div class="ord" id="ord">
+            <span id="ord1">01</span>
+            <span id="ord2">02</span>
+          </div>
+          <div class="rail-track"><div class="rail-fill" id="rail-fill"></div></div>
+        </div>
+
+        <div class="stage" id="stage">
+          <!-- Beats are filled at build time from WORDS + LINES so the spans
+               and the timing grid cannot drift apart. -->
+          <div class="beat" id="b1" data-layout-allow-overlap="true"><div class="bmv"></div></div>
+          <div class="beat" id="b2" data-layout-allow-overlap="true"><div class="bmv"></div></div>
+          <div class="beat" id="b3" data-layout-allow-overlap="true"><div class="bmv"></div></div>
+
+          <div class="beat" id="h1" data-layout-allow-overlap="true">
+            <div class="bmv">
+              <div class="hero-ar" dir="rtl" lang="ar">مُجَرَّد مُسَافِر</div>
+              <div class="hero-rule" id="h1-rule"></div>
+              <div class="hero-tr">mujarrad musāfir</div>
+              <div class="hero-en">merely a traveller</div>
+            </div>
+          </div>
+
+          <div class="beat" id="b4" data-layout-allow-overlap="true"><div class="bmv"></div></div>
+          <div class="beat" id="b5" data-layout-allow-overlap="true"><div class="bmv"></div></div>
+          <div class="beat" id="b6" data-layout-allow-overlap="true"><div class="bmv"></div></div>
+          <div class="beat" id="b7" data-layout-allow-overlap="true"><div class="bmv"></div></div>
+
+          <div class="beat" id="h2" data-layout-allow-overlap="true">
+            <div class="bmv">
+              <div class="hero-ar hero-ar--long" dir="rtl" lang="ar">تَعْظِيمُ اللهِ لِأَنَّهُ الله</div>
+              <div class="hero-rule" id="h2-rule"></div>
+              <div class="hero-tr">taʿẓīm Allāh li-annahu Allāh</div>
+              <div class="hero-en">venerating Allah because He is Allah</div>
+            </div>
+          </div>
+
+          <div class="beat" id="b9" data-layout-allow-overlap="true"><div class="bmv"></div></div>
+          <div class="beat" id="b10" data-layout-allow-overlap="true"><div class="bmv"></div></div>
+          <div class="beat" id="b11" data-layout-allow-overlap="true"><div class="bmv"></div></div>
+        </div>
+
+        <div class="foot" id="foot">
+          <span>Seeing Allah in Jannah</span>
+          <span>TafsirLab</span>
+        </div>
+      </div>
+
+      <audio id="au-voice" data-start="0" data-duration="28.16" data-volume="1"
+             src="audio/voice.mp3"></audio>
+    </div>
+
+    <script>
+      /* ═══ 1 · The measured grid ═══════════════════════════════════════
+         whisper word-level output for audio/voice.mp3, clamped so every
+         window is monotonic and non-overlapping (asr-keyword-glow needs an
+         unambiguous envelope). 83 words — every word he speaks in the trim,
+         nothing dropped, nothing invented. */
+      const WORDS = [
+        [0.00, 0.22, "Live"],      [0.22, 0.46, "this"],      [0.46, 1.68, "life,"],
+        [1.68, 1.84, "live"],      [1.84, 2.14, "this"],      [2.14, 2.50, "dunya."],
+        [2.72, 3.50, "First"],     [3.50, 3.64, "of"],        [3.64, 4.00, "all,"],
+        [4.00, 4.34, "as"],        [4.34, 5.42, "if"],        [5.42, 5.58, "you"],
+        [5.58, 5.70, "are"],       [5.70, 5.86, "a"],         [5.86, 6.18, "traveller,"],
+        [6.18, 6.26, "just"],      [6.26, 6.60, "simply"],    [6.60, 6.92, "merely"],
+        [6.92, 7.04, "a"],         [7.04, 7.86, "traveller."],[7.94, 8.12, "And"],
+        [8.12, 8.86, "secondly,"], [8.86, 9.12, "when"],      [9.12, 9.28, "you"],
+        [9.28, 9.44, "live"],      [9.44, 9.68, "this"],      [9.68, 10.50, "life,"],
+        [10.50, 10.68, "give"],    [10.68, 11.00, "Allah"],   [11.00, 11.38, "no"],
+        [11.38, 11.74, "reason"],  [11.74, 12.02, "not"],     [12.02, 12.22, "to"],
+        [12.22, 12.34, "show"],    [12.34, 12.46, "you"],     [12.46, 12.58, "His"],
+        [12.58, 13.58, "face."],   [13.58, 13.86, "Make"],    [13.86, 14.00, "it"],
+        [14.00, 15.14, "so"],      [15.14, 15.56, "obvious"], [15.56, 15.86, "that,"],
+        [15.86, 15.98, "Ya"],      [15.98, 16.76, "Allah,"],  [16.76, 17.20, "everything"],
+        [17.20, 17.40, "I’ve"],    [17.40, 17.60, "done"],    [17.60, 17.72, "for"],
+        [17.72, 17.88, "you"],     [17.88, 18.00, "is"],      [18.00, 18.50, "taʿẓīm"],
+        [18.50, 18.72, "Allāh"],   [18.72, 19.08, "li-annahu"],[19.08, 19.36, "Allāh,"],
+        [19.36, 19.70, "everything"],[19.70, 20.00, "I’ve"],  [20.00, 20.30, "done"],
+        [20.30, 20.74, "is"],      [20.74, 20.88, "to"],      [20.88, 21.28, "venerate"],
+        [21.28, 21.42, "you"],     [21.42, 21.70, "only"],    [21.70, 21.96, "because"],
+        [21.96, 22.12, "you"],     [22.12, 22.18, "are"],     [22.18, 22.54, "Allah."],
+        [22.54, 22.84, "Not"],     [22.84, 22.96, "for"],     [22.96, 23.28, "anything"],
+        [23.28, 23.46, "on"],      [23.46, 23.92, "return."], [25.22, 25.42, "So"],
+        [25.42, 25.60, "that"],    [25.60, 25.74, "Allah"],   [25.74, 25.96, "has"],
+        [25.96, 26.12, "no"],      [26.12, 26.48, "excuse"],  [26.48, 27.10, "but"],
+        [27.10, 27.26, "to"],      [27.26, 27.38, "show"],    [27.38, 27.46, "you"],
+        [27.46, 27.58, "His"],     [27.58, 28.08, "face."]
+      ];
+
+      /* ═══ 2 · Which words sit on which line ═══════════════════════════
+         `range` is inclusive and indexes WORDS, so a caption can never say
+         one thing while the driver lights another. `mark` is the sub-range
+         the ochre bar underlines. */
+      const LINES = [
+        { beat: "b1",  cls: "ln ln--xl", range: [0, 2] },
+        { beat: "b1",  cls: "ln ln--xl", range: [3, 5] },
+        { beat: "b1",  gloss: "dunya — this world, the lower one" },
+
+        { beat: "b2",  cls: "ln ln--xl", range: [6, 8] },
+
+        { beat: "b3",  cls: "ln", range: [9, 16], mark: [14, 14] },
+
+        { beat: "b4",  cls: "ln ln--xl", range: [20, 21] },
+
+        { beat: "b5",  cls: "ln ln--sm", range: [22, 26] },
+        { beat: "b5",  cls: "ln ln--sm", range: [27, 36], mark: [29, 30] },
+
+        { beat: "b6",  cls: "ln", range: [37, 38] },
+        { beat: "b6",  cls: "ln ln--held", range: [39, 39], id: "held-so" },
+        { beat: "b6",  cls: "ln", range: [40, 43] },
+
+        { beat: "b7",  cls: "ln ln--sm", range: [44, 49] },
+
+        { beat: "b9",  cls: "ln ln--sm", range: [54, 60] },
+        { beat: "b9",  cls: "ln ln--sm", range: [61, 65] },
+
+        { beat: "b10", cls: "ln ln--xl", range: [66, 70] },
+
+        { beat: "b11", cls: "ln ln--sm", range: [71, 76] },
+        { beat: "b11", cls: "ln", range: [77, 80] },
+        { beat: "b11", cls: "ln ln--face", range: [81, 82], id: "face-line" }
+      ];
+
+      /* Words 17–19 ("merely a traveller.") and 50–53 ("taʿẓīm Allāh
+         li-annahu Allāh,") are on screen as the Arabic hero cards rather
+         than as a caption line — they ARE those phrases. Their windows are
+         the hero windows below, so every one of the 83 is accounted for. */
+
+      const stage = document.getElementById("stage");
+      const wordEls = new Array(WORDS.length).fill(null);
+
+      function makeWord(i) {
+        const outer = document.createElement("span");
+        outer.className = "w";
+        const inner = document.createElement("i");
+        inner.className = "wi";
+        inner.style.fontStyle = "normal";
+        inner.textContent = WORDS[i][2];
+        outer.appendChild(inner);
+        wordEls[i] = inner;
+        return outer;
+      }
+
+      for (const spec of LINES) {
+        const host = document.querySelector("#" + spec.beat + " .bmv");
+        if (spec.gloss) {
+          const g = document.createElement("div");
+          g.className = "gloss";
+          g.textContent = spec.gloss;
+          host.appendChild(g);
+          continue;
+        }
+        const line = document.createElement("div");
+        line.className = spec.cls;
+        if (spec.id) line.id = spec.id;
+
+        const [from, to] = spec.range;
+        const mk = spec.mark || null;
+        let markHost = null;
+
+        for (let i = from; i <= to; i++) {
+          const inMark = mk && i >= mk[0] && i <= mk[1];
+          if (mk && i === mk[0]) {
+            markHost = document.createElement("span");
+            markHost.className = "mk";
+            line.appendChild(markHost);
+          }
+          const target = inMark ? markHost : line;
+          target.appendChild(makeWord(i));
+          if (inMark && i === mk[1]) {
+            const bar = document.createElement("span");
+            bar.className = "mk-bar";
+            bar.id = "mkbar-" + spec.beat;
+            markHost.appendChild(bar);
+          }
+          /* A space BETWEEN two marked words belongs inside the marked run, or
+             the two words collide ("noreason"). The space that ends the run
+             belongs to the line, or the underline stretches past the words it
+             is marking. */
+          if (i < to) {
+            const nextInMark = mk && (i + 1) >= mk[0] && (i + 1) <= mk[1];
+            (inMark && nextInMark ? markHost : line)
+              .appendChild(document.createTextNode(" "));
+          }
+        }
+        host.appendChild(line);
+      }
+
+      /* ═══ 3 · The beats ═══════════════════════════════════════════════
+         Windows tile 0 → 28.16 with no gap and no overlap. Every onset is a
+         word onset off the grid above — nothing here is hand-placed. */
+      const BEATS = [
+        { el: "#b1",  from: 0.00,  to: 2.72,  enter: "words" },
+        { el: "#b2",  from: 2.72,  to: 4.00,  enter: "snap"  },
+        { el: "#b3",  from: 4.00,  to: 6.60,  enter: "rise"  },
+        { el: "#h1",  from: 6.60,  to: 7.94,  enter: "hero"  },
+        { el: "#b4",  from: 7.94,  to: 8.86,  enter: "snap"  },
+        { el: "#b5",  from: 8.86,  to: 13.58, enter: "side"  },
+        { el: "#b6",  from: 13.58, to: 15.98, enter: "rise"  },
+        { el: "#b7",  from: 15.98, to: 18.00, enter: "fast"  },
+        { el: "#h2",  from: 18.00, to: 19.36, enter: "hero"  },
+        { el: "#b9",  from: 19.36, to: 22.54, enter: "tilt"  },
+        { el: "#b10", from: 22.54, to: 25.22, enter: "rise"  },
+        { el: "#b11", from: 25.22, to: 28.16, enter: "slam"  }
+      ];
+
+      const DUR = 28.16;
+      const tl = gsap.timeline({ paused: true });
+
+      /* ── The rule, which advances only while he is speaking ──────────
+         He stops at 23.92 and says nothing until 25.22. The rule stops with
+         him: a progress bar that kept crawling through a silence would be
+         telling the viewer something untrue about the recording. */
+      tl.set("#rail-fill", { scaleX: 0 }, 0);
+      tl.to("#rail-fill", { scaleX: 23.92 / DUR, duration: 23.92, ease: "none" }, 0);
+      tl.to("#rail-fill", { scaleX: 1, duration: DUR - 25.22, ease: "none" }, 25.22);
+
+      tl.set("#foot", { opacity: 0 }, 0);
+      tl.to("#foot", { opacity: 1, duration: 0.5, ease: "power2.out" }, 0.4);
+
+      /* ── The ordinal: the one thing that survives the cuts ───────────
+         It changes its digits in place rather than leaving and returning, so
+         the frame keeps an anchor across the two halves of the argument. */
+      tl.set("#ord",  { opacity: 0, y: 0 }, 0);
+      tl.set("#ord1", { opacity: 1 }, 0);
+      tl.set("#ord2", { opacity: 0 }, 0);
+      tl.fromTo("#ord", { y: 14 },
+        { y: 0, duration: 0.24, ease: "power3.out", immediateRender: false }, 2.72);
+      tl.to("#ord", { opacity: 1, duration: 0.24, ease: "power2.out" }, 2.72);
+      // 01 → 02 in place, on the word "secondly".
+      tl.to("#ord1", { opacity: 0, duration: 0.14, ease: "power2.inOut" }, 7.94);
+      tl.to("#ord2", { opacity: 1, duration: 0.14, ease: "power2.inOut" }, 7.98);
+      tl.to("#ord", { opacity: 0, duration: 0.3, ease: "power2.in" }, 24.9);
+
+      /* ── Beat entrances and exits ────────────────────────────────────
+         Distinct entrance per beat (kinetic-beat-slam), but all of them
+         travel UP: a spent beat leaves through the top while its successor
+         arrives from below, so a swap reads as one roll rather than two
+         unrelated events. */
+      const ENTER = {
+        words: { y: 0,  extra: {} },
+        rise:  { y: 46, extra: { ease: "power3.out", duration: 0.34 } },
+        fast:  { y: 34, extra: { ease: "power4.out", duration: 0.22 } },
+        snap:  { y: 26, extra: { ease: "expo.out",   duration: 0.26 } },
+        side:  { y: 40, extra: { ease: "circ.out",   duration: 0.36 } },
+        tilt:  { y: 52, extra: { ease: "power3.out", duration: 0.38 } },
+        hero:  { y: 64, extra: { ease: "back.out(1.5)", duration: 0.42 } },
+        slam:  { y: 78, extra: { ease: "power4.out", duration: 0.40 } }
+      };
+
+      BEATS.forEach((b, bi) => {
+        const mv = b.el + " .bmv";
+        /* A beat's last word ENDS at the next beat's first word, so there is
+           no silent gap to cut in. The spent beat therefore leaves in the
+           0.14s before the boundary — four frames early on a word the eye has
+           already read, which is how any subtitle sets its out-point — and the
+           new one starts two frames later. The two are never both legible:
+           overlap is under a single frame. */
+        const inAt  = Math.max(0, b.from - 0.02);
+        const outAt = b.to - 0.14;
+        const spec  = ENTER[b.enter];
+
+        if (b.enter === "words") {
+          /* The opening beat has no predecessor to roll off, so its entrance
+             IS the speech: each word lifts as he says it. The beat itself is
+             visible from frame one; its words are what arrive. */
+          tl.set(b.el, { opacity: 1 }, 0);
+          for (let i = 0; i <= 5; i++) {
+            const at = Math.max(0, WORDS[i][0] - 0.05);
+            tl.fromTo(wordEls[i].parentElement, { y: 52, opacity: 0 },
+              { y: 0, opacity: 1, duration: 0.30, ease: "power3.out", immediateRender: false }, at);
+          }
+          tl.fromTo("#b1 .gloss", { y: 20, opacity: 0 },
+            { y: 0, opacity: 1, duration: 0.34, ease: "power2.out", immediateRender: false }, 2.16);
+        } else {
+          tl.set(b.el, { opacity: 0 }, 0);
+          tl.set(b.el, { opacity: 1 }, inAt);
+          tl.fromTo(mv, { y: spec.y, opacity: 0 },
+            { y: 0, opacity: 1, ease: spec.extra.ease, duration: spec.extra.duration,
+              immediateRender: false }, inAt);
+        }
+
+        /* The last beat holds to the final frame — a climax that scaled back
+           out would take the line away before it had been read. */
+        if (bi < BEATS.length - 1) {
+          tl.to(mv, { y: -34, opacity: 0, duration: 0.14, ease: "power2.in" }, outAt);
+          tl.set(b.el, { opacity: 0 }, b.to - 0.005);
+        }
+      });
+
+      /* ── The marker sweeps: ochre under the words that carry the point ── */
+      function sweep(id, from, to) {
+        tl.set(id, { scaleX: 0 }, 0);
+        tl.to(id, { scaleX: 1, duration: to - from, ease: "power1.out" }, from);
+      }
+      sweep("#mkbar-b3", 5.86, 6.18);   // "traveller,"
+      sweep("#mkbar-b5", 11.00, 11.74); // "no reason"
+
+      /* The heroes' rules draw with the phrase, from the centre out. */
+      tl.set("#h1-rule", { scaleX: 0 }, 0);
+      tl.to("#h1-rule", { scaleX: 1, duration: 0.38, ease: "power2.out" }, 6.66);
+      tl.set("#h2-rule", { scaleX: 0 }, 0);
+      tl.to("#h2-rule", { scaleX: 1, duration: 0.38, ease: "power2.out" }, 18.06);
+
+      /* Transliteration and gloss arrive after the Arabic has been seen —
+         the phrase first, then what it means. */
+      [["#h1", 6.60], ["#h2", 18.00]].forEach(([h, t]) => {
+        tl.fromTo(h + " .hero-tr", { y: 18, opacity: 0 },
+          { y: 0, opacity: 1, duration: 0.28, ease: "power2.out", immediateRender: false }, t + 0.26);
+        tl.fromTo(h + " .hero-en", { y: 14, opacity: 0 },
+          { y: 0, opacity: 1, duration: 0.28, ease: "power2.out", immediateRender: false }, t + 0.40);
+      });
+
+      /* ── "so" ─────────────────────────────────────────────────────────
+         He holds the word for 1.14 seconds. It snaps larger when he lands on
+         it and then does not move at all until he lets go — a slow crawl
+         across a held word would shimmer, and stillness is the stronger
+         reading of a man pausing on a word anyway. */
+      tl.set("#held-so", { scale: 1 }, 0);
+      tl.to("#held-so", { scale: 1.34, duration: 0.18, ease: "power3.out" }, 14.00);
+      tl.to("#held-so", { scale: 1.0,  duration: 0.16, ease: "power2.inOut" }, 15.06);
+
+      /* "His face." is the sentence the whole clip is walking toward. It
+         lands last, largest, and settles rather than bouncing. */
+      tl.set("#face-line", { scale: 0.86 }, 0);
+      tl.to("#face-line", { scale: 1, duration: 0.42, ease: "power4.out" }, 27.42);
+
+      /* ═══ 4 · The karaoke driver ══════════════════════════════════════
+         ONE linear driver for all 83 words (asr-keyword-glow, karaoke
+         variation). It writes COLOUR ONLY — no scale, no text-shadow. A glow
+         is a dark-mode device and would be wrong on paper; a per-word scale
+         decaying over a third of a second moves glyphs by half a pixel a
+         frame, which is precisely the sub-pixel shimmer this project has
+         already shipped and had to remove twice. Ink is enough: light grey →
+         near-black at 82px reads from across a room, and nothing moves.
+
+         Three states, all legible on their own: not yet spoken (3.9:1),
+         spoken and settled (5.4:1), being spoken (13:1). */
+      const ATTACK = 0.05;   // < the shortest word window (0.06s)
+      const RELEASE = 0.34;
+      const REST_LEVEL = 0.35;
+      const REST_RGB = { r: 0x7e, g: 0x7a, b: 0x6f };
+      const INK_RGB  = { r: 0x29, g: 0x26, b: 0x21 };
+
+      function envelope(t, start, end) {
+        if (t < start) return 0;
+        if (t < end) return Math.min((t - start) / ATTACK, 1);
+        const releaseEnd = end + RELEASE;
+        if (t < releaseEnd) return 1 - ((t - end) / RELEASE) * (1 - REST_LEVEL);
+        return REST_LEVEL;
+      }
+      function chan(a, b, t) { return Math.round(a + (b - a) * t); }
+
+      const driver = { t: 0 };
+      tl.to(driver, {
+        t: DUR, duration: DUR, ease: "none",
+        onUpdate: () => {
+          for (let i = 0; i < WORDS.length; i++) {
+            const el = wordEls[i];
+            if (!el) continue;
+            const e = envelope(driver.t, WORDS[i][0], WORDS[i][1]);
+            el.style.color = "rgb(" + chan(REST_RGB.r, INK_RGB.r, e) + ","
+                                    + chan(REST_RGB.g, INK_RGB.g, e) + ","
+                                    + chan(REST_RGB.b, INK_RGB.b, e) + ")";
+          }
+        }
+      }, 0);
+
+      tl.seek(0);
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>
