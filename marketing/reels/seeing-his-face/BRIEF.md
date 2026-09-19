@@ -36,10 +36,18 @@ no ornament that would read as marketing.
 - Starts on "Live this life", ends on "…show you His face." — the owner's two
   cut points, measured against the transcript, not eyeballed.
 - Volume raised: the denoised source sits at −22.1 LUFS; the delivered file is
-  −10.4 LUFS at −1.7 dBTP, with the dynamic range pulled to LRA 3.2 and a
-  presence lift at 3 kHz. Removing the noise is what let it get this loud —
-  with hiss in the recording, every dB of gain raised the hiss too, and the
-  best the mix reached was −12.0.
+  −11.6 LUFS at −2.1 dBTP, LRA 3.3. Removing the noise is what let it get this
+  loud — with hiss in the recording, every dB of gain raised the hiss too.
+- Warmed, after the first pass came back tinny. The cause was the EQ curve
+  itself: it cut 260 Hz (a male voice's body) and lifted 3 kHz by 3.5 dB,
+  which is the textbook recipe for thin. Measured against the raw take it had
+  scooped 640–1280 Hz by 0.9 dB and lifted 2.5–5 kHz by 1.7 dB. The curve is
+  now +4 dB at 190 Hz, +2 at 800, +0.5 at 3.2k, −2.5 at 4.5k, and the
+  pre-loudnorm limiter is eased from −5.2 to −4.2 dBFS because hard limiting
+  reads as harshness too. Presence-minus-body moved 3.4 dB toward body
+  (−8.5 → −11.9) at the same delivered loudness.
+- The denoise was checked as a suspect and cleared: it costs 1.6 dB at
+  60–120 Hz and is otherwise spectrally neutral. The thinness was ours.
 - Noise floor in his 1.3s pause: −45.5 dB, against −32.7 dB before the
   denoise. That is the pause actually being a pause.
 - Captions carry every word except the four runs the owner asked to be shown
