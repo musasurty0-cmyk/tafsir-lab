@@ -494,7 +494,7 @@ export default function AiPanel({ pageId, surahNumber, surahName, onAddToEditor,
                      notes reads differently from writing. */
                   <div className="lab-bubble lab-thinking" role="status">
                     <ThinkingOrb
-                      size={20}
+                      size={64}
                       state={orbForStep(lastStep(t))}
                       className="lab-orb"
                       aria-hidden

@@ -26,7 +26,6 @@ import type { MemberRole } from "@/lib/services/workspaces.service";
 import type { RailItem } from "@/lib/services/bookmarks.service";
 import AppSidebar from "@/components/AppSidebar";
 import HomeRail from "@/components/HomeRail";
-import StudyWithAI from "@/components/StudyWithAI";
 import Announcement from "@/components/Announcement";
 import Onboarding from "@/components/Onboarding";
 
@@ -541,7 +540,10 @@ export default function HomeClient({
           rather than using AppShell, so it needs its own. */}
       <main className="home-content" id="main">
 
-        <StudyWithAI />
+        {/* The Lab AI banner used to sit here, above everything. It is gone by
+            the owner's call: the assistant is reachable from the Ask button on
+            every page that has something to ask ABOUT, and a banner offering it
+            before you have opened anything was advertising, not navigation. */}
 
         {/* Welcome + resume */}
         <WelcomeHero

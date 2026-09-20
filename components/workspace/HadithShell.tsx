@@ -247,6 +247,13 @@ export default function HadithShell({
         </div>
       </header>
 
+      {/* Body and panel as a ROW. The shell is a column, so the panel used to
+          be laid out as the last row of it — a block across the bottom of the
+          screen that shoved the canvas and the tool rail out of the way. It is
+          a drawer over the right of the board now, which is also the right
+          shape for a canvas: pushing the board would move the drawing out from
+          under the reader's pen. */}
+      <div className="whiteboard-shell-main">
       <div className="whiteboard-shell-body">
         <EditorContextProvider value={ctx}>
           <WhiteboardPage
@@ -336,6 +343,7 @@ export default function HadithShell({
           onClose={() => setAiOpen(false)}
         />
       )}
+      </div>
     </div>
   );
 }

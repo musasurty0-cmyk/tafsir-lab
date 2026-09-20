@@ -349,7 +349,7 @@ export default function AssistantClient({ user, sources, streak }: Props) {
                 aria-expanded={t.openTrace}
               >
                 {t.running
-                  ? <ThinkingOrb size={20} state={orbForStep(lastStep(t))}
+                  ? <ThinkingOrb size={64} state={orbForStep(lastStep(t))}
                                  className="as-orb" aria-hidden />
                   : <ChevronDown size={15} aria-hidden className="as-trace-chev" />}
                 <span>

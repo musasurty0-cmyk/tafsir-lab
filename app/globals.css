@@ -9469,6 +9469,35 @@ input, textarea { font: inherit; color: inherit; }
   height: 100dvh;
   background: var(--bg);
 }
+/* The row that holds the board and, over it, the Lab AI drawer. */
+.whiteboard-shell-main {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+/* A drawer, not a column. `.lab` is built as a flex child of a ROW layout
+   (which is what the editor gives it); dropped into this column shell it
+   became a band across the bottom of the screen. Here it overlays the right
+   of the board instead, so opening it never moves the drawing. */
+.whiteboard-shell-main > .lab {
+  position: absolute;
+  top: 0; right: 0; bottom: 0;
+  width: min(420px, 38vw);
+  z-index: 40;
+  box-shadow: var(--shadow-lg);
+}
+
+/* Both zoom HUDs sit bottom-right, and so does the Lab AI drawer — the
+   readout landed on top of the panel's send button. Move them clear while the
+   drawer is open. `:has(.lab)` rather than a state class because the panel's
+   presence in the DOM IS the condition, and it is rendered from three
+   different hosts. */
+body:has(.lab) .doc-zoom,
+body:has(.lab) .mode-b-zoom-controls {
+  right: calc(min(420px, 38vw) + 20px);
+}
+
 .whiteboard-shell-bar {
   display: flex;
   align-items: center;
@@ -11307,46 +11336,6 @@ input, textarea { font: inherit; color: inherit; }
 .hr-item-sub  { font-size: 13px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
 .hr-item-at   { grid-row: 1 / span 2; align-self: center; font-size: 11.5px; color: var(--ink-4); }
 
-/* ── Lab AI banner (dashboard) ─────────────────────────────────────────── */
-
-.ai-banner {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: var(--sp-3);
-  padding: 14px 18px;
-  margin-bottom: var(--sp-4);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  background: var(--bg-elev);
-  text-align: left;
-  transition: border-color var(--dur-hover) var(--ease-flow),
-              background var(--dur-hover) var(--ease-flow),
-              transform var(--dur-hover) var(--ease-flow);
-}
-.ai-banner:hover {
-  border-color: color-mix(in oklch, var(--accent) 40%, var(--line));
-  background: color-mix(in oklch, var(--accent) 4%, var(--bg-elev));
-  transform: translateY(-1px);
-}
-.ai-banner:hover .ai-banner-chev { transform: translateX(3px); }
-.ai-banner-icon {
-  flex: none;
-  width: 38px; height: 38px;
-  display: grid; place-items: center;
-  border-radius: var(--radius-md);
-  background: var(--accent-soft);
-  color: var(--accent-ink);
-}
-.ai-banner-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
-.ai-banner-text strong { font-size: 15px; color: var(--ink); }
-.ai-banner-text span   { font-size: 13px; color: var(--ink-4); }
-.ai-banner-chev {
-  flex: none;
-  color: var(--ink-4);
-  transition: transform var(--dur-hover) var(--ease-flow);
-}
-
 .ai-overlay {
   position: fixed;
   inset: 0;
@@ -12794,7 +12783,11 @@ input, textarea { font: inherit; color: inherit; }
 .lab-orb, .as-orb {
   flex: none;
   display: block;
-  width: 20px; height: 20px;
+  /* The 64 preset, not the 20: the two are separate designs with their own dot
+     counts and tuning rather than one scaled, and at 20px the motion was too
+     small to read as motion at all. */
+  width: 64px; height: 64px;
+  margin: -6px -4px -6px -8px;   /* it carries its own breathing room */
 }
 
 /* ── Retrieval trace ────────────────────────────────────────────────────────
