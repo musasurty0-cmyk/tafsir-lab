@@ -8,24 +8,23 @@
     <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
     <style>
       /* ══════════════════════════════════════════════════════════════════
-         maryam-87-95 — 61s, 1080×1920, LIGHT.
+         maryam-87-95 — 61.1s, 1080×1920, LIGHT.
 
-         Sūrat Maryam 87–95, recited, set as pages of the Mushaf view.
+         Sūrat Maryam 87–95, recited, as ONE PAGE THAT SCROLLS.
 
-         THE ARABIC DOES NOT MOVE once it is up, and there is no word-by-word
-         lighting on it: the recitation is being heard, and highlighting parts
-         of Qurʾānic text on a per-word timing I cannot verify would be a claim
-         I am not able to make. What IS timed is what was measured — which
-         āyah is up, when the meaning arrives under it, and the one place he
-         stops inside an āyah (19:90, at 23.33), where the cut lands in both
-         scripts.
+         Not nine cards. All nine āyāt are on a single column that moves the
+         way a reader moves down a page: what he has recited stays above,
+         faded; what is coming waits below, faded; the āyah he is on sits at
+         the reading line in full ink. Nothing is ever replaced and nothing
+         disappears, which is the difference between a page and a slideshow.
 
-         The frame does not move either. The number, the rule and both text
-         blocks sit at fixed positions, so āyah to āyah the page keeps its
-         shape and only its contents change — the hairlines either side of the
-         number never blink at all. Under it, one spine of nine segments, each
-         as wide as the share of the recitation its āyah takes, filling as he
-         reads. Something is always advancing.
+         THE ARABIC DOES NOT MOVE relative to its page, and there is no
+         word-by-word lighting: highlighting parts of Qurʾānic text on a
+         per-word timing I cannot verify would be a claim I am not able to
+         make. What IS timed is measured — which āyah is at the line, when the
+         meaning arrives, the one place he stops inside an āyah (19:90 at
+         23.33, where the cut lands in both scripts), and the moment he reaches
+         each closing rhyme word, when that word turns red.
 
          No music. Nothing plays under the recitation.
          ══════════════════════════════════════════════════════════════════ */
@@ -38,20 +37,18 @@
         --ink-3:  #6e695f;
         --line:   rgba(41, 38, 33, 0.13);
         --accent: #a8762a;
-        /* Madder red, for the rhyme. Red is how a printed Mushaf has always
-           annotated its own text, and 6.6:1 on this paper. */
+        /* Madder red, for the rhyme — how a printed Mushaf has always
+           annotated its own text. 6.6:1 on this paper. */
         --mark:   #9c3a2c;
 
         --sans:   "Inter", -apple-system, "Segoe UI", system-ui, Arial, sans-serif;
         --serif:  "Literata", Georgia, serif;
         --brand:  "Source Serif 4", Georgia, serif;
-        /* Scheherazade New, not Amiri Quran. The build Google Fonts serves for
+        /* Scheherazade New, not Amiri Quran: the build Google Fonts serves for
            Amiri Quran has broken mark attachment in Chrome — the ḥarakāt come
-           out in a detached row floating above the letters. Not the subset
-           (every mark here is inside the served unicode-range) and not the
+           out in a detached row above the letters. Not the subset and not the
            delivery (self-hosting the same woff2 changed nothing). Scheherazade
-           New sets it correctly and is already the app's own Uthmani fallback
-           in `--font-uthmanic`. */
+           New is already the app's own Uthmani fallback. */
         --quran:  "Scheherazade New", serif;
       }
 
@@ -70,63 +67,62 @@
         background-size: 30px 30px;   /* static; nothing in the background moves */
       }
 
-      /* ── The spine: nine segments, one per āyah, each as wide as the share
-            of the recitation it takes. 19:90 is a fifth of the passage and
-            looks it. ─────────────────────────────────────────────────────── */
-      .spine { position: absolute; left: 96px; right: 96px; top: 300px; display: flex; gap: 7px; }
+      /* ── The spine: nine segments, each as wide as the share of the
+            recitation its āyah takes. 19:90 is a fifth of the passage and
+            looks it. It fills continuously, so something is always
+            advancing even while an āyah holds. ───────────────────────────── */
+      .spine { position: absolute; left: 96px; right: 96px; top: 286px; display: flex; gap: 7px; }
       .seg { position: relative; height: 3px; background: var(--line); }
       .segfill {
         position: absolute; inset: 0; background: var(--accent); opacity: 0.6;
         transform-origin: 0% 50%;
       }
 
-      .stage { position: absolute; left: 70px; right: 70px; top: 500px; height: 940px; }
+      /* The window onto the page. Masked top and bottom so āyāt fade out at
+         the edges rather than being cut off by a hard line. */
+      .viewport {
+        position: absolute; left: 70px; right: 70px; top: 360px; height: 1100px;
+        overflow: hidden;
+        -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 14%, #000 86%, transparent 100%);
+                mask-image: linear-gradient(to bottom, transparent 0%, #000 14%, #000 86%, transparent 100%);
+      }
+      .column { position: relative; width: 100%; }
 
-      /* The hairlines live in the SCENE, not in the cards: they are the one
-         thing on the page that never moves, blinks or reflows, and every āyah
-         arrives inside them. */
-      .numframe {
-        position: absolute; left: 0; right: 0; top: 100px; height: 56px;
-        display: flex; align-items: center; justify-content: center; gap: 22px;
-      }
-      .numframe i { display: block; width: 110px; height: 1px; background: var(--line); }
-      .numframe b { display: block; width: 104px; }
+      .aya { padding-bottom: 96px; opacity: 0.16; }
 
-      .beat { position: absolute; inset: 0; opacity: 0; }
-      /* Fixed slots. Nothing re-centres between āyāt. */
-      .num {
-        position: absolute; left: 0; right: 0; top: 100px; height: 56px;
-        display: flex; align-items: center; justify-content: center;
-        font-family: var(--quran); font-size: 42px; color: var(--accent); line-height: 1;
+      .num { display: flex; align-items: center; justify-content: center; gap: 22px; margin-bottom: 34px; }
+      .num i { display: block; width: 110px; height: 1px; background: var(--line); }
+      .num span {
+        font-family: var(--quran); font-size: 42px; color: var(--accent);
+        line-height: 1; padding-bottom: 6px;
       }
-      .arwrap {
-        position: absolute; left: 0; right: 0; top: 196px; height: 340px;
-        display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
-      }
+
+      .arwrap { display: flex; flex-direction: column; align-items: center; gap: 6px; }
       .ar {
         font-family: var(--quran); line-height: 2.0; color: var(--ink);
         direction: rtl; max-width: 940px; word-spacing: 0.04em; text-align: center;
       }
-      .rulewrap { position: absolute; left: 0; right: 0; top: 566px; display: flex; justify-content: center; }
+
+      .rulewrap { display: flex; justify-content: center; margin: 36px 0 32px; }
       .rule {
         width: 300px; height: 2px; background: var(--accent); opacity: 0.45;
         transform-origin: 50% 50%;
       }
-      .enwrap { position: absolute; left: 0; right: 0; top: 620px; text-align: center; }
+
       .en {
         font-family: var(--serif); font-weight: 400; font-size: 50px; line-height: 1.5;
-        color: var(--ink-2); max-width: 880px; margin: 0 auto; letter-spacing: -0.012em;
+        color: var(--ink-2); max-width: 880px; margin: 0 auto; text-align: center;
+        letter-spacing: -0.012em;
       }
       .en2 { margin-top: 12px; }
 
-      /* The rhyme. Every āyah in this passage closes on the same -an sound;
-         colouring it is showing the reader a structure the text already has. */
-      .mk { color: var(--mark); }
+      /* The rhyme. Ink until he reaches it. */
+      .mk { color: inherit; }
 
       /* ── The closing card ───────────────────────────────────────────── */
-      .closewrap {
-        position: absolute; left: 0; right: 0; top: 150px;
-        display: flex; flex-direction: column; align-items: center;
+      .close {
+        position: absolute; left: 0; right: 0; top: 700px;
+        display: flex; flex-direction: column; align-items: center; opacity: 0;
       }
       .brand-row { display: flex; align-items: center; gap: 34px; }
       .tile {
@@ -154,7 +150,7 @@
       }
 
       .foot {
-        position: absolute; left: 96px; right: 96px; top: 1500px;
+        position: absolute; left: 96px; right: 96px; top: 1520px;
         display: flex; align-items: center; justify-content: space-between;
         font-family: var(--sans); font-size: 24px; font-weight: 500;
         letter-spacing: 0.1em; text-transform: uppercase; color: #8a8579;
@@ -163,10 +159,10 @@
     </style>
   </head>
   <body>
-    <div id="root" data-composition-id="main" data-start="0" data-duration="61.00"
+    <div id="root" data-composition-id="main" data-start="0" data-duration="61.10"
          data-fps="30" data-width="1080" data-height="1920">
 
-      <div id="scene" class="clip" data-start="0" data-duration="61.00" data-track-index="1">
+      <div id="scene" class="clip" data-start="0" data-duration="61.10" data-track-index="1">
         <div class="paper"></div>
         <div class="dots"></div>
 
@@ -182,120 +178,100 @@
           <div class="seg" style="flex-grow:9.339"><div class="segfill" id="seg-95"></div></div>
         </div>
 
-        <div class="stage" id="stage">
-          <div class="numframe" id="numframe"><i></i><b></b><i></i></div>
-
-          <div class="beat" id="a87" data-layout-allow-overlap="true">
-            <div class="num">٨٧</div>
+        <div class="viewport" id="viewport">
+          <div class="column" id="column">
+          <div class="aya" id="a87" data-layout-allow-occlusion="true" data-layout-allow-overlap="true">
+            <div class="num"><i></i><span>٨٧</span><i></i></div>
             <div class="arwrap">
-                <p class="ar" id="ar-87" style="font-size:54px" dir="rtl" lang="ar">لَّا يَمْلِكُونَ ٱلشَّفَـٰعَةَ إِلَّا مَنِ ٱتَّخَذَ عِندَ ٱلرَّحْمَـٰنِ <span class="mk">عَهْدًا</span></p>
+              <p class="ar" style="font-size:54px" dir="rtl" lang="ar">لَّا يَمْلِكُونَ ٱلشَّفَـٰعَةَ إِلَّا مَنِ ٱتَّخَذَ عِندَ ٱلرَّحْمَـٰنِ عَهْدًا</p>
             </div>
             <div class="rulewrap"><div class="rule" id="rule-87"></div></div>
-            <div class="enwrap">
-                <p class="en" id="en-87">None will have [power of] intercession except he who had taken from the Most Merciful <span class="mk">a covenant.</span></p>
-            </div>
+            <p class="en" id="en-87">None will have [power of] intercession except he who had taken from the Most Merciful a covenant.</p>
           </div>
 
-          <div class="beat" id="a88" data-layout-allow-overlap="true">
-            <div class="num">٨٨</div>
+          <div class="aya" id="a88" data-layout-allow-occlusion="true" data-layout-allow-overlap="true">
+            <div class="num"><i></i><span>٨٨</span><i></i></div>
             <div class="arwrap">
-                <p class="ar" id="ar-88" style="font-size:72px" dir="rtl" lang="ar">وَقَالُوا۟ ٱتَّخَذَ ٱلرَّحْمَـٰنُ <span class="mk">وَلَدًا</span></p>
+              <p class="ar" style="font-size:72px" dir="rtl" lang="ar">وَقَالُوا۟ ٱتَّخَذَ ٱلرَّحْمَـٰنُ <span class="mk" id="mkar-88">وَلَدًا</span></p>
             </div>
             <div class="rulewrap"><div class="rule" id="rule-88"></div></div>
-            <div class="enwrap">
-                <p class="en" id="en-88">And they say, "The Most Merciful has taken [for Himself] <span class="mk">a son.</span>"</p>
-            </div>
+            <p class="en" id="en-88">And they say, "The Most Merciful has taken [for Himself] <span class="mk" id="mken-88">a son.</span>"</p>
           </div>
 
-          <div class="beat" id="a89" data-layout-allow-overlap="true">
-            <div class="num">٨٩</div>
+          <div class="aya" id="a89" data-layout-allow-occlusion="true" data-layout-allow-overlap="true">
+            <div class="num"><i></i><span>٨٩</span><i></i></div>
             <div class="arwrap">
-                <p class="ar" id="ar-89" style="font-size:78px" dir="rtl" lang="ar">لَّقَدْ جِئْتُمْ شَيْـًٔا <span class="mk">إِدًّا</span></p>
+              <p class="ar" style="font-size:78px" dir="rtl" lang="ar">لَّقَدْ جِئْتُمْ شَيْـًٔا <span class="mk" id="mkar-89">إِدًّا</span></p>
             </div>
             <div class="rulewrap"><div class="rule" id="rule-89"></div></div>
-            <div class="enwrap">
-                <p class="en" id="en-89">You have done <span class="mk">an atrocious thing.</span></p>
-            </div>
+            <p class="en" id="en-89">You have done <span class="mk" id="mken-89">an atrocious thing.</span></p>
           </div>
 
-          <div class="beat" id="a90" data-layout-allow-overlap="true">
-            <div class="num">٩٠</div>
+          <div class="aya" id="a90" data-layout-allow-occlusion="true" data-layout-allow-overlap="true">
+            <div class="num"><i></i><span>٩٠</span><i></i></div>
             <div class="arwrap">
-                <p class="ar" id="ar-90" style="font-size:56px" dir="rtl" lang="ar">تَكَادُ ٱلسَّمَـٰوَٰتُ يَتَفَطَّرْنَ مِنْهُ</p>
-                <p class="ar ar2" id="ar2-90" style="font-size:56px" dir="rtl" lang="ar">وَتَنشَقُّ ٱلْأَرْضُ وَتَخِرُّ ٱلْجِبَالُ <span class="mk">هَدًّا</span></p>
+              <p class="ar" style="font-size:56px" dir="rtl" lang="ar">تَكَادُ ٱلسَّمَـٰوَٰتُ يَتَفَطَّرْنَ مِنْهُ</p>
+              <p class="ar" id="ar2-90" style="font-size:56px" dir="rtl" lang="ar">وَتَنشَقُّ ٱلْأَرْضُ وَتَخِرُّ ٱلْجِبَالُ <span class="mk" id="mkar-90">هَدًّا</span></p>
             </div>
             <div class="rulewrap"><div class="rule" id="rule-90"></div></div>
-            <div class="enwrap">
-                <p class="en" id="en-90">The heavens almost rupture therefrom</p>
-                <p class="en en2" id="en2-90">and the earth splits open and the mountains collapse <span class="mk">in devastation</span></p>
-            </div>
+            <p class="en" id="en-90">The heavens almost rupture therefrom</p>
+              <p class="en en2" id="en2-90">and the earth splits open and the mountains collapse <span class="mk" id="mken-90">in devastation</span></p>
           </div>
 
-          <div class="beat" id="a91" data-layout-allow-overlap="true">
-            <div class="num">٩١</div>
+          <div class="aya" id="a91" data-layout-allow-occlusion="true" data-layout-allow-overlap="true">
+            <div class="num"><i></i><span>٩١</span><i></i></div>
             <div class="arwrap">
-                <p class="ar" id="ar-91" style="font-size:72px" dir="rtl" lang="ar">أَن دَعَوْا۟ لِلرَّحْمَـٰنِ <span class="mk">وَلَدًا</span></p>
+              <p class="ar" style="font-size:72px" dir="rtl" lang="ar">أَن دَعَوْا۟ لِلرَّحْمَـٰنِ <span class="mk" id="mkar-91">وَلَدًا</span></p>
             </div>
             <div class="rulewrap"><div class="rule" id="rule-91"></div></div>
-            <div class="enwrap">
-                <p class="en" id="en-91">That they attribute to the Most Merciful <span class="mk">a son.</span></p>
-            </div>
+            <p class="en" id="en-91">That they attribute to the Most Merciful <span class="mk" id="mken-91">a son.</span></p>
           </div>
 
-          <div class="beat" id="a92" data-layout-allow-overlap="true">
-            <div class="num">٩٢</div>
+          <div class="aya" id="a92" data-layout-allow-occlusion="true" data-layout-allow-overlap="true">
+            <div class="num"><i></i><span>٩٢</span><i></i></div>
             <div class="arwrap">
-                <p class="ar" id="ar-92" style="font-size:60px" dir="rtl" lang="ar">وَمَا يَنۢبَغِى لِلرَّحْمَـٰنِ أَن يَتَّخِذَ <span class="mk">وَلَدًا</span></p>
+              <p class="ar" style="font-size:60px" dir="rtl" lang="ar">وَمَا يَنۢبَغِى لِلرَّحْمَـٰنِ أَن يَتَّخِذَ <span class="mk" id="mkar-92">وَلَدًا</span></p>
             </div>
             <div class="rulewrap"><div class="rule" id="rule-92"></div></div>
-            <div class="enwrap">
-                <p class="en" id="en-92">And it is not appropriate for the Most Merciful that He should take <span class="mk">a son.</span></p>
-            </div>
+            <p class="en" id="en-92">And it is not appropriate for the Most Merciful that He should take <span class="mk" id="mken-92">a son.</span></p>
           </div>
 
-          <div class="beat" id="a93" data-layout-allow-overlap="true">
-            <div class="num">٩٣</div>
+          <div class="aya" id="a93" data-layout-allow-occlusion="true" data-layout-allow-overlap="true">
+            <div class="num"><i></i><span>٩٣</span><i></i></div>
             <div class="arwrap">
-                <p class="ar" id="ar-93" style="font-size:52px" dir="rtl" lang="ar">إِن كُلُّ مَن فِى ٱلسَّمَـٰوَٰتِ وَٱلْأَرْضِ إِلَّآ ءَاتِى ٱلرَّحْمَـٰنِ <span class="mk">عَبْدًا</span></p>
+              <p class="ar" style="font-size:52px" dir="rtl" lang="ar">إِن كُلُّ مَن فِى ٱلسَّمَـٰوَٰتِ وَٱلْأَرْضِ إِلَّآ ءَاتِى ٱلرَّحْمَـٰنِ <span class="mk" id="mkar-93">عَبْدًا</span></p>
             </div>
             <div class="rulewrap"><div class="rule" id="rule-93"></div></div>
-            <div class="enwrap">
-                <p class="en" id="en-93">There is no one in the heavens and earth but that he comes to the Most Merciful <span class="mk">as a servant.</span></p>
-            </div>
+            <p class="en" id="en-93">There is no one in the heavens and earth but that he comes to the Most Merciful <span class="mk" id="mken-93">as a servant.</span></p>
           </div>
 
-          <div class="beat" id="a94" data-layout-allow-overlap="true">
-            <div class="num">٩٤</div>
+          <div class="aya" id="a94" data-layout-allow-occlusion="true" data-layout-allow-overlap="true">
+            <div class="num"><i></i><span>٩٤</span><i></i></div>
             <div class="arwrap">
-                <p class="ar" id="ar-94" style="font-size:72px" dir="rtl" lang="ar">لَّقَدْ أَحْصَىٰهُمْ وَعَدَّهُمْ <span class="mk">عَدًّا</span></p>
+              <p class="ar" style="font-size:72px" dir="rtl" lang="ar">لَّقَدْ أَحْصَىٰهُمْ وَعَدَّهُمْ <span class="mk" id="mkar-94">عَدًّا</span></p>
             </div>
             <div class="rulewrap"><div class="rule" id="rule-94"></div></div>
-            <div class="enwrap">
-                <p class="en" id="en-94">He has enumerated them and counted them <span class="mk">a [full] counting.</span></p>
-            </div>
+            <p class="en" id="en-94">He has enumerated them and counted them <span class="mk" id="mken-94">a [full] counting.</span></p>
           </div>
 
-          <div class="beat" id="a95" data-layout-allow-overlap="true">
-            <div class="num">٩٥</div>
+          <div class="aya" id="a95" data-layout-allow-occlusion="true" data-layout-allow-overlap="true">
+            <div class="num"><i></i><span>٩٥</span><i></i></div>
             <div class="arwrap">
-                <p class="ar" id="ar-95" style="font-size:63px" dir="rtl" lang="ar">وَكُلُّهُمْ ءَاتِيهِ يَوْمَ ٱلْقِيَـٰمَةِ <span class="mk">فَرْدًا</span></p>
+              <p class="ar" style="font-size:63px" dir="rtl" lang="ar">وَكُلُّهُمْ ءَاتِيهِ يَوْمَ ٱلْقِيَـٰمَةِ <span class="mk" id="mkar-95">فَرْدًا</span></p>
             </div>
             <div class="rulewrap"><div class="rule" id="rule-95"></div></div>
-            <div class="enwrap">
-                <p class="en" id="en-95">And all of them are coming to Him on the Day of Resurrection <span class="mk">alone.</span></p>
-            </div>
+            <p class="en" id="en-95">And all of them are coming to Him on the Day of Resurrection <span class="mk" id="mken-95">alone.</span></p>
           </div>
+          </div>
+        </div>
 
-          <div class="beat" id="close" data-layout-allow-overlap="true">
-            <div class="closewrap">
-              <div class="brand-row">
-                <div class="tile"><span class="t">T</span></div>
-                <div class="wm-clip"><div class="wordmark">TafsirLab</div></div>
-              </div>
-              <div class="close-rule" id="close-rule"></div>
-              <div class="url-clip"><div class="close-url">tafsir-lab.com</div></div>
-            </div>
+        <div class="close" id="close">
+          <div class="brand-row">
+            <div class="tile"><span class="t">T</span></div>
+            <div class="wm-clip"><div class="wordmark">TafsirLab</div></div>
           </div>
+          <div class="close-rule" id="close-rule"></div>
+          <div class="url-clip"><div class="close-url">tafsir-lab.com</div></div>
         </div>
 
         <div class="foot" id="foot">
@@ -309,21 +285,28 @@
     </div>
 
     <script>
-      const DUR = 61.00;
+      const DUR = 61.10;
+      const MARK_COLOUR = "#9c3a2c";
+      const IDS = ["a87", "a88", "a89", "a90", "a91", "a92", "a93", "a94", "a95"];
       const tl = gsap.timeline({ paused: true });
 
-      /* A card arrives, holds still, and leaves — the same way every time,
-         because no āyah here outranks another and giving one its own entrance
-         would be saying that it did. The page's frame does not move at all. */
-      function card(sel, inAt, outAt) {
-        tl.set(sel, { opacity: 0 }, 0);
-        tl.set(sel, { opacity: 1 }, inAt);
-        tl.fromTo(sel, { y: 34 }, { y: 0, duration: 0.42, ease: "power3.out",
-          immediateRender: false }, inAt);
-        if (outAt > 0) {
-          tl.to(sel, { y: -26, opacity: 0, duration: 0.16, ease: "power2.in" }, outAt);
-          tl.set(sel, { opacity: 0 }, outAt + 0.155);
-        }
+      const col = document.getElementById("column");
+      /* Where the āyah being recited sits inside the window. Measured at BUILD
+         time, which is allowed here because this is a single-scene composition
+         and every block is laid out before the timeline is built. */
+      const READ = 1100 / 2;
+      const POS = IDS.map(function (id) {
+        const el = document.getElementById(id);
+        const y = READ - (el.offsetTop + el.offsetHeight / 2);
+        return isFinite(y) ? y : 0;
+      });
+
+      /* Bring one āyah to full ink and let the one before it fall back. The
+         page keeps everything: the recited stays above, the coming waits
+         below, both at a reading-room dimness. */
+      function focus(i, at) {
+        tl.to("#" + IDS[i], { opacity: 1, duration: 0.55, ease: "power2.out" }, at);
+        if (i > 0) tl.to("#" + IDS[i - 1], { opacity: 0.22, duration: 0.55, ease: "power2.out" }, at);
       }
       function reveal(sel, at) {
         tl.set(sel, { opacity: 0 }, 0);
@@ -331,66 +314,97 @@
           { y: 0, opacity: 1, duration: 0.42, ease: "power2.out", immediateRender: false }, at);
       }
 
-      gsap.utils.toArray(".rule").forEach((r) => tl.set(r, { scaleX: 0 }, 0));
+      IDS.forEach(function (id) { tl.set("#" + id, { opacity: 0.16 }, 0); });
+      gsap.utils.toArray(".rule").forEach(function (r) { tl.set(r, { scaleX: 0 }, 0); });
+      gsap.utils.toArray(".mk").forEach(function (m) { tl.set(m, { color: "inherit" }, 0); });
 
       tl.set("#foot", { opacity: 0 }, 0);
       tl.to("#foot", { opacity: 1, duration: 0.6, ease: "power2.out" }, 0.5);
-      tl.to("#foot", { opacity: 0, duration: 0.24, ease: "power2.in" }, 59.00 - 0.36);
-      tl.to("#spine", { opacity: 0, duration: 0.24, ease: "power2.in" }, 59.00 - 0.36);
-      tl.to("#numframe", { opacity: 0, duration: 0.24, ease: "power2.in" }, 59.00 - 0.36);
 
-      card("#a87", 0.00, 8.74);
+      tl.set(col, { y: POS[0] }, 0);
+      focus(0, 0.00);
       tl.to("#rule-87", { scaleX: 1, duration: 0.42, ease: "power2.out" }, 0.30);
       reveal("#en-87", 0.55);
       tl.fromTo("#seg-87", { scaleX: 0 }, { scaleX: 1, duration: 8.92, ease: "none", immediateRender: false }, 0.00);
-      card("#a88", 8.90, 12.68);
+      tl.to(col, { y: POS[1], duration: 0.78, ease: "power2.inOut" }, 8.57);
+      focus(1, 8.57);
       tl.to("#rule-88", { scaleX: 1, duration: 0.42, ease: "power2.out" }, 9.22);
       reveal("#en-88", 9.47);
+      tl.to("#mkar-88", { color: MARK_COLOUR, duration: 0.26, ease: "power2.out" }, 11.60);
+      tl.to("#mken-88", { color: MARK_COLOUR, duration: 0.26, ease: "power2.out" }, 11.60);
       tl.fromTo("#seg-88", { scaleX: 0 }, { scaleX: 1, duration: 3.94, ease: "none", immediateRender: false }, 8.92);
-      card("#a89", 12.84, 15.54);
+      tl.to(col, { y: POS[2], duration: 0.78, ease: "power2.inOut" }, 12.51);
+      focus(2, 12.51);
       tl.to("#rule-89", { scaleX: 1, duration: 0.42, ease: "power2.out" }, 13.16);
       reveal("#en-89", 13.41);
+      tl.to("#mkar-89", { color: MARK_COLOUR, duration: 0.26, ease: "power2.out" }, 14.60);
+      tl.to("#mken-89", { color: MARK_COLOUR, duration: 0.26, ease: "power2.out" }, 14.60);
       tl.fromTo("#seg-89", { scaleX: 0 }, { scaleX: 1, duration: 2.86, ease: "none", immediateRender: false }, 12.86);
-      card("#a90", 15.70, 27.80);
+      tl.to(col, { y: POS[3], duration: 0.78, ease: "power2.inOut" }, 15.37);
+      focus(3, 15.37);
       tl.to("#rule-90", { scaleX: 1, duration: 0.42, ease: "power2.out" }, 16.02);
       reveal("#en-90", 16.27);
       reveal("#ar2-90", 23.33);
       reveal("#en2-90", 23.58);
+      tl.to("#mkar-90", { color: MARK_COLOUR, duration: 0.26, ease: "power2.out" }, 27.02);
+      tl.to("#mken-90", { color: MARK_COLOUR, duration: 0.26, ease: "power2.out" }, 27.02);
       tl.fromTo("#seg-90", { scaleX: 0 }, { scaleX: 1, duration: 12.26, ease: "none", immediateRender: false }, 15.72);
-      card("#a91", 27.96, 33.56);
+      tl.to(col, { y: POS[4], duration: 0.78, ease: "power2.inOut" }, 27.63);
+      focus(4, 27.63);
       tl.to("#rule-91", { scaleX: 1, duration: 0.42, ease: "power2.out" }, 28.28);
       reveal("#en-91", 28.53);
+      tl.to("#mkar-91", { color: MARK_COLOUR, duration: 0.26, ease: "power2.out" }, 32.24);
+      tl.to("#mken-91", { color: MARK_COLOUR, duration: 0.26, ease: "power2.out" }, 32.24);
       tl.fromTo("#seg-91", { scaleX: 0 }, { scaleX: 1, duration: 5.76, ease: "none", immediateRender: false }, 27.98);
-      card("#a92", 33.72, 39.95);
+      tl.to(col, { y: POS[5], duration: 0.78, ease: "power2.inOut" }, 33.39);
+      focus(5, 33.39);
       tl.to("#rule-92", { scaleX: 1, duration: 0.42, ease: "power2.out" }, 34.04);
       reveal("#en-92", 34.29);
+      tl.to("#mkar-92", { color: MARK_COLOUR, duration: 0.26, ease: "power2.out" }, 38.60);
+      tl.to("#mken-92", { color: MARK_COLOUR, duration: 0.26, ease: "power2.out" }, 38.60);
       tl.fromTo("#seg-92", { scaleX: 0 }, { scaleX: 1, duration: 6.39, ease: "none", immediateRender: false }, 33.74);
-      card("#a93", 40.11, 48.72);
+      tl.to(col, { y: POS[6], duration: 0.78, ease: "power2.inOut" }, 39.78);
+      focus(6, 39.78);
       tl.to("#rule-93", { scaleX: 1, duration: 0.42, ease: "power2.out" }, 40.43);
       reveal("#en-93", 40.68);
+      tl.to("#mkar-93", { color: MARK_COLOUR, duration: 0.26, ease: "power2.out" }, 47.25);
+      tl.to("#mken-93", { color: MARK_COLOUR, duration: 0.26, ease: "power2.out" }, 47.25);
       tl.fromTo("#seg-93", { scaleX: 0 }, { scaleX: 1, duration: 8.77, ease: "none", immediateRender: false }, 40.13);
-      card("#a94", 48.88, 53.31);
+      tl.to(col, { y: POS[7], duration: 0.78, ease: "power2.inOut" }, 48.55);
+      focus(7, 48.55);
       tl.to("#rule-94", { scaleX: 1, duration: 0.42, ease: "power2.out" }, 49.20);
       reveal("#en-94", 49.45);
+      tl.to("#mkar-94", { color: MARK_COLOUR, duration: 0.26, ease: "power2.out" }, 51.62);
+      tl.to("#mken-94", { color: MARK_COLOUR, duration: 0.26, ease: "power2.out" }, 51.62);
       tl.fromTo("#seg-94", { scaleX: 0 }, { scaleX: 1, duration: 4.59, ease: "none", immediateRender: false }, 48.90);
-      card("#a95", 53.47, 58.82);
+      tl.to(col, { y: POS[8], duration: 0.78, ease: "power2.inOut" }, 53.14);
+      focus(8, 53.14);
       tl.to("#rule-95", { scaleX: 1, duration: 0.42, ease: "power2.out" }, 53.79);
       reveal("#en-95", 54.04);
+      tl.to("#mkar-95", { color: MARK_COLOUR, duration: 0.26, ease: "power2.out" }, 57.03);
+      tl.to("#mken-95", { color: MARK_COLOUR, duration: 0.26, ease: "power2.out" }, 57.03);
       tl.fromTo("#seg-95", { scaleX: 0 }, { scaleX: 1, duration: 5.51, ease: "none", immediateRender: false }, 53.49);
 
-      /* ── The close ───────────────────────────────────────────────────── */
-      card("#close", 59.00, 0);
+      /* ── The close. The page carries on upward and out; it is not cut. ── */
+      tl.to(col, { y: POS[POS.length - 1] - 260, duration: 1.0, ease: "power2.in" }, 59.10 - 0.70);
+      tl.to("#viewport", { opacity: 0, duration: 0.5, ease: "power2.in" }, 59.10 - 0.55);
+      tl.to("#foot",  { opacity: 0, duration: 0.3, ease: "power2.in" }, 59.10 - 0.55);
+      tl.to("#spine", { opacity: 0, duration: 0.3, ease: "power2.in" }, 59.10 - 0.55);
+
+      tl.set("#close",            { opacity: 1 }, 59.10);
       tl.set("#close .tile",      { scale: 0.82 }, 0);
       tl.set("#close .wordmark",  { xPercent: -106 }, 0);
       tl.set("#close-rule",       { scaleX: 0 }, 0);
       tl.set("#close .close-url", { yPercent: 115 }, 0);
+      tl.fromTo("#close", { y: 34 }, { y: 0, duration: 0.5, ease: "power3.out",
+        immediateRender: false }, 59.10);
       tl.fromTo("#close .tile", { scale: 0.82 },
-        { scale: 1, duration: 0.42, ease: "back.out(1.8)", immediateRender: false }, 59.00 + 0.06);
+        { scale: 1, duration: 0.42, ease: "back.out(1.8)", immediateRender: false }, 59.10 + 0.06);
       tl.fromTo("#close .wordmark", { xPercent: -106 },
-        { xPercent: 0, duration: 0.44, ease: "power3.out", immediateRender: false }, 59.00 + 0.14);
-      tl.to("#close-rule", { scaleX: 1, duration: 0.40, ease: "power2.out" }, 59.00 + 0.44);
+        { xPercent: 0, duration: 0.44, ease: "power3.out", immediateRender: false }, 59.10 + 0.14);
+      tl.to("#close-rule", { scaleX: 1, duration: 0.40, ease: "power2.out" }, 59.10 + 0.44);
       tl.fromTo("#close .close-url", { yPercent: 115 },
-        { yPercent: 0, duration: 0.34, ease: "power3.out", immediateRender: false }, 59.00 + 0.64);
+        { yPercent: 0, duration: 0.34, ease: "power3.out", immediateRender: false }, 59.10 + 0.64);
 
       tl.seek(0);
       window.__timelines["main"] = tl;

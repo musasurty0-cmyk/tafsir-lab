@@ -58,32 +58,47 @@ Dot grid at 13% ink, static.
 
 Every āyah in this passage closes on the same `-an` sound: *ʿahdan, waladan,
 iddan, haddan, waladan, waladan, ʿabdan, ʿaddan, fardan*. That is the passage's
-own **fāṣila**, and it is what carries the madder red (`--mark`, #9c3a2c, 6.6:1
-on this paper) — in the Arabic and in its English counterpart both. Red is how
-a printed Mushaf has always annotated its own text. The colour is not emphasis
-chosen by a designer; it is a structure the text already has, made visible.
+own **fāṣila**, and it carries a madder red (`--mark`, #9c3a2c, 6.6:1 on this
+paper) in the Arabic and in its English counterpart both. Red is how a printed
+Mushaf has always annotated its own text.
+
+**It turns red at the moment he says it**, not before — so the colour is an
+event in the recitation rather than a decoration on the page. Seven of the nine
+onsets came from word-level transcription of each āyah on its own; on 89 and 90
+the recogniser dropped the final word, so those two were read off a 5 ms
+envelope as the last onset before the closing decay (14.60, after *shayʾan*
+lands at 14.26; 27.02, after *al-jibāl*).
+
+**19:87 carries no mark.** Its rhyme is *ʿahdan*, "a covenant" — the word is
+not part of what this passage is arguing, and colouring it only because it
+rhymes would be applying the rule instead of reading the text.
 
 ## Motion
 
-Every card arrives the same way — a 34px rise over 0.42s — and leaves the same
-way, because no āyah here outranks another and giving one its own entrance
-would be saying that it did.
+**It is one page, and it scrolls.** Not nine cards: all nine āyāt live on a
+single column that moves the way a reader moves down a page. What he has
+already recited stays above at a reading-room dimness, what is coming waits
+below, and the āyah he is on sits at the reading line in full ink. Nothing is
+ever replaced and nothing disappears — which is the whole difference between a
+page and a slideshow, and is why this is not built the way the first two
+versions were.
 
-What keeps that from reading as a stack of slides is that **the page does not
-move**. The number, the rule and both text blocks sit in fixed slots, so āyah
-to āyah the frame keeps its shape and only the contents change; the hairlines
-either side of the number live in the scene rather than in the cards, so they
-never blink at all. And the **spine** runs under everything: nine segments,
-each as wide as the share of the recitation its āyah takes — 19:90 is a fifth
-of the passage and looks it — filling continuously as he reads. Something is
-always advancing.
+The column's position for each āyah is **measured at build time** — the block's
+own `offsetTop` and height against the reading line — which is allowed here
+because this is a single-scene composition and everything is laid out before
+the timeline is built. The move between āyāt is a 0.78s eased glide starting
+0.35s before he begins, so it has settled by the time he speaks.
 
-The one place the timing goes finer than "which āyah is up" is 19:90, the only
-āyah he stops inside (23.33, measured at 17.0 dB under his own loud level for
-that āyah; every other dip in the passage is a 5–10 dB word gap, not a stop).
-There the cut lands in **both scripts** — the Arabic holds at *minhu* and the
-rest arrives with the second half of the meaning.
+The window is masked top and bottom, so āyāt fade out at the edges rather than
+being cut off by a hard line.
 
-Rules: `spring-pop-entrance` (the card rise and the closing mark),
-`svg-path-draw` (the rules drawing under each āyah), clip reveals on the close.
-Deliberately **not** `asr-keyword-glow` — see BRIEF.
+Under it, the **spine**: nine segments, each as wide as the share of the
+recitation its āyah takes — 19:90 is a fifth of the passage and looks it —
+filling continuously, so something is always advancing even while an āyah
+holds.
+
+The one place the timing goes finer than "which āyah is at the line" is 19:90,
+the only āyah he stops inside (23.33, measured at 17.0 dB under his own loud
+level for that āyah; every other dip in the passage is a 5–10 dB word gap, not
+a stop). There the cut lands in **both scripts** — the Arabic holds at *minhu*
+and the rest arrives with the second half of the meaning.
