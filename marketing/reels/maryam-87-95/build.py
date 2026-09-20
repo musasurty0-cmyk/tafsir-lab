@@ -3,7 +3,8 @@
 The verse data is INLINED into the page rather than fetched: a render-time
 fetch is non-deterministic and the framework forbids it. verses.json stays as
 the record of where the text came from."""
-import json, pathlib, io, sys
+import json
+import subprocess, pathlib, io, sys
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
 P = pathlib.Path(__file__).parent
@@ -18,7 +19,18 @@ CLOSE_IN, DUR = 59.10, 61.10
 
 # Nine ayat whose lengths differ by a factor of four; each is set on its own so
 # the short ones are not timid and the long ones do not orphan a word.
-SIZE = {87: 54, 88: 72, 89: 78, 90: 56, 91: 72, 92: 60, 93: 52, 94: 72, 95: 63}
+MARK_COLOUR = "#9c3a2c"   # the rhyme word, once he reaches it
+
+SIZE = {87: 58, 88: 78, 89: 84, 90: 60, 91: 78, 92: 65, 93: 56, 94: 78, 95: 68}
+
+
+# The two layers. The red one is aria-hidden: it is the same word twice, and a
+# screen reader should hear it once. `data-layout-allow-overlap` is the honest
+# declaration that these two text nodes sit on top of each other on purpose.
+MK = ('<span class="mk %(dir)s" id="%(id)s">'
+      '<span class="mk-i" data-layout-allow-overlap>%(t)s</span>'
+      '<span class="mk-r" aria-hidden="true" data-layout-allow-overlap>%(t)s</span>'
+      '</span>')
 
 
 def mark_arabic(text, n):
@@ -27,14 +39,14 @@ def mark_arabic(text, n):
         return text
     toks = text.split()
     return " ".join(toks[:-1]) + (" " if len(toks) > 1 else "") + \
-        '<span class="mk" id="mkar-%d">%s</span>' % (n, toks[-1])
+        MK % {"dir": "rtl", "id": "mkar-%d" % n, "t": toks[-1]}
 
 
 def mark_english(text, phrase, n):
     if n not in MARK:
         return text
     assert text.count(phrase) == 1, "en mark %r not unique in %r" % (phrase, text)
-    return text.replace(phrase, '<span class="mk" id="mken-%d">%s</span>' % (n, phrase), 1)
+    return text.replace(phrase, MK % {"dir": "ltr", "id": "mken-%d" % n, "t": phrase}, 1)
 
 
 # When he actually reaches the rhyme word. Seven came from word-level
@@ -97,8 +109,7 @@ for i, v in enumerate(V):
     if n in MARK:
         # It turns red as he says it, not before.
         for sel in ("#mkar-%d" % n, "#mken-%d" % n):
-            tweens.append('      tl.to("%s", { color: MARK_COLOUR, duration: 0.26, ease: "power2.out" }, %.2f);'
-                          % (sel, MARK[n]))
+            tweens.append('      sweep("%s", %.2f);' % (sel, MARK[n]))
 
     spine.append('          <div class="seg" style="flex-grow:%.3f"><div class="segfill" id="seg-%d"></div></div>'
                  % ((end - start) / total * 100, n))
@@ -188,10 +199,10 @@ HTML = """<!DOCTYPE html>
       /* The window onto the page. Masked top and bottom so āyāt fade out at
          the edges rather than being cut off by a hard line. */
       .viewport {
-        position: absolute; left: 70px; right: 70px; top: 360px; height: 1100px;
+        position: absolute; left: 70px; right: 70px; top: 310px; height: 1200px;
         overflow: hidden;
-        -webkit-mask-image: linear-gradient(to bottom, transparent 0%%, #000 14%%, #000 86%%, transparent 100%%);
-                mask-image: linear-gradient(to bottom, transparent 0%%, #000 14%%, #000 86%%, transparent 100%%);
+        -webkit-mask-image: linear-gradient(to bottom, transparent 0%%, #000 10%%, #000 90%%, transparent 100%%);
+                mask-image: linear-gradient(to bottom, transparent 0%%, #000 10%%, #000 90%%, transparent 100%%);
       }
       .column { position: relative; width: 100%%; }
 
@@ -200,7 +211,7 @@ HTML = """<!DOCTYPE html>
       .num { display: flex; align-items: center; justify-content: center; gap: 22px; margin-bottom: 34px; }
       .num i { display: block; width: 110px; height: 1px; background: var(--line); }
       .num span {
-        font-family: var(--quran); font-size: 42px; color: var(--accent);
+        font-family: var(--quran); font-size: 45px; color: var(--accent);
         line-height: 1; padding-bottom: 6px;
       }
 
@@ -217,14 +228,39 @@ HTML = """<!DOCTYPE html>
       }
 
       .en {
-        font-family: var(--serif); font-weight: 400; font-size: 50px; line-height: 1.5;
+        font-family: var(--serif); font-weight: 400; font-size: 54px; line-height: 1.5;
         color: var(--ink-2); max-width: 880px; margin: 0 auto; text-align: center;
         letter-spacing: -0.012em;
       }
       .en2 { margin-top: 12px; }
 
-      /* The rhyme. Ink until he reaches it. */
-      .mk { color: inherit; }
+      /* The rhyme. Ink until he reaches it, and then it does not simply
+         switch — the colour crosses the word, in the direction that word is
+         read: leading edge first, a soft 16%% ramp behind it, so it arrives
+         the way the sound does rather than appearing all at once.
+
+         Two stacked copies rather than a tween on `color`, because colour
+         interpolates the whole word at once and there is no way to interpolate
+         part of a glyph run. The ink copy is the one in flow; the red copy is
+         laid exactly over it and masked. Arabic sweeps right to left and
+         English left to right — each follows its own reading direction. */
+      .mk { position: relative; display: inline-block; --p: -18%%; }
+      .mk-r {
+        position: absolute; inset: 0; color: %(mark)s;
+        pointer-events: none;
+      }
+      .mk.rtl .mk-r {
+        -webkit-mask-image: linear-gradient(to left,
+          #000 0%%, #000 var(--p), transparent calc(var(--p) + 16%%), transparent 100%%);
+                mask-image: linear-gradient(to left,
+          #000 0%%, #000 var(--p), transparent calc(var(--p) + 16%%), transparent 100%%);
+      }
+      .mk.ltr .mk-r {
+        -webkit-mask-image: linear-gradient(to right,
+          #000 0%%, #000 var(--p), transparent calc(var(--p) + 16%%), transparent 100%%);
+                mask-image: linear-gradient(to right,
+          #000 0%%, #000 var(--p), transparent calc(var(--p) + 16%%), transparent 100%%);
+      }
 
       /* ── The closing card ───────────────────────────────────────────── */
       .close {
@@ -304,7 +340,6 @@ HTML = """<!DOCTYPE html>
 
     <script>
       const DUR = %(dur).2f;
-      const MARK_COLOUR = "#9c3a2c";
       const IDS = %(ids)s;
       const tl = gsap.timeline({ paused: true });
 
@@ -312,12 +347,14 @@ HTML = """<!DOCTYPE html>
       /* Where the āyah being recited sits inside the window. Measured at BUILD
          time, which is allowed here because this is a single-scene composition
          and every block is laid out before the timeline is built. */
-      const READ = 1100 / 2;
-      const POS = IDS.map(function (id) {
-        const el = document.getElementById(id);
-        const y = READ - (el.offsetTop + el.offsetHeight / 2);
-        return isFinite(y) ? y : 0;
-      });
+      /* Where each āyah comes to rest inside the window, as a translation of
+         the whole column. These are MEASURED, not computed here — by
+         measure-stops.mjs, in the same engine that renders the video, after
+         document.fonts.ready. The page used to measure itself inline at parse
+         time, which is before the Arabic webfont arrives: every block was
+         still at fallback height, so every stop was left sitting low and the
+         last line of the longer translations fell under the bottom fade. */
+      const POS = __POS__;
 
       /* Bring one āyah to full ink and let the one before it fall back. The
          page keeps everything: the recited stays above, the coming waits
@@ -325,6 +362,12 @@ HTML = """<!DOCTYPE html>
       function focus(i, at) {
         tl.to("#" + IDS[i], { opacity: 1, duration: 0.55, ease: "power2.out" }, at);
         if (i > 0) tl.to("#" + IDS[i - 1], { opacity: 0.22, duration: 0.55, ease: "power2.out" }, at);
+      }
+      /* The colour crossing the word. It starts fully off the leading edge
+         (-18%%, past the 16%% ramp) so nothing is tinted before he says it. */
+      function sweep(sel, at) {
+        tl.fromTo(sel, { "--p": "-18%%" },
+          { "--p": "100%%", duration: 0.44, ease: "power2.out", immediateRender: false }, at);
       }
       function reveal(sel, at) {
         tl.set(sel, { opacity: 0 }, 0);
@@ -334,7 +377,7 @@ HTML = """<!DOCTYPE html>
 
       IDS.forEach(function (id) { tl.set("#" + id, { opacity: 0.16 }, 0); });
       gsap.utils.toArray(".rule").forEach(function (r) { tl.set(r, { scaleX: 0 }, 0); });
-      gsap.utils.toArray(".mk").forEach(function (m) { tl.set(m, { color: "inherit" }, 0); });
+      gsap.utils.toArray(".mk").forEach(function (m) { tl.set(m, { "--p": "-18%%" }, 0); });
 
       tl.set("#foot", { opacity: 0 }, 0);
       tl.to("#foot", { opacity: 1, duration: 0.6, ease: "power2.out" }, 0.5);
@@ -371,6 +414,29 @@ HTML = """<!DOCTYPE html>
 
 out = HTML % {"dur": DUR, "recend": REC_END, "closein": CLOSE_IN,
               "blocks": "\n\n".join(blocks), "tweens": "\n".join(tweens),
-              "spine": "\n".join(spine), "ids": json.dumps(ids)}
-(P / "index.html").write_text(out, encoding="utf-8")
+              "spine": "\n".join(spine), "ids": json.dumps(ids),
+              "mark": MARK_COLOUR}
+# First pass writes the page with placeholder stops; then it is measured with
+# the real fonts loaded and rewritten with the numbers. Two passes, because the
+# heights depend on text that only exists once the page has been built.
+(P / "index.html").write_text(out.replace("__POS__", "[]"), encoding="utf-8")
+
+READ = 1200 / 2
+try:
+    m = json.loads(subprocess.run(
+        ["node", str(P / "measure-stops.mjs"), str(P / "index.html")],
+        capture_output=True, text=True, check=True, cwd=str(P)).stdout)
+    pos = [round(READ - (r["top"] + r["content"] / 2), 1) for r in m["rows"]]
+    assert len(pos) == len(V), "measured %d blocks, expected %d" % (len(pos), len(V))
+    tall = max(r["content"] for r in m["rows"])
+    room = m["vpH"] * 0.80          # the mask leaves a 10% fade at each end
+    if tall > room:
+        print("  WARNING: tallest āyah is %dpx of content but only %dpx of the "
+              "window is unfaded — a translation will be cut." % (tall, room))
+    print("  measured stops (tallest āyah %dpx in %dpx of clear window)" % (tall, room))
+except (subprocess.CalledProcessError, FileNotFoundError) as e:
+    raise SystemExit("could not measure the scroll stops: %s -- index.html is written but its stops are empty, so fix this and rebuild."
+                     % (getattr(e, "stderr", "") or e))
+
+(P / "index.html").write_text(out.replace("__POS__", json.dumps(pos)), encoding="utf-8")
 print("wrote index.html  (%d āyāt on one scrolling page, %.2fs)" % (len(V), DUR))

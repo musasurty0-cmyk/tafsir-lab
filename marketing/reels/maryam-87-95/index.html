@@ -81,10 +81,10 @@
       /* The window onto the page. Masked top and bottom so āyāt fade out at
          the edges rather than being cut off by a hard line. */
       .viewport {
-        position: absolute; left: 70px; right: 70px; top: 360px; height: 1100px;
+        position: absolute; left: 70px; right: 70px; top: 310px; height: 1200px;
         overflow: hidden;
-        -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 14%, #000 86%, transparent 100%);
-                mask-image: linear-gradient(to bottom, transparent 0%, #000 14%, #000 86%, transparent 100%);
+        -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 10%, #000 90%, transparent 100%);
+                mask-image: linear-gradient(to bottom, transparent 0%, #000 10%, #000 90%, transparent 100%);
       }
       .column { position: relative; width: 100%; }
 
@@ -93,7 +93,7 @@
       .num { display: flex; align-items: center; justify-content: center; gap: 22px; margin-bottom: 34px; }
       .num i { display: block; width: 110px; height: 1px; background: var(--line); }
       .num span {
-        font-family: var(--quran); font-size: 42px; color: var(--accent);
+        font-family: var(--quran); font-size: 45px; color: var(--accent);
         line-height: 1; padding-bottom: 6px;
       }
 
@@ -110,14 +110,39 @@
       }
 
       .en {
-        font-family: var(--serif); font-weight: 400; font-size: 50px; line-height: 1.5;
+        font-family: var(--serif); font-weight: 400; font-size: 54px; line-height: 1.5;
         color: var(--ink-2); max-width: 880px; margin: 0 auto; text-align: center;
         letter-spacing: -0.012em;
       }
       .en2 { margin-top: 12px; }
 
-      /* The rhyme. Ink until he reaches it. */
-      .mk { color: inherit; }
+      /* The rhyme. Ink until he reaches it, and then it does not simply
+         switch — the colour crosses the word, in the direction that word is
+         read: leading edge first, a soft 16% ramp behind it, so it arrives
+         the way the sound does rather than appearing all at once.
+
+         Two stacked copies rather than a tween on `color`, because colour
+         interpolates the whole word at once and there is no way to interpolate
+         part of a glyph run. The ink copy is the one in flow; the red copy is
+         laid exactly over it and masked. Arabic sweeps right to left and
+         English left to right — each follows its own reading direction. */
+      .mk { position: relative; display: inline-block; --p: -18%; }
+      .mk-r {
+        position: absolute; inset: 0; color: #9c3a2c;
+        pointer-events: none;
+      }
+      .mk.rtl .mk-r {
+        -webkit-mask-image: linear-gradient(to left,
+          #000 0%, #000 var(--p), transparent calc(var(--p) + 16%), transparent 100%);
+                mask-image: linear-gradient(to left,
+          #000 0%, #000 var(--p), transparent calc(var(--p) + 16%), transparent 100%);
+      }
+      .mk.ltr .mk-r {
+        -webkit-mask-image: linear-gradient(to right,
+          #000 0%, #000 var(--p), transparent calc(var(--p) + 16%), transparent 100%);
+                mask-image: linear-gradient(to right,
+          #000 0%, #000 var(--p), transparent calc(var(--p) + 16%), transparent 100%);
+      }
 
       /* ── The closing card ───────────────────────────────────────────── */
       .close {
@@ -183,7 +208,7 @@
           <div class="aya" id="a87" data-layout-allow-occlusion="true" data-layout-allow-overlap="true">
             <div class="num"><i></i><span>٨٧</span><i></i></div>
             <div class="arwrap">
-              <p class="ar" style="font-size:54px" dir="rtl" lang="ar">لَّا يَمْلِكُونَ ٱلشَّفَـٰعَةَ إِلَّا مَنِ ٱتَّخَذَ عِندَ ٱلرَّحْمَـٰنِ عَهْدًا</p>
+              <p class="ar" style="font-size:58px" dir="rtl" lang="ar">لَّا يَمْلِكُونَ ٱلشَّفَـٰعَةَ إِلَّا مَنِ ٱتَّخَذَ عِندَ ٱلرَّحْمَـٰنِ عَهْدًا</p>
             </div>
             <div class="rulewrap"><div class="rule" id="rule-87"></div></div>
             <p class="en" id="en-87">None will have [power of] intercession except he who had taken from the Most Merciful a covenant.</p>
@@ -192,75 +217,75 @@
           <div class="aya" id="a88" data-layout-allow-occlusion="true" data-layout-allow-overlap="true">
             <div class="num"><i></i><span>٨٨</span><i></i></div>
             <div class="arwrap">
-              <p class="ar" style="font-size:72px" dir="rtl" lang="ar">وَقَالُوا۟ ٱتَّخَذَ ٱلرَّحْمَـٰنُ <span class="mk" id="mkar-88">وَلَدًا</span></p>
+              <p class="ar" style="font-size:78px" dir="rtl" lang="ar">وَقَالُوا۟ ٱتَّخَذَ ٱلرَّحْمَـٰنُ <span class="mk rtl" id="mkar-88"><span class="mk-i" data-layout-allow-overlap>وَلَدًا</span><span class="mk-r" aria-hidden="true" data-layout-allow-overlap>وَلَدًا</span></span></p>
             </div>
             <div class="rulewrap"><div class="rule" id="rule-88"></div></div>
-            <p class="en" id="en-88">And they say, "The Most Merciful has taken [for Himself] <span class="mk" id="mken-88">a son.</span>"</p>
+            <p class="en" id="en-88">And they say, "The Most Merciful has taken [for Himself] <span class="mk ltr" id="mken-88"><span class="mk-i" data-layout-allow-overlap>a son.</span><span class="mk-r" aria-hidden="true" data-layout-allow-overlap>a son.</span></span>"</p>
           </div>
 
           <div class="aya" id="a89" data-layout-allow-occlusion="true" data-layout-allow-overlap="true">
             <div class="num"><i></i><span>٨٩</span><i></i></div>
             <div class="arwrap">
-              <p class="ar" style="font-size:78px" dir="rtl" lang="ar">لَّقَدْ جِئْتُمْ شَيْـًٔا <span class="mk" id="mkar-89">إِدًّا</span></p>
+              <p class="ar" style="font-size:84px" dir="rtl" lang="ar">لَّقَدْ جِئْتُمْ شَيْـًٔا <span class="mk rtl" id="mkar-89"><span class="mk-i" data-layout-allow-overlap>إِدًّا</span><span class="mk-r" aria-hidden="true" data-layout-allow-overlap>إِدًّا</span></span></p>
             </div>
             <div class="rulewrap"><div class="rule" id="rule-89"></div></div>
-            <p class="en" id="en-89">You have done <span class="mk" id="mken-89">an atrocious thing.</span></p>
+            <p class="en" id="en-89">You have done <span class="mk ltr" id="mken-89"><span class="mk-i" data-layout-allow-overlap>an atrocious thing.</span><span class="mk-r" aria-hidden="true" data-layout-allow-overlap>an atrocious thing.</span></span></p>
           </div>
 
           <div class="aya" id="a90" data-layout-allow-occlusion="true" data-layout-allow-overlap="true">
             <div class="num"><i></i><span>٩٠</span><i></i></div>
             <div class="arwrap">
-              <p class="ar" style="font-size:56px" dir="rtl" lang="ar">تَكَادُ ٱلسَّمَـٰوَٰتُ يَتَفَطَّرْنَ مِنْهُ</p>
-              <p class="ar" id="ar2-90" style="font-size:56px" dir="rtl" lang="ar">وَتَنشَقُّ ٱلْأَرْضُ وَتَخِرُّ ٱلْجِبَالُ <span class="mk" id="mkar-90">هَدًّا</span></p>
+              <p class="ar" style="font-size:60px" dir="rtl" lang="ar">تَكَادُ ٱلسَّمَـٰوَٰتُ يَتَفَطَّرْنَ مِنْهُ</p>
+              <p class="ar" id="ar2-90" style="font-size:60px" dir="rtl" lang="ar">وَتَنشَقُّ ٱلْأَرْضُ وَتَخِرُّ ٱلْجِبَالُ <span class="mk rtl" id="mkar-90"><span class="mk-i" data-layout-allow-overlap>هَدًّا</span><span class="mk-r" aria-hidden="true" data-layout-allow-overlap>هَدًّا</span></span></p>
             </div>
             <div class="rulewrap"><div class="rule" id="rule-90"></div></div>
             <p class="en" id="en-90">The heavens almost rupture therefrom</p>
-              <p class="en en2" id="en2-90">and the earth splits open and the mountains collapse <span class="mk" id="mken-90">in devastation</span></p>
+              <p class="en en2" id="en2-90">and the earth splits open and the mountains collapse <span class="mk ltr" id="mken-90"><span class="mk-i" data-layout-allow-overlap>in devastation</span><span class="mk-r" aria-hidden="true" data-layout-allow-overlap>in devastation</span></span></p>
           </div>
 
           <div class="aya" id="a91" data-layout-allow-occlusion="true" data-layout-allow-overlap="true">
             <div class="num"><i></i><span>٩١</span><i></i></div>
             <div class="arwrap">
-              <p class="ar" style="font-size:72px" dir="rtl" lang="ar">أَن دَعَوْا۟ لِلرَّحْمَـٰنِ <span class="mk" id="mkar-91">وَلَدًا</span></p>
+              <p class="ar" style="font-size:78px" dir="rtl" lang="ar">أَن دَعَوْا۟ لِلرَّحْمَـٰنِ <span class="mk rtl" id="mkar-91"><span class="mk-i" data-layout-allow-overlap>وَلَدًا</span><span class="mk-r" aria-hidden="true" data-layout-allow-overlap>وَلَدًا</span></span></p>
             </div>
             <div class="rulewrap"><div class="rule" id="rule-91"></div></div>
-            <p class="en" id="en-91">That they attribute to the Most Merciful <span class="mk" id="mken-91">a son.</span></p>
+            <p class="en" id="en-91">That they attribute to the Most Merciful <span class="mk ltr" id="mken-91"><span class="mk-i" data-layout-allow-overlap>a son.</span><span class="mk-r" aria-hidden="true" data-layout-allow-overlap>a son.</span></span></p>
           </div>
 
           <div class="aya" id="a92" data-layout-allow-occlusion="true" data-layout-allow-overlap="true">
             <div class="num"><i></i><span>٩٢</span><i></i></div>
             <div class="arwrap">
-              <p class="ar" style="font-size:60px" dir="rtl" lang="ar">وَمَا يَنۢبَغِى لِلرَّحْمَـٰنِ أَن يَتَّخِذَ <span class="mk" id="mkar-92">وَلَدًا</span></p>
+              <p class="ar" style="font-size:65px" dir="rtl" lang="ar">وَمَا يَنۢبَغِى لِلرَّحْمَـٰنِ أَن يَتَّخِذَ <span class="mk rtl" id="mkar-92"><span class="mk-i" data-layout-allow-overlap>وَلَدًا</span><span class="mk-r" aria-hidden="true" data-layout-allow-overlap>وَلَدًا</span></span></p>
             </div>
             <div class="rulewrap"><div class="rule" id="rule-92"></div></div>
-            <p class="en" id="en-92">And it is not appropriate for the Most Merciful that He should take <span class="mk" id="mken-92">a son.</span></p>
+            <p class="en" id="en-92">And it is not appropriate for the Most Merciful that He should take <span class="mk ltr" id="mken-92"><span class="mk-i" data-layout-allow-overlap>a son.</span><span class="mk-r" aria-hidden="true" data-layout-allow-overlap>a son.</span></span></p>
           </div>
 
           <div class="aya" id="a93" data-layout-allow-occlusion="true" data-layout-allow-overlap="true">
             <div class="num"><i></i><span>٩٣</span><i></i></div>
             <div class="arwrap">
-              <p class="ar" style="font-size:52px" dir="rtl" lang="ar">إِن كُلُّ مَن فِى ٱلسَّمَـٰوَٰتِ وَٱلْأَرْضِ إِلَّآ ءَاتِى ٱلرَّحْمَـٰنِ <span class="mk" id="mkar-93">عَبْدًا</span></p>
+              <p class="ar" style="font-size:56px" dir="rtl" lang="ar">إِن كُلُّ مَن فِى ٱلسَّمَـٰوَٰتِ وَٱلْأَرْضِ إِلَّآ ءَاتِى ٱلرَّحْمَـٰنِ <span class="mk rtl" id="mkar-93"><span class="mk-i" data-layout-allow-overlap>عَبْدًا</span><span class="mk-r" aria-hidden="true" data-layout-allow-overlap>عَبْدًا</span></span></p>
             </div>
             <div class="rulewrap"><div class="rule" id="rule-93"></div></div>
-            <p class="en" id="en-93">There is no one in the heavens and earth but that he comes to the Most Merciful <span class="mk" id="mken-93">as a servant.</span></p>
+            <p class="en" id="en-93">There is no one in the heavens and earth but that he comes to the Most Merciful <span class="mk ltr" id="mken-93"><span class="mk-i" data-layout-allow-overlap>as a servant.</span><span class="mk-r" aria-hidden="true" data-layout-allow-overlap>as a servant.</span></span></p>
           </div>
 
           <div class="aya" id="a94" data-layout-allow-occlusion="true" data-layout-allow-overlap="true">
             <div class="num"><i></i><span>٩٤</span><i></i></div>
             <div class="arwrap">
-              <p class="ar" style="font-size:72px" dir="rtl" lang="ar">لَّقَدْ أَحْصَىٰهُمْ وَعَدَّهُمْ <span class="mk" id="mkar-94">عَدًّا</span></p>
+              <p class="ar" style="font-size:78px" dir="rtl" lang="ar">لَّقَدْ أَحْصَىٰهُمْ وَعَدَّهُمْ <span class="mk rtl" id="mkar-94"><span class="mk-i" data-layout-allow-overlap>عَدًّا</span><span class="mk-r" aria-hidden="true" data-layout-allow-overlap>عَدًّا</span></span></p>
             </div>
             <div class="rulewrap"><div class="rule" id="rule-94"></div></div>
-            <p class="en" id="en-94">He has enumerated them and counted them <span class="mk" id="mken-94">a [full] counting.</span></p>
+            <p class="en" id="en-94">He has enumerated them and counted them <span class="mk ltr" id="mken-94"><span class="mk-i" data-layout-allow-overlap>a [full] counting.</span><span class="mk-r" aria-hidden="true" data-layout-allow-overlap>a [full] counting.</span></span></p>
           </div>
 
           <div class="aya" id="a95" data-layout-allow-occlusion="true" data-layout-allow-overlap="true">
             <div class="num"><i></i><span>٩٥</span><i></i></div>
             <div class="arwrap">
-              <p class="ar" style="font-size:63px" dir="rtl" lang="ar">وَكُلُّهُمْ ءَاتِيهِ يَوْمَ ٱلْقِيَـٰمَةِ <span class="mk" id="mkar-95">فَرْدًا</span></p>
+              <p class="ar" style="font-size:68px" dir="rtl" lang="ar">وَكُلُّهُمْ ءَاتِيهِ يَوْمَ ٱلْقِيَـٰمَةِ <span class="mk rtl" id="mkar-95"><span class="mk-i" data-layout-allow-overlap>فَرْدًا</span><span class="mk-r" aria-hidden="true" data-layout-allow-overlap>فَرْدًا</span></span></p>
             </div>
             <div class="rulewrap"><div class="rule" id="rule-95"></div></div>
-            <p class="en" id="en-95">And all of them are coming to Him on the Day of Resurrection <span class="mk" id="mken-95">alone.</span></p>
+            <p class="en" id="en-95">And all of them are coming to Him on the Day of Resurrection <span class="mk ltr" id="mken-95"><span class="mk-i" data-layout-allow-overlap>alone.</span><span class="mk-r" aria-hidden="true" data-layout-allow-overlap>alone.</span></span></p>
           </div>
           </div>
         </div>
@@ -286,7 +311,6 @@
 
     <script>
       const DUR = 61.10;
-      const MARK_COLOUR = "#9c3a2c";
       const IDS = ["a87", "a88", "a89", "a90", "a91", "a92", "a93", "a94", "a95"];
       const tl = gsap.timeline({ paused: true });
 
@@ -294,12 +318,14 @@
       /* Where the āyah being recited sits inside the window. Measured at BUILD
          time, which is allowed here because this is a single-scene composition
          and every block is laid out before the timeline is built. */
-      const READ = 1100 / 2;
-      const POS = IDS.map(function (id) {
-        const el = document.getElementById(id);
-        const y = READ - (el.offsetTop + el.offsetHeight / 2);
-        return isFinite(y) ? y : 0;
-      });
+      /* Where each āyah comes to rest inside the window, as a translation of
+         the whole column. These are MEASURED, not computed here — by
+         measure-stops.mjs, in the same engine that renders the video, after
+         document.fonts.ready. The page used to measure itself inline at parse
+         time, which is before the Arabic webfont arrives: every block was
+         still at fallback height, so every stop was left sitting low and the
+         last line of the longer translations fell under the bottom fade. */
+      const POS = [244.5, -443.5, -978.0, -1644.5, -2345.5, -2942.0, -3613.0, -4256.5, -4815.5];
 
       /* Bring one āyah to full ink and let the one before it fall back. The
          page keeps everything: the recited stays above, the coming waits
@@ -307,6 +333,12 @@
       function focus(i, at) {
         tl.to("#" + IDS[i], { opacity: 1, duration: 0.55, ease: "power2.out" }, at);
         if (i > 0) tl.to("#" + IDS[i - 1], { opacity: 0.22, duration: 0.55, ease: "power2.out" }, at);
+      }
+      /* The colour crossing the word. It starts fully off the leading edge
+         (-18%, past the 16% ramp) so nothing is tinted before he says it. */
+      function sweep(sel, at) {
+        tl.fromTo(sel, { "--p": "-18%" },
+          { "--p": "100%", duration: 0.44, ease: "power2.out", immediateRender: false }, at);
       }
       function reveal(sel, at) {
         tl.set(sel, { opacity: 0 }, 0);
@@ -316,7 +348,7 @@
 
       IDS.forEach(function (id) { tl.set("#" + id, { opacity: 0.16 }, 0); });
       gsap.utils.toArray(".rule").forEach(function (r) { tl.set(r, { scaleX: 0 }, 0); });
-      gsap.utils.toArray(".mk").forEach(function (m) { tl.set(m, { color: "inherit" }, 0); });
+      gsap.utils.toArray(".mk").forEach(function (m) { tl.set(m, { "--p": "-18%" }, 0); });
 
       tl.set("#foot", { opacity: 0 }, 0);
       tl.to("#foot", { opacity: 1, duration: 0.6, ease: "power2.out" }, 0.5);
@@ -330,15 +362,15 @@
       focus(1, 8.57);
       tl.to("#rule-88", { scaleX: 1, duration: 0.42, ease: "power2.out" }, 9.22);
       reveal("#en-88", 9.47);
-      tl.to("#mkar-88", { color: MARK_COLOUR, duration: 0.26, ease: "power2.out" }, 11.60);
-      tl.to("#mken-88", { color: MARK_COLOUR, duration: 0.26, ease: "power2.out" }, 11.60);
+      sweep("#mkar-88", 11.60);
+      sweep("#mken-88", 11.60);
       tl.fromTo("#seg-88", { scaleX: 0 }, { scaleX: 1, duration: 3.94, ease: "none", immediateRender: false }, 8.92);
       tl.to(col, { y: POS[2], duration: 0.78, ease: "power2.inOut" }, 12.51);
       focus(2, 12.51);
       tl.to("#rule-89", { scaleX: 1, duration: 0.42, ease: "power2.out" }, 13.16);
       reveal("#en-89", 13.41);
-      tl.to("#mkar-89", { color: MARK_COLOUR, duration: 0.26, ease: "power2.out" }, 14.60);
-      tl.to("#mken-89", { color: MARK_COLOUR, duration: 0.26, ease: "power2.out" }, 14.60);
+      sweep("#mkar-89", 14.60);
+      sweep("#mken-89", 14.60);
       tl.fromTo("#seg-89", { scaleX: 0 }, { scaleX: 1, duration: 2.86, ease: "none", immediateRender: false }, 12.86);
       tl.to(col, { y: POS[3], duration: 0.78, ease: "power2.inOut" }, 15.37);
       focus(3, 15.37);
@@ -346,43 +378,43 @@
       reveal("#en-90", 16.27);
       reveal("#ar2-90", 23.33);
       reveal("#en2-90", 23.58);
-      tl.to("#mkar-90", { color: MARK_COLOUR, duration: 0.26, ease: "power2.out" }, 27.02);
-      tl.to("#mken-90", { color: MARK_COLOUR, duration: 0.26, ease: "power2.out" }, 27.02);
+      sweep("#mkar-90", 27.02);
+      sweep("#mken-90", 27.02);
       tl.fromTo("#seg-90", { scaleX: 0 }, { scaleX: 1, duration: 12.26, ease: "none", immediateRender: false }, 15.72);
       tl.to(col, { y: POS[4], duration: 0.78, ease: "power2.inOut" }, 27.63);
       focus(4, 27.63);
       tl.to("#rule-91", { scaleX: 1, duration: 0.42, ease: "power2.out" }, 28.28);
       reveal("#en-91", 28.53);
-      tl.to("#mkar-91", { color: MARK_COLOUR, duration: 0.26, ease: "power2.out" }, 32.24);
-      tl.to("#mken-91", { color: MARK_COLOUR, duration: 0.26, ease: "power2.out" }, 32.24);
+      sweep("#mkar-91", 32.24);
+      sweep("#mken-91", 32.24);
       tl.fromTo("#seg-91", { scaleX: 0 }, { scaleX: 1, duration: 5.76, ease: "none", immediateRender: false }, 27.98);
       tl.to(col, { y: POS[5], duration: 0.78, ease: "power2.inOut" }, 33.39);
       focus(5, 33.39);
       tl.to("#rule-92", { scaleX: 1, duration: 0.42, ease: "power2.out" }, 34.04);
       reveal("#en-92", 34.29);
-      tl.to("#mkar-92", { color: MARK_COLOUR, duration: 0.26, ease: "power2.out" }, 38.60);
-      tl.to("#mken-92", { color: MARK_COLOUR, duration: 0.26, ease: "power2.out" }, 38.60);
+      sweep("#mkar-92", 38.60);
+      sweep("#mken-92", 38.60);
       tl.fromTo("#seg-92", { scaleX: 0 }, { scaleX: 1, duration: 6.39, ease: "none", immediateRender: false }, 33.74);
       tl.to(col, { y: POS[6], duration: 0.78, ease: "power2.inOut" }, 39.78);
       focus(6, 39.78);
       tl.to("#rule-93", { scaleX: 1, duration: 0.42, ease: "power2.out" }, 40.43);
       reveal("#en-93", 40.68);
-      tl.to("#mkar-93", { color: MARK_COLOUR, duration: 0.26, ease: "power2.out" }, 47.25);
-      tl.to("#mken-93", { color: MARK_COLOUR, duration: 0.26, ease: "power2.out" }, 47.25);
+      sweep("#mkar-93", 47.25);
+      sweep("#mken-93", 47.25);
       tl.fromTo("#seg-93", { scaleX: 0 }, { scaleX: 1, duration: 8.77, ease: "none", immediateRender: false }, 40.13);
       tl.to(col, { y: POS[7], duration: 0.78, ease: "power2.inOut" }, 48.55);
       focus(7, 48.55);
       tl.to("#rule-94", { scaleX: 1, duration: 0.42, ease: "power2.out" }, 49.20);
       reveal("#en-94", 49.45);
-      tl.to("#mkar-94", { color: MARK_COLOUR, duration: 0.26, ease: "power2.out" }, 51.62);
-      tl.to("#mken-94", { color: MARK_COLOUR, duration: 0.26, ease: "power2.out" }, 51.62);
+      sweep("#mkar-94", 51.62);
+      sweep("#mken-94", 51.62);
       tl.fromTo("#seg-94", { scaleX: 0 }, { scaleX: 1, duration: 4.59, ease: "none", immediateRender: false }, 48.90);
       tl.to(col, { y: POS[8], duration: 0.78, ease: "power2.inOut" }, 53.14);
       focus(8, 53.14);
       tl.to("#rule-95", { scaleX: 1, duration: 0.42, ease: "power2.out" }, 53.79);
       reveal("#en-95", 54.04);
-      tl.to("#mkar-95", { color: MARK_COLOUR, duration: 0.26, ease: "power2.out" }, 57.03);
-      tl.to("#mken-95", { color: MARK_COLOUR, duration: 0.26, ease: "power2.out" }, 57.03);
+      sweep("#mkar-95", 57.03);
+      sweep("#mken-95", 57.03);
       tl.fromTo("#seg-95", { scaleX: 0 }, { scaleX: 1, duration: 5.51, ease: "none", immediateRender: false }, 53.49);
 
       /* ── The close. The page carries on upward and out; it is not cut. ── */
