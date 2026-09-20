@@ -6,48 +6,81 @@ the record of where the text came from."""
 import json, pathlib, io, sys
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
-P = pathlib.Path(r"C:\Users\musas\Tafsir Lab\marketing\reels\maryam-87-95")
+P = pathlib.Path(__file__).parent
 doc = json.loads((P / "verses.json").read_text(encoding="utf-8"))
 V = doc["verses"]
 
 AR_DIGITS = "٠١٢٣٤٥٦٧٨٩"
-def arabic_num(n):
-    return "".join(AR_DIGITS[int(c)] for c in str(n))
+arabic_num = lambda n: "".join(AR_DIGITS[int(c)] for c in str(n))
 
 REC_END = doc["audio"]["duration"]      # 58.60
 CLOSE_IN, DUR = 59.00, 61.00
-# Set per āyah rather than by one rule. There are nine of them and their
-# lengths differ by a factor of four, so one size either leaves the short ones
-# looking timid in the frame or breaks the long ones with a single word orphaned
-# on its own line. A typesetter would set nine lines nine ways; so do we.
-SIZE = {87: 54, 88: 72, 89: 78, 90: 49, 91: 72, 92: 60, 93: 52, 94: 72, 95: 63}
 
-cards, tweens = [], []
-for i, v in enumerate(V):
-    n = v["n"]
-    px = SIZE[n]
-    en2 = ('\n              <p class="aya-en aya-en2" id="en2-%d">%s</p>' % (n, v["english2"])) if "english2" in v else ""
+# Nine ayat whose lengths differ by a factor of four. One size would leave the
+# short ones timid in the frame and break the long ones with a word orphaned,
+# so each is set on its own.
+SIZE = {87: 54, 88: 72, 89: 78, 90: 56, 91: 72, 92: 60, 93: 52, 94: 72, 95: 63}
+
+
+def mark_arabic(text):
+    """Colour the ayah's closing rhyme word — the fasila the passage is built on."""
+    toks = text.split()
+    return " ".join(toks[:-1]) + (" " if len(toks) > 1 else "") + \
+        '<span class="mk">%s</span>' % toks[-1]
+
+
+def mark_english(text, phrase):
+    assert text.count(phrase) == 1, "en mark %r not unique in %r" % (phrase, text)
+    return text.replace(phrase, '<span class="mk">%s</span>' % phrase, 1)
+
+
+cards, tweens, spine = [], [], []
+total = sum(v["end"] - v["start"] for v in V)
+
+for v in V:
+    n, px = v["n"], SIZE[v["n"]]
+    split = "arabic2" in v
+
+    # The rhyme lives in the last part, so only that part carries the colour.
+    ar1 = mark_arabic(v["arabic"]) if not split else v["arabic"]
+    ar2 = mark_arabic(v["arabic2"]) if split else None
+    en1 = v["english"] if split else mark_english(v["english"], v["enMark"])
+    en2 = mark_english(v["english2"], v["enMark"]) if split else None
+
+    ar_html = '<p class="ar" id="ar-%d" style="font-size:%dpx" dir="rtl" lang="ar">%s</p>' % (n, px, ar1)
+    if split:
+        ar_html += '\n                <p class="ar ar2" id="ar2-%d" style="font-size:%dpx" dir="rtl" lang="ar">%s</p>' % (n, px, ar2)
+    en_html = '<p class="en" id="en-%d">%s</p>' % (n, en1)
+    if split:
+        en_html += '\n                <p class="en en2" id="en2-%d">%s</p>' % (n, en2)
+
     cards.append("""          <div class="beat" id="a%d" data-layout-allow-overlap="true">
-            <div class="bmv">
-              <div class="aya-num"><i></i><span>%s</span><i></i></div>
-              <p class="aya-ar" style="font-size:%dpx" dir="rtl" lang="ar">%s</p>
-              <div class="aya-rule" id="rule-%d"></div>
-              <p class="aya-en" id="en-%d">%s</p>%s
+            <div class="num">%s</div>
+            <div class="arwrap">
+                %s
             </div>
-          </div>""" % (n, arabic_num(n), px, v["arabic"], n, n, v["english"], en2))
+            <div class="rulewrap"><div class="rule" id="rule-%d"></div></div>
+            <div class="enwrap">
+                %s
+            </div>
+          </div>""" % (n, arabic_num(n), ar_html, n, en_html))
 
     start, end = v["start"], v["end"]
-    in_at = max(0.0, round(start - 0.02, 2))
-    out_at = round(end - 0.18, 2)
-    # Every ayah card leaves, including the last: the closing card is the only
-    # thing that holds, and 95 clearing first is what gives it an empty page.
-    tweens.append('      card("#a%d", %.2f, %.2f, true);' % (n, in_at, out_at))
-    # The rule draws under the Arabic, then the meaning arrives. Arabic first,
-    # then what it means -- never both at once.
-    tweens.append('      tl.to("#rule-%d", { scaleX: 1, duration: 0.42, ease: "power2.out" }, %.2f);' % (n, round(start + 0.30, 2)))
+    in_at, out_at = max(0.0, round(start - 0.02, 2)), round(end - 0.18, 2)
+    tweens.append('      card("#a%d", %.2f, %.2f);' % (n, in_at, out_at))
+    tweens.append('      tl.to("#rule-%d", { scaleX: 1, duration: 0.42, ease: "power2.out" }, %.2f);'
+                  % (n, round(start + 0.30, 2)))
     tweens.append('      reveal("#en-%d", %.2f);' % (n, round(start + 0.55, 2)))
-    if "english2" in v:
-        tweens.append('      reveal("#en2-%d", %.2f);   // his breath inside the ayah' % (n, v["split"]))
+    if split:
+        # He stops here; the cut lands in both scripts, not just the English.
+        tweens.append('      reveal("#ar2-%d", %.2f);' % (n, v["split"]))
+        tweens.append('      reveal("#en2-%d", %.2f);' % (n, round(v["split"] + 0.25, 2)))
+
+    # One spine segment per ayah, its width the share of the recitation it takes.
+    spine.append('          <div class="seg" style="flex-grow:%.3f"><div class="segfill" id="seg-%d"></div></div>'
+                 % ((end - start) / total * 100, n))
+    tweens.append('      tl.fromTo("#seg-%d", { scaleX: 0 }, { scaleX: 1, duration: %.2f, ease: "none", immediateRender: false }, %.2f);'
+                  % (n, end - start, start))
 
 HTML = """<!DOCTYPE html>
 <html lang="en">
@@ -61,16 +94,22 @@ HTML = """<!DOCTYPE html>
       /* ══════════════════════════════════════════════════════════════════
          maryam-87-95 — 61s, 1080×1920, LIGHT.
 
-         Sūrat Maryam 87–95, recited, set as pages of the Mushaf view: warm
-         paper, the āyah in Uthmani script, its number between two rules, the
-         meaning beneath.
+         Sūrat Maryam 87–95, recited, set as pages of the Mushaf view.
 
-         THE ARABIC DOES NOT MOVE. It arrives, and then it is still. There is
-         no word-by-word lighting on it — the recitation is being heard, the
-         eye follows the ear, and highlighting parts of Qurʾānic text on a
-         timing I cannot verify to the word would be a claim I cannot make.
-         What is timed is what I measured: which āyah is on screen, and when
-         the meaning arrives under it.
+         THE ARABIC DOES NOT MOVE once it is up, and there is no word-by-word
+         lighting on it: the recitation is being heard, and highlighting parts
+         of Qurʾānic text on a per-word timing I cannot verify would be a claim
+         I am not able to make. What IS timed is what was measured — which
+         āyah is up, when the meaning arrives under it, and the one place he
+         stops inside an āyah (19:90, at 23.33), where the cut lands in both
+         scripts.
+
+         The frame does not move either. The number, the rule and both text
+         blocks sit at fixed positions, so āyah to āyah the page keeps its
+         shape and only its contents change — the hairlines either side of the
+         number never blink at all. Under it, one spine of nine segments, each
+         as wide as the share of the recitation its āyah takes, filling as he
+         reads. Something is always advancing.
 
          No music. Nothing plays under the recitation.
          ══════════════════════════════════════════════════════════════════ */
@@ -83,19 +122,20 @@ HTML = """<!DOCTYPE html>
         --ink-3:  #6e695f;
         --line:   rgba(41, 38, 33, 0.13);
         --accent: #a8762a;
+        /* Madder red, for the rhyme. Red is how a printed Mushaf has always
+           annotated its own text, and 6.6:1 on this paper. */
+        --mark:   #9c3a2c;
 
         --sans:   "Inter", -apple-system, "Segoe UI", system-ui, Arial, sans-serif;
         --serif:  "Literata", Georgia, serif;
         --brand:  "Source Serif 4", Georgia, serif;
-        /* Scheherazade New, not Amiri Quran. Amiri Quran is the obvious pick
-           for Uthmani text and it is what the app lists first — but the build
-           Google Fonts serves has broken mark attachment in Chrome: the
-           ḥarakāt render in a detached row floating above the letters instead
-           of sitting on them. Verified side by side in a real browser, and
-           self-hosting the same woff2 did not fix it, so it is the font build
-           and not the delivery. Scheherazade New sets the same text correctly
-           and is already the app's own fallback for Uthmani script
-           (`--font-uthmanic` in app/globals.css). */
+        /* Scheherazade New, not Amiri Quran. The build Google Fonts serves for
+           Amiri Quran has broken mark attachment in Chrome — the ḥarakāt come
+           out in a detached row floating above the letters. Not the subset
+           (every mark here is inside the served unicode-range) and not the
+           delivery (self-hosting the same woff2 changed nothing). Scheherazade
+           New sets it correctly and is already the app's own Uthmani fallback
+           in `--font-uthmanic`. */
         --quran:  "Scheherazade New", serif;
       }
 
@@ -111,56 +151,67 @@ HTML = """<!DOCTYPE html>
       .dots {
         position: absolute; inset: 0;
         background: radial-gradient(rgba(41, 38, 33, 0.09) 1.5px, transparent 1.5px);
-        background-size: 30px 30px;
-        /* Static. Nothing in the background moves. */
+        background-size: 30px 30px;   /* static; nothing in the background moves */
       }
 
-      .rail { position: absolute; left: 96px; right: 96px; top: 300px; display: flex; align-items: center; }
-      .rail-track { position: relative; flex: 1; height: 2px; background: var(--line); }
-      .rail-fill {
-        position: absolute; inset: 0; background: var(--accent); opacity: 0.55;
-        transform-origin: 0%% 50%%; transform: scaleX(0);
+      /* ── The spine: nine segments, one per āyah, each as wide as the share
+            of the recitation it takes. 19:90 is a fifth of the passage and
+            looks it. ─────────────────────────────────────────────────────── */
+      .spine { position: absolute; left: 96px; right: 96px; top: 300px; display: flex; gap: 7px; }
+      .seg { position: relative; height: 3px; background: var(--line); }
+      .segfill {
+        position: absolute; inset: 0; background: var(--accent); opacity: 0.6;
+        transform-origin: 0%% 50%%;
       }
 
       .stage { position: absolute; left: 70px; right: 70px; top: 500px; height: 940px; }
-      .beat {
-        position: absolute; left: 0; right: 0; top: 50%%; transform: translateY(-50%%);
-        display: flex; flex-direction: column; align-items: center;
-        text-align: center; opacity: 0;
-      }
-      .bmv { display: flex; flex-direction: column; align-items: center; width: 100%%; }
 
-      /* The āyah number, held between two hairlines — the Mushaf's own way of
-         marking one off, not a badge borrowed from a UI. */
-      .aya-num { display: flex; align-items: center; gap: 22px; margin-bottom: 40px; }
-      .aya-num i { display: block; width: 110px; height: 1px; background: var(--line); }
-      .aya-num span {
-        font-family: var(--quran); font-size: 42px; color: var(--accent);
-        line-height: 1; padding-bottom: 6px;
+      /* The hairlines live in the SCENE, not in the cards: they are the one
+         thing on the page that never moves, blinks or reflows, and every āyah
+         arrives inside them. */
+      .numframe {
+        position: absolute; left: 0; right: 0; top: 100px; height: 56px;
+        display: flex; align-items: center; justify-content: center; gap: 22px;
       }
+      .numframe i { display: block; width: 110px; height: 1px; background: var(--line); }
+      .numframe b { display: block; width: 104px; }
 
-      .aya-ar {
-        font-family: var(--quran); line-height: 2.0;
-        color: var(--ink); direction: rtl; max-width: 940px;
-        word-spacing: 0.04em;
+      .beat { position: absolute; inset: 0; opacity: 0; }
+      /* Fixed slots. Nothing re-centres between āyāt. */
+      .num {
+        position: absolute; left: 0; right: 0; top: 100px; height: 56px;
+        display: flex; align-items: center; justify-content: center;
+        font-family: var(--quran); font-size: 42px; color: var(--accent); line-height: 1;
       }
-
-      /* No `transform: scaleX(0)` here: GSAP animates scaleX on this class and
-         would overwrite the whole CSS transform. The closed state is set on the
-         timeline at t=0 instead, which is the one place that owns it. */
-      .aya-rule {
+      .arwrap {
+        position: absolute; left: 0; right: 0; top: 196px; height: 340px;
+        display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+      }
+      .ar {
+        font-family: var(--quran); line-height: 2.0; color: var(--ink);
+        direction: rtl; max-width: 940px; word-spacing: 0.04em; text-align: center;
+      }
+      .rulewrap { position: absolute; left: 0; right: 0; top: 566px; display: flex; justify-content: center; }
+      .rule {
         width: 300px; height: 2px; background: var(--accent); opacity: 0.45;
-        margin: 46px 0 40px; transform-origin: 50%% 50%%;
+        transform-origin: 50%% 50%%;
       }
+      .enwrap { position: absolute; left: 0; right: 0; top: 620px; text-align: center; }
+      .en {
+        font-family: var(--serif); font-weight: 400; font-size: 50px; line-height: 1.5;
+        color: var(--ink-2); max-width: 880px; margin: 0 auto; letter-spacing: -0.012em;
+      }
+      .en2 { margin-top: 12px; }
 
-      .aya-en {
-        font-family: var(--serif); font-weight: 400; font-size: 50px;
-        line-height: 1.5; color: var(--ink-2); max-width: 880px;
-        letter-spacing: -0.012em;
-      }
-      .aya-en2 { margin-top: 14px; }
+      /* The rhyme. Every āyah in this passage closes on the same -an sound;
+         colouring it is showing the reader a structure the text already has. */
+      .mk { color: var(--mark); }
 
       /* ── The closing card ───────────────────────────────────────────── */
+      .closewrap {
+        position: absolute; left: 0; right: 0; top: 150px;
+        display: flex; flex-direction: column; align-items: center;
+      }
       .brand-row { display: flex; align-items: center; gap: 34px; }
       .tile {
         width: 148px; height: 148px; border-radius: 34px; background: var(--ink);
@@ -179,7 +230,7 @@ HTML = """<!DOCTYPE html>
       .url-clip { overflow: hidden; }
       .close-rule {
         width: 360px; height: 3px; background: var(--accent); opacity: 0.5;
-        margin: 40px 0 22px; transform-origin: 50%% 50%%; transform: scaleX(0);
+        margin: 40px 0 22px; transform-origin: 50%% 50%%;
       }
       .close-url {
         font-family: var(--sans); font-size: 30px; font-weight: 500;
@@ -203,13 +254,17 @@ HTML = """<!DOCTYPE html>
         <div class="paper"></div>
         <div class="dots"></div>
 
-        <div class="rail"><div class="rail-track"><div class="rail-fill" id="rail-fill"></div></div></div>
+        <div class="spine" id="spine">
+%(spine)s
+        </div>
 
         <div class="stage" id="stage">
+          <div class="numframe" id="numframe"><i></i><b></b><i></i></div>
+
 %(cards)s
 
           <div class="beat" id="close" data-layout-allow-overlap="true">
-            <div class="bmv">
+            <div class="closewrap">
               <div class="brand-row">
                 <div class="tile"><span class="t">T</span></div>
                 <div class="wm-clip"><div class="wordmark">TafsirLab</div></div>
@@ -232,19 +287,18 @@ HTML = """<!DOCTYPE html>
 
     <script>
       const DUR = %(dur).2f;
-      const REC_END = %(recend).2f;
       const tl = gsap.timeline({ paused: true });
 
-      /* A card arrives, holds perfectly still, and leaves upward — the same
-         roll for every āyah, because none of them is more important than
-         another and a different entrance each time would be saying so. */
-      function card(sel, inAt, outAt, leaves) {
+      /* A card arrives, holds still, and leaves — the same way every time,
+         because no āyah here outranks another and giving one its own entrance
+         would be saying that it did. The page's frame does not move at all. */
+      function card(sel, inAt, outAt) {
         tl.set(sel, { opacity: 0 }, 0);
         tl.set(sel, { opacity: 1 }, inAt);
-        tl.fromTo(sel + " .bmv", { y: 44, opacity: 0 },
-          { y: 0, opacity: 1, duration: 0.40, ease: "power3.out", immediateRender: false }, inAt);
-        if (leaves) {
-          tl.to(sel + " .bmv", { y: -34, opacity: 0, duration: 0.16, ease: "power2.in" }, outAt);
+        tl.fromTo(sel, { y: 34 }, { y: 0, duration: 0.42, ease: "power3.out",
+          immediateRender: false }, inAt);
+        if (outAt > 0) {
+          tl.to(sel, { y: -26, opacity: 0, duration: 0.16, ease: "power2.in" }, outAt);
           tl.set(sel, { opacity: 0 }, outAt + 0.155);
         }
       }
@@ -254,23 +308,18 @@ HTML = """<!DOCTYPE html>
           { y: 0, opacity: 1, duration: 0.42, ease: "power2.out", immediateRender: false }, at);
       }
 
-      /* Every rule starts closed. */
-      gsap.utils.toArray(".aya-rule").forEach((r) => tl.set(r, { scaleX: 0 }, 0));
-
-      /* The rail tracks the recitation, not the composition — it is full when
-         he finishes, and the closing card is not part of the reading. */
-      tl.set("#rail-fill", { scaleX: 0 }, 0);
-      tl.to("#rail-fill", { scaleX: 1, duration: REC_END, ease: "none" }, 0);
+      gsap.utils.toArray(".rule").forEach((r) => tl.set(r, { scaleX: 0 }, 0));
 
       tl.set("#foot", { opacity: 0 }, 0);
       tl.to("#foot", { opacity: 1, duration: 0.6, ease: "power2.out" }, 0.5);
       tl.to("#foot", { opacity: 0, duration: 0.24, ease: "power2.in" }, %(closein).2f - 0.36);
-      tl.to(".rail", { opacity: 0, duration: 0.24, ease: "power2.in" }, %(closein).2f - 0.36);
+      tl.to("#spine", { opacity: 0, duration: 0.24, ease: "power2.in" }, %(closein).2f - 0.36);
+      tl.to("#numframe", { opacity: 0, duration: 0.24, ease: "power2.in" }, %(closein).2f - 0.36);
 
 %(tweens)s
 
       /* ── The close ───────────────────────────────────────────────────── */
-      card("#close", %(closein).2f, 0, false);
+      card("#close", %(closein).2f, 0);
       tl.set("#close .tile",      { scale: 0.82 }, 0);
       tl.set("#close .wordmark",  { xPercent: -106 }, 0);
       tl.set("#close-rule",       { scaleX: 0 }, 0);
@@ -290,9 +339,8 @@ HTML = """<!DOCTYPE html>
 </html>
 """
 
-out = HTML % {
-    "dur": DUR, "recend": REC_END, "closein": CLOSE_IN,
-    "cards": "\n\n".join(cards), "tweens": "\n".join(tweens),
-}
+out = HTML % {"dur": DUR, "recend": REC_END, "closein": CLOSE_IN,
+              "cards": "\n\n".join(cards), "tweens": "\n".join(tweens),
+              "spine": "\n".join(spine)}
 (P / "index.html").write_text(out, encoding="utf-8")
 print("wrote index.html  (%d cards, %.2fs)" % (len(V), DUR))

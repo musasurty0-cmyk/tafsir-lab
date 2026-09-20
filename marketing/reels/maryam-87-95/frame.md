@@ -54,15 +54,35 @@ a single word orphaned. Nine lines, nine sizes.
 
 Dot grid at 13% ink, static.
 
+## The rhyme
+
+Every āyah in this passage closes on the same `-an` sound: *ʿahdan, waladan,
+iddan, haddan, waladan, waladan, ʿabdan, ʿaddan, fardan*. That is the passage's
+own **fāṣila**, and it is what carries the madder red (`--mark`, #9c3a2c, 6.6:1
+on this paper) — in the Arabic and in its English counterpart both. Red is how
+a printed Mushaf has always annotated its own text. The colour is not emphasis
+chosen by a designer; it is a structure the text already has, made visible.
+
 ## Motion
 
-The restraint is the design. Every card arrives the same way — a 44px rise over
-0.40s — and leaves the same way, because no āyah here outranks another and
-giving one a different entrance would be saying that it did. Between those two
-moments nothing moves at all.
+Every card arrives the same way — a 34px rise over 0.42s — and leaves the same
+way, because no āyah here outranks another and giving one its own entrance
+would be saying that it did.
 
-The only per-āyah timing finer than "which one is up" is 19:90, whose
-translation arrives in two parts on the reciter's own breath at 23.20.
+What keeps that from reading as a stack of slides is that **the page does not
+move**. The number, the rule and both text blocks sit in fixed slots, so āyah
+to āyah the frame keeps its shape and only the contents change; the hairlines
+either side of the number live in the scene rather than in the cards, so they
+never blink at all. And the **spine** runs under everything: nine segments,
+each as wide as the share of the recitation its āyah takes — 19:90 is a fifth
+of the passage and looks it — filling continuously as he reads. Something is
+always advancing.
+
+The one place the timing goes finer than "which āyah is up" is 19:90, the only
+āyah he stops inside (23.33, measured at 17.0 dB under his own loud level for
+that āyah; every other dip in the passage is a 5–10 dB word gap, not a stop).
+There the cut lands in **both scripts** — the Arabic holds at *minhu* and the
+rest arrives with the second half of the meaning.
 
 Rules: `spring-pop-entrance` (the card rise and the closing mark),
 `svg-path-draw` (the rules drawing under each āyah), clip reveals on the close.
