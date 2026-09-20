@@ -48,6 +48,22 @@ CREATE INDEX IF NOT EXISTS tafsir_chunk_verse_idx  ON "TafsirChunk" (surah, ayah
 --
 -- It earns its place because vector search alone misses exact phrases and
 -- proper nouns — precisely what a citation-first assistant is asked for.
+--
+-- PARTIAL, and deliberately so. Over all seventeen editions this index cost
+-- 152 MB of a 500 MB database, which was 95.7% full with nothing left for
+-- readers' notes. Over the seven editions the fallback actually needs it costs
+-- 63 MB. Semantic search is untouched and still covers every edition.
+--
+-- This statement is NOT the source of truth for which seven — the list lives
+-- in lib/tafsir/lexical-sources.ts, because the query has to filter on the
+-- same set (a partial index is only used when the planner can prove the rows
+-- satisfy its predicate; without the filter Postgres seq-scans 74k rows of
+-- TOASTed text). Source ids differ per database, so the index is built from
+-- that list by:
+--
+--     node --env-file=.env scripts/rebuild-lexical-index.mjs
+--
+-- On a fresh database this creates the full index and the script narrows it.
 CREATE INDEX IF NOT EXISTS tafsir_entry_trgm_idx
   ON "TafsirEntry" USING gin (content gin_trgm_ops);
 

@@ -33,6 +33,7 @@
  */
 
 import { db } from "@/lib/db";
+import { LEXICAL_SOURCE_SLUGS } from "@/lib/tafsir/lexical-sources";
 import { probeTerms } from "@/lib/tafsir/answer";
 
 export interface SearchHit {
@@ -172,6 +173,20 @@ export async function semanticSearch(
  * falling back to the first chunk when the match is fuzzy and `strpos` finds
  * no exact offset.
  */
+/* Slugs live in code, ids live in the database, and the index predicate needs
+   ids. Resolved once per process — the set only changes when someone edits the
+   list and rebuilds the index, which is a deploy, not a request. */
+let indexedIdsCache: string[] | null = null;
+async function indexedSourceIds(): Promise<string[]> {
+  if (indexedIdsCache) return indexedIdsCache;
+  const rows = await db.tafsirSource.findMany({
+    where:  { slug: { in: [...LEXICAL_SOURCE_SLUGS] } },
+    select: { id: true },
+  });
+  indexedIdsCache = rows.map((r) => r.id);
+  return indexedIdsCache;
+}
+
 export async function lexicalSearch(
   query: string, opts: SearchOptions = {},
 ): Promise<RawHit[]> {
@@ -188,6 +203,20 @@ export async function lexicalSearch(
   const params: unknown[] = [q];
 
   const entryFilters: string[] = [];
+
+  /* Restrict to the editions the trigram index actually covers.
+     This is not an optional narrowing — it is what makes the index usable.
+     The index is partial (see lib/tafsir/lexical-sources.ts: a GIN trigram
+     over all seventeen editions cost 152 MB of a 500 MB database), and
+     Postgres will only choose a partial index when the query proves the rows
+     it wants satisfy the predicate. Without this filter the planner ignores
+     it and sequentially scans 74k rows of TOASTed text straight into the 7s
+     timeout — the fallback would return nothing, slowly.
+     Semantic retrieval is unaffected and still covers every edition. */
+  const lexicalIds = await indexedSourceIds();
+  if (lexicalIds.length === 0) return [];
+  params.push(lexicalIds);
+  entryFilters.push(`e."sourceId" = ANY($${params.length}::uuid[])`);
   if (opts.sources?.length) {
     params.push(opts.sources);
     entryFilters.push(`s.slug = ANY($${params.length}::text[])`);
