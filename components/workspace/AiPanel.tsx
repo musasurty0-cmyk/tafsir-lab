@@ -459,7 +459,10 @@ export default function AiPanel({ pageId, surahNumber, surahName, onAddToEditor,
       <div className="lab-body">
         {turns.length === 0 && (
           <div className="lab-empty">
-            <span className="lab-empty-mark" aria-hidden><Sparkles size={22} /></span>
+            {/* The mark is the orb, idling. A sparkle in a tinted tile said
+                "AI feature" the way 2018 said it; this says what the panel
+                actually does, in the same ink as everything it will draw. */}
+            <ThinkingOrb state="breathing" size={64} displaySize={54} className="lab-empty-orb" aria-hidden />
             <p className="lab-empty-title">Lab AI</p>
             <p className="lab-empty-sub">
               Ask about any verse or search your notes. Every answer is drawn from
@@ -494,7 +497,7 @@ export default function AiPanel({ pageId, surahNumber, surahName, onAddToEditor,
                      notes reads differently from writing. */
                   <div className="lab-bubble lab-thinking" role="status">
                     <ThinkingOrb
-                      size={64}
+                      size={64} displaySize={54}
                       state={orbForStep(lastStep(t))}
                       className="lab-orb"
                       aria-hidden

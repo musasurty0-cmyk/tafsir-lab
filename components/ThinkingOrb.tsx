@@ -27,6 +27,12 @@ interface Props {
   state?: OrbState;
   /** 64 (chat scale) or 20 (inline). They are separate designs, not a scale. */
   size?: OrbSize;
+  /** CSS size, when it should not equal the preset. The two presets are tuned
+   *  designs with their own dot counts, so this draws at `size` and displays
+   *  the result smaller — the dots shrink with everything else and the tuning
+   *  is left alone. Rendering into a canvas larger than its box costs nothing
+   *  but sharpness. */
+  displaySize?: number;
   /** Multiplier on the preset's own tuned speed. */
   speed?: number;
   className?: string;
@@ -56,8 +62,9 @@ function useDark(): boolean {
 }
 
 export default function ThinkingOrb({
-  state = "working", size = 64, speed = 1, className, ...aria
+  state = "working", size = 64, displaySize, speed = 1, className, ...aria
 }: Props) {
+  const box = displaySize ?? size;
   const ref  = useRef<HTMLCanvasElement>(null);
   const dark = useDark();
 
@@ -117,7 +124,7 @@ export default function ThinkingOrb({
       ref={ref}
       role="img"
       className={className}
-      style={{ width: size, height: size, display: "block" }}
+      style={{ width: box, height: box, display: "block" }}
       {...aria}
     />
   );

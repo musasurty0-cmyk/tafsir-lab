@@ -12663,14 +12663,17 @@ body:has(.lab) .mode-b-zoom-controls {
   word-break: break-word;
 }
 
+/* Bare, at the weight of a margin note. It was a filled green disc with a
+   border beside every answer — the loudest thing in a column of reading, and
+   saying only "this one is from the assistant", which the layout already
+   says. */
 .lab-avatar {
   flex: none;
   display: grid; place-items: center;
-  width: 26px; height: 26px; border-radius: 50%;
-  color: var(--accent-ink, var(--ink));
-  background: color-mix(in oklab, var(--accent) 26%, transparent);
-  border: 1px solid color-mix(in oklab, var(--accent) 34%, transparent);
-  margin-top: 2px;
+  width: 22px; height: 22px;
+  color: var(--ink-4);
+  margin-top: 5px;
+  opacity: 0.85;
 }
 .lab-said {
   flex: 1; min-width: 0;
@@ -12783,11 +12786,10 @@ body:has(.lab) .mode-b-zoom-controls {
 .lab-orb, .as-orb {
   flex: none;
   display: block;
-  /* The 64 preset, not the 20: the two are separate designs with their own dot
-     counts and tuning rather than one scaled, and at 20px the motion was too
-     small to read as motion at all. */
-  width: 64px; height: 64px;
-  margin: -6px -4px -6px -8px;   /* it carries its own breathing room */
+  /* The box comes inline from the component's displaySize: the 64 preset drawn
+     into a 54px box, so the dots come down 15% with everything else without
+     leaving the tuning. */
+  margin: -5px -3px -5px -7px;   /* it carries its own breathing room */
 }
 
 /* ── Retrieval trace ────────────────────────────────────────────────────────
@@ -12886,13 +12888,10 @@ body:has(.lab) .mode-b-zoom-controls {
   text-align: center; padding: 22px 16px; gap: 7px;
   animation: lab-bubble-in 320ms var(--ease-overlay) both;
 }
-.lab-empty-mark {
-  display: grid; place-items: center;
-  width: 46px; height: 46px; border-radius: 14px; margin-bottom: 4px;
-  color: var(--accent-ink, var(--ink));
-  background: color-mix(in oklab, var(--accent) 18%, transparent);
-  border: 1px solid color-mix(in oklab, var(--accent) 28%, transparent);
-}
+/* The idling orb, as the panel's mark. No tile behind it: the orb is drawn as
+   ink on nothing, and a tinted rounded square around it puts chrome in front of
+   the one element carrying the panel's whole visual idea. */
+.lab-empty-orb { margin-bottom: 2px; }
 .lab-empty-title { font-size: 15px; font-weight: 620; color: var(--ink); margin: 0; }
 .lab-empty-sub {
   font-size: 12.5px; color: var(--ink-4); margin: 0;
@@ -12900,9 +12899,11 @@ body:has(.lab) .mode-b-zoom-controls {
 }
 .lab-suggest { display: grid; gap: 7px; margin-top: 14px; width: 100%; }
 .lab-suggest button {
-  padding: 9px 13px; border-radius: 11px; text-align: left;
+  /* A line of text you can press, not a filled chip: a fill AND a border AND
+     a radius was three treatments doing one job. */
+  padding: 10px 14px; border-radius: 12px; text-align: left;
   font-size: 12.5px; color: var(--ink-2);
-  background: color-mix(in oklab, var(--ink) 4%, transparent);
+  background: none;
   border: 1px solid var(--line); cursor: pointer;
   animation: lab-bubble-in 300ms var(--ease-overlay) both;
   transition: background var(--dur-fast) ease, border-color var(--dur-fast) ease,
