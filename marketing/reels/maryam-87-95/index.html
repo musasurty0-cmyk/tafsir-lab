@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=1080, height=1920">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;0,7..72,700;1,7..72,500&family=Source+Serif+4:ital,opsz,wght@1,8..60,500&family=Scheherazade+New:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      /* ══════════════════════════════════════════════════════════════════
+         maryam-87-95 — 61s, 1080×1920, LIGHT.
+
+         Sūrat Maryam 87–95, recited, set as pages of the Mushaf view: warm
+         paper, the āyah in Uthmani script, its number between two rules, the
+         meaning beneath.
+
+         THE ARABIC DOES NOT MOVE. It arrives, and then it is still. There is
+         no word-by-word lighting on it — the recitation is being heard, the
+         eye follows the ear, and highlighting parts of Qurʾānic text on a
+         timing I cannot verify to the word would be a claim I cannot make.
+         What is timed is what I measured: which āyah is on screen, and when
+         the meaning arrives under it.
+
+         No music. Nothing plays under the recitation.
+         ══════════════════════════════════════════════════════════════════ */
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+
+      :root {
+        --bg:     #fcfbf8;
+        --ink:    #292621;
+        --ink-2:  #57534b;
+        --ink-3:  #6e695f;
+        --line:   rgba(41, 38, 33, 0.13);
+        --accent: #a8762a;
+
+        --sans:   "Inter", -apple-system, "Segoe UI", system-ui, Arial, sans-serif;
+        --serif:  "Literata", Georgia, serif;
+        --brand:  "Source Serif 4", Georgia, serif;
+        /* Scheherazade New, not Amiri Quran. Amiri Quran is the obvious pick
+           for Uthmani text and it is what the app lists first — but the build
+           Google Fonts serves has broken mark attachment in Chrome: the
+           ḥarakāt render in a detached row floating above the letters instead
+           of sitting on them. Verified side by side in a real browser, and
+           self-hosting the same woff2 did not fix it, so it is the font build
+           and not the delivery. Scheherazade New sets the same text correctly
+           and is already the app's own fallback for Uthmani script
+           (`--font-uthmanic` in app/globals.css). */
+        --quran:  "Scheherazade New", serif;
+      }
+
+      html, body {
+        width: 1080px; height: 1920px; overflow: hidden;
+        background: var(--bg); font-family: var(--sans);
+        -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+      }
+      #root { position: relative; width: 1080px; height: 1920px; background: var(--bg); }
+      .clip { position: absolute; inset: 0; overflow: hidden; }
+
+      .paper { position: absolute; inset: 0; background: var(--bg); }
+      .dots {
+        position: absolute; inset: 0;
+        background: radial-gradient(rgba(41, 38, 33, 0.09) 1.5px, transparent 1.5px);
+        background-size: 30px 30px;
+        /* Static. Nothing in the background moves. */
+      }
+
+      .rail { position: absolute; left: 96px; right: 96px; top: 300px; display: flex; align-items: center; }
+      .rail-track { position: relative; flex: 1; height: 2px; background: var(--line); }
+      .rail-fill {
+        position: absolute; inset: 0; background: var(--accent); opacity: 0.55;
+        transform-origin: 0% 50%; transform: scaleX(0);
+      }
+
+      .stage { position: absolute; left: 70px; right: 70px; top: 500px; height: 940px; }
+      .beat {
+        position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%);
+        display: flex; flex-direction: column; align-items: center;
+        text-align: center; opacity: 0;
+      }
+      .bmv { display: flex; flex-direction: column; align-items: center; width: 100%; }
+
+      /* The āyah number, held between two hairlines — the Mushaf's own way of
+         marking one off, not a badge borrowed from a UI. */
+      .aya-num { display: flex; align-items: center; gap: 22px; margin-bottom: 40px; }
+      .aya-num i { display: block; width: 110px; height: 1px; background: var(--line); }
+      .aya-num span {
+        font-family: var(--quran); font-size: 42px; color: var(--accent);
+        line-height: 1; padding-bottom: 6px;
+      }
+
+      .aya-ar {
+        font-family: var(--quran); line-height: 2.0;
+        color: var(--ink); direction: rtl; max-width: 940px;
+        word-spacing: 0.04em;
+      }
+
+      /* No `transform: scaleX(0)` here: GSAP animates scaleX on this class and
+         would overwrite the whole CSS transform. The closed state is set on the
+         timeline at t=0 instead, which is the one place that owns it. */
+      .aya-rule {
+        width: 300px; height: 2px; background: var(--accent); opacity: 0.45;
+        margin: 46px 0 40px; transform-origin: 50% 50%;
+      }
+
+      .aya-en {
+        font-family: var(--serif); font-weight: 400; font-size: 50px;
+        line-height: 1.5; color: var(--ink-2); max-width: 880px;
+        letter-spacing: -0.012em;
+      }
+      .aya-en2 { margin-top: 14px; }
+
+      /* ── The closing card ───────────────────────────────────────────── */
+      .brand-row { display: flex; align-items: center; gap: 34px; }
+      .tile {
+        width: 148px; height: 148px; border-radius: 34px; background: var(--ink);
+        display: flex; align-items: center; justify-content: center;
+        box-shadow: 0 26px 60px rgba(41, 38, 33, 0.22);
+      }
+      .tile .t {
+        font-family: var(--brand); font-style: normal; font-weight: 600;
+        font-size: 92px; line-height: 1; color: var(--bg); padding-bottom: 8px;
+      }
+      .wordmark {
+        font-family: var(--brand); font-style: italic; font-weight: 500;
+        font-size: 108px; letter-spacing: -0.02em; color: var(--ink); white-space: nowrap;
+      }
+      .wm-clip { overflow: hidden; padding: 6px 0; }
+      .url-clip { overflow: hidden; }
+      .close-rule {
+        width: 360px; height: 3px; background: var(--accent); opacity: 0.5;
+        margin: 40px 0 22px; transform-origin: 50% 50%; transform: scaleX(0);
+      }
+      .close-url {
+        font-family: var(--sans); font-size: 30px; font-weight: 500;
+        letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3);
+      }
+
+      .foot {
+        position: absolute; left: 96px; right: 96px; top: 1500px;
+        display: flex; align-items: center; justify-content: space-between;
+        font-family: var(--sans); font-size: 24px; font-weight: 500;
+        letter-spacing: 0.1em; text-transform: uppercase; color: #8a8579;
+        padding-top: 22px; border-top: 1px solid var(--line); opacity: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="61.00"
+         data-fps="30" data-width="1080" data-height="1920">
+
+      <div id="scene" class="clip" data-start="0" data-duration="61.00" data-track-index="1">
+        <div class="paper"></div>
+        <div class="dots"></div>
+
+        <div class="rail"><div class="rail-track"><div class="rail-fill" id="rail-fill"></div></div></div>
+
+        <div class="stage" id="stage">
+          <div class="beat" id="a87" data-layout-allow-overlap="true">
+            <div class="bmv">
+              <div class="aya-num"><i></i><span>٨٧</span><i></i></div>
+              <p class="aya-ar" style="font-size:54px" dir="rtl" lang="ar">لَّا يَمْلِكُونَ ٱلشَّفَـٰعَةَ إِلَّا مَنِ ٱتَّخَذَ عِندَ ٱلرَّحْمَـٰنِ عَهْدًا</p>
+              <div class="aya-rule" id="rule-87"></div>
+              <p class="aya-en" id="en-87">None will have [power of] intercession except he who had taken from the Most Merciful a covenant.</p>
+            </div>
+          </div>
+
+          <div class="beat" id="a88" data-layout-allow-overlap="true">
+            <div class="bmv">
+              <div class="aya-num"><i></i><span>٨٨</span><i></i></div>
+              <p class="aya-ar" style="font-size:72px" dir="rtl" lang="ar">وَقَالُوا۟ ٱتَّخَذَ ٱلرَّحْمَـٰنُ وَلَدًا</p>
+              <div class="aya-rule" id="rule-88"></div>
+              <p class="aya-en" id="en-88">And they say, "The Most Merciful has taken [for Himself] a son."</p>
+            </div>
+          </div>
+
+          <div class="beat" id="a89" data-layout-allow-overlap="true">
+            <div class="bmv">
+              <div class="aya-num"><i></i><span>٨٩</span><i></i></div>
+              <p class="aya-ar" style="font-size:78px" dir="rtl" lang="ar">لَّقَدْ جِئْتُمْ شَيْـًٔا إِدًّا</p>
+              <div class="aya-rule" id="rule-89"></div>
+              <p class="aya-en" id="en-89">You have done an atrocious thing.</p>
+            </div>
+          </div>
+
+          <div class="beat" id="a90" data-layout-allow-overlap="true">
+            <div class="bmv">
+              <div class="aya-num"><i></i><span>٩٠</span><i></i></div>
+              <p class="aya-ar" style="font-size:49px" dir="rtl" lang="ar">تَكَادُ ٱلسَّمَـٰوَٰتُ يَتَفَطَّرْنَ مِنْهُ وَتَنشَقُّ ٱلْأَرْضُ وَتَخِرُّ ٱلْجِبَالُ هَدًّا</p>
+              <div class="aya-rule" id="rule-90"></div>
+              <p class="aya-en" id="en-90">The heavens almost rupture therefrom</p>
+              <p class="aya-en aya-en2" id="en2-90">and the earth splits open and the mountains collapse in devastation</p>
+            </div>
+          </div>
+
+          <div class="beat" id="a91" data-layout-allow-overlap="true">
+            <div class="bmv">
+              <div class="aya-num"><i></i><span>٩١</span><i></i></div>
+              <p class="aya-ar" style="font-size:72px" dir="rtl" lang="ar">أَن دَعَوْا۟ لِلرَّحْمَـٰنِ وَلَدًا</p>
+              <div class="aya-rule" id="rule-91"></div>
+              <p class="aya-en" id="en-91">That they attribute to the Most Merciful a son.</p>
+            </div>
+          </div>
+
+          <div class="beat" id="a92" data-layout-allow-overlap="true">
+            <div class="bmv">
+              <div class="aya-num"><i></i><span>٩٢</span><i></i></div>
+              <p class="aya-ar" style="font-size:60px" dir="rtl" lang="ar">وَمَا يَنۢبَغِى لِلرَّحْمَـٰنِ أَن يَتَّخِذَ وَلَدًا</p>
+              <div class="aya-rule" id="rule-92"></div>
+              <p class="aya-en" id="en-92">And it is not appropriate for the Most Merciful that He should take a son.</p>
+            </div>
+          </div>
+
+          <div class="beat" id="a93" data-layout-allow-overlap="true">
+            <div class="bmv">
+              <div class="aya-num"><i></i><span>٩٣</span><i></i></div>
+              <p class="aya-ar" style="font-size:52px" dir="rtl" lang="ar">إِن كُلُّ مَن فِى ٱلسَّمَـٰوَٰتِ وَٱلْأَرْضِ إِلَّآ ءَاتِى ٱلرَّحْمَـٰنِ عَبْدًا</p>
+              <div class="aya-rule" id="rule-93"></div>
+              <p class="aya-en" id="en-93">There is no one in the heavens and earth but that he comes to the Most Merciful as a servant.</p>
+            </div>
+          </div>
+
+          <div class="beat" id="a94" data-layout-allow-overlap="true">
+            <div class="bmv">
+              <div class="aya-num"><i></i><span>٩٤</span><i></i></div>
+              <p class="aya-ar" style="font-size:72px" dir="rtl" lang="ar">لَّقَدْ أَحْصَىٰهُمْ وَعَدَّهُمْ عَدًّا</p>
+              <div class="aya-rule" id="rule-94"></div>
+              <p class="aya-en" id="en-94">He has enumerated them and counted them a [full] counting.</p>
+            </div>
+          </div>
+
+          <div class="beat" id="a95" data-layout-allow-overlap="true">
+            <div class="bmv">
+              <div class="aya-num"><i></i><span>٩٥</span><i></i></div>
+              <p class="aya-ar" style="font-size:63px" dir="rtl" lang="ar">وَكُلُّهُمْ ءَاتِيهِ يَوْمَ ٱلْقِيَـٰمَةِ فَرْدًا</p>
+              <div class="aya-rule" id="rule-95"></div>
+              <p class="aya-en" id="en-95">And all of them are coming to Him on the Day of Resurrection alone.</p>
+            </div>
+          </div>
+
+          <div class="beat" id="close" data-layout-allow-overlap="true">
+            <div class="bmv">
+              <div class="brand-row">
+                <div class="tile"><span class="t">T</span></div>
+                <div class="wm-clip"><div class="wordmark">TafsirLab</div></div>
+              </div>
+              <div class="close-rule" id="close-rule"></div>
+              <div class="url-clip"><div class="close-url">tafsir-lab.com</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="foot" id="foot">
+          <span>Sūrat Maryam · 19:87–95</span>
+          <span>TafsirLab</span>
+        </div>
+      </div>
+
+      <audio id="au-rec" data-start="0" data-duration="58.60" data-volume="1"
+             src="audio/recitation.flac"></audio>
+    </div>
+
+    <script>
+      const DUR = 61.00;
+      const REC_END = 58.60;
+      const tl = gsap.timeline({ paused: true });
+
+      /* A card arrives, holds perfectly still, and leaves upward — the same
+         roll for every āyah, because none of them is more important than
+         another and a different entrance each time would be saying so. */
+      function card(sel, inAt, outAt, leaves) {
+        tl.set(sel, { opacity: 0 }, 0);
+        tl.set(sel, { opacity: 1 }, inAt);
+        tl.fromTo(sel + " .bmv", { y: 44, opacity: 0 },
+          { y: 0, opacity: 1, duration: 0.40, ease: "power3.out", immediateRender: false }, inAt);
+        if (leaves) {
+          tl.to(sel + " .bmv", { y: -34, opacity: 0, duration: 0.16, ease: "power2.in" }, outAt);
+          tl.set(sel, { opacity: 0 }, outAt + 0.155);
+        }
+      }
+      function reveal(sel, at) {
+        tl.set(sel, { opacity: 0 }, 0);
+        tl.fromTo(sel, { y: 18, opacity: 0 },
+          { y: 0, opacity: 1, duration: 0.42, ease: "power2.out", immediateRender: false }, at);
+      }
+
+      /* Every rule starts closed. */
+      gsap.utils.toArray(".aya-rule").forEach((r) => tl.set(r, { scaleX: 0 }, 0));
+
+      /* The rail tracks the recitation, not the composition — it is full when
+         he finishes, and the closing card is not part of the reading. */
+      tl.set("#rail-fill", { scaleX: 0 }, 0);
+      tl.to("#rail-fill", { scaleX: 1, duration: REC_END, ease: "none" }, 0);
+
+      tl.set("#foot", { opacity: 0 }, 0);
+      tl.to("#foot", { opacity: 1, duration: 0.6, ease: "power2.out" }, 0.5);
+      tl.to("#foot", { opacity: 0, duration: 0.24, ease: "power2.in" }, 59.00 - 0.36);
+      tl.to(".rail", { opacity: 0, duration: 0.24, ease: "power2.in" }, 59.00 - 0.36);
+
+      card("#a87", 0.00, 8.74, true);
+      tl.to("#rule-87", { scaleX: 1, duration: 0.42, ease: "power2.out" }, 0.30);
+      reveal("#en-87", 0.55);
+      card("#a88", 8.90, 12.68, true);
+      tl.to("#rule-88", { scaleX: 1, duration: 0.42, ease: "power2.out" }, 9.22);
+      reveal("#en-88", 9.47);
+      card("#a89", 12.84, 15.54, true);
+      tl.to("#rule-89", { scaleX: 1, duration: 0.42, ease: "power2.out" }, 13.16);
+      reveal("#en-89", 13.41);
+      card("#a90", 15.70, 27.80, true);
+      tl.to("#rule-90", { scaleX: 1, duration: 0.42, ease: "power2.out" }, 16.02);
+      reveal("#en-90", 16.27);
+      reveal("#en2-90", 23.20);   // his breath inside the ayah
+      card("#a91", 27.96, 33.56, true);
+      tl.to("#rule-91", { scaleX: 1, duration: 0.42, ease: "power2.out" }, 28.28);
+      reveal("#en-91", 28.53);
+      card("#a92", 33.72, 39.95, true);
+      tl.to("#rule-92", { scaleX: 1, duration: 0.42, ease: "power2.out" }, 34.04);
+      reveal("#en-92", 34.29);
+      card("#a93", 40.11, 48.72, true);
+      tl.to("#rule-93", { scaleX: 1, duration: 0.42, ease: "power2.out" }, 40.43);
+      reveal("#en-93", 40.68);
+      card("#a94", 48.88, 53.31, true);
+      tl.to("#rule-94", { scaleX: 1, duration: 0.42, ease: "power2.out" }, 49.20);
+      reveal("#en-94", 49.45);
+      card("#a95", 53.47, 58.82, true);
+      tl.to("#rule-95", { scaleX: 1, duration: 0.42, ease: "power2.out" }, 53.79);
+      reveal("#en-95", 54.04);
+
+      /* ── The close ───────────────────────────────────────────────────── */
+      card("#close", 59.00, 0, false);
+      tl.set("#close .tile",      { scale: 0.82 }, 0);
+      tl.set("#close .wordmark",  { xPercent: -106 }, 0);
+      tl.set("#close-rule",       { scaleX: 0 }, 0);
+      tl.set("#close .close-url", { yPercent: 115 }, 0);
+      tl.fromTo("#close .tile", { scale: 0.82 },
+        { scale: 1, duration: 0.42, ease: "back.out(1.8)", immediateRender: false }, 59.00 + 0.06);
+      tl.fromTo("#close .wordmark", { xPercent: -106 },
+        { xPercent: 0, duration: 0.44, ease: "power3.out", immediateRender: false }, 59.00 + 0.14);
+      tl.to("#close-rule", { scaleX: 1, duration: 0.40, ease: "power2.out" }, 59.00 + 0.44);
+      tl.fromTo("#close .close-url", { yPercent: 115 },
+        { yPercent: 0, duration: 0.34, ease: "power3.out", immediateRender: false }, 59.00 + 0.64);
+
+      tl.seek(0);
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>

@@ -1,0 +1,84 @@
+{
+  "surah": 19,
+  "surahArabic": "مَرْيَم",
+  "surahEnglish": "Maryam",
+  "range": "87–95",
+  "source": {
+    "name": "api.quran.com v4",
+    "arabic": "text_uthmani",
+    "translation": "Saheeh International (resource 20)",
+    "note": "Arabic and translation are verbatim from the API, as the app itself fetches them."
+  },
+  "audio": {
+    "file": "audio/recitation.flac",
+    "duration": 58.6,
+    "note": "Left channel of the source; summing L+R loses ~8 dB to phase cancellation."
+  },
+  "verses": [
+    {
+      "n": 87,
+      "arabic": "لَّا يَمْلِكُونَ ٱلشَّفَـٰعَةَ إِلَّا مَنِ ٱتَّخَذَ عِندَ ٱلرَّحْمَـٰنِ عَهْدًا",
+      "english": "None will have [power of] intercession except he who had taken from the Most Merciful a covenant.",
+      "start": 0.0,
+      "end": 8.92
+    },
+    {
+      "n": 88,
+      "arabic": "وَقَالُوا۟ ٱتَّخَذَ ٱلرَّحْمَـٰنُ وَلَدًا",
+      "english": "And they say, \"The Most Merciful has taken [for Himself] a son.\"",
+      "start": 8.92,
+      "end": 12.86
+    },
+    {
+      "n": 89,
+      "arabic": "لَّقَدْ جِئْتُمْ شَيْـًٔا إِدًّا",
+      "english": "You have done an atrocious thing.",
+      "start": 12.86,
+      "end": 15.72
+    },
+    {
+      "n": 90,
+      "arabic": "تَكَادُ ٱلسَّمَـٰوَٰتُ يَتَفَطَّرْنَ مِنْهُ وَتَنشَقُّ ٱلْأَرْضُ وَتَخِرُّ ٱلْجِبَالُ هَدًّا",
+      "english": "The heavens almost rupture therefrom",
+      "start": 15.72,
+      "end": 27.98,
+      "english2": "and the earth splits open and the mountains collapse in devastation",
+      "split": 23.2
+    },
+    {
+      "n": 91,
+      "arabic": "أَن دَعَوْا۟ لِلرَّحْمَـٰنِ وَلَدًا",
+      "english": "That they attribute to the Most Merciful a son.",
+      "start": 27.98,
+      "end": 33.74
+    },
+    {
+      "n": 92,
+      "arabic": "وَمَا يَنۢبَغِى لِلرَّحْمَـٰنِ أَن يَتَّخِذَ وَلَدًا",
+      "english": "And it is not appropriate for the Most Merciful that He should take a son.",
+      "start": 33.74,
+      "end": 40.13
+    },
+    {
+      "n": 93,
+      "arabic": "إِن كُلُّ مَن فِى ٱلسَّمَـٰوَٰتِ وَٱلْأَرْضِ إِلَّآ ءَاتِى ٱلرَّحْمَـٰنِ عَبْدًا",
+      "english": "There is no one in the heavens and earth but that he comes to the Most Merciful as a servant.",
+      "start": 40.13,
+      "end": 48.9
+    },
+    {
+      "n": 94,
+      "arabic": "لَّقَدْ أَحْصَىٰهُمْ وَعَدَّهُمْ عَدًّا",
+      "english": "He has enumerated them and counted them a [full] counting.",
+      "start": 48.9,
+      "end": 53.49
+    },
+    {
+      "n": 95,
+      "arabic": "وَكُلُّهُمْ ءَاتِيهِ يَوْمَ ٱلْقِيَـٰمَةِ فَرْدًا",
+      "english": "And all of them are coming to Him on the Day of Resurrection alone.",
+      "start": 53.49,
+      "end": 59.0
+    }
+  ]
+}
