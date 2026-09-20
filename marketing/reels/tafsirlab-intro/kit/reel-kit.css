@@ -292,14 +292,8 @@ html, body {
    kit is safe to embed as live HTML.
    ========================================================================== */
 
-@media (prefers-reduced-motion: reduce) {
-  /* Replace travel with a short opacity cross-fade; drop all overshoot. */
-  .device, .pc > img, .w > span, .spot, .tap, .tap__ring {
-    transform: none !important;
-    animation: none !important;
-    transition: opacity 200ms ease !important;
-  }
-}
+/* (no prefers-reduced-motion gate: a rendered video has no reader to ask,
+   and a frozen keyframe here would bake stillness into the MP4) */
 @media (prefers-reduced-transparency: reduce) {
   .glass { background: #14171a; backdrop-filter: none; -webkit-backdrop-filter: none; }
 }

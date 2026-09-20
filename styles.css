@@ -1327,7 +1327,6 @@ input, textarea { font: inherit; color: inherit; }
   }
 }
 
-/* (removed prefers-reduced-motion rules) */
 
 /* ---------- Modals ---------- */
 .modal-backdrop {
@@ -1498,7 +1497,6 @@ input, textarea { font: inherit; color: inherit; }
   }
 }
 
-/* (removed prefers-reduced-motion rules) */
   font-weight: 500;
   box-shadow: var(--shadow-sm);
 }

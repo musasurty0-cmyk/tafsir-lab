@@ -18,7 +18,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ThinkingOrb } from "thinking-orbs";
+import ThinkingOrb from "@/components/ThinkingOrb";
 import { orbForStep, labelForStep } from "@/lib/orb-state";
 import {
   ChevronDown, Sparkles, Send, BookOpen, Search as SearchIcon,

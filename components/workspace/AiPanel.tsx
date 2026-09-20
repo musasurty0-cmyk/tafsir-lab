@@ -24,7 +24,7 @@ import {
   Sparkles, ArrowUp, X, SquarePen, ChevronDown, AlertCircle,
   Search, BookOpen, FilePlus2, Check, Network, ScanLine,
 } from "lucide-react";
-import { ThinkingOrb } from "thinking-orbs";
+import ThinkingOrb from "@/components/ThinkingOrb";
 import { orbForStep, labelForStep } from "@/lib/orb-state";
 import { useOverlayMotion } from "@/lib/use-overlay-motion";
 import { useDismissable } from "@/lib/use-dismissable";
