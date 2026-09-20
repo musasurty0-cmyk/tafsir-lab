@@ -33,8 +33,10 @@ import type { Chapter } from "@/lib/types";
 const ROW = 56;
 /** Rows drawn either side of the centre. Enough to place yourself, not a list. */
 const WINGS = 3;
-/** A wheel gesture quieter than this is drift, not an intent to move. */
-const WHEEL_THRESHOLD = 14;
+/** Silence this long ends a wheel gesture — the equivalent of lifting a
+ *  finger. Long enough to span the gaps in a trackpad's inertia stream,
+ *  short enough that settling onto a row never feels late. */
+const WHEEL_END_MS = 90;
 /** Below this (rows/ms) a release is a placement, not a throw. */
 const FLICK_MIN = 0.0016;
 /** How long the throw keeps paying out. Higher = longer glide. */
@@ -163,20 +165,84 @@ export default function SurahSpotlight({
     return () => window.removeEventListener("keydown", onKey);
   }, [last, move, glideTo, onPick, onClose, chapters]);
 
-  /* Wheel deltas vary wildly between a mouse notch and a trackpad glide, so
-     they are accumulated and spent one step at a time. A trackpad's own
-     inertia already arrives as a stream of events, so this needs no momentum
-     of its own — the hardware supplies it. */
-  const wheelAcc = useRef(0);
-  function onWheel(e: React.WheelEvent) {
-    e.preventDefault();
-    wheelAcc.current += e.deltaY;
-    while (Math.abs(wheelAcc.current) >= WHEEL_THRESHOLD) {
-      const dir = wheelAcc.current > 0 ? 1 : -1;
-      wheelAcc.current -= dir * WHEEL_THRESHOLD;
-      move(dir);
+  /** Let go of the column at `vel` rows/ms. Shared by the pointer release and
+   *  the end of a wheel gesture, so a trackpad throw and a finger throw decay
+   *  on identical terms rather than merely similar ones. */
+  const release = useCallback((vel: number) => {
+    if (Math.abs(vel) < FLICK_MIN) {
+      glideTo(pos.current, 190);      // placed, not thrown — settle where it is
+      return;
     }
-  }
+    /* Distance is what the throw earned: velocity paid out over the glide,
+       capped so one flick cannot cross the whole Qurʾān. */
+    const travel = clamp(vel * GLIDE_MS, -MAX_FLICK_ROWS, MAX_FLICK_ROWS);
+    const target = clamp(pos.current + travel, 0, last);
+    /* Longer throws take longer to die, but never so long that the column
+       feels like it is ignoring you. */
+    const ms = clamp(260 + Math.abs(target - pos.current) * 46, 260, 900);
+    glideTo(target, ms);
+  }, [glideTo, last]);
+
+  /* The wheel is a DRAG, not a queue of steps.
+
+     It used to spend accumulated delta by calling move() once per threshold,
+     and move() restarts the glide from Math.round(pos). A trackpad emits a
+     stream of small deltas, so that cancelled and restarted the animation
+     every few milliseconds, re-rounding each time — and whenever the live
+     position sat just under .5 the round went backwards. That is the
+     shuddering: the column was being told to start again, from a different
+     place, faster than it could travel.
+
+     So the wheel now drives `pos` continuously, exactly as a finger does,
+     and the end of the gesture is a release with the same physics. Where the
+     OS supplies its own inertia the events keep arriving and the column keeps
+     moving under them; by the time they stop the measured velocity has
+     decayed, so `release` simply settles it on a row. Where there is no OS
+     inertia — a mouse wheel, or a flick cut short — our momentum carries it.
+
+     Attached natively because React's onWheel is passive: preventDefault
+     there is a no-op, so the page scrolled behind the gesture. */
+  useEffect(() => {
+    const el = boxRef.current;   // the whole panel, as before — not just the rows
+    if (!el) return;
+    let active = false;
+    let raw = pos.current;
+    let endTimer: ReturnType<typeof setTimeout> | null = null;
+    const trail: { t: number; p: number }[] = [];
+
+    const finish = () => {
+      active = false;
+      const a = trail[0], b = trail[trail.length - 1];
+      const dt = a && b ? b.t - a.t : 0;
+      release(dt > 0 ? (b.p - a.p) / dt : 0);
+      trail.length = 0;
+    };
+
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      /* Firefox reports lines, and a page for shift-wheel; a line here is a
+         row, which is the unit this column is made of. */
+      const px = e.deltaMode === 1 ? e.deltaY * ROW
+               : e.deltaMode === 2 ? e.deltaY * ROW * (WINGS * 2 + 1)
+               : e.deltaY;
+      if (!active) { active = true; stopAnim(); raw = pos.current; trail.length = 0; }
+      raw += px / ROW;
+      /* Rubber band past the ends, off the UNBANDED position — banding a
+         banded value compounds and the column seizes up at the edges. */
+      pos.current = raw < 0 ? raw / 3 : raw > last ? last + (raw - last) / 3 : raw;
+      paint();
+      trail.push({ t: performance.now(), p: pos.current });
+      if (trail.length > 5) trail.shift();
+      if (endTimer) clearTimeout(endTimer);
+      endTimer = setTimeout(finish, WHEEL_END_MS);
+    };
+
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => {
+      el.removeEventListener("wheel", onWheel);
+      if (endTimer) clearTimeout(endTimer);
+    };
+  }, [last, paint, stopAnim, release]);
 
   /* Touch/pen/mouse drag with a throw at the end. Pointer events rather than
      touch events so one path serves all three, and `setPointerCapture` keeps
@@ -233,20 +299,7 @@ export default function SurahSpotlight({
     const pts = trail.current;
     const a = pts[0], b = pts[pts.length - 1];
     const dt = a && b ? b.t - a.t : 0;
-    const vel = dt > 0 ? -((b.y - a.y) / dt) / ROW : 0;
-
-    if (Math.abs(vel) < FLICK_MIN) {
-      glideTo(pos.current, 190);      // placed, not thrown — settle where it is
-      return;
-    }
-    /* Distance is what the throw earned: velocity paid out over the glide,
-       capped so one flick cannot cross the whole Qurʾān. */
-    const travel = clamp(vel * GLIDE_MS, -MAX_FLICK_ROWS, MAX_FLICK_ROWS);
-    const target = clamp(pos.current + travel, 0, last);
-    /* Longer throws take longer to die, but never so long that the column
-       feels like it is ignoring you. */
-    const ms = clamp(260 + Math.abs(target - pos.current) * 46, 260, 900);
-    glideTo(target, ms);
+    release(dt > 0 ? -((b.y - a.y) / dt) / ROW : 0);
   }
 
   const current = chapters[i];
@@ -285,7 +338,6 @@ export default function SurahSpotlight({
         aria-label="Scroll through the Qur'an"
         aria-activedescendant={`spot-opt-${current.id}`}
         onClick={(e) => e.stopPropagation()}
-        onWheel={onWheel}
       >
         <div className="spot-head">
           <span className="spot-keys">
