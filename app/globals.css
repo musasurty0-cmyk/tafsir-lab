@@ -3972,18 +3972,19 @@ input, textarea { font: inherit; color: inherit; }
      containers (.mode-b-canvas, the focus canvas) are positioned, so 50% here
      means 50% of the board. The transform is safe: nothing tweens this bar. */
   position: absolute;
-  transform: translateX(-50%);
-  /* A bar along the bottom, centred. It has been a vertical rail on the left
-     and then on the right; both put it in the path of the hand doing the
-     drawing. Along the bottom it is out of the way of the page and reachable
-     without crossing the work. */
-  left: 50%;
-  bottom: 18px;
-  top: auto;
+  /* Down the left edge, at the owner's request. It has been a bottom bar and
+     a right-hand rail before this; the note that used to live here said the
+     left put it in the path of the drawing hand, which is true for a
+     right-hander on a tablet and is the trade being accepted. */
+  left: 18px;
+  top: 50%;
+  transform: translateY(-50%);
+  right: auto;
+  bottom: auto;
   z-index: 30;
 
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   align-items: center;
   gap: 2px;
 
@@ -4046,10 +4047,13 @@ input, textarea { font: inherit; color: inherit; }
 
 /* ── Separator ── */
 .ctr-sep {
-  width: 1px;
-  height: 20px;
+  /* The rail is a column, so its separator lies across it. The one place the
+     rail is still a row — the docked rail on a narrow screen — flips this
+     back in its own media query. */
+  width: 20px;
+  height: 1px;
   background: var(--line);
-  margin: 0 4px;
+  margin: 4px 0;
   flex-shrink: 0;
   opacity: 0.7;
 }
@@ -4070,10 +4074,12 @@ input, textarea { font: inherit; color: inherit; }
 /* ── Colour + size popover ── */
 .ctr-popover {
   position: absolute;
-  /* Upward, over the bar it belongs to — there is no room beside a control
-     that spans the bottom of the screen. */
-  bottom: calc(100% + 10px);
-  left: 50%;
+  /* Out to the side, level with the rail. It used to open upward, which was
+     right when the rail spanned the bottom of the screen and is wrong now
+     that it stands down the left edge. */
+  left: calc(100% + 10px);
+  top: 50%;
+  bottom: auto;
 
   background: var(--bg-elev);
   border-radius: var(--radius-lg);
@@ -4089,7 +4095,7 @@ input, textarea { font: inherit; color: inherit; }
   /* Closed state — inert and invisible */
   opacity: 0;
   pointer-events: none;
-  transform: translateX(-50%) translateY(6px);
+  transform: translateY(-50%) translateX(-6px);
   transition:
     opacity 160ms ease,
     transform 160ms cubic-bezier(0.16, 1, 0.3, 1);
@@ -4097,7 +4103,7 @@ input, textarea { font: inherit; color: inherit; }
 .ctr-popover[data-open="true"] {
   opacity: 1;
   pointer-events: auto;
-  transform: translateX(-50%) translateY(0);
+  transform: translateY(-50%) translateX(0);
 }
 
 .ctr-popover-label {
@@ -4337,6 +4343,18 @@ input, textarea { font: inherit; color: inherit; }
     flex-wrap: wrap;
     justify-content: center;
     gap: 2px;
+  }
+  /* Back to a row here, so the separator stands up in it and the palette
+     opens over the bar rather than off the side of the screen. */
+  .fa-rail .canvas-tool-rail .ctr-sep {
+    width: 1px; height: 20px; margin: 0 4px;
+  }
+  .fa-rail .ctr-popover {
+    left: 50%; top: auto; bottom: calc(100% + 10px);
+    transform: translateX(-50%) translateY(6px);
+  }
+  .fa-rail .ctr-popover[data-open="true"] {
+    transform: translateX(-50%) translateY(0);
   }
   .fa-toolbar {
     flex-wrap: nowrap;
@@ -13533,13 +13551,19 @@ input, textarea { font: inherit; color: inherit; }
   to   { opacity: 1; transform: none; }
 }
 
-/* The tool rail slides in from the edge it is docked to. */
+/* The tool rail fades in. It used to slide, and the slide is what put the bar
+   off-centre for months: the keyframes ended on `transform: none`, and with
+   `both` fill that final frame sticks — wiping the `translateX(-50%)` the bar
+   was centred with and leaving it half its own width to the right. The rail is
+   positioned four different ways across its contexts (floating, docked left,
+   docked bottom on narrow screens), so no single transform keyframe is correct
+   for all of them. Opacity is, and it cannot collide with layout. */
 .canvas-tool-rail {
   animation: ov-rail-in var(--dur-overlay) var(--ease-overlay) both;
 }
 @keyframes ov-rail-in {
-  from { opacity: 0; transform: translateX(-12px); }
-  to   { opacity: 1; transform: none; }
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
 /* Tooltips are the one case where travel would be noise: they are small, they

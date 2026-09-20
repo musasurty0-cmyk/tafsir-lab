@@ -236,7 +236,20 @@ export default function CanvasToolRail({
     activeTool === "pen" || activeTool === "highlight" ||
     (activeTool === "eraser" && eraserHasPopover);
 
-  const popoverTool = lastPaletteToolRef.current;
+  /* Read the LIVE tool while one with a palette is selected, and fall back to
+     the remembered one only while the popover is fading out after a switch to
+     hand / arrow / text.
+
+     It used to read the ref unconditionally, and the ref is written in an
+     effect — so on the render where you picked the highlighter it still held
+     "pen". Usually the `setPopoverOpen(true)` in the other effect forced a
+     second render and it corrected itself, which is why this looked fine most
+     of the time. But if the palette was ALREADY open — pen selected, swatches
+     up, now click highlight — that set is a no-op, React bails out, no second
+     render happens, and the highlighter opens the pen's colours. */
+  const popoverTool = isCurrentlyPalette
+    ? (activeTool as "pen" | "highlight" | "eraser")
+    : lastPaletteToolRef.current;
   const isEraser    = popoverTool === "eraser";
   const isHighlight = popoverTool === "highlight";
   const colors      = isHighlight ? HIGHLIGHT_COLORS : PEN_COLORS;
