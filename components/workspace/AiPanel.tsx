@@ -24,6 +24,8 @@ import {
   Sparkles, ArrowUp, X, SquarePen, ChevronDown, AlertCircle,
   Search, BookOpen, FilePlus2, Check, Network, ScanLine,
 } from "lucide-react";
+import { ThinkingOrb } from "thinking-orbs";
+import { orbForStep, labelForStep } from "@/lib/orb-state";
 import { useOverlayMotion } from "@/lib/use-overlay-motion";
 import { useDismissable } from "@/lib/use-dismissable";
 import { parseBlocks, type Inline } from "@/lib/lab-markdown";
@@ -34,6 +36,11 @@ import { labMarkdownToTiptap } from "@/lib/lab-to-tiptap";
 
 interface CiteRef { n: number; sourceName: string; verseKey: string }
 interface Step { step: string; detail: string; state?: string }
+
+/** The last thing the pipeline told us it was doing. */
+function lastStep(t: { steps: Step[] }): string | undefined {
+  return t.steps.length ? t.steps[t.steps.length - 1].step : undefined;
+}
 interface HitRef { sourceName: string; verseKey: string; via: string; rank: number }
 
 interface Turn {
@@ -482,9 +489,17 @@ export default function AiPanel({ pageId, surahNumber, surahName, onAddToEditor,
                   which is unusable. */}
               <div className="lab-said" aria-live="polite" aria-busy={t.running}>
                 {t.running && !t.text && t.sentences.length === 0 ? (
+                  /* Orb and label both come from the pipeline's own last step,
+                     so a long wait says WHICH part is long — searching your
+                     notes reads differently from writing. */
                   <div className="lab-bubble lab-thinking" role="status">
-                    <span className="lab-dots" aria-hidden><i /><i /><i /></span>
-                    <span>Thinking…</span>
+                    <ThinkingOrb
+                      size={20}
+                      state={orbForStep(lastStep(t))}
+                      className="lab-orb"
+                      aria-hidden
+                    />
+                    <span>{labelForStep(lastStep(t))}</span>
                   </div>
                 ) : (
                   <>

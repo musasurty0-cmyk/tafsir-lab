@@ -6,16 +6,19 @@
  * Layout: fixed to the left of .mode-b-canvas, vertically centred.
  *
  * Popover behaviour (Miro / Figma style):
- *  • Appears when the user selects or hovers the active pen / highlight button.
- *  • Auto-hides after ~1.25 s of inactivity (timer resets on any interaction).
- *  • Stays open while the mouse is anywhere in the rail + popover zone.
- *  • Closes immediately when switching to a non-palette tool.
+ *  • Appears when the user selects a pen / highlight / eraser button.
+ *  • Tapping that same button again puts it away.
+ *  • Closes on Escape, on a pointer landing anywhere outside the rail (the
+ *    board included), and on switching to a tool that has no palette.
+ *  • Never closes on a timer — it used to hide itself 1.25 s after you stopped
+ *    touching it, which read as the menu vanishing on its own.
  *  • Smooth 160 ms fade + slide transition in both directions.
  *  • The popover is always in the DOM (not unmounted) so the exit transition
  *    plays correctly; `pointer-events:none` keeps it fully inert when hidden.
  */
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import { useDismissable } from "@/lib/use-dismissable";
 import type { DrawTool } from "./DrawingCanvas";
 
 // ── Palette configuration ─────────────────────────────────────────────────
@@ -77,7 +80,6 @@ export const ERASER_SIZE_KEY         = "tl-eraser-size";
 /** localStorage key remembering the last used pen width */
 export const PEN_SIZE_KEY            = "tl-pen-size";
 
-const HIDE_DELAY_MS = 1250;
 
 // ── Icons ─────────────────────────────────────────────────────────────────
 
@@ -231,7 +233,12 @@ export default function CanvasToolRail({
 
   // Track the last popover-bearing tool so the popover shows correct content
   // while fading out after the user switches to arrow / hand / text.
-  const lastPaletteToolRef = useRef<"pen" | "highlight" | "eraser">("pen");
+  /* State, not a ref: it is read during render to pick the palette's contents,
+     and a ref read during render is both a lint error and a real staleness
+     hazard — the value changes without scheduling the render that would show
+     it. */
+  const [lastPaletteTool, setLastPaletteTool] =
+    useState<"pen" | "highlight" | "eraser">("pen");
   const isCurrentlyPalette =
     activeTool === "pen" || activeTool === "highlight" ||
     (activeTool === "eraser" && eraserHasPopover);
@@ -249,7 +256,7 @@ export default function CanvasToolRail({
      render happens, and the highlighter opens the pen's colours. */
   const popoverTool = isCurrentlyPalette
     ? (activeTool as "pen" | "highlight" | "eraser")
-    : lastPaletteToolRef.current;
+    : lastPaletteTool;
   const isEraser    = popoverTool === "eraser";
   const isHighlight = popoverTool === "highlight";
   const colors      = isHighlight ? HIGHLIGHT_COLORS : PEN_COLORS;
@@ -258,36 +265,36 @@ export default function CanvasToolRail({
 
   // ── Timer helpers ───────────────────────────────────────────────────────
 
-  const hideTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isFirstRender = useRef(true);
+  const railRef       = useRef<HTMLDivElement>(null);
 
-  const cancelHide = useCallback(() => {
-    if (hideTimerRef.current) { clearTimeout(hideTimerRef.current); hideTimerRef.current = null; }
-  }, []);
+  /* The palette used to close itself 1.25s after you stopped touching it,
+     which is what "it disappears randomly" was. A menu should close because
+     you dismissed it, so it now closes on exactly four things: picking the
+     same tool again, pressing Escape, pointing at anything outside the rail
+     (the board included), and choosing a tool that has no palette. Nothing
+     closes on a clock. */
+  useEffect(() => {
+    if (!popoverOpen) return;
+    function onDown(e: PointerEvent) {
+      const rail = railRef.current;
+      if (rail && e.target instanceof Node && rail.contains(e.target)) return;
+      setPopoverOpen(false);
+    }
+    // Capture, so it still runs for a board that stops propagation itself.
+    document.addEventListener("pointerdown", onDown, true);
+    return () => document.removeEventListener("pointerdown", onDown, true);
+  }, [popoverOpen]);
 
-  const scheduleHide = useCallback(() => {
-    if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
-    hideTimerRef.current = setTimeout(() => setPopoverOpen(false), HIDE_DELAY_MS);
-  }, []);
-
-  const openAndSchedule = useCallback(() => {
-    cancelHide();
-    setPopoverOpen(true);
-    // schedule auto-hide from the moment of opening
-    hideTimerRef.current = setTimeout(() => setPopoverOpen(false), HIDE_DELAY_MS);
-  }, [cancelHide]);
-
-  // Cleanup on unmount
-  useEffect(() => () => { if (hideTimerRef.current) clearTimeout(hideTimerRef.current); }, []);
+  useDismissable(() => setPopoverOpen(false), popoverOpen);
 
   // When activeTool changes externally (keyboard shortcut etc.), update popover
   useEffect(() => {
     if (isFirstRender.current) { isFirstRender.current = false; return; }
     if (activeTool === "pen" || activeTool === "highlight" ||
         (activeTool === "eraser" && eraserHasPopover)) {
-      openAndSchedule();
+      setPopoverOpen(true);
     } else {
-      cancelHide();
       setPopoverOpen(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -298,15 +305,12 @@ export default function CanvasToolRail({
   function handleColor(c: string) {
     if (isHighlight) onHighlightColorChange(c);
     else             onPenColorChange(c);
-    scheduleHide(); // interaction resets the auto-hide clock
   }
   function handleWidth(w: number) {
     onStrokeSizeChange(w);
-    scheduleHide();
   }
   function handleEraserSize(w: number) {
     onEraserSizeChange?.(w);
-    scheduleHide();
   }
 
   // ── Rail mouse zone handlers ────────────────────────────────────────────
@@ -315,12 +319,11 @@ export default function CanvasToolRail({
   //              the popover) → start the hide timer. The popover's own
   //              onMouseEnter cancels it if the user bridges the gap.
 
-  /* Written in an effect rather than during render: assigning a ref while
-     rendering is a genuine hazard under concurrent rendering, and this one is
-     read on the very next line to choose the popover's contents. */
+  /* Recorded in an effect so the popover keeps showing the right palette while
+     it fades out after a switch to hand, arrow or text. */
   useEffect(() => {
     if (isCurrentlyPalette) {
-      lastPaletteToolRef.current = activeTool as "pen" | "highlight" | "eraser";
+      setLastPaletteTool(activeTool as "pen" | "highlight" | "eraser");
     }
   }, [isCurrentlyPalette, activeTool]);
 
@@ -329,21 +332,10 @@ export default function CanvasToolRail({
      been cancelled, so it stayed up until something else happened to dismiss
      it. A tool that has no palette should not be showing one. */
   useEffect(() => {
-    if (!isCurrentlyPalette) {
-      if (hideTimerRef.current) { clearTimeout(hideTimerRef.current); hideTimerRef.current = null; }
-      setPopoverOpen(false);
-    }
+    if (!isCurrentlyPalette) setPopoverOpen(false);
   }, [isCurrentlyPalette]);
 
-  function onRailEnter() {
-    if (isCurrentlyPalette) {
-      cancelHide();
-      setPopoverOpen(true);
-    }
-  }
-  function onRailLeave() {
-    if (popoverOpen) scheduleHide();
-  }
+
 
   // iOS Safari frequently does NOT synthesise a `click` for an Apple Pencil
   // tap, so onClick-only buttons ignore the stylus (you "had to use a finger"
@@ -365,23 +357,28 @@ export default function CanvasToolRail({
   }
 
   function selectTool(id: DrawTool) {
-    onToolChange(id);
-    // Re-selecting an already-active palette tool: re-open and reset timer
-    if ((id === "pen" || id === "highlight" ||
-         (id === "eraser" && eraserHasPopover)) && id === activeTool) {
-      openAndSchedule();
+    const hasPalette = id === "pen" || id === "highlight" ||
+                       (id === "eraser" && eraserHasPopover);
+    /* Tapping the tool you are already on toggles its palette. It used to
+       re-open it unconditionally, so there was no way to put it away from the
+       rail itself — you pressed the button again and nothing appeared to
+       happen. */
+    if (hasPalette && id === activeTool) {
+      setPopoverOpen((open) => !open);
+      return;
     }
+    onToolChange(id);
+    if (hasPalette) setPopoverOpen(true);
   }
 
   // ── Render ────────────────────────────────────────────────────────────
 
   return (
     <div
+      ref={railRef}
       className="canvas-tool-rail"
       onPointerDown={(e) => e.stopPropagation()}
       onPointerUp={(e) => e.stopPropagation()}
-      onMouseEnter={onRailEnter}
-      onMouseLeave={onRailLeave}
     >
 
       {/* ── Tool buttons ── */}
@@ -454,8 +451,6 @@ export default function CanvasToolRail({
         data-open={popoverOpen ? "true" : "false"}
         onPointerDown={(e) => e.stopPropagation()}
         onPointerUp={(e) => e.stopPropagation()}
-        onMouseEnter={cancelHide}
-        onMouseLeave={scheduleHide}
       >
         {isEraser ? (
           <>

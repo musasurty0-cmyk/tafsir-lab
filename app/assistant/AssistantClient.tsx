@@ -18,6 +18,8 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { ThinkingOrb } from "thinking-orbs";
+import { orbForStep, labelForStep } from "@/lib/orb-state";
 import {
   ChevronDown, Sparkles, Send, BookOpen, Search as SearchIcon,
   Languages, Filter, AlertCircle, Loader2,
@@ -41,6 +43,11 @@ interface Props {
 // ── Stream shapes ──────────────────────────────────────────────────────────
 
 interface Step { step: string; detail: string; state?: string; pinned?: string[] }
+
+/** The last thing the pipeline told us it was doing. */
+function lastStep(t: { steps: Step[] }): string | undefined {
+  return t.steps.length ? t.steps[t.steps.length - 1].step : undefined;
+}
 interface HitRef {
   sourceName: string; sourceSlug: string; verseKey: string;
   via: string; rank: number; language: string;
@@ -342,10 +349,13 @@ export default function AssistantClient({ user, sources, streak }: Props) {
                 aria-expanded={t.openTrace}
               >
                 {t.running
-                  ? <Loader2 size={15} className="rec-spin" aria-hidden />
+                  ? <ThinkingOrb size={20} state={orbForStep(lastStep(t))}
+                                 className="as-orb" aria-hidden />
                   : <ChevronDown size={15} aria-hidden className="as-trace-chev" />}
                 <span>
-                  {t.running ? "Working…" : `Searched ${t.searched.length || 0} source${t.searched.length === 1 ? "" : "s"}`}
+                  {t.running
+                    ? labelForStep(lastStep(t))
+                    : `Searched ${t.searched.length || 0} source${t.searched.length === 1 ? "" : "s"}`}
                 </span>
                 {!t.running && t.hits.length > 0 && (
                   <span className="as-trace-count">{t.hits.length} passages</span>

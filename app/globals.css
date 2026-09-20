@@ -12788,19 +12788,13 @@ input, textarea { font: inherit; color: inherit; }
   color: var(--ink-3);
   border-bottom-left-radius: 6px;
 }
-.lab-dots { display: inline-flex; gap: 3px; }
-.lab-dots i {
-  width: 5px; height: 5px; border-radius: 50%;
-  background: currentColor; opacity: .3;
-  animation: lab-dot 1.05s var(--ease-soft) infinite;
-}
-.lab-dots i:nth-child(2) { animation-delay: .14s; }
-.lab-dots i:nth-child(3) { animation-delay: .28s; }
-/* Scale as well as travel: a dot that only hops reads as three dots taking
-   turns, where one that swells reads as a single thing moving through them. */
-@keyframes lab-dot {
-  0%, 62%, 100% { opacity: .26; transform: translateY(0) scale(.82); }
-  28%           { opacity: 1;   transform: translateY(-3.5px) scale(1); }
+/* The waiting indicator is a thinking orb now (`thinking-orbs`), and WHICH orb
+   says which stage the pipeline is on — see lib/orb-state.ts. It draws on its
+   own canvas, so all the stylesheet owes it is a box that does not shrink. */
+.lab-orb, .as-orb {
+  flex: none;
+  display: block;
+  width: 20px; height: 20px;
 }
 
 /* ── Retrieval trace ────────────────────────────────────────────────────────
