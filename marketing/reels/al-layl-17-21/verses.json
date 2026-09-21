@@ -1,0 +1,75 @@
+{
+ "surah": 92,
+ "surahArabic": "الليْل",
+ "surahEnglish": "al-Layl",
+ "range": "17–21",
+ "source": {
+  "name": "api.quran.com v4",
+  "arabic": "text_uthmani",
+  "translation": "Saheeh International (resource 20)",
+  "note": "Arabic and translation are verbatim from the API, as the app itself fetches them."
+ },
+ "audio": {
+  "file": "audio/recitation.flac",
+  "duration": 26.78,
+  "note": "Left channel of the source, which is exactly dual mono (the L-R difference measures -91 dB), trimmed from 1.12s to 27.90s. highpass 70 Hz, +1.6 dB, then a true-peak limiter at -2.0 dBFS: -12.0 LUFS with LRA 5.8 preserved of the dry 6.0. Left undenoised on purpose — the noise floor measures p5 -28.3 dB, marginally quieter than the Maryam reel's -26.6 dB, so there is nothing here that reel did not already have."
+ },
+ "timing": {
+  "method": "Boundaries were read off the sound, not guessed. A 5 ms envelope gives the quiet troughs; each candidate slice was then transcribed on its own and had to come back as exactly one ayah. 1.40-4.90 returns 'wa-sayujannabuha l-atqa' and nothing more; 4.90-9.70 returns 18 entire; 9.70-18.37 returns 19 entire.",
+  "sourceOffset": 1.12
+ },
+ "verses": [
+  {
+   "n": 17,
+   "arabic": "وَسَيُجَنَّبُهَا ٱلْأَتْقَى",
+   "english": "But the righteous one will avoid it",
+   "start": 0.0,
+   "end": 3.75,
+   "enMark": "the righteous one"
+  },
+  {
+   "n": 18,
+   "arabic": "ٱلَّذِى يُؤْتِى مَالَهُۥ يَتَزَكَّىٰ",
+   "english": "[He] who gives [from] his wealth to purify himself",
+   "start": 3.75,
+   "end": 8.56,
+   "enMark": "to purify himself"
+  },
+  {
+   "n": 19,
+   "arabic": "وَمَا لِأَحَدٍ عِندَهُۥ مِن نِّعْمَةٍ تُجْزَىٰٓ",
+   "english": "And not [giving] for anyone who has [done him] a favor to be rewarded",
+   "start": 8.56,
+   "end": 17.25,
+   "enMark": "to be rewarded"
+  },
+  {
+   "n": 20,
+   "arabic": "إِلَّا ٱبْتِغَآءَ وَجْهِ رَبِّهِ ٱلْأَعْلَىٰ",
+   "english": "But only seeking the face [i.e., acceptance] of his Lord, Most High.",
+   "start": 17.25,
+   "end": 23.81,
+   "enMark": "Most High."
+  },
+  {
+   "n": 21,
+   "arabic": "وَلَسَوْفَ يَرْضَىٰ",
+   "english": "And he is going to be satisfied.",
+   "start": 23.81,
+   "end": 26.78,
+   "enMark": "satisfied."
+  }
+ ],
+ "marks": {
+  "note": "enMark is the English counterpart of each ayah's closing rhyme word; the Arabic rhyme is the final token, found at build time. In al-Layl the rhyme IS the argument — al-atqa, yatazakka, tujza, al-a'la, yarda — so every one of the five is marked.",
+  "colour": "--mark (#9c3a2c)",
+  "onsets": {
+   "note": "When he reaches the rhyme word, from word-level transcription, less the trim.",
+   "17": 2.62,
+   "18": 6.72,
+   "19": 14.64,
+   "20": 22.08,
+   "21": 25.18
+  }
+ }
+}
