@@ -102,6 +102,64 @@ export function hitTest(pts: Pt[], cx: number, cy: number, r: number): boolean {
   return false;
 }
 
+// ── Selection geometry (lasso) ─────────────────────────────────────────────
+
+/**
+ * Is (x, y) inside the polygon? Ray casting, counting crossings of a ray cast
+ * along +x. Works for the concave, self-touching shapes a hand-drawn lasso
+ * produces, which is why this rather than a convex test.
+ */
+export function pointInPolygon(poly: Pt[], x: number, y: number): boolean {
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const xi = poly[i][0], yi = poly[i][1];
+    const xj = poly[j][0], yj = poly[j][1];
+    if ((yi > y) !== (yj > y) &&
+        x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+
+/**
+ * The share of a stroke a lasso has to enclose before it counts as grabbed.
+ *
+ * Not 1.0 (fully enclosed), which is the strictest and most common rule and
+ * also the most annoying one: circle a word of handwriting and one descender
+ * or the tail of a letter almost always pokes out, and the whole word refuses
+ * to be picked up. Not a touch test either — that grabs any long line merely
+ * passing through the loop. A clear majority means "you drew the loop around
+ * this" without demanding precision the hand does not have.
+ */
+export const LASSO_GRAB = 0.6;
+
+/** Does the lasso take this stroke? See LASSO_GRAB. */
+export function lassoTakes(poly: Pt[], pts: Pt[], min = LASSO_GRAB): boolean {
+  if (poly.length < 3 || pts.length === 0) return false;
+  let inside = 0;
+  for (const p of pts) if (pointInPolygon(poly, p[0], p[1])) inside++;
+  return inside / pts.length >= min;
+}
+
+/** Axis-aligned bounds of a point list, or null if there are none. */
+export function pointsBounds(pts: Pt[]): { x0: number; y0: number; x1: number; y1: number } | null {
+  if (!pts.length) return null;
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const p of pts) {
+    if (p[0] < x0) x0 = p[0];
+    if (p[1] < y0) y0 = p[1];
+    if (p[0] > x1) x1 = p[0];
+    if (p[1] > y1) y1 = p[1];
+  }
+  return { x0, y0, x1, y1 };
+}
+
+/** Shift a point list. Returns a NEW array — the built-path cache is keyed on
+ *  stroke object identity, so moved ink must be a new object or it repaints
+ *  from the cached geometry at its old position. */
+export function translatePoints(pts: Pt[], dx: number, dy: number): Pt[] {
+  return pts.map((p) => [p[0] + dx, p[1] + dy, p[2]] as Pt);
+}
+
 // ── Rendering ──────────────────────────────────────────────────────────────
 //
 // Constant-width strokes (highlighter etc.): one continuous midpoint-

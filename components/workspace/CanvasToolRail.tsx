@@ -123,6 +123,18 @@ const EraserIcon = () => (
   </svg>
 );
 
+/* A dashed loop with the ink it has caught. Dashes say "selection" in every
+   drawing tool there is, and they are what the canvas actually draws. */
+const LassoIcon = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 4c4.4 0 8 2.5 8 5.5S16.4 15 12 15s-8-2.5-8-5.5a4.6 4.6 0 0 1 1.5-3.2"
+      strokeDasharray="3.4 2.6"/>
+    <path d="M7 14.4c-.9 1.4-1 2.8-.3 3.8"/>
+    <circle cx="6.2" cy="19.6" r="1.7"/>
+  </svg>
+);
+
 const TextIcon = () => (
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
     stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
@@ -182,6 +194,7 @@ const RAIL_TOOLS: { id: DrawTool; Icon: () => React.ReactElement; title: string 
   { id: "highlight", Icon: HighlighterIcon, title: "Highlight  L" },
   { id: "arrow",     Icon: ArrowIcon,       title: "Arrow  A"     },
   { id: "text",      Icon: TextIcon,        title: "Text box  T"  },
+  { id: "lasso",     Icon: LassoIcon,       title: "Select ink  S" },
   { id: "eraser",    Icon: EraserIcon,      title: "Eraser  E"    },
 ];
 
@@ -207,6 +220,10 @@ interface Props {
   onRedo:                 () => void;
   /** When provided, a trash button appears at the bottom of the rail. */
   onClear?:               () => void;
+  /** Tools this host does not implement. FocusAnnotation draws on its own
+   *  canvas rather than DrawingCanvas, so it has no lasso to offer, and a
+   *  button that selects a tool nothing handles is worse than no button. */
+  omitTools?:             DrawTool[];
 }
 
 // ── Component ─────────────────────────────────────────────────────────────
@@ -220,7 +237,12 @@ export default function CanvasToolRail({
   canUndo, canRedo,
   onUndo, onRedo,
   onClear,
+  omitTools,
 }: Props) {
+
+  const tools = omitTools?.length
+    ? RAIL_TOOLS.filter((t) => !omitTools.includes(t.id))
+    : RAIL_TOOLS;
 
   // ── Popover open / closed state ─────────────────────────────────────────
   // The popover is always present in the DOM so its CSS exit transition plays.
@@ -382,7 +404,7 @@ export default function CanvasToolRail({
     >
 
       {/* ── Tool buttons ── */}
-      {RAIL_TOOLS.map(({ id, Icon, title }) => (
+      {tools.map(({ id, Icon, title }) => (
         <button
           key={id}
           className="ctr-btn"

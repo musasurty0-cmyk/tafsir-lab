@@ -106,6 +106,7 @@ function clamp(v: number, lo: number, hi: number) { return Math.max(lo, Math.min
 
 const TOOL_HOTKEYS: Record<string, DrawTool> = {
   h: "hand", p: "pen", l: "highlight", a: "arrow", e: "eraser", t: "text",
+  s: "lasso",
 };
 
 // ── Props ──────────────────────────────────────────────────────────────────

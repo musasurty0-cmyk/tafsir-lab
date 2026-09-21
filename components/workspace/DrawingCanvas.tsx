@@ -48,11 +48,14 @@ import type { CanvasViewport } from "./ModeBPage";
 import {
   type Pt, type InkStroke,
   normPts, hitTest, drawSmooth, drawArrow, paintStroke, strokeSurface,
+  lassoTakes, pointsBounds, translatePoints,
 } from "@/lib/ink";
+import { isTypingTarget } from "@/lib/is-typing";
 
 // ── Public types ───────────────────────────────────────────────────────────
 
-export type DrawTool = "hand" | "pen" | "highlight" | "arrow" | "eraser" | "text";
+export type DrawTool =
+  "hand" | "pen" | "highlight" | "arrow" | "eraser" | "text" | "lasso";
 
 /** How long erased ink takes to fade out. Short enough that erasing still
  *  feels instant, long enough to read as a disappearance rather than a blink. */
@@ -71,6 +74,12 @@ export interface DrawingCanvasHandle {
 // overlay). Canvas strokes are world-space, tagged surface:"canvas".
 export type Stroke = InkStroke;
 
+/** One undoable edit, with its inverse implied by `kind`. */
+type Op =
+  | { kind: "add";    strokes: Stroke[] }
+  | { kind: "remove"; strokes: Stroke[] }
+  | { kind: "move";   ids: string[]; dx: number; dy: number };
+
 interface DrawingLayer {
   authorId:   string;
   authorName: string;
@@ -86,6 +95,14 @@ const TOOL_OPACITY: Record<"pen" | "highlight" | "arrow", number> = {
 };
 
 const ERASER_RADIUS = 20;
+
+/* A dashed loop, so the lasso does not share the crosshair every drawing tool
+   uses. Drawn explicitly in near-black: the native cursors this app would
+   otherwise fall back to render white on several platforms. */
+const LASSO_CURSOR =
+  "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'>" +
+  "<ellipse cx='10' cy='10' rx='7.6' ry='6.2' fill='none' stroke='%23111' stroke-width='1.6' " +
+  "stroke-dasharray='3 2.6'/></svg>\") 10 10, crosshair";
 const SAVE_DEBOUNCE = 1200;
 
 // (normPts / hitTest / drawSmooth / drawArrow / paintStroke now live in lib/ink)
@@ -224,8 +241,26 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     anchor?:     string;
   }>>(new Map());
 
-  const redoStackRef = useRef<Stroke[]>([]);
+  /* ── History ────────────────────────────────────────────────────────────
+     Undo used to be "drop the last stroke in the array", which is only the
+     right answer when the only thing that ever happens is drawing. Erasing
+     was not undoable at all, and moving ink with the lasso would not have
+     been either. So the two stacks hold OPERATIONS, each with an exact
+     inverse, and undo/redo apply them. Ops carry stroke objects (add/remove)
+     or ids (move) — never indices, which a collaborator's sync can invalidate
+     between the op and its undo. */
+  const undoRef = useRef<Op[]>([]);
+  const redoRef = useRef<Op[]>([]);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // ── Lasso selection ────────────────────────────────────────────────────
+  // The loop being drawn right now (world space), the ids it caught, and the
+  // live drag offset while the selection is being carried. All refs: this
+  // changes every pointer event and none of it belongs in React state.
+  const lassoPtsRef    = useRef<Pt[]>([]);
+  const isLassoingRef  = useRef(false);
+  const selectedRef    = useRef<Set<string>>(new Set());
+  const dragRef        = useRef<{ x0: number; y0: number; dx: number; dy: number } | null>(null);
 
   // ── Persistence-safety bookkeeping ────────────────────────────────────
   // tombstones: ids the user deleted this session (undo / eraser / clear).
@@ -283,7 +318,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     const filtered = filterForPage(allMyStrokesRef.current, mushafPageRef.current);
     myStrokesRef.current = filtered;
     setMyStrokes(filtered);
-    onHistoryRef.current?.(filtered.length > 0, redoStackRef.current.length > 0);
+    notifyHistory();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -402,8 +437,24 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
 
     // ── Pass 2: my non-highlight strokes + active non-highlight ───────────
     ctx.save(); applyVP(ctx);
+    /* While a lasso selection is being carried, its strokes are painted in a
+       translated pass instead of being rebuilt every frame at a new position.
+       Their geometry is cached on the stroke object, so drawing them through
+       a canvas transform costs nothing; regenerating the outline of a page of
+       handwriting per pointer move would not be affordable. */
+    const drag    = dragRef.current;
+    const carried = selectedRef.current;
+    const moving  = (st: Stroke) => drag !== null && carried.has(st.id);
     for (const s of myStrokesRef.current) {
-      if (s.tool !== "highlight") paintStroke(ctx, s);
+      if (s.tool !== "highlight" && !moving(s)) paintStroke(ctx, s);
+    }
+    if (drag) {
+      ctx.save();
+      ctx.translate(drag.dx, drag.dy);
+      for (const s of myStrokesRef.current) {
+        if (s.tool !== "highlight" && carried.has(s.id)) paintStroke(ctx, s);
+      }
+      ctx.restore();
     }
     /* Erased ink on its way out. Alpha only — the geometry is untouched, so
        nothing appears to move or shrink oddly, and a stroke that is half
@@ -435,10 +486,11 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     ctx.restore();
 
     // ── Pass 3: highlight composite ───────────────────────────────────────
-    const hlStrokes  = myStrokesRef.current.filter(s => s.tool === "highlight");
+    const hlStrokes  = myStrokesRef.current.filter(s => s.tool === "highlight" && !moving(s));
+    const hlCarried  = drag ? myStrokesRef.current.filter(s => s.tool === "highlight" && carried.has(s.id)) : [];
     const activeIsHL = isDrawingRef.current && activeToolRef.current === "highlight" && activePtsRef.current.length > 0;
 
-    if (hlStrokes.length > 0 || activeIsHL) {
+    if (hlStrokes.length > 0 || hlCarried.length > 0 || activeIsHL) {
       if (!hlCanvasRef.current) hlCanvasRef.current = document.createElement("canvas");
       const hl = hlCanvasRef.current;
       if (hl.width !== w || hl.height !== h) { hl.width = w; hl.height = h; }
@@ -450,6 +502,14 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
           const pts = normPts(s.points as unknown[]);
           drawSmooth(hCtx, pts, s.color, s.width, 1);
         }
+        if (hlCarried.length > 0 && drag) {
+          hCtx.save();
+          hCtx.translate(drag.dx, drag.dy);
+          for (const s of hlCarried) {
+            drawSmooth(hCtx, normPts(s.points as unknown[]), s.color, s.width, 1);
+          }
+          hCtx.restore();
+        }
         if (activeIsHL) {
           drawSmooth(hCtx, activePtsRef.current, activeColorRef.current, activeWidthRef.current, 1);
         }
@@ -458,6 +518,57 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
         ctx.drawImage(hl, 0, 0);
         ctx.globalAlpha = 1;
       }
+    }
+
+    // ── Pass 4: lasso chrome ──────────────────────────────────────────
+    // The loop being drawn, and the box around what it caught. Painted in
+    // world space so it tracks the ink exactly, with every width and dash
+    // divided by the zoom so it stays one weight on screen at any
+    // magnification.
+    const selBox = selectionBox();
+    const loop   = lassoPtsRef.current;
+    if (loop.length > 1 || selBox) {
+      ctx.save(); applyVP(ctx);
+      const z    = vp.zoom || 1;
+      const tint = selectionTint();
+      ctx.lineJoin = "round";
+      ctx.lineCap  = "round";
+
+      if (loop.length > 1) {
+        ctx.beginPath();
+        ctx.moveTo(loop[0][0], loop[0][1]);
+        for (let i = 1; i < loop.length; i++) ctx.lineTo(loop[i][0], loop[i][1]);
+        ctx.closePath();
+        /* Alpha rather than a translucent colour: the accent is a CSS token
+           in whatever colour space the theme uses, and opacity applied here
+           works whatever that turns out to be. */
+        ctx.globalAlpha = 0.10;
+        ctx.fillStyle   = tint;
+        ctx.fill();
+        ctx.globalAlpha = 1;
+        ctx.setLineDash([7 / z, 5 / z]);
+        ctx.lineWidth   = 1.5 / z;
+        ctx.strokeStyle = tint;
+        ctx.stroke();
+      }
+
+      if (selBox) {
+        const w = selBox.x1 - selBox.x0;
+        const h = selBox.y1 - selBox.y0;
+        ctx.setLineDash([6 / z, 4 / z]);
+        ctx.lineWidth   = 1.5 / z;
+        ctx.strokeStyle = tint;
+        ctx.beginPath();
+        if (typeof ctx.roundRect === "function") {
+          ctx.roundRect(selBox.x0, selBox.y0, w, h, Math.min(8 / z, w / 2, h / 2));
+        } else {
+          ctx.rect(selBox.x0, selBox.y0, w, h);
+        }
+        ctx.stroke();
+      }
+
+      ctx.setLineDash([]);
+      ctx.restore();
     }
   }, []); // empty deps — reads only from refs, never stale
 
@@ -511,7 +622,8 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     // merge into (or delete from) this page's set.
     allMyStrokesRef.current = [];
     myStrokesRef.current    = [];
-    redoStackRef.current    = [];
+    undoRef.current         = [];
+    redoRef.current         = [];
     tombstonesRef.current   = new Set();
     savedIdsRef.current     = new Set();
     savedAtRef.current      = new Map();
@@ -550,7 +662,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
             const filtered = filterForPage(allMyStrokesRef.current, curPage);
             setMyStrokes(filtered);
             myStrokesRef.current = filtered;
-            onHistoryRef.current?.(filtered.length > 0, redoStackRef.current.length > 0);
+            notifyHistory();
 
             if (changed) {
               // Fire-and-forget — server merges by id, so this only updates
@@ -585,7 +697,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     const filtered = filterForPage(allMyStrokesRef.current, mushafPage);
     setMyStrokes(filtered);
     myStrokesRef.current = filtered;
-    onHistoryRef.current?.(filtered.length > 0, redoStackRef.current.length > 0);
+    notifyHistory();
   }, [mushafPage, activeAnchor]);
 
   // ── Reconciliation poll (slow) ────────────────────────────────────────
@@ -661,7 +773,16 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
           if (existing) {
             return prev.map((l) =>
               l.authorId === authorId
-                ? { ...l, strokes: [...l.strokes, msg.stroke!] }
+                ? {
+                    ...l,
+                    /* Replace by id, not append. A stroke id can arrive more
+                       than once — a peer moving ink with the lasso resends
+                       every stroke it carried — and appending left the copy
+                       at the old position sitting underneath the new one. */
+                    strokes: l.strokes.some((x) => x.id === msg.stroke!.id)
+                      ? l.strokes.map((x) => (x.id === msg.stroke!.id ? msg.stroke! : x))
+                      : [...l.strokes, msg.stroke!],
+                  }
                 : l
             );
           }
@@ -823,52 +944,282 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
   // ── Imperative handle ──────────────────────────────────────────────────
 
   function notifyHistory() {
-    onHistoryRef.current?.(
-      myStrokesRef.current.length > 0,
-      redoStackRef.current.length > 0,
-    );
+    onHistoryRef.current?.(undoRef.current.length > 0, redoRef.current.length > 0);
   }
 
+  // ── Edits ─────────────────────────────────────────────────────────────
+  // Every change to committed ink goes through one of these three, so
+  // undo/redo, saving, tombstones and the visible list stay in step. They do
+  // NOT record history themselves — the caller decides whether an edit is
+  // undoable, because applying an undo must not itself be undoable.
+
+  function pushOp(op: Op) {
+    undoRef.current = [...undoRef.current, op];
+    redoRef.current = [];
+  }
+
+  function applyAdd(strokes: Stroke[]) {
+    if (!strokes.length) return;
+    for (const st of strokes) tombstonesRef.current.delete(st.id);
+    const have  = new Set(allMyStrokesRef.current.map((s) => s.id));
+    const fresh = strokes.filter((s) => !have.has(s.id));
+    if (!fresh.length) return;
+    allMyStrokesRef.current = [...allMyStrokesRef.current, ...fresh];
+    const visible = filterForPage(fresh, mushafPageRef.current);
+    if (visible.length) {
+      const next = [...myStrokesRef.current, ...visible];
+      myStrokesRef.current = next;
+      setMyStrokes(next);
+    }
+    scheduleSave(); notifyHistory();
+  }
+
+  function applyRemove(ids: Set<string>) {
+    if (!ids.size) return;
+    for (const id of ids) tombstonesRef.current.add(id);
+    allMyStrokesRef.current = allMyStrokesRef.current.filter((s) => !ids.has(s.id));
+    const next = myStrokesRef.current.filter((s) => !ids.has(s.id));
+    myStrokesRef.current = next;
+    setMyStrokes(next);
+    scheduleSave(); notifyHistory();
+  }
+
+  /** Shift strokes by (dx, dy) and return the moved copies, for broadcast. */
+  function applyMove(ids: Set<string>, dx: number, dy: number): Stroke[] {
+    if (!ids.size || (dx === 0 && dy === 0)) return [];
+    const moved: Stroke[] = [];
+    const shift = (s: Stroke): Stroke => {
+      if (!ids.has(s.id)) return s;
+      /* A NEW object, never a mutation: the built-path cache is keyed on
+         stroke identity, so ink moved in place would keep repainting from
+         the geometry it had at its old position. */
+      const m = { ...s, points: translatePoints(normPts(s.points as unknown[]), dx, dy) };
+      moved.push(m);
+      return m;
+    };
+    allMyStrokesRef.current = allMyStrokesRef.current.map(shift);
+    /* The visible list must hold the SAME objects, not second copies made by
+       a second pass — two objects for one stroke means two cache entries and
+       the outline maths runs twice per frame for every moved stroke. */
+    const byId = new Map(moved.map((m) => [m.id, m]));
+    const next = myStrokesRef.current.map((s) => byId.get(s.id) ?? s);
+    myStrokesRef.current = next;
+    setMyStrokes(next);
+    scheduleSave(); notifyHistory();
+    return moved;
+  }
+
+  /** Tell peers about finished strokes. Reads the socket from its ref so a
+   *  reconnect between mount and here cannot send on a dead one. */
+  function broadcast(strokes: Stroke[]) {
+    const sock = roomSocketRef.current;
+    if (!sock || sock.readyState !== WebSocket.OPEN) return;
+    for (const st of strokes) {
+      sock.send(JSON.stringify({ type: "stroke-complete", stroke: st }));
+    }
+  }
+
+  // ── Lasso ────────────────────────────────────────────────────────────
+  //
+  // Draw a loop around some ink and carry it somewhere else. Only ever YOUR
+  // own ink, on this page, in the layer you are looking at — myStrokesRef
+  // is already scoped that way, and the lasso never looks outside it, so a
+  // collaborator's work cannot be picked up and moved out from under them.
+
+  /** Air between the ink and its selection box, in world px. */
+  const SELECT_PAD = 10;
+
+  function clearSelection() {
+    if (!selectedRef.current.size && !isLassoingRef.current && !dragRef.current) return;
+    selectedRef.current   = new Set();
+    lassoPtsRef.current   = [];
+    isLassoingRef.current = false;
+    dragRef.current       = null;
+    scheduleRender();
+  }
+
+  /** The box around the selection, padded, with any live drag applied. */
+  function selectionBox(): { x0: number; y0: number; x1: number; y1: number } | null {
+    const ids = selectedRef.current;
+    if (!ids.size) return null;
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const st of myStrokesRef.current) {
+      if (!ids.has(st.id)) continue;
+      const b = pointsBounds(normPts(st.points as unknown[]));
+      if (!b) continue;
+      /* Points are the centreline; the ink is painted either side of it. */
+      const r = st.width;
+      x0 = Math.min(x0, b.x0 - r); y0 = Math.min(y0, b.y0 - r);
+      x1 = Math.max(x1, b.x1 + r); y1 = Math.max(y1, b.y1 + r);
+    }
+    if (!Number.isFinite(x0)) return null;
+    const d  = dragRef.current;
+    const dx = d ? d.dx : 0, dy = d ? d.dy : 0;
+    return {
+      x0: x0 + dx - SELECT_PAD, y0: y0 + dy - SELECT_PAD,
+      x1: x1 + dx + SELECT_PAD, y1: y1 + dy + SELECT_PAD,
+    };
+  }
+
+  function inSelection(wx: number, wy: number): boolean {
+    const b = selectionBox();
+    return !!b && wx >= b.x0 && wx <= b.x1 && wy >= b.y0 && wy <= b.y1;
+  }
+
+  /** Pointer down with the lasso armed: either pick up what is already
+   *  selected, or start drawing a new loop. */
+  function lassoDown(wx: number, wy: number) {
+    if (inSelection(wx, wy)) {
+      dragRef.current = { x0: wx, y0: wy, dx: 0, dy: 0 };
+      return;
+    }
+    selectedRef.current   = new Set();
+    isLassoingRef.current = true;
+    lassoPtsRef.current   = [[wx, wy, 0.5]];
+    scheduleRender();
+  }
+
+  function lassoMove(wx: number, wy: number) {
+    const d = dragRef.current;
+    if (d) { d.dx = wx - d.x0; d.dy = wy - d.y0; scheduleRender(); return; }
+    if (!isLassoingRef.current) return;
+    const pts  = lassoPtsRef.current;
+    const last = pts[pts.length - 1];
+    /* A loop does not need stylus resolution, and it is not ink — every
+       vertex it keeps costs one crossing test per stroke point when it
+       closes. Two SCREEN px, so the spacing is the same however far in you
+       are zoomed. */
+    if (!last || Math.hypot(wx - last[0], wy - last[1]) > 2 / viewportRef.current.zoom) {
+      pts.push([wx, wy, 0.5]);
+      scheduleRender();
+    }
+  }
+
+  function lassoUp() {
+    const d = dragRef.current;
+    if (d) {
+      dragRef.current = null;
+      const ids = selectedRef.current;
+      if (ids.size && (d.dx !== 0 || d.dy !== 0)) {
+        pushOp({ kind: "move", ids: [...ids], dx: d.dx, dy: d.dy });
+        broadcast(applyMove(ids, d.dx, d.dy));
+      }
+      scheduleRender();
+      return;
+    }
+    if (!isLassoingRef.current) return;
+    isLassoingRef.current = false;
+    const poly = lassoPtsRef.current;
+    lassoPtsRef.current = [];
+    const taken = new Set<string>();
+    if (poly.length >= 3) {
+      for (const st of myStrokesRef.current) {
+        if (lassoTakes(poly, normPts(st.points as unknown[]))) taken.add(st.id);
+      }
+    }
+    selectedRef.current = taken;
+    scheduleRender();
+  }
+
+  function deleteSelection() {
+    const ids = selectedRef.current;
+    if (!ids.size) return;
+    const going = myStrokesRef.current.filter((st) => ids.has(st.id));
+    const now = performance.now();
+    for (const st of going) fadingRef.current.push({ stroke: st, t0: now });
+    startFadeLoop();
+    pushOp({ kind: "remove", strokes: going });
+    applyRemove(new Set(ids));
+    clearSelection();
+  }
+
+  /* The selection chrome borrows the workspace accent, so it belongs to the
+     app instead of being a generic blue, and follows the reader's own accent
+     and theme. Validated before use: a browser that cannot parse the token
+     IGNORES the assignment rather than throwing, which would leave the
+     chrome painted in whatever colour was set last. Cached on the raw string
+     so the probe runs again only when the accent actually changes. */
+  const tintRef = useRef<{ raw: string; use: string } | null>(null);
+  function selectionTint(): string {
+    const el  = containerRef.current ?? document.documentElement;
+    const raw = getComputedStyle(el).getPropertyValue("--accent").trim();
+    if (tintRef.current && tintRef.current.raw === raw) return tintRef.current.use;
+    let use = "#3b82f6";
+    if (raw) {
+      const probe = document.createElement("canvas").getContext("2d");
+      if (probe) {
+        probe.strokeStyle = "#000000";
+        probe.strokeStyle = raw;
+        if (probe.strokeStyle !== "#000000") use = raw;
+      }
+    }
+    tintRef.current = { raw, use };
+    return use;
+  }
+
+  /* Escape drops the selection, Delete/Backspace removes it. Both are guarded
+     on there being a selection at all, so neither key is taken from anything
+     else on the page while the lasso is idle. */
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (!selectedRef.current.size) return;
+      if (isTypingTarget(e)) return;
+      if (e.key === "Escape") { clearSelection(); return; }
+      if (e.key === "Delete" || e.key === "Backspace") {
+        e.preventDefault();
+        deleteSelection();
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /* Changing tool, page or annotation layer ends the selection. Ink you can
+     no longer see must not still be carried by a drag. */
+  useEffect(() => { clearSelection(); },
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  [tool, mushafPage, activeAnchor]);
+
   useImperativeHandle(ref, () => ({
+    /* Undo walks the op stack, not the stroke array. The old version popped
+       whichever stroke happened to be last, so it also deleted ink drawn in
+       an earlier session — nothing distinguishes that from ink drawn a second
+       ago — and it could never put back anything the eraser took. */
     undo() {
-      // Operate on the current-page view; rebuild allMyStrokes around it
-      const prev = myStrokesRef.current;
-      if (!prev.length) return;
-      const removed = prev[prev.length - 1];
-      redoStackRef.current = [...redoStackRef.current, removed];
-      const nextPage = prev.slice(0, -1);
-      // Remove from allMyStrokes too
-      allMyStrokesRef.current = allMyStrokesRef.current.filter(s => s.id !== removed.id);
-      tombstonesRef.current.add(removed.id);
-      myStrokesRef.current = nextPage;
-      setMyStrokes(nextPage);
-      scheduleSave(); notifyHistory();
+      const stack = undoRef.current;
+      if (!stack.length) return;
+      const op = stack[stack.length - 1];
+      undoRef.current = stack.slice(0, -1);
+      if      (op.kind === "add")    applyRemove(new Set(op.strokes.map((s) => s.id)));
+      else if (op.kind === "remove") { applyAdd(op.strokes); broadcast(op.strokes); }
+      else                           broadcast(applyMove(new Set(op.ids), -op.dx, -op.dy));
+      redoRef.current = [...redoRef.current, op];
+      clearSelection();
+      notifyHistory(); scheduleRender();
     },
     redo() {
-      const stack = redoStackRef.current;
+      const stack = redoRef.current;
       if (!stack.length) return;
-      const stroke = stack[stack.length - 1];
-      redoStackRef.current = stack.slice(0, -1);
-      tombstonesRef.current.delete(stroke.id); // it's alive again
-      allMyStrokesRef.current = [...allMyStrokesRef.current, stroke];
-      const nextPage = [...myStrokesRef.current, stroke];
-      myStrokesRef.current = nextPage;
-      setMyStrokes(nextPage);
-      scheduleSave(); notifyHistory();
+      const op = stack[stack.length - 1];
+      redoRef.current = stack.slice(0, -1);
+      if      (op.kind === "add")    { applyAdd(op.strokes); broadcast(op.strokes); }
+      else if (op.kind === "remove") applyRemove(new Set(op.strokes.map((s) => s.id)));
+      else                           broadcast(applyMove(new Set(op.ids), op.dx, op.dy));
+      undoRef.current = [...undoRef.current, op];
+      clearSelection();
+      notifyHistory(); scheduleRender();
     },
     clear() {
       // Clear ONLY the strokes currently visible (this page + active layer),
       // by id — clearing the main Mushaf must never touch strokes hidden in
       // word/ayah annotation layers on the same page.
-      const visibleIds = new Set(myStrokesRef.current.map(s => s.id));
-      if (!visibleIds.size) return;
-      for (const id of visibleIds) tombstonesRef.current.add(id);
-      allMyStrokesRef.current = allMyStrokesRef.current.filter(s => !visibleIds.has(s.id));
-      redoStackRef.current = [];
-      myStrokesRef.current = [];
-      setMyStrokes([]);
-      scheduleSave();
-      onHistoryRef.current?.(false, false);
+      const visible = myStrokesRef.current;
+      if (!visible.length) return;
+      pushOp({ kind: "remove", strokes: visible });
+      applyRemove(new Set(visible.map((s) => s.id)));
+      clearSelection();
+      scheduleRender();
     },
     /* Exactly what finishing a stroke does, minus the drawing: same refs in
        the same order, one save, one broadcast each. Going through this path
@@ -879,24 +1230,12 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     addStrokes(incoming: InkStroke[]) {
       const add = incoming.filter((st) => st.points.length > 1);
       if (!add.length) return;
-      redoStackRef.current = [];
-      allMyStrokesRef.current = [...allMyStrokesRef.current, ...add];
       /* Only the ones belonging to the page on screen join the visible set;
          the rest still persist, exactly as a stroke drawn on another Mushaf
-         page would. */
-      const here = add.filter((st) => (st.mushafPage ?? 0) === mushafPageRef.current);
-      if (here.length) {
-        const next = [...myStrokesRef.current, ...here];
-        myStrokesRef.current = next;
-        setMyStrokes(next);
-      }
-      scheduleSave();
-      notifyHistory();
-      if (roomSocket?.readyState === WebSocket.OPEN) {
-        for (const st of add) {
-          roomSocket.send(JSON.stringify({ type: "stroke-complete", stroke: st }));
-        }
-      }
+         page would — applyAdd does that filtering. */
+      pushOp({ kind: "add", strokes: add });
+      applyAdd(add);
+      broadcast(add);
       scheduleRender();
     },
   }), [scheduleSave, roomSocket]);  
@@ -926,7 +1265,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
 
     // Stylus draws even in the hand (pan) tool, but the TEXT tool is explicit —
     // a pen tap there must place a text box, not draw.
-    function penTool(): "pen" | "highlight" | "arrow" | "eraser" | "text" {
+    function penTool(): "pen" | "highlight" | "arrow" | "eraser" | "text" | "lasso" {
       const t = toolRef.current;
       if (t === "hand") return "pen";
       return t;
@@ -953,6 +1292,15 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
       if (eff === "text") { parent!.dataset.penActive = ""; onTextPlaceRef.current?.(wx, wy); return; }
       if (eff === "eraser") { penErasingRef.current = true; lastErasePtRef.current = null; eraseStroke(wx, wy); return; }
 
+      /* The lasso takes the capture too — a loop drawn past the edge of the
+         canvas must keep receiving moves, exactly as a stroke does. */
+      if (eff === "lasso") {
+        try { parent!.setPointerCapture(e.pointerId); } catch { /* ok */ }
+        parent!.dataset.penActive = "";
+        lassoDown(wx, wy);
+        return;
+      }
+
       try { parent!.setPointerCapture(e.pointerId); } catch { /* ok */ }
       isDrawingRef.current   = true;
       activeToolRef.current  = eff;
@@ -972,6 +1320,14 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
         if (penErasingRef.current || (e.buttons & 1) || e.pressure > 0) {
           const [wx, wy] = toWorld(e.clientX, e.clientY); eraseStroke(wx, wy);
         }
+        return;
+      }
+      if (penTool() === "lasso") {
+        if (!isLassoingRef.current && !dragRef.current) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const [wx, wy] = toWorld(e.clientX, e.clientY);
+        lassoMove(wx, wy);
         return;
       }
       if (!isDrawingRef.current) return;
@@ -1001,6 +1357,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
       // event to this container, so taps on the tool rail never reach the
       // buttons ("eraser keeps drawing; only my finger works").
       try { if (parent!.hasPointerCapture(e.pointerId)) parent!.releasePointerCapture(e.pointerId); } catch { /* ok */ }
+      if (isLassoingRef.current || dragRef.current) { e.preventDefault(); lassoUp(); return; }
       if (!isDrawingRef.current) return;
       e.preventDefault();
       appendFinalPoint(e.clientX, e.clientY);
@@ -1098,12 +1455,8 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     }
     startFadeLoop();
 
-    const next = prev.filter(s => !removedIds.has(s.id));
-    allMyStrokesRef.current = allMyStrokesRef.current.filter(s => !removedIds.has(s.id));
-    redoStackRef.current = [];
-    myStrokesRef.current = next;
-    setMyStrokes(next);
-    scheduleSave(); notifyHistory();
+    pushOp({ kind: "remove", strokes: prev.filter((s) => removedIds.has(s.id)) });
+    applyRemove(removedIds);
   }
 
   // ── Pointer handlers (fix #6 — touch is always rejected) ──────────────
@@ -1122,6 +1475,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     const [wx, wy] = toWorld(e.clientX, e.clientY);
     if (toolRef.current === "text")   { onTextPlace?.(wx, wy); return; }
     if (toolRef.current === "eraser") { lastErasePtRef.current = null; eraseStroke(wx, wy); return; }
+    if (toolRef.current === "lasso")  { lassoDown(wx, wy); return; }
 
     // Mouse-only path now (touch + pen return earlier) — neutral pressure.
     isDrawingRef.current   = true;
@@ -1139,6 +1493,18 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     if (toolRef.current === "hand") return;
     // The eraser ring follows the mouse even before the button goes down
     if (toolRef.current === "eraser") moveEraserRing(e.clientX, e.clientY);
+    if (toolRef.current === "lasso") {
+      const [wx, wy] = toWorld(e.clientX, e.clientY);
+      if (isLassoingRef.current || dragRef.current) {
+        e.stopPropagation();
+        lassoMove(wx, wy);
+      } else if (canvasRef.current) {
+        /* Hovering over what is selected says so before you press: the box is
+           a thing you can pick up, not just a mark on the page. */
+        canvasRef.current.style.cursor = inSelection(wx, wy) ? "move" : LASSO_CURSOR;
+      }
+      return;
+    }
     if (!isDrawingRef.current) return;
     e.stopPropagation();
 
@@ -1220,21 +1586,9 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
         surface:    "canvas",
         ...(anchorRef.current ? { anchor: anchorRef.current } : {}),
       };
-      redoStackRef.current = [];
-      allMyStrokesRef.current = [...allMyStrokesRef.current, done];
-      const next = [...myStrokesRef.current, done];
-      myStrokesRef.current = next;
-      setMyStrokes(next);
-      scheduleSave();
-      notifyHistory();
-
-      // Broadcast completed stroke to peers
-      if (roomSocket?.readyState === WebSocket.OPEN) {
-        roomSocket.send(JSON.stringify({
-          type:   "stroke-complete",
-          stroke: done,
-        }));
-      }
+      pushOp({ kind: "add", strokes: [done] });
+      applyAdd([done]);
+      broadcast([done]);
     }
     scheduleRender();
   }
@@ -1243,6 +1597,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     if (e.pointerType === "touch") return;
     if (e.pointerType === "pen")   return; // native capture handlers own the pen
     e.preventDefault();
+    if (toolRef.current === "lasso") { lassoUp(); return; }
     if (!isDrawingRef.current) return;
     if (toolRef.current === "eraser") { isDrawingRef.current = false; activePtsRef.current = []; lastErasePtRef.current = null; return; }
     appendFinalPoint(e.clientX, e.clientY);
@@ -1270,6 +1625,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
           // several platforms (iPad pointer, Windows "cell").
           cursor: tool === "pen" || tool === "arrow" || tool === "highlight"
                     ? `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='19' height='19'><g stroke='%23111' stroke-width='1.8' fill='none'><path d='M9.5 1v17M1 9.5h17'/></g></svg>") 9 9, crosshair`
+                : tool === "lasso"  ? LASSO_CURSOR
                 : tool === "eraser" ? "none"   // the ring IS the cursor
                 : tool === "text"
                     ? `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='17' height='17'><g stroke='%23111' stroke-width='1.4' fill='none'><path d='M5.5 2h6M5.5 15h6M8.5 2v13'/></g></svg>") 8 8, text`

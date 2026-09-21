@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { packStroke, packStrokes, normPts, resample, streamline } from "./ink";
+import {
+  packStroke, packStrokes, normPts, resample, streamline,
+  pointInPolygon, lassoTakes, pointsBounds, translatePoints, LASSO_GRAB,
+  type Pt,
+} from "./ink";
 
 /**
  * The ink codec touches strokes people have already drawn, so the properties
@@ -176,5 +180,102 @@ describe("streamline", () => {
     const out = streamline(spiky);
     const peak = Math.max(...out.map((p) => p[1]));
     expect(peak).toBeLessThan(30);
+  });
+});
+
+// ── Lasso selection ────────────────────────────────────────────────────
+
+/** A closed square from (0,0) to (s,s). */
+const square = (n: number): Pt[] =>
+  [[0, 0, 0.5], [n, 0, 0.5], [n, n, 0.5], [0, n, 0.5]];
+
+/** A horizontal run of `n` points from x0 to x1 at height y. */
+const run = (n: number, x0: number, x1: number, y: number): Pt[] =>
+  Array.from({ length: n }, (_, i) =>
+    [x0 + ((x1 - x0) * i) / (n - 1), y, 0.5] as Pt);
+
+describe("pointInPolygon", () => {
+  it("is true inside and false outside a square", () => {
+    const sq = square(10);
+    expect(pointInPolygon(sq, 5, 5)).toBe(true);
+    expect(pointInPolygon(sq, 15, 5)).toBe(false);
+    expect(pointInPolygon(sq, -1, 5)).toBe(false);
+    expect(pointInPolygon(sq, 5, 20)).toBe(false);
+  });
+
+  it("handles a concave shape — the notch is outside", () => {
+    // A "C": the bite taken out of the right-hand side is not inside it.
+    const c: Pt[] = [
+      [0, 0, 0.5], [10, 0, 0.5], [10, 3, 0.5],
+      [4, 3, 0.5], [4, 7, 0.5], [10, 7, 0.5],
+      [10, 10, 0.5], [0, 10, 0.5],
+    ];
+    expect(pointInPolygon(c, 2, 5)).toBe(true);   // the spine
+    expect(pointInPolygon(c, 7, 5)).toBe(false);  // the bite
+    expect(pointInPolygon(c, 7, 1)).toBe(true);   // the top arm
+  });
+});
+
+describe("lassoTakes — what a loop picks up", () => {
+  const sq = square(100);
+
+  it("takes a stroke drawn entirely inside", () => {
+    expect(lassoTakes(sq, run(20, 10, 90, 50))).toBe(true);
+  });
+
+  it("leaves a stroke entirely outside", () => {
+    expect(lassoTakes(sq, run(20, 110, 190, 50))).toBe(false);
+  });
+
+  it("still takes a word whose tail pokes out — the whole point of not\n      demanding full enclosure", () => {
+    // 85% of the stroke is in, the last few points trail past the edge.
+    const pts = run(20, 10, 115, 50);
+    const inside = pts.filter((q) => pointInPolygon(sq, q[0], q[1])).length;
+    expect(inside / pts.length).toBeGreaterThan(LASSO_GRAB);
+    expect(lassoTakes(sq, pts)).toBe(true);
+  });
+
+  it("does NOT take a long line that merely passes through", () => {
+    // A rule drawn right across the board: only a short middle span is in.
+    const pts = run(41, -400, 500, 50);
+    expect(lassoTakes(sq, pts)).toBe(false);
+  });
+
+  it("refuses a degenerate loop — a tap is not a selection", () => {
+    expect(lassoTakes([[5, 5, 0.5], [5, 5, 0.5]], run(10, 0, 10, 5))).toBe(false);
+  });
+
+  it("takes a single-point stroke (a dot) sitting inside", () => {
+    expect(lassoTakes(sq, [[50, 50, 0.5]])).toBe(true);
+  });
+});
+
+describe("translatePoints — moving ink", () => {
+  it("shifts every point and keeps pressure", () => {
+    expect(translatePoints([[1, 2, 0.3], [3, 4, 0.7]], 10, -5))
+      .toEqual([[11, -3, 0.3], [13, -1, 0.7]]);
+  });
+
+  it("returns a NEW array — the path cache is keyed on identity, so moved\n      ink must not be the same object it was before", () => {
+    const src: Pt[] = [[1, 2, 0.5]];
+    const out = translatePoints(src, 1, 1);
+    expect(out).not.toBe(src);
+    expect(src).toEqual([[1, 2, 0.5]]);
+  });
+
+  it("is exactly reversible — undoing a move puts ink back where it was", () => {
+    const src: Pt[] = [[1.5, -2.25, 0.4], [3, 4, 0.6]];
+    expect(translatePoints(translatePoints(src, 37, -12), -37, 12)).toEqual(src);
+  });
+});
+
+describe("pointsBounds", () => {
+  it("wraps every point", () => {
+    expect(pointsBounds([[1, 5, 0.5], [-3, 2, 0.5], [4, -1, 0.5]]))
+      .toEqual({ x0: -3, y0: -1, x1: 4, y1: 5 });
+  });
+
+  it("is null for no points", () => {
+    expect(pointsBounds([])).toBeNull();
   });
 });

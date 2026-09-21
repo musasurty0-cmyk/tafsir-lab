@@ -68,7 +68,7 @@ interface Viewport { x: number; y: number; zoom: number; }
 
 interface Stroke {
   id:      string;
-  tool:    Exclude<DrawTool, "hand" | "eraser">;
+  tool:    Exclude<DrawTool, "hand" | "eraser" | "lasso">;
   points:  Point[];
   color:   string;
   width:   number;
@@ -546,7 +546,7 @@ export default function FocusAnnotation({
     isDrawing.current    = true;
     activeStroke.current = {
       id: crypto.randomUUID(),
-      tool:    tool as Exclude<DrawTool, "hand" | "eraser">,
+      tool:    tool as Exclude<DrawTool, "hand" | "eraser" | "lasso">,
       points:  [pt], color, width, opacity,
     };
     cancelAnimationFrame(rafRef.current);
@@ -658,6 +658,7 @@ export default function FocusAnnotation({
         {/* Tool rail */}
         <div className="fa-rail">
           <CanvasToolRail
+            omitTools={["lasso"]}
             activeTool={tool}
             onToolChange={setTool}
             penColor={penColor}
