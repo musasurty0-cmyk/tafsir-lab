@@ -412,5 +412,10 @@
     "from": 13.14,
     "to": 23.0,
     "note": "A book beside the sourcing: it opens as he names the collection and closes as he hands over to the hadith itself. It sits above the caption stage as its own element rather than inside a beat, so it survives the three captions that change underneath it."
+  },
+  "bed": {
+    "file": "audio/bed-nasheed.flac",
+    "under": 16.3,
+    "note": "Built by make-bed.py. The supplied clip has a DROPOUT at 44.92-45.90 -- digital silence, a splice in the recording rather than a rest -- and at 51.1s is shorter than the film. So the bed is the clean run before the dropout, extended by jumping back exactly three 7.92s phrases, a repeat measured by correlating the envelope against itself. The join lands on the same point in the bar and passes as a repeat rather than a cut."
   }
 }

@@ -215,6 +215,11 @@ HTML = """<!DOCTYPE html>
 
       <audio id="au-voice" data-start="0" data-duration="%(speech).2f" data-volume="1"
              src="%(audio)s"></audio>
+
+      <!-- The nasheed, 16.3 LU under him: present enough to carry the paper
+           between beats, never near competing with what he is saying. -->
+      <audio id="au-bed" data-start="0" data-duration="%(dur).2f" data-volume="1"
+             src="%(bed)s"></audio>
     </div>
 
     <script>
@@ -542,6 +547,7 @@ out = HTML % {
     "dur": DUR,
     "speech": SPEECH_END,
     "audio": DOC["audio"]["file"],
+    "bed": DOC["bed"]["file"],
     "blocks": "\n".join(blocks),
     "words": "\n".join(words_js),
     "arwords": "\n".join(arwords_js),

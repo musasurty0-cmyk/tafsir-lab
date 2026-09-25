@@ -149,8 +149,28 @@ are short transients a 10 ms attack cannot catch. The limiter is the right tool
 and the range it costs is what it costs.
 
 No denoising: the owner had already cleaned all three, and the floors measure
-−62 to −65 dB. No music bed either — the sibling reel has one because it was
-asked for; this one was not.
+−62 to −65 dB.
+
+### The nasheed
+
+Built by `make-bed.py`. The supplied clip had two problems: a **dropout** at
+44.92–45.90 — digital silence, a splice in the recording rather than a rest in
+the music — and at 51.1s it is shorter than the film.
+
+So the bed is the clean run before the dropout, extended by jumping back
+exactly **three 7.92s phrases**. That repeat was measured, not guessed:
+correlating the loudness envelope against itself puts the phrase at 7.92s with
+2× that the next strongest. Jumping a whole number of phrases lands the splice
+on the same point in the bar, so the join passes as a repeat rather than a cut.
+
+It sits **16.4 LU under the voice**, which is where the sibling reel's bed ended
+up after the owner asked for it to come down.
+
+One measured surprise: the renderer takes about **1.1 dB off** when a second
+audio element is present — the same speech windows read 1.0–1.1 dB lower with
+the bed than without it. Both files are pre-compensated by that amount, so the
+delivered mix sits at −12.0 LUFS with the voice at exactly the level it has
+without a bed, and the ratio between the two untouched.
 
 ## Line breaks
 
