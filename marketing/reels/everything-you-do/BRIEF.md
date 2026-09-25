@@ -82,6 +82,28 @@ captions underneath it change while it is open.
 resolves against the element's own bounding box, which for the left cover is
 nowhere near the spine — it would swing open from its outer edge.
 
+## Motion, and the face
+
+The opening was two cards holding still for thirteen seconds while he recited
+underneath them. Nothing on screen was tied to the sound, which is the
+slideshow problem this project keeps having to solve.
+
+So the recitation IS the animation: every Arabic word is a span with its own
+measured onset and inks at the moment he says it, on the same driver the
+English captions use. Onsets come from word-level Arabic transcription of each
+clip, shifted into final-audio time; the hadith and the second half of the
+maxim align token for token, and on the first half only the recogniser own
+Arabic tokens were taken, because it also emits spurious English mid-stream.
+
+The transliteration and the meaning now arrive within the first second of each
+card and stay. Holding them back to land on a cue left the second card meaning
+on screen for 1.5s, which is why it read as absent altogether.
+
+The face is **Scheherazade New**, the mushaf hand, already this app own
+--font-uthmanic fallback. Not Amiri Quran: Google Fonts ships that with broken
+mark attachment and the harakat float off the letters. Scheherazade sets much
+wider than Amiri, so every card size was re-measured after the switch.
+
 ## Cuts
 
 Every in/out point is the quietest 40 ms in its neighbourhood, found by

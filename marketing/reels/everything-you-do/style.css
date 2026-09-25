@@ -22,7 +22,7 @@
            and it has to match the other reel, whatever the captions are set
            in. */
         --brand:  "Source Serif 4", Georgia, serif;
-        --arabic: "Amiri", "Amiri Quran", serif;
+        --arabic: "Scheherazade New", "Amiri", serif;
       }
 
       html, body {
@@ -189,7 +189,7 @@
          change while it is open and a graphic inside a beat would leave with
          the first of them. */
       .bookwrap {
-        position: absolute; left: 0; right: 0; top: 398px;
+        position: absolute; left: 0; right: 0; top: 386px;
         display: flex; justify-content: center;
         opacity: 0;
       }

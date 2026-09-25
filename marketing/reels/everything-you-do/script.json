@@ -23,12 +23,15 @@
       "to": 9.05,
       "enter": "hero",
       "hero": {
-        "ar": "الْعِبَادَةُ لَا تُسَمَّى عِبَادَةً إِلَّا مَعَ التَّوْحِيدِ",
-        "sizePx": 86,
+        "sizePx": 92,
         "tr": "al-ʿibādatu lā tusammā ʿibādatan illā maʿa at-tawḥīd",
         "en": "worship is not called worship except with tawḥīd",
-        "trAt": 3.2,
-        "enAt": 5.6
+        "trAt": 0.3,
+        "enAt": 0.62,
+        "arRange": [
+          0,
+          6
+        ]
       }
     },
     {
@@ -37,12 +40,15 @@
       "to": 12.78,
       "enter": "hero",
       "hero": {
-        "ar": "كَمَا أَنَّ الصَّلَاةَ لَا تُسَمَّى صَلَاةً إِلَّا مَعَ الطَّهَارَةِ",
-        "sizePx": 80,
+        "sizePx": 86,
         "tr": "kamā anna aṣ-ṣalāta lā tusammā ṣalātan illā maʿa aṭ-ṭahārah",
         "en": "just as prayer is not called prayer except with purity",
-        "trAt": 10.4,
-        "enAt": 11.3
+        "trAt": 9.35,
+        "enAt": 9.67,
+        "arRange": [
+          7,
+          15
+        ]
       }
     },
     {
@@ -73,12 +79,15 @@
       "to": 16.73,
       "enter": "hero",
       "hero": {
-        "ar": "لَا إِلَٰهَ إِلَّا اللَّهُ",
         "sizePx": 132,
         "tr": "lā ilāha illā Allāh",
         "en": "there is no god but Allah",
-        "trAt": 15.32,
-        "enAt": 15.7
+        "trAt": 15.1,
+        "enAt": 15.42,
+        "arRange": [
+          16,
+          19
+        ]
       }
     },
     {
@@ -167,12 +176,15 @@
       "to": 31.6,
       "enter": "hero",
       "hero": {
-        "ar": "إِنَّمَا الْأَعْمَالُ بِالنِّيَّاتِ",
-        "sizePx": 132,
+        "sizePx": 112,
         "tr": "innamā l-aʿmālu bi-n-niyyāt",
         "en": "Verily, actions are by their intentions.",
-        "trAt": 27.3,
-        "enAt": 28.44
+        "trAt": 26.89,
+        "enAt": 27.21,
+        "arRange": [
+          20,
+          22
+        ]
       }
     },
     {
@@ -181,12 +193,15 @@
       "to": 37.45,
       "enter": "hero",
       "hero": {
-        "ar": "وَإِنَّمَا لِكُلِّ امْرِئٍ مَا نَوَى",
-        "sizePx": 108,
+        "sizePx": 98,
         "tr": "wa-innamā li-kulli mri’in mā nawā",
         "en": "And every person will have what they have intended.",
-        "trAt": 32.6,
-        "enAt": 33.8
+        "trAt": 31.9,
+        "enAt": 32.22,
+        "arRange": [
+          23,
+          27
+        ]
       }
     },
     {
@@ -399,7 +414,9 @@
     "marks": "The ochre bar goes under what the sentence turns on: tawḥīd, lā ilāha illā Allāh, spiritual acts, fajr, revising, the ummah.",
     "heroSize": "Measured, not guessed: at 100px the two phrases set 620px and 748px wide, so in a 900px stage they wrap above 145px and 120px. Set at 132 and 108, which leaves about a tenth of the width in hand — a phrase that only just fits is one font-metric change away from wrapping.",
     "lineBreaks": "Line ranges are judged against the real layout by check-wraps.mjs, not by counting characters -- three guesses in a row put a word on its own line. One orphan is kept on purpose: tawhid alone at the end of the first caption is the word the sentence turns on and the word the ochre bar marks. Lines are also kept clear of the 900px limit rather than just inside it, because the renderer and the checker do not always break a boundary case the same way.",
-    "arabic": "Every stretch he speaks in Arabic is set in Arabic, with the transliteration and the meaning beneath: the two halves of the maxim that open the film, la ilaha illa Allah, and the two halves of the hadith. The first cut of this reel captioned the opening ten seconds in ENGLISH, because a recogniser asked for English translates Arabic instead of failing -- it returned fluent prose he never says. Asking it to DETECT the language is what caught it: over 12.3-16.6 of clip 3 it gives up and writes the word \"Arabic\"."
+    "arabic": "Every stretch he speaks in Arabic is set in Arabic, with the transliteration and the meaning beneath: the two halves of the maxim that open the film, la ilaha illa Allah, and the two halves of the hadith. The first cut of this reel captioned the opening ten seconds in ENGLISH, because a recogniser asked for English translates Arabic instead of failing -- it returned fluent prose he never says. Asking it to DETECT the language is what caught it: over 12.3-16.6 of clip 3 it gives up and writes the word \"Arabic\".",
+    "arabicMotion": "Each Arabic word inks at the moment he says it, on the same driver as the English. Before this the opening was two cards holding still for thirteen seconds while he recited underneath them -- nothing on screen was tied to the sound. The transliteration and the meaning now arrive within the first second of each card and stay, because they are what the viewer reads while the recitation runs, not a beat to be revealed.",
+    "arabicFace": "Scheherazade New, the mushaf hand, and already this app's own --font-uthmanic fallback. NOT Amiri Quran: Google Fonts ships that with broken mark attachment and the harakat float off the letters. It sets much wider than Amiri, so every card size was re-measured after the switch."
   },
   "book": {
     "from": 16.73,

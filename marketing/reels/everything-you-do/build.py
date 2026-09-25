@@ -16,7 +16,9 @@ import sys
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
 P = pathlib.Path(__file__).parent
-WORDS = json.loads((P / "transcript.json").read_text(encoding="utf-8"))["words"]
+TR = json.loads((P / "transcript.json").read_text(encoding="utf-8"))
+WORDS = TR["words"]
+ARWORDS = TR["arabic"]["words"]
 DOC = json.loads((P / "script.json").read_text(encoding="utf-8"))
 CSS = (P / "style.css").read_text(encoding="utf-8")
 
@@ -47,17 +49,21 @@ blocks = []
 for b in BEATS:
     if "hero" in b:
         h = b["hero"]
+        # The Arabic is built from word spans now, so a card with no range is a
+        # card that renders EMPTY -- which is exactly what shipped when two
+        # beats were keyed ha1/ha2 and the word table called them a1/a2.
+        assert "arRange" in h, "hero %s has no arRange: its card would be blank" % b["id"]
         blocks.append(
             '        <div class="beat" id="%s" data-layout-allow-overlap="true">\n'
             '          <div class="bmv">\n'
-            '            <div class="%s" dir="rtl" lang="ar"%s>%s</div>\n'
+            '            <div class="%s" dir="rtl" lang="ar"%s id="%s-ar"></div>\n'
             '            <div class="hero-rule" id="%s-rule"></div>\n'
             '            <div class="hero-tr">%s</div>\n'
             '            <div class="hero-en">%s</div>\n'
             '          </div>\n'
             '        </div>' % (b["id"], h.get("cls", "hero-ar"),
                                 (' style="font-size:%dpx"' % h["sizePx"]) if "sizePx" in h else "",
-                                h["ar"], b["id"], h["tr"], h["en"]))
+                                b["id"], b["id"], h["tr"], h["en"]))
     elif b["id"] == "close":
         blocks.append(
             '        <div class="beat" id="close" data-layout-allow-overlap="true">\n'
@@ -97,6 +103,19 @@ for i in range(0, len(WORDS), 3):
                     for w in WORDS[i:i + 3])
     words_js.append("        " + row + ",")
 
+arwords_js = []
+for i in range(0, len(ARWORDS), 3):
+    row = ", ".join('[%.2f, %.2f, %s]' % (w[0], w[1], json.dumps(w[2], ensure_ascii=False))
+                    for w in ARWORDS[i:i + 3])
+    arwords_js.append("        " + row + ",")
+
+arlines_js = []
+for b in BEATS:
+    h = b.get("hero")
+    if h and "arRange" in h:
+        arlines_js.append('        { host: "#%s-ar", range: [%d, %d] },'
+                          % (b["id"], h["arRange"][0], h["arRange"][1]))
+
 hero_js = []
 for b in BEATS:
     if "hero" in b:
@@ -118,7 +137,7 @@ HTML = """<!DOCTYPE html>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=1080, height=1920">
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;0,7..72,700;1,7..72,500;1,7..72,600&amp;family=Source+Serif+4:ital,opsz,wght@1,8..60,500&amp;family=Amiri:wght@400;700&amp;display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;0,7..72,700;1,7..72,500;1,7..72,600&amp;family=Source+Serif+4:ital,opsz,wght@1,8..60,500&amp;family=Amiri:wght@400;700&amp;family=Scheherazade+New:wght@400;700&amp;display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
     <style>
       /* %(banner)s */
@@ -138,7 +157,7 @@ HTML = """<!DOCTYPE html>
         </div>
 
         <div class="bookwrap" id="book" aria-hidden="true">
-          <svg viewBox="0 0 330 196" width="330" height="196">
+          <svg viewBox="0 0 330 196" width="418" height="248">
             <g id="bk-l">
               <path class="bk-cover" d="M162 26 C126 10 74 5 26 12 L26 170 C74 163 126 168 162 184 Z"/>
               <g class="bk-lines" id="bk-ll">
@@ -182,6 +201,15 @@ HTML = """<!DOCTYPE html>
 %(words)s
       ];
 
+      /* The Arabic he recites, word by word. Same shape as WORDS and driven
+         by the same envelope: the recitation is what animates these cards. */
+      const AR = [
+%(arwords)s
+      ];
+      const AR_LINES = [
+%(arlines)s
+      ];
+
       /* Which words sit on which line. `range` is inclusive and indexes
          WORDS, so a caption can never say one thing while the driver lights
          another. `mark` is the sub-range the ochre bar underlines. */
@@ -210,6 +238,27 @@ HTML = """<!DOCTYPE html>
         outer.appendChild(inner);
         wordEls[i] = inner;
         return outer;
+      }
+
+      const arEls = new Array(AR.length).fill(null);
+      /* Built the same way as a caption line so the ink driver can treat both
+         alike. RTL is the container's job -- the spans go in source order and
+         the browser lays them right to left. */
+      for (const spec of AR_LINES) {
+        const host = document.querySelector(spec.host);
+        const [from, to] = spec.range;
+        for (let i = from; i <= to; i++) {
+          const outer = document.createElement("span");
+          outer.className = "w";
+          const inner = document.createElement("i");
+          inner.className = "wi";
+          inner.style.fontStyle = "normal";
+          inner.textContent = AR[i][2];
+          outer.appendChild(inner);
+          arEls[i] = inner;
+          host.appendChild(outer);
+          if (i < to) host.appendChild(document.createTextNode(" "));
+        }
       }
 
       for (const spec of LINES) {
@@ -420,14 +469,18 @@ HTML = """<!DOCTYPE html>
       tl.to(driver, {
         t: DUR, duration: DUR, ease: "none",
         onUpdate: () => {
-          for (let i = 0; i < WORDS.length; i++) {
-            const el = wordEls[i];
-            if (!el) continue;
-            const e = envelope(driver.t, WORDS[i][0], WORDS[i][1]);
-            el.style.color = "rgb(" + chan(REST_RGB.r, INK_RGB.r, e) + ","
-                                    + chan(REST_RGB.g, INK_RGB.g, e) + ","
-                                    + chan(REST_RGB.b, INK_RGB.b, e) + ")";
-          }
+          const paint = (tbl, els) => {
+            for (let i = 0; i < tbl.length; i++) {
+              const el = els[i];
+              if (!el) continue;
+              const e = envelope(driver.t, tbl[i][0], tbl[i][1]);
+              el.style.color = "rgb(" + chan(REST_RGB.r, INK_RGB.r, e) + ","
+                                      + chan(REST_RGB.g, INK_RGB.g, e) + ","
+                                      + chan(REST_RGB.b, INK_RGB.b, e) + ")";
+            }
+          };
+          paint(WORDS, wordEls);
+          paint(AR, arEls);
         }
       }, 0);
 
@@ -450,6 +503,8 @@ out = HTML % {
     "audio": DOC["audio"]["file"],
     "blocks": "\n".join(blocks),
     "words": "\n".join(words_js),
+    "arwords": "\n".join(arwords_js),
+    "arlines": "\n".join(arlines_js),
     "lines": "\n".join(lines_js),
     "beats": "\n".join(beats_js),
     "sweeps": "\n".join(sweep_js),
