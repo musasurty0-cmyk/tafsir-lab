@@ -1,0 +1,414 @@
+"""Generate marketing/reels/everything-you-do/index.html.
+
+Three inputs, none of them this file:
+  transcript.json — the measured word list, from the rendered audio
+  script.json     — which words sit on which line, in which beat, and what the
+                    ochre bar marks
+  style.css       — the design, which is the sibling reel's verbatim
+
+The page is GENERATED. Edit the data or this generator, never index.html.
+"""
+import io
+import json
+import pathlib
+import sys
+
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+
+P = pathlib.Path(__file__).parent
+WORDS = json.loads((P / "transcript.json").read_text(encoding="utf-8"))["words"]
+DOC = json.loads((P / "script.json").read_text(encoding="utf-8"))
+CSS = (P / "style.css").read_text(encoding="utf-8")
+
+BEATS = DOC["beats"]
+DUR = BEATS[-1]["to"]
+SPEECH_END = DOC["audio"]["speechEnd"]
+
+# Every word a line claims must exist, and no word may be claimed twice: a
+# caption that says one thing while the karaoke lights another is the failure
+# this check exists to make impossible.
+claimed = {}
+for b in BEATS:
+    for ln in b.get("lines", []):
+        lo, hi = ln["range"]
+        assert 0 <= lo <= hi < len(WORDS), "range %s outside the word list" % (ln["range"],)
+        for i in range(lo, hi + 1):
+            assert i not in claimed, "word %d claimed by %s and %s" % (i, claimed[i], b["id"])
+            claimed[i] = b["id"]
+        if "mark" in ln:
+            m0, m1 = ln["mark"]
+            assert lo <= m0 <= m1 <= hi, "mark %s outside its line %s" % (ln["mark"], ln["range"])
+
+# Beats must tile: no gap to cut into, no overlap to collide in.
+for a, b in zip(BEATS, BEATS[1:]):
+    assert abs(a["to"] - b["from"]) < 1e-9, "gap between %s and %s" % (a["id"], b["id"])
+
+blocks = []
+for b in BEATS:
+    if "hero" in b:
+        h = b["hero"]
+        blocks.append(
+            '        <div class="beat" id="%s" data-layout-allow-overlap="true">\n'
+            '          <div class="bmv">\n'
+            '            <div class="%s" dir="rtl" lang="ar"%s>%s</div>\n'
+            '            <div class="hero-rule" id="%s-rule"></div>\n'
+            '            <div class="hero-tr">%s</div>\n'
+            '            <div class="hero-en">%s</div>\n'
+            '          </div>\n'
+            '        </div>' % (b["id"], h.get("cls", "hero-ar"),
+                                (' style="font-size:%dpx"' % h["sizePx"]) if "sizePx" in h else "",
+                                h["ar"], b["id"], h["tr"], h["en"]))
+    elif b["id"] == "close":
+        blocks.append(
+            '        <div class="beat" id="close" data-layout-allow-overlap="true">\n'
+            '          <div class="bmv">\n'
+            '            <div class="brand-row">\n'
+            '              <div class="tile"><span class="t">T</span></div>\n'
+            '              <div class="wm-clip"><div class="wordmark">TafsirLab</div></div>\n'
+            '            </div>\n'
+            '            <div class="cobrand">\n'
+            '              <div class="xm">&#215;</div>\n'
+            '              <div class="sgs-clip"><div class="sgs">SGS ISOC</div></div>\n'
+            '            </div>\n'
+            '            <div class="close-rule" id="close-rule"></div>\n'
+            '            <div class="url-clip"><div class="close-url">tafsir-lab.com</div></div>\n'
+            '          </div>\n'
+            '        </div>')
+    else:
+        blocks.append(
+            '        <div class="beat" id="%s" data-layout-allow-overlap="true">'
+            '<div class="bmv"></div></div>' % b["id"])
+
+lines_js = []
+for b in BEATS:
+    for ln in b.get("lines", []):
+        mark = ', mark: [%d, %d]' % tuple(ln["mark"]) if "mark" in ln else ""
+        lines_js.append('        { beat: "%s", cls: "%s", range: [%d, %d]%s },'
+                        % (b["id"], ln["cls"], ln["range"][0], ln["range"][1], mark))
+
+beats_js = []
+for b in BEATS:
+    beats_js.append('        { el: "#%s", from: %6.2f, to: %6.2f, enter: "%s" },'
+                    % (b["id"], b["from"], b["to"], b["enter"]))
+
+words_js = []
+for i in range(0, len(WORDS), 3):
+    row = ", ".join('[%.2f, %.2f, %s]' % (w[0], w[1], json.dumps(w[2], ensure_ascii=False))
+                    for w in WORDS[i:i + 3])
+    words_js.append("        " + row + ",")
+
+hero_js = []
+for b in BEATS:
+    if "hero" in b:
+        h = b["hero"]
+        hero_js.append('        ["#%s", %.2f, %.2f, %.2f],'
+                       % (b["id"], b["from"] + 0.08, h["trAt"], h["enAt"]))
+
+sweep_js = []
+for b in BEATS:
+    for ln in b.get("lines", []):
+        if "mark" in ln:
+            m0, m1 = ln["mark"]
+            sweep_js.append('      sweep("#mkbar-%s", %.2f, %.2f);'
+                            % (b["id"], WORDS[m0][0], WORDS[m1][1]))
+
+HTML = """<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=1080, height=1920">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;0,7..72,700;1,7..72,500;1,7..72,600&amp;family=Source+Serif+4:ital,opsz,wght@1,8..60,500&amp;family=Amiri:wght@400;700&amp;display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      /* %(banner)s */
+%(css)s
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="%(dur).2f"
+         data-fps="30" data-width="1080" data-height="1920">
+      <div id="scene" class="clip" data-start="0" data-duration="%(dur).2f" data-track-index="1">
+
+        <div class="paper"></div>
+        <div class="dots"></div>
+
+        <div class="rail">
+          <div class="rail-track"><div class="rail-fill" id="rail-fill"></div></div>
+        </div>
+
+        <div class="stage" id="stage">
+%(blocks)s
+        </div>
+
+        <div class="foot" id="foot">
+          <span>%(footL)s</span>
+          <span>%(footR)s</span>
+        </div>
+      </div>
+
+      <audio id="au-voice" data-start="0" data-duration="%(speech).2f" data-volume="1"
+             src="%(audio)s"></audio>
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+
+      /* The words he says, with the time he says each one. Measured from the
+         rendered audio, not authored: see build.py. */
+      const WORDS = [
+%(words)s
+      ];
+
+      /* Which words sit on which line. `range` is inclusive and indexes
+         WORDS, so a caption can never say one thing while the driver lights
+         another. `mark` is the sub-range the ochre bar underlines. */
+      const LINES = [
+%(lines)s
+      ];
+
+      const BEATS = [
+%(beats)s
+      ];
+
+      const DUR = %(dur).2f;
+      const SPEECH_END = %(speech).2f;
+      const tl = gsap.timeline({ paused: true });
+
+      const stage = document.getElementById("stage");
+      const wordEls = new Array(WORDS.length).fill(null);
+
+      function makeWord(i) {
+        const outer = document.createElement("span");
+        outer.className = "w";
+        const inner = document.createElement("i");
+        inner.className = "wi";
+        inner.style.fontStyle = "normal";
+        inner.textContent = WORDS[i][2];
+        outer.appendChild(inner);
+        wordEls[i] = inner;
+        return outer;
+      }
+
+      for (const spec of LINES) {
+        const host = document.querySelector("#" + spec.beat + " .bmv");
+        const line = document.createElement("div");
+        line.className = spec.cls;
+
+        const [from, to] = spec.range;
+        const mk = spec.mark || null;
+        let markHost = null;
+
+        for (let i = from; i <= to; i++) {
+          const inMark = mk && i >= mk[0] && i <= mk[1];
+          if (mk && i === mk[0]) {
+            markHost = document.createElement("span");
+            markHost.className = "mk";
+            line.appendChild(markHost);
+          }
+          (inMark ? markHost : line).appendChild(makeWord(i));
+          if (inMark && i === mk[1]) {
+            const bar = document.createElement("span");
+            bar.className = "mk-bar";
+            bar.id = "mkbar-" + spec.beat;
+            markHost.appendChild(bar);
+          }
+          /* A space BETWEEN two marked words belongs inside the marked run, or
+             the two collide ("noreason"). The space that ENDS the run belongs
+             to the line, or the underline stretches past what it marks. */
+          if (i < to) {
+            const nextInMark = mk && (i + 1) >= mk[0] && (i + 1) <= mk[1];
+            (inMark && nextInMark ? markHost : line)
+              .appendChild(document.createTextNode(" "));
+          }
+        }
+        host.appendChild(line);
+      }
+
+      /* The rail advances with the recording, and the foot sits under it.
+         Both leave before the card lands, so the mark is alone on the paper
+         and the foot's wordmark is not under a second one saying the same. */
+      tl.set("#rail-fill", { scaleX: 0 }, 0);
+      tl.to("#rail-fill", { scaleX: 1, duration: SPEECH_END, ease: "none" }, 0);
+      tl.to(".rail", { opacity: 0, duration: 0.22, ease: "power2.in" }, SPEECH_END + 0.20);
+
+      tl.set("#foot", { opacity: 0 }, 0);
+      tl.to("#foot", { opacity: 1, duration: 0.5, ease: "power2.out" }, 0.4);
+      tl.to("#foot", { opacity: 0, duration: 0.22, ease: "power2.in" }, SPEECH_END + 0.20);
+
+      /* Distinct entrance per beat, but all of them travel UP: a spent beat
+         leaves through the top while its successor arrives from below, so a
+         swap reads as one roll rather than two unrelated events. */
+      const ENTER = {
+        words: { y: 0,  ease: "power3.out",    duration: 0.30 },
+        rise:  { y: 46, ease: "power3.out",    duration: 0.34 },
+        fast:  { y: 34, ease: "power4.out",    duration: 0.22 },
+        side:  { y: 40, ease: "circ.out",      duration: 0.36 },
+        tilt:  { y: 52, ease: "power3.out",    duration: 0.38 },
+        hero:  { y: 64, ease: "back.out(1.5)", duration: 0.42 },
+        slam:  { y: 78, ease: "power4.out",    duration: 0.40 }
+      };
+
+      BEATS.forEach((b, bi) => {
+        const mv = "#" + b.el.slice(1) + " .bmv";
+        /* A beat's last word ends where the next beat's first word starts, so
+           there is no silent gap to cut in. The spent beat leaves in the 0.14s
+           before the boundary -- four frames early on a word the eye has
+           already read, which is how any subtitle sets its out-point -- and
+           the new one starts two frames later. Overlap is under one frame. */
+        const inAt  = Math.max(0, b.from - 0.02);
+        const outAt = b.to - 0.14;
+        const spec  = ENTER[b.enter];
+
+        if (b.enter === "words") {
+          /* The opening beat has no predecessor to roll off, so its entrance
+             IS the speech: each word lifts as he says it. */
+          tl.set(b.el, { opacity: 1 }, 0);
+          const first = LINES.find((l) => l.beat === b.el.slice(1));
+          const last  = LINES.filter((l) => l.beat === b.el.slice(1)).pop();
+          for (let i = first.range[0]; i <= last.range[1]; i++) {
+            if (!wordEls[i]) continue;
+            const at = Math.max(0, WORDS[i][0] - 0.05);
+            tl.fromTo(wordEls[i].parentElement, { y: 52, opacity: 0 },
+              { y: 0, opacity: 1, duration: 0.30, ease: "power3.out",
+                immediateRender: false }, at);
+          }
+        } else {
+          tl.set(b.el, { opacity: 0 }, 0);
+          tl.set(b.el, { opacity: 1 }, inAt);
+          tl.fromTo(mv, { y: spec.y, opacity: 0 },
+            { y: 0, opacity: 1, ease: spec.ease, duration: spec.duration,
+              immediateRender: false }, inAt);
+        }
+
+        /* The last beat holds to the final frame -- a climax that scaled back
+           out would take the line away before it had been read. */
+        if (bi < BEATS.length - 1) {
+          tl.to(mv, { y: -34, opacity: 0, duration: 0.14, ease: "power2.in" }, outAt);
+          tl.set(b.el, { opacity: 0 }, b.to - 0.005);
+        }
+      });
+
+      /* The ochre marker, under the words the sentence turns on. It draws
+         across exactly the span of time he spends saying them. */
+      function sweep(id, from, to) {
+        tl.set(id, { scaleX: 0 }, 0);
+        tl.to(id, { scaleX: 1, duration: Math.max(0.18, to - from),
+                    ease: "power1.out" }, from);
+      }
+%(sweeps)s
+
+      /* The hadith cards: the Arabic first, then the transliteration, then
+         what it means -- the phrase before its gloss. The gloss lands on the
+         word he says it with, so the card reads at his pace and not the
+         page's. */
+      const HEROES = [
+%(heroes)s
+      ];
+      HEROES.forEach(([h, tRule, tTr, tEn]) => {
+        tl.set(h + " .hero-rule", { scaleX: 0 }, 0);
+        tl.to(h + " .hero-rule", { scaleX: 1, duration: 0.38, ease: "power2.out" }, tRule);
+        /* An explicit hidden state at t=0. The card's parent is on screen
+           before these two lines are, and a fromTo with immediateRender:false
+           paints nothing until its own start -- so without this they simply
+           sit there at full opacity. Opacity, not display, so the Arabic
+           above them does not move when they arrive. */
+        tl.set(h + " .hero-tr", { opacity: 0 }, 0);
+        tl.set(h + " .hero-en", { opacity: 0 }, 0);
+        tl.fromTo(h + " .hero-tr", { y: 18, opacity: 0 },
+          { y: 0, opacity: 1, duration: 0.28, ease: "power2.out", immediateRender: false }, tTr);
+        tl.fromTo(h + " .hero-en", { y: 14, opacity: 0 },
+          { y: 0, opacity: 1, duration: 0.28, ease: "power2.out", immediateRender: false }, tEn);
+      });
+
+      /* The close. Both reveals are clips, not fades: fading a child inside a
+         group that is itself fading compounds the two, and a half-opaque
+         glyph measures as a contrast failure mid-entrance even though its
+         resting state is 13:1. A clip slides at full ink the whole way. */
+      const CLOSE_IN = %(closeIn).2f;
+      tl.set("#close .tile", { scale: 0.7, opacity: 0 }, 0);
+      tl.to("#close .tile", { scale: 1, opacity: 1, duration: 0.42,
+                              ease: "back.out(1.6)" }, CLOSE_IN + 0.10);
+      tl.set("#close .wordmark", { yPercent: 115 }, 0);
+      tl.to("#close .wordmark", { yPercent: 0, duration: 0.46, ease: "power3.out" },
+            CLOSE_IN + 0.26);
+      tl.set("#close .xm", { opacity: 0 }, 0);
+      tl.to("#close .xm", { opacity: 1, duration: 0.30, ease: "power2.out" },
+            CLOSE_IN + 0.62);
+      tl.set("#close .sgs", { yPercent: 115 }, 0);
+      tl.to("#close .sgs", { yPercent: 0, duration: 0.44, ease: "power3.out" },
+            CLOSE_IN + 0.70);
+      tl.set("#close-rule", { scaleX: 0 }, 0);
+      tl.to("#close-rule", { scaleX: 1, duration: 0.42, ease: "power2.out" },
+            CLOSE_IN + 1.02);
+      tl.set("#close .close-url", { yPercent: 115 }, 0);
+      tl.to("#close .close-url", { yPercent: 0, duration: 0.40, ease: "power3.out" },
+            CLOSE_IN + 1.18);
+
+      /* ONE linear driver for every word: it writes COLOUR ONLY. No glow (a
+         dark-mode device, wrong on paper) and no per-word scale (half a pixel
+         a frame under a large serif is the sub-pixel shimmer this project has
+         already had to remove twice). Ink is enough.
+
+         Three states, each legible on its own: not yet spoken (3.9:1), spoken
+         and settled (5.4:1), being spoken (13:1). */
+      const ATTACK = 0.05;
+      const RELEASE = 0.34;
+      const REST_LEVEL = 0.35;
+      const REST_RGB = { r: 0x7e, g: 0x7a, b: 0x6f };
+      const INK_RGB  = { r: 0x29, g: 0x26, b: 0x21 };
+
+      function envelope(t, start, end) {
+        if (t < start) return 0;
+        if (t < end) return Math.min((t - start) / ATTACK, 1);
+        const releaseEnd = end + RELEASE;
+        if (t < releaseEnd) return 1 - ((t - end) / RELEASE) * (1 - REST_LEVEL);
+        return REST_LEVEL;
+      }
+      function chan(a, b, t) { return Math.round(a + (b - a) * t); }
+
+      const driver = { t: 0 };
+      tl.to(driver, {
+        t: DUR, duration: DUR, ease: "none",
+        onUpdate: () => {
+          for (let i = 0; i < WORDS.length; i++) {
+            const el = wordEls[i];
+            if (!el) continue;
+            const e = envelope(driver.t, WORDS[i][0], WORDS[i][1]);
+            el.style.color = "rgb(" + chan(REST_RGB.r, INK_RGB.r, e) + ","
+                                    + chan(REST_RGB.g, INK_RGB.g, e) + ","
+                                    + chan(REST_RGB.b, INK_RGB.b, e) + ")";
+          }
+        }
+      }, 0);
+
+      tl.seek(0);
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>
+"""
+
+banner = ("everything-you-do — %.1fs, 1080×1920, LIGHT. "
+          "TafsirLab × SGS ISOC. Generated by build.py; edit the data, not this."
+          % DUR)
+
+out = HTML % {
+    "banner": banner,
+    "css": CSS.rstrip(),
+    "dur": DUR,
+    "speech": SPEECH_END,
+    "audio": DOC["audio"]["file"],
+    "blocks": "\n".join(blocks),
+    "words": "\n".join(words_js),
+    "lines": "\n".join(lines_js),
+    "beats": "\n".join(beats_js),
+    "sweeps": "\n".join(sweep_js),
+    "heroes": "\n".join(hero_js),
+    "closeIn": BEATS[-1]["from"],
+    "footL": "An introduction to Tawḥīd",
+    "footR": "TafsirLab × SGS ISOC",
+}
+(P / "index.html").write_text(out, encoding="utf-8")
+print("wrote index.html  (%d beats, %d words captioned of %d, %.2fs)"
+      % (len(BEATS), len(claimed), len(WORDS), DUR))

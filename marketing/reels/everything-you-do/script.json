@@ -1,0 +1,326 @@
+{
+  "title": "An introduction to Tawḥīd",
+  "occasion": "Jumuʿah khuṭbah · SGS ISOC · 25 September 2026 / 14 Rabīʿ al-Thānī 1448",
+  "khateeb": "Musa Surty",
+  "source": {
+    "clips": [
+      "cleaned-video (3).mp4 — the premise: worship is not worship without tawḥīd",
+      "cleaned-video (8).mp4 — the question, and the hadith of intentions",
+      "cleaned-video (7).mp4 — the examples, and the close"
+    ],
+    "note": "Three excerpts of one khuṭbah, already denoised by the owner. Joined in the order the khuṭbah argues them, not the order the files arrived."
+  },
+  "audio": {
+    "file": "audio/khutbah.flac",
+    "duration": 52.71,
+    "speechEnd": 52.71,
+    "note": "Six segments from three clips. Every in/out point is the quietest 40 ms in its neighbourhood, measured rather than taken from the recogniser — whose word times run about 0.45s late on clip 3, which is how the first attempt cut into the middle of 'verily'. Clips matched to a common level first (−21.8 / −22.7 / −23.5 LUFS), then +10 dB into a limiter at −1.5 dBFS: −11.8 LUFS, LRA 3.1, which is the sibling reel's voice to within 0.2 dB."
+  },
+  "beats": [
+    {
+      "id": "b1",
+      "from": 0.48,
+      "to": 9.66,
+      "enter": "words",
+      "lines": [
+        {
+          "cls": "ln",
+          "range": [
+            1,
+            6
+          ]
+        },
+        {
+          "cls": "ln",
+          "range": [
+            7,
+            12
+          ],
+          "mark": [
+            12,
+            12
+          ]
+        }
+      ]
+    },
+    {
+      "id": "b2",
+      "from": 9.66,
+      "to": 13.72,
+      "enter": "rise",
+      "lines": [
+        {
+          "cls": "ln ln--sm",
+          "range": [
+            13,
+            21
+          ]
+        },
+        {
+          "cls": "ln ln--sm",
+          "range": [
+            22,
+            27
+          ],
+          "mark": [
+            25,
+            27
+          ]
+        }
+      ]
+    },
+    {
+      "id": "h1",
+      "from": 13.72,
+      "to": 18.9,
+      "enter": "hero",
+      "hero": {
+        "ar": "إِنَّمَا الْأَعْمَالُ بِالنِّيَّاتِ",
+        "tr": "innamā l-aʿmālu bi-n-niyyāt",
+        "en": "Verily, actions are by their intentions.",
+        "trAt": 14.9,
+        "enAt": 16.16,
+        "sizePx": 132
+      }
+    },
+    {
+      "id": "h2",
+      "from": 18.9,
+      "to": 24.54,
+      "enter": "hero",
+      "hero": {
+        "ar": "وَإِنَّمَا لِكُلِّ امْرِئٍ مَا نَوَى",
+        "tr": "wa-innamā li-kulli mri’in mā nawā",
+        "en": "And every person will have what they have intended.",
+        "trAt": 19.7,
+        "enAt": 20.62,
+        "sizePx": 108
+      }
+    },
+    {
+      "id": "b5",
+      "from": 24.54,
+      "to": 27.68,
+      "enter": "side",
+      "lines": [
+        {
+          "cls": "ln",
+          "range": [
+            41,
+            49
+          ],
+          "mark": [
+            48,
+            49
+          ]
+        }
+      ]
+    },
+    {
+      "id": "b6",
+      "from": 27.68,
+      "to": 34.8,
+      "enter": "rise",
+      "lines": [
+        {
+          "cls": "ln ln--sm",
+          "range": [
+            50,
+            54
+          ]
+        },
+        {
+          "cls": "ln ln--sm",
+          "range": [
+            55,
+            57
+          ]
+        },
+        {
+          "cls": "ln ln--sm",
+          "range": [
+            58,
+            60
+          ]
+        },
+        {
+          "cls": "ln ln--sm",
+          "range": [
+            61,
+            63
+          ]
+        },
+        {
+          "cls": "ln ln--sm",
+          "range": [
+            64,
+            66
+          ]
+        }
+      ]
+    },
+    {
+      "id": "b7",
+      "from": 34.8,
+      "to": 38.58,
+      "enter": "fast",
+      "lines": [
+        {
+          "cls": "ln ln--sm",
+          "range": [
+            67,
+            71
+          ]
+        },
+        {
+          "cls": "ln ln--sm",
+          "range": [
+            72,
+            76
+          ]
+        },
+        {
+          "cls": "ln ln--sm",
+          "range": [
+            77,
+            80
+          ]
+        }
+      ]
+    },
+    {
+      "id": "b8",
+      "from": 38.58,
+      "to": 41.36,
+      "enter": "tilt",
+      "lines": [
+        {
+          "cls": "ln",
+          "range": [
+            81,
+            92
+          ],
+          "mark": [
+            92,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "b9",
+      "from": 41.36,
+      "to": 43.64,
+      "enter": "side",
+      "lines": [
+        {
+          "cls": "ln ln--sm",
+          "range": [
+            93,
+            101
+          ],
+          "mark": [
+            96,
+            96
+          ]
+        }
+      ]
+    },
+    {
+      "id": "b10",
+      "from": 43.64,
+      "to": 48.24,
+      "enter": "rise",
+      "lines": [
+        {
+          "cls": "ln ln--sm",
+          "range": [
+            102,
+            106
+          ]
+        },
+        {
+          "cls": "ln ln--sm",
+          "range": [
+            107,
+            109
+          ]
+        },
+        {
+          "cls": "ln ln--sm",
+          "range": [
+            110,
+            112
+          ]
+        },
+        {
+          "cls": "ln ln--sm",
+          "range": [
+            113,
+            118
+          ],
+          "mark": [
+            117,
+            118
+          ]
+        }
+      ]
+    },
+    {
+      "id": "b11",
+      "from": 48.24,
+      "to": 51.22,
+      "enter": "tilt",
+      "lines": [
+        {
+          "cls": "ln ln--sm",
+          "range": [
+            119,
+            123
+          ]
+        },
+        {
+          "cls": "ln ln--sm",
+          "range": [
+            124,
+            126
+          ]
+        },
+        {
+          "cls": "ln ln--sm",
+          "range": [
+            127,
+            129
+          ]
+        }
+      ]
+    },
+    {
+      "id": "b12",
+      "from": 51.22,
+      "to": 53.3,
+      "enter": "slam",
+      "lines": [
+        {
+          "cls": "ln ln--xl",
+          "range": [
+            130,
+            135
+          ]
+        }
+      ]
+    },
+    {
+      "id": "close",
+      "from": 53.3,
+      "to": 57.4,
+      "enter": "rise"
+    }
+  ],
+  "notes": {
+    "uncaptioned": "Words 28–32 and 33–40 are the English he speaks over the two hadith cards; they are set on the card as its gloss rather than run through the karaoke, the same way the sibling reel handles the stretch he spends arriving at an Arabic phrase. Word 0 is a fragment before 'verily' and is not shown.",
+    "marks": "The ochre bar goes under what the sentence turns on: tawḥīd, lā ilāha illā Allāh, spiritual acts, fajr, revising, the ummah.",
+    "heroSize": "Measured, not guessed: at 100px the two phrases set 620px and 748px wide, so in a 900px stage they wrap above 145px and 120px. Set at 132 and 108, which leaves about a tenth of the width in hand — a phrase that only just fits is one font-metric change away from wrapping.",
+    "lineBreaks": "Line ranges are judged against the real layout by check-wraps.mjs, not by counting characters -- three guesses in a row put a word on its own line. One orphan is kept on purpose: tawhid alone at the end of the first caption is the word the sentence turns on and the word the ochre bar marks. Lines are also kept clear of the 900px limit rather than just inside it, because the renderer and the checker do not always break a boundary case the same way."
+  }
+}
