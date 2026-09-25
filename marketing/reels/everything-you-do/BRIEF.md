@@ -6,7 +6,7 @@ message: "Worship is not worship without tawḥīd; actions are by intentions; s
 destination: instagram-reels
 aspect: 1080x1920
 language: en
-length: 57.4s
+length: 67.4s
 angle: narrative
 ---
 
@@ -15,59 +15,92 @@ angle: narrative
 An excerpt from the khuṭbah **"An introduction to Tawḥīd"** — Musa Surty, SGS
 ISOC, 25 September 2026 / 14 Rabīʿ al-Thānī 1448 — set in the Tafsir Lab
 language: warm paper, ink serif, a hairline that advances as he speaks, every
-word darkening at the instant it is said, and the two hadith phrases held as
-Arabic cards.
+word darkening at the instant it is said, and every Arabic phrase held as a
+card with its meaning beneath.
 
 Carries a second mark: **TafsirLab × SGS ISOC**, in the running foot and on the
 closing card.
 
 Same build as `../seeing-his-face`, which this is the sibling of — the
 stylesheet is that reel's verbatim (see `style.css`), minus its circled
-numerals, plus the co-brand lockup.
+numerals, plus the co-brand lockup and the book.
 
 ## The edit
 
-Three clips arrived; all three are used, in the order the khuṭbah argues them
-rather than the order the files came in:
+Three clips, all used, in the order the khuṭbah argues them rather than the
+order the files arrived:
 
-| # | clip | what it carries |
-| - | ---- | --------------- |
-| A | `cleaned-video (3).mp4` | the premise — worship is not worship without tawḥīd |
-| B | `cleaned-video (8).mp4` | the question — what does living *lā ilāha illā Allāh* look like? |
-| C | `cleaned-video (8).mp4` | the hadith — *innamā l-aʿmālu bi-n-niyyāt* |
-| D | `cleaned-video (7).mp4` | the examples — sleeping for fajr, revising for the ummah |
-| E | `cleaned-video (7).mp4` | the bridge — these could be your intention in everything you do |
-| F | `cleaned-video (7).mp4` | the close — *Islam exists in everything you do* |
+| seg | clip | what it carries |
+| --- | ---- | --------------- |
+| a1 | 3 | **Arabic** — *al-ʿibādatu lā tusammā ʿibādatan illā maʿa at-tawḥīd* |
+| a2 | 3 | **Arabic** — *kamā anna aṣ-ṣalāta lā tusammā ṣalātan illā maʿa aṭ-ṭahārah* |
+| b  | 8 | the question, ending on *lā ilāha illā Allāh* |
+| s  | 8 | the first hadith of Nawawī's forty and of Bukhārī, one you all know |
+| c  | 8 | the hadith — *innamā l-aʿmālu bi-n-niyyāt* |
+| d  | 7 | worship is not limited — sleeping for fajr, revising for the ummah |
+| f  | 7 | *Islam exists in everything you do* |
 
-Six segments, 52.7s of speech in a 57.4s piece. The brief was "no longer than a
-minute" with the choice left open; all three fit inside it once the sourcing of
-the hadith (Nawawī, Bukhārī), the *kuntum khayra ummah* quotation and the
-restatement after it are left out. Each of those is good; none of them is
-load-bearing for this argument.
+Left out to hold the length: his English gloss of the ṣalāh/purity half (the
+card already carries it in English), and the line "these could be your
+intention in everything that you do", which the closing line says better.
+
+## The Arabic, and how the first cut got it wrong
+
+Clip 3 opens the khuṭbah in **Arabic**, and the first cut of this reel
+captioned those ten seconds in **English**.
+
+The cause is worth writing down. A recogniser asked for English does not fail
+on Arabic — it TRANSLATES. Whisper returned *"verily worship cannot be called
+worship except with the accompaniment of Tawheed"* as fluent English prose with
+plausible word-level timings, and none of it is spoken. Checking it by forcing
+Arabic proved nothing either, because forcing Arabic on English audio
+translates the other way, so both answers look the same.
+
+What caught it was asking Whisper to **detect** the language over short windows
+instead of telling it: over 12.3–16.6s it gives up and writes the literal word
+*"Arabic"*, and over 3.5–7.5s it drops an Arabic fragment into the middle of an
+English sentence. Scanning the clip that way puts the Arabic at **1.94–16.37**,
+with his English translation after it.
+
+Every stretch he speaks in Arabic is now set in Arabic, with the
+transliteration and the meaning beneath: both halves of the maxim, *lā ilāha
+illā Allāh*, and both halves of the hadith.
+
+10.90–12.46 of clip 3 is him repeating *maʿa at-tawḥīd*; the clause itself
+finishes at 10.60, so that is where the trim comes from.
+
+## The book
+
+A drawn book sits beside the sourcing — it opens as he names the collection,
+its ruled lines draw on, and it shuts before the hadith card lands. Same
+hairline weight as the rules and the same ochre as the marker, so it belongs to
+the page rather than arriving from a different stylesheet. It lives above the
+caption stage as its own element rather than inside a beat, because the three
+captions underneath it change while it is open.
+
+`svgOrigin`, not `transformOrigin`: on an SVG group the percentage form
+resolves against the element's own bounding box, which for the left cover is
+nowhere near the spine — it would swing open from its outer edge.
 
 ## Cuts
 
 Every in/out point is the quietest 40 ms in its neighbourhood, found by
-measuring the envelope (`trough.py` in the working notes), not taken from the
-recogniser. The recogniser drifts: on clip 3 its word times run about 0.45s
-late, which is how the first attempt cut into the middle of *verily* and the
-last one caught the tail of *true* before *Islam*. The joined edit was then
-transcribed end to end and had to read back as one coherent passage before
-anything was built on it.
+measuring the envelope (`trough.py`), not taken from the recogniser. The
+recogniser drifts: on clip 3 its word times run about 0.45s late, which is how
+an earlier attempt cut into the middle of *verily* and another caught the tail
+of *true* before *Islam*.
 
 ## Audio
 
 The three clips were exported separately and arrived at −21.8 / −22.7 / −23.5
 LUFS, so each is trimmed to a common level before the join — no seam lands on a
-step in loudness. Then +10 dB into a limiter at −1.5 dBFS.
-
-Result: **−11.8 LUFS, LRA 3.1**, which is `seeing-his-face/audio/voice.flac`
-(−11.6, LRA 3.1) to within 0.2 dB.
+step in loudness. Then +10 dB into a limiter at −1.5 dBFS: **−11.7 LUFS, LRA
+2.8**, alongside `seeing-his-face/audio/voice.flac` at −11.6 / 3.1.
 
 A compressor was tried first and rejected on measurement: it bought 2.9 LU
 while costing half the dynamic range (LRA 4.1 → 2.0), because the peaks here
 are short transients a 10 ms attack cannot catch. The limiter is the right tool
-and 0.9 LU is what it costs.
+and the range it costs is what it costs.
 
 No denoising: the owner had already cleaned all three, and the floors measure
 −62 to −65 dB. No music bed either — the sibling reel has one because it was
@@ -77,11 +110,10 @@ asked for; this one was not.
 
 `check-wraps.mjs` reports how every caption actually breaks and fails the build
 on a stranded word. It exists because counting characters got three captions
-wrong in a row — *"so I can put myself in a / position"*, *"in a position with
-good / grades"*, *"That these could be your / intention"* — and because the
-renderer and the checker do not always break a boundary case the same way, so
-lines are kept clear of the 900px limit rather than just inside it.
+wrong in a row, and because the renderer and the checker do not always break a
+boundary case the same way, so lines are kept clear of the 900px limit rather
+than just inside it.
 
-One orphan is kept deliberately: **tawḥīd.** alone on the last line of the
-opening caption. It is the word the sentence turns on and the word the ochre
-bar marks.
+One trap it exposed: the recogniser gives *"saying,"* and *"I'm"* the **same**
+onset, and two words at one timestamp cannot be split across a line boundary.
+The monotonic pass now separates equal onsets, not just decreasing ones.
