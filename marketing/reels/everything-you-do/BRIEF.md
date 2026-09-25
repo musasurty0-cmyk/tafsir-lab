@@ -6,7 +6,7 @@ message: "Worship is not worship without tawḥīd; actions are by intentions; s
 destination: instagram-reels
 aspect: 1080x1920
 language: en
-length: 67.4s
+length: 63.6s
 angle: narrative
 ---
 
@@ -103,6 +103,30 @@ The face is **Scheherazade New**, the mushaf hand, already this app own
 --font-uthmanic fallback. Not Amiri Quran: Google Fonts ships that with broken
 mark attachment and the harakat float off the letters. Scheherazade sets much
 wider than Amiri, so every card size was re-measured after the switch.
+
+## Drawn marks, not a list
+
+When he says worship is not limited to salah, prayers, fasting, hajj, the
+screen lists too: a mihrab, a misbaha, a crescent, the Ka'bah, each arriving as
+he names it and staying, so by the end of the line all four are on the page and
+the list can be seen whole. Four nouns set as a paragraph is the one shape that
+sentence should not have. A sunrise lands on fajr for the same reason.
+
+Same hairline ink and same ochre as the book, so the drawn things in this film
+read as one set rather than as clip art.
+
+## No transliteration
+
+The cards carry the Arabic and its meaning, nothing in between. The
+transliteration was a third line of small type on every card and on a reel it
+is read by nobody: whoever can read the Arabic does not need it, and whoever
+cannot wants the meaning.
+
+## The salah half is cut
+
+The maxim's second clause -- prayer is not called prayer except with purity --
+is out. It was 3.6s for a restatement, and losing it brought the film back
+under the minute the brief asked for.
 
 ## Cuts
 

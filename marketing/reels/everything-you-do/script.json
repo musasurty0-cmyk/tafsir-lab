@@ -12,49 +12,30 @@
   },
   "audio": {
     "file": "audio/khutbah.flac",
-    "duration": 62.77,
-    "speechEnd": 62.77,
-    "note": "Seven segments from three clips. Clip 3 is used from 1.94 because that is where he begins the Arabic; 10.90-12.46 is him repeating maa at-tawhid and is where the trim comes from. +10 dB into a limiter at -1.5 dBFS: -11.7 LUFS, LRA 2.8."
+    "duration": 59.17,
+    "speechEnd": 59.17,
+    "note": "Six segments from three clips. +10 dB into a limiter at -1.5 dBFS: -11.8 LUFS, LRA 2.8."
   },
   "beats": [
     {
       "id": "ha1",
       "from": 0.0,
-      "to": 9.05,
+      "to": 9.19,
       "enter": "hero",
       "hero": {
-        "sizePx": 92,
-        "tr": "al-ʿibādatu lā tusammā ʿibādatan illā maʿa at-tawḥīd",
-        "en": "worship is not called worship except with tawḥīd",
-        "trAt": 0.3,
-        "enAt": 0.62,
         "arRange": [
           0,
           6
-        ]
-      }
-    },
-    {
-      "id": "ha2",
-      "from": 9.05,
-      "to": 12.78,
-      "enter": "hero",
-      "hero": {
-        "sizePx": 86,
-        "tr": "kamā anna aṣ-ṣalāta lā tusammā ṣalātan illā maʿa aṭ-ṭahārah",
-        "en": "just as prayer is not called prayer except with purity",
-        "trAt": 9.35,
-        "enAt": 9.67,
-        "arRange": [
-          7,
-          15
-        ]
+        ],
+        "sizePx": 92,
+        "en": "worship is not called worship except with tawḥīd",
+        "enAt": 0.62
       }
     },
     {
       "id": "b1",
-      "from": 12.78,
-      "to": 14.8,
+      "from": 9.19,
+      "to": 11.6,
       "enter": "rise",
       "lines": [
         {
@@ -75,302 +56,295 @@
     },
     {
       "id": "hla",
-      "from": 14.8,
-      "to": 16.73,
+      "from": 11.6,
+      "to": 13.14,
       "enter": "hero",
       "hero": {
-        "sizePx": 132,
-        "tr": "lā ilāha illā Allāh",
-        "en": "there is no god but Allah",
-        "trAt": 15.1,
-        "enAt": 15.42,
         "arRange": [
-          16,
-          19
-        ]
+          7,
+          10
+        ],
+        "sizePx": 132,
+        "en": "there is no god but Allah",
+        "enAt": 12.1
       }
     },
     {
       "id": "s1",
-      "from": 16.73,
-      "to": 20.1,
+      "from": 13.14,
+      "to": 17.1,
       "enter": "fast",
       "lines": [
         {
           "cls": "ln ln--sm",
           "range": [
-            12,
-            16
+            15,
+            19
           ]
         },
         {
           "cls": "ln ln--sm",
           "range": [
-            17,
-            22
+            20,
+            25
           ]
         },
         {
           "cls": "ln ln--sm",
           "range": [
-            23,
-            24
+            26,
+            27
           ]
         }
       ]
     },
     {
       "id": "s2",
-      "from": 20.1,
-      "to": 23.9,
+      "from": 17.1,
+      "to": 20.5,
       "enter": "side",
       "lines": [
         {
           "cls": "ln ln--sm",
           "range": [
-            25,
-            26
+            28,
+            29
           ]
         },
         {
           "cls": "ln ln--sm",
           "range": [
-            27,
-            30
+            30,
+            33
           ]
         },
         {
           "cls": "ln ln--sm",
           "range": [
-            31,
-            34
+            34,
+            37
           ]
         }
       ]
     },
     {
       "id": "s3",
-      "from": 23.9,
-      "to": 26.59,
+      "from": 20.5,
+      "to": 23.0,
       "enter": "rise",
       "lines": [
         {
           "cls": "ln ln--sm",
           "range": [
-            35,
-            37
+            38,
+            40
           ]
         },
         {
           "cls": "ln ln--sm",
           "range": [
-            38,
-            41
+            41,
+            44
           ]
         }
       ]
     },
     {
       "id": "h1",
-      "from": 26.59,
-      "to": 31.6,
+      "from": 23.0,
+      "to": 28.0,
       "enter": "hero",
       "hero": {
-        "sizePx": 112,
-        "tr": "innamā l-aʿmālu bi-n-niyyāt",
-        "en": "Verily, actions are by their intentions.",
-        "trAt": 26.89,
-        "enAt": 27.21,
         "arRange": [
-          20,
-          22
-        ]
+          11,
+          13
+        ],
+        "sizePx": 112,
+        "en": "Verily, actions are by their intentions.",
+        "enAt": 23.9
       }
     },
     {
       "id": "h2",
-      "from": 31.6,
-      "to": 37.45,
+      "from": 28.0,
+      "to": 33.85,
       "enter": "hero",
       "hero": {
-        "sizePx": 98,
-        "tr": "wa-innamā li-kulli mri’in mā nawā",
-        "en": "And every person will have what they have intended.",
-        "trAt": 31.9,
-        "enAt": 32.22,
         "arRange": [
-          23,
-          27
-        ]
+          14,
+          18
+        ],
+        "sizePx": 98,
+        "en": "And every person will have what they have intended.",
+        "enAt": 30.2
       }
     },
     {
       "id": "d1",
-      "from": 37.45,
-      "to": 40.78,
+      "from": 33.85,
+      "to": 37.18,
       "enter": "side",
       "lines": [
         {
           "cls": "ln",
           "range": [
-            42,
-            50
+            45,
+            53
           ],
           "mark": [
-            49,
-            50
+            51,
+            53
           ]
         }
       ]
     },
     {
       "id": "d2",
-      "from": 40.78,
-      "to": 47.86,
+      "from": 37.18,
+      "to": 44.26,
       "enter": "rise",
       "lines": [
         {
           "cls": "ln ln--sm",
           "range": [
-            51,
-            55
-          ]
-        },
-        {
-          "cls": "ln ln--sm",
-          "range": [
             56,
-            58
-          ]
-        },
-        {
-          "cls": "ln ln--sm",
-          "range": [
-            59,
             61
           ]
-        },
+        }
+      ],
+      "icons": [
         {
-          "cls": "ln ln--sm",
-          "range": [
-            62,
+          "key": "salah",
+          "at": 40.9,
+          "labelRange": [
+            64,
             64
           ]
         },
         {
-          "cls": "ln ln--sm",
-          "range": [
-            65,
+          "key": "beads",
+          "at": 41.78,
+          "labelRange": [
+            67,
             67
+          ]
+        },
+        {
+          "key": "crescent",
+          "at": 42.7,
+          "labelRange": [
+            70,
+            70
+          ]
+        },
+        {
+          "key": "kaaba",
+          "at": 43.46,
+          "labelRange": [
+            73,
+            73
           ]
         }
       ]
     },
     {
       "id": "d3",
-      "from": 47.86,
-      "to": 51.65,
+      "from": 44.26,
+      "to": 48.05,
       "enter": "fast",
       "lines": [
         {
           "cls": "ln ln--sm",
           "range": [
-            68,
-            72
+            74,
+            78
           ]
         },
         {
           "cls": "ln ln--sm",
           "range": [
-            73,
-            77
+            79,
+            83
           ]
         },
         {
           "cls": "ln ln--sm",
           "range": [
-            78,
-            81
+            84,
+            87
           ]
         }
       ]
     },
     {
       "id": "d4",
-      "from": 51.65,
-      "to": 54.5,
+      "from": 48.05,
+      "to": 50.86,
       "enter": "tilt",
       "lines": [
         {
           "cls": "ln",
           "range": [
-            82,
-            85
+            88,
+            91
           ]
         },
         {
           "cls": "ln",
           "range": [
-            86,
-            93
+            92,
+            99
           ],
           "mark": [
-            93,
-            93
+            99,
+            99
           ]
+        }
+      ],
+      "icons": [
+        {
+          "key": "sunrise",
+          "at": 49.94,
+          "labelRange": null
         }
       ]
     },
     {
       "id": "d5",
-      "from": 54.5,
-      "to": 57.1,
+      "from": 50.86,
+      "to": 53.38,
       "enter": "side",
       "lines": [
         {
           "cls": "ln ln--sm",
           "range": [
-            94,
-            97
+            100,
+            103
           ],
           "mark": [
-            97,
-            97
+            103,
+            103
           ]
         },
         {
           "cls": "ln ln--sm",
           "range": [
-            98,
-            102
+            104,
+            108
           ]
         }
       ]
     },
     {
       "id": "d6",
-      "from": 57.1,
-      "to": 61.2,
+      "from": 53.38,
+      "to": 57.6,
       "enter": "rise",
       "lines": [
         {
           "cls": "ln ln--sm",
           "range": [
-            103,
-            107
-          ]
-        },
-        {
-          "cls": "ln ln--sm",
-          "range": [
-            108,
-            110
-          ]
-        },
-        {
-          "cls": "ln ln--sm",
-          "range": [
-            111,
+            109,
             113
           ]
         },
@@ -378,34 +352,48 @@
           "cls": "ln ln--sm",
           "range": [
             114,
-            119
-          ],
-          "mark": [
-            118,
+            116
+          ]
+        },
+        {
+          "cls": "ln ln--sm",
+          "range": [
+            117,
             119
           ]
-        }
-      ]
-    },
-    {
-      "id": "f1",
-      "from": 61.2,
-      "to": 63.4,
-      "enter": "slam",
-      "lines": [
+        },
         {
-          "cls": "ln ln--xl",
+          "cls": "ln ln--sm",
           "range": [
             120,
+            125
+          ],
+          "mark": [
+            124,
             125
           ]
         }
       ]
     },
     {
+      "id": "f1",
+      "from": 57.6,
+      "to": 59.6,
+      "enter": "slam",
+      "lines": [
+        {
+          "cls": "ln ln--xl",
+          "range": [
+            126,
+            131
+          ]
+        }
+      ]
+    },
+    {
       "id": "close",
-      "from": 63.4,
-      "to": 67.4,
+      "from": 59.6,
+      "to": 63.6,
       "enter": "rise"
     }
   ],
@@ -416,11 +404,13 @@
     "lineBreaks": "Line ranges are judged against the real layout by check-wraps.mjs, not by counting characters -- three guesses in a row put a word on its own line. One orphan is kept on purpose: tawhid alone at the end of the first caption is the word the sentence turns on and the word the ochre bar marks. Lines are also kept clear of the 900px limit rather than just inside it, because the renderer and the checker do not always break a boundary case the same way.",
     "arabic": "Every stretch he speaks in Arabic is set in Arabic, with the transliteration and the meaning beneath: the two halves of the maxim that open the film, la ilaha illa Allah, and the two halves of the hadith. The first cut of this reel captioned the opening ten seconds in ENGLISH, because a recogniser asked for English translates Arabic instead of failing -- it returned fluent prose he never says. Asking it to DETECT the language is what caught it: over 12.3-16.6 of clip 3 it gives up and writes the word \"Arabic\".",
     "arabicMotion": "Each Arabic word inks at the moment he says it, on the same driver as the English. Before this the opening was two cards holding still for thirteen seconds while he recited underneath them -- nothing on screen was tied to the sound. The transliteration and the meaning now arrive within the first second of each card and stay, because they are what the viewer reads while the recitation runs, not a beat to be revealed.",
-    "arabicFace": "Scheherazade New, the mushaf hand, and already this app's own --font-uthmanic fallback. NOT Amiri Quran: Google Fonts ships that with broken mark attachment and the harakat float off the letters. It sets much wider than Amiri, so every card size was re-measured after the switch."
+    "arabicFace": "Scheherazade New, the mushaf hand, and already this app's own --font-uthmanic fallback. NOT Amiri Quran: Google Fonts ships that with broken mark attachment and the harakat float off the letters. It sets much wider than Amiri, so every card size was re-measured after the switch.",
+    "noTransliteration": "The cards carry the Arabic and its meaning, nothing in between. The transliteration was a third line of small type on every card, and on a reel it is read by nobody: whoever can read the Arabic does not need it, and whoever cannot wants the meaning.",
+    "icons": "When he lists what worship is not limited to, each one gets a drawn mark as he names it -- a mihrab, a misbaha, a crescent, the Ka'bah -- rather than four nouns in a paragraph. Same hairline weight and ochre as the book, so they read as one set. The sunrise lands on fajr for the same reason."
   },
   "book": {
-    "from": 16.73,
-    "to": 26.59,
+    "from": 13.14,
+    "to": 23.0,
     "note": "A book beside the sourcing: it opens as he names the collection and closes as he hands over to the hadith itself. It sits above the caption stage as its own element rather than inside a beat, so it survives the three captions that change underneath it."
   }
 }

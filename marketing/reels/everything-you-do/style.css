@@ -196,3 +196,14 @@
       .bk-cover { fill: none; stroke: var(--ink); stroke-width: 2.6; stroke-linejoin: round; }
       .bk-spine { stroke: var(--ink); stroke-width: 2.6; stroke-linecap: round; }
       .bk-lines line { stroke: var(--accent); stroke-width: 3; stroke-linecap: round; opacity: 0.42; }
+
+      /* ── The drawn marks ──────────────────────────────────────── */
+      /* He is listing — salah, prayers, fasting, hajj — so the screen lists
+         too, one mark per item, instead of setting four nouns as a paragraph.
+         Same hairline ink and same ochre as the book, so the drawn things in
+         this film read as one set rather than as clip art. */
+      .icons { display: flex; align-items: flex-start; justify-content: center; gap: 40px; margin-top: 44px; }
+      .ic { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+      .ic-ink { fill: none; stroke: var(--ink); stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; }
+      .ic-acc { fill: none; stroke: var(--accent); stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; opacity: 0.85; }
+      .ic-label { font-family: var(--serif); font-weight: 700; font-size: 46px; letter-spacing: -0.015em; }

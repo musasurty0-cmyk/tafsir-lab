@@ -35,7 +35,8 @@ SEGS = [
     # prose that he never says. Asking it to detect the language instead is
     # what caught it: on 12.3-16.6 it gives up and writes the word "Arabic".
     ("a1", 3,  1.940, 10.600),   # al-ibadatu la tusamma ibadatan illa maa at-tawhid
-    ("a2", 3, 13.050, 16.365),   # kama anna as-salata la tusamma salatan illa maa at-tahara
+    # The salah/purity half of the maxim is cut: the film makes its point with
+    # the first clause and the second was costing 3.6s for a restatement.
     # 10.90-12.46 is him repeating "maa at-tawhid"; the clause itself finishes
     # at 10.60, so the repetition is where the trim comes from.
     ("b",  8,  0.000,  3.670),   # how does it look to live with la ilaha illa Allah
