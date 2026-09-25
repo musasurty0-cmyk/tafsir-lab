@@ -29,12 +29,20 @@ TRIM = {3: -0.9, 7: 0.0, 8: +0.8}
 # clip 3 its word times run about 0.45s late, which is how the first cut landed
 # in the middle of "verily" instead of the silence before it.
 SEGS = [
-    ("a", 3,  3.735, 12.785),
-    ("b", 8,  0.000,  3.670),
-    ("c", 8, 14.190, 24.890),
-    ("d", 7,  3.520, 26.970),
-    ("e", 7, 39.790, 42.520),
-    ("f", 7, 49.760, 51.230),
+    # Clip 3 opens the film in ARABIC. The first pass at this captioned it in
+    # English, because a recogniser asked for English TRANSLATES Arabic rather
+    # than admitting it cannot hear it -- 3.7-12.8 came back as fluent English
+    # prose that he never says. Asking it to detect the language instead is
+    # what caught it: on 12.3-16.6 it gives up and writes the word "Arabic".
+    ("a1", 3,  1.940, 10.600),   # al-ibadatu la tusamma ibadatan illa maa at-tawhid
+    ("a2", 3, 13.050, 16.365),   # kama anna as-salata la tusamma salatan illa maa at-tahara
+    # 10.90-12.46 is him repeating "maa at-tawhid"; the clause itself finishes
+    # at 10.60, so the repetition is where the trim comes from.
+    ("b",  8,  0.000,  3.670),   # how does it look to live with la ilaha illa Allah
+    ("s",  8,  4.610, 14.190),   # first hadith in Nawawi and in Bukhari, one you all know
+    ("c",  8, 14.190, 24.890),   # the hadith itself, both halves
+    ("d",  7,  3.520, 26.970),   # worship is not limited -- fajr, revising, the ummah
+    ("f",  7, 49.760, 51.230),   # Islam exists in everything you do
 ]
 
 GAP = 0.28   # between segments, so each thought lands before the next starts

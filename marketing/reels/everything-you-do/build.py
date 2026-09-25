@@ -137,6 +137,28 @@ HTML = """<!DOCTYPE html>
           <div class="rail-track"><div class="rail-fill" id="rail-fill"></div></div>
         </div>
 
+        <div class="bookwrap" id="book" aria-hidden="true">
+          <svg viewBox="0 0 330 196" width="330" height="196">
+            <g id="bk-l">
+              <path class="bk-cover" d="M162 26 C126 10 74 5 26 12 L26 170 C74 163 126 168 162 184 Z"/>
+              <g class="bk-lines" id="bk-ll">
+                <line x1="48" y1="52" x2="140" y2="47"/>
+                <line x1="48" y1="78" x2="140" y2="73"/>
+                <line x1="48" y1="104" x2="122" y2="100"/>
+              </g>
+            </g>
+            <g id="bk-r">
+              <path class="bk-cover" d="M168 26 C204 10 256 5 304 12 L304 170 C256 163 204 168 168 184 Z"/>
+              <g class="bk-lines" id="bk-rl">
+                <line x1="190" y1="47" x2="282" y2="52"/>
+                <line x1="190" y1="73" x2="282" y2="78"/>
+                <line x1="190" y1="100" x2="264" y2="104"/>
+              </g>
+            </g>
+            <line class="bk-spine" id="bk-spine" x1="165" y1="24" x2="165" y2="186"/>
+          </svg>
+        </div>
+
         <div class="stage" id="stage">
 %(blocks)s
         </div>
@@ -321,6 +343,33 @@ HTML = """<!DOCTYPE html>
           { y: 0, opacity: 1, duration: 0.28, ease: "power2.out", immediateRender: false }, tEn);
       });
 
+      /* The book, beside the sourcing. It opens as he names the collection and
+         shuts as he hands over to the hadith itself. The two covers swing out
+         from the spine and the ruled lines draw on afterwards, so it reads as
+         a book being opened rather than a picture of one fading up.
+
+         svgOrigin, not transformOrigin: on an SVG group the percentage form is
+         resolved against the element's own bounding box, which for the left
+         cover is nowhere near the spine — it would swing from its outer edge. */
+      const BOOK_IN  = %(bookIn).2f;
+      const BOOK_OUT = %(bookOut).2f;
+      tl.set("#book", { opacity: 0 }, 0);
+      tl.to("#book", { opacity: 1, duration: 0.26, ease: "power2.out" }, BOOK_IN);
+      tl.set("#bk-spine", { scaleY: 0, svgOrigin: "165 105" }, 0);
+      tl.to("#bk-spine", { scaleY: 1, duration: 0.30, ease: "power2.out" }, BOOK_IN + 0.04);
+      ["#bk-l", "#bk-r"].forEach((g) => {
+        tl.set(g, { scaleX: 0.03, svgOrigin: "165 105" }, 0);
+        tl.to(g, { scaleX: 1, duration: 0.66, ease: "power3.out" }, BOOK_IN + 0.20);
+      });
+      tl.set(".bk-lines line", { scaleX: 0, transformOrigin: "0%% 50%%" }, 0);
+      tl.to(".bk-lines line", { scaleX: 1, duration: 0.42, ease: "power2.out",
+                                stagger: 0.10 }, BOOK_IN + 0.76);
+      /* It shuts the way it opened, and is gone before the hadith card lands. */
+      ["#bk-l", "#bk-r"].forEach((g) => {
+        tl.to(g, { scaleX: 0.03, duration: 0.34, ease: "power2.in" }, BOOK_OUT - 0.46);
+      });
+      tl.to("#book", { opacity: 0, duration: 0.20, ease: "power2.in" }, BOOK_OUT - 0.20);
+
       /* The close. Both reveals are clips, not fades: fading a child inside a
          group that is itself fading compounds the two, and a half-opaque
          glyph measures as a contrast failure mid-entrance even though its
@@ -406,6 +455,8 @@ out = HTML % {
     "sweeps": "\n".join(sweep_js),
     "heroes": "\n".join(hero_js),
     "closeIn": BEATS[-1]["from"],
+    "bookIn": DOC["book"]["from"],
+    "bookOut": DOC["book"]["to"],
     "footL": "An introduction to Tawḥīd",
     "footR": "TafsirLab × SGS ISOC",
 }

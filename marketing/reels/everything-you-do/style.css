@@ -180,3 +180,19 @@
         letter-spacing: 0.06em; color: var(--ink); white-space: nowrap;
       }
       .sgs-clip { overflow: hidden; padding: 6px 0; }
+
+      /* ── The book ────────────────────────────────────────────── */
+      /* Drawn, not illustrated: the same hairline weight as the rules and the
+         same ochre as the marker, so it belongs to the page rather than
+         arriving from a different stylesheet. It lives ABOVE the caption
+         stage as its own element, because the three captions underneath it
+         change while it is open and a graphic inside a beat would leave with
+         the first of them. */
+      .bookwrap {
+        position: absolute; left: 0; right: 0; top: 398px;
+        display: flex; justify-content: center;
+        opacity: 0;
+      }
+      .bk-cover { fill: none; stroke: var(--ink); stroke-width: 2.6; stroke-linejoin: round; }
+      .bk-spine { stroke: var(--ink); stroke-width: 2.6; stroke-linecap: round; }
+      .bk-lines line { stroke: var(--accent); stroke-width: 3; stroke-linecap: round; opacity: 0.42; }
