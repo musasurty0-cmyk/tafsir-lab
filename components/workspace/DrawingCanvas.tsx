@@ -925,6 +925,9 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
       // If the current tool is "hand", let ModeBPage's touch handler manage panning
       // without interference.  We only block touch→pointer promotion for drawing tools.
       if (toolRef.current === "hand") return;
+      /* The lasso reads the finger through pointer events, so the touch is not
+         spurious here and must not be cancelled out from under it. */
+      if (toolRef.current === "lasso") return;
       let hasFinger = false;
       for (let i = 0; i < e.changedTouches.length; i++) {
         const t = e.changedTouches[i] as Touch & { touchType?: string };
@@ -1462,8 +1465,9 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
   // ── Pointer handlers (fix #6 — touch is always rejected) ──────────────
 
   function onDown(e: React.PointerEvent) {
-    // touch → always handled by ModeBPage native touch handlers (panning)
-    if (e.pointerType === "touch") return;
+    /* touch → the hosts' own touch handlers pan the board, EXCEPT under the
+       lasso, which takes the finger for itself. See the hosts' onStart. */
+    if (e.pointerType === "touch" && toolRef.current !== "lasso") return;
     // pen → handled by the native capture listeners (stylus always draws)
     if (e.pointerType === "pen") return;
     // hand tool → mouse never draws (mouse follows the selected tool)
@@ -1488,7 +1492,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
   }
 
   function onMove(e: React.PointerEvent) {
-    if (e.pointerType === "touch") return;
+    if (e.pointerType === "touch" && toolRef.current !== "lasso") return;
     if (e.pointerType === "pen")   return; // native capture handlers own the pen
     if (toolRef.current === "hand") return;
     // The eraser ring follows the mouse even before the button goes down
@@ -1594,7 +1598,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
   }
 
   function onUp(e: React.PointerEvent) {
-    if (e.pointerType === "touch") return;
+    if (e.pointerType === "touch" && toolRef.current !== "lasso") return;
     if (e.pointerType === "pen")   return; // native capture handlers own the pen
     e.preventDefault();
     if (toolRef.current === "lasso") { lassoUp(); return; }

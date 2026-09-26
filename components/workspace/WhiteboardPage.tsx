@@ -276,7 +276,15 @@ export default function WhiteboardPage({
       }
       e.preventDefault();
       for (const t of e.changedTouches) pts.set(t.identifier, { x: t.clientX, y: t.clientY });
-      if (pts.size === 1) { pinchStart = null; startPan(); } else { panStart = null; startPinch(); }
+      /* The lasso owns the single finger. Every other tool lets a finger
+         move the paper while the stylus draws; a selection gesture has no
+         such second input to fall back on, so with the lasso armed one
+         finger draws the loop and the board holds still. Two fingers still
+         pinch and pan, here as everywhere. */
+      if (pts.size === 1) {
+        pinchStart = null;
+        if (toolRef.current !== "lasso") startPan();
+      } else { panStart = null; startPinch(); }
     }
     function onMove(e: TouchEvent) {
       e.preventDefault();
@@ -308,7 +316,7 @@ export default function WhiteboardPage({
       }
       for (const t of e.changedTouches) pts.delete(t.identifier);
       if (pts.size < 2) pinchStart = null;
-      if (pts.size === 1 && panStart === null) startPan();
+      if (pts.size === 1 && panStart === null && toolRef.current !== "lasso") startPan();
       if (pts.size === 0) panStart = null;
     }
     el.addEventListener("touchstart", onStart, { passive: false });

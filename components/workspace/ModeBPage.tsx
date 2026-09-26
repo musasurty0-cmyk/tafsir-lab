@@ -1152,7 +1152,15 @@ export default function ModeBPage({
       }
       e.preventDefault();
       for (const t of e.changedTouches) pts.set(t.identifier, { x: t.clientX, y: t.clientY });
-      if (pts.size === 1) { pinchStart = null; startPanFromPts(); }
+      /* The lasso owns the single finger. Every other tool lets a finger
+         move the paper while the stylus draws; a selection gesture has no
+         such second input to fall back on, so with the lasso armed one
+         finger draws the loop and the board holds still. Two fingers still
+         pinch and pan, here as everywhere. */
+      if (pts.size === 1) {
+        pinchStart = null;
+        if (toolRef.current !== "lasso") startPanFromPts();
+      }
       else                { panStart  = null; startPinchFromPts(); }
     }
 
@@ -1210,7 +1218,7 @@ export default function ModeBPage({
         // Drop the layer so the Mushaf re-rasterizes crisp at the new scale.
         innerRef.current?.removeAttribute("data-zooming");
       }
-      if (pts.size === 1 && panStart === null) startPanFromPts();
+      if (pts.size === 1 && panStart === null && toolRef.current !== "lasso") startPanFromPts();
       if (pts.size === 0) { panStart = null; el.removeAttribute("data-panning"); }
     }
 
