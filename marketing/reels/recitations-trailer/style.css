@@ -1,0 +1,209 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+      :root {
+        /* The app's own LIGHT tokens (app/globals.css). Green excluded per
+           the owner's standing brief; the accent here is the app's ochre. */
+        --bg:     #fcfbf8;
+        --ink:    #292621;
+        --ink-2:  #57534b;
+        --ink-3:  #6e695f;
+        --rest:   #7e7a6f;   /* a word not yet spoken — 3.9:1 on paper */
+        --line:   rgba(41, 38, 33, 0.13);
+        --accent: #a8762a;
+
+        --sans:   "Inter", -apple-system, "Segoe UI", system-ui, Arial, sans-serif;
+        /* Literata, not Source Serif 4. Same family of idea — a face built for
+           long-form reading on a warm ground — but shorter in the ascender,
+           sturdier in the stem, and it carries weight 700 without going
+           spindly in the thin strokes the way a higher-contrast serif does.
+           The words are the picture here, so they should have some mass. */
+        --serif:  "Literata", "Source Serif 4", Georgia, serif;
+        /* The wordmark stays in the app's own face: the mark is brand truth
+           and it has to match the other reel, whatever the captions are set
+           in. */
+        --brand:  "Source Serif 4", Georgia, serif;
+        --arabic: "Scheherazade New", "Amiri", serif;
+      }
+
+      html, body {
+        width: 1080px; height: 1920px;
+        overflow: hidden;
+        background: var(--bg);
+        font-family: var(--sans);
+        -webkit-font-smoothing: antialiased;
+        text-rendering: optimizeLegibility;
+      }
+      #root { position: relative; width: 1080px; height: 1920px; background: var(--bg); }
+      .clip { position: absolute; inset: 0; overflow: hidden; }
+
+      /* ── The surface ────────────────────────────────────────────────── */
+      .paper { position: absolute; inset: 0; background: var(--bg); }
+      .dots {
+        position: absolute; inset: 0;
+        background: radial-gradient(rgba(41, 38, 33, 0.09) 1.5px, transparent 1.5px);
+        background-size: 30px 30px;
+        /* STATIC. A drifting grid under 80px serif re-rasterises the glyphs
+           every frame and reads as vibration — this project has paid for
+           that bug twice. Nothing in the background moves. */
+      }
+
+      /* ── The rail: a hairline that fills as he speaks ─────────────────── */
+      .rail {
+        position: absolute; left: 96px; right: 96px; top: 352px;
+        display: flex; align-items: center;
+      }
+      .rail-track { position: relative; flex: 1; height: 2px; background: var(--line); }
+      .rail-fill {
+        position: absolute; inset: 0;
+        background: var(--accent); opacity: 0.55;
+        transform-origin: 0% 50%; transform: scaleX(0);
+      }
+
+      /* ── The caption stage ──────────────────────────────────────────── */
+      .stage {
+        position: absolute; left: 90px; right: 90px; top: 620px; height: 700px;
+      }
+      .beat {
+        position: absolute; left: 0; right: 0; top: 50%;
+        transform: translateY(-50%);
+        display: flex; flex-direction: column; align-items: center; gap: 10px;
+        text-align: center;
+        opacity: 0;
+      }
+      /* .bmv carries the roll; .beat keeps the centring transform, so the two
+         never fight over the same transform matrix. */
+      .bmv { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; }
+
+      .ln {
+        font-family: var(--serif); font-weight: 700; font-size: 76px;
+        line-height: 1.26; letter-spacing: -0.022em;
+        max-width: 900px;
+      }
+      /* Literata sets wider and with a taller x-height than Source Serif 4,
+         so every size comes down ~7% to hold the same line breaks while
+         reading heavier. */
+      .ln--xl   { font-size: 96px;  line-height: 1.18; }
+      .ln--sm   { font-size: 66px; }
+      .ln--face { font-size: 122px; line-height: 1.1; }
+      .ln--held { font-size: 110px; line-height: 1.1; }
+
+      /* A word. .w takes layout + entrance transforms, .wi takes the ink the
+         karaoke driver writes — one property each, so nothing is overwritten
+         from two places. */
+      .w  { display: inline-block; }
+      .wi { display: inline-block; color: var(--rest); }
+
+      /* The ochre marker: a child of the marked run, so it needs no measuring
+         and cannot drift off the words it belongs to. */
+      .mk { position: relative; display: inline-block; }
+      .mk-bar {
+        position: absolute; left: -4px; right: -4px; bottom: 2px; height: 6px;
+        background: var(--accent); opacity: 0.42;
+        transform-origin: 0% 50%; transform: scaleX(0);
+      }
+
+      /* ── The Arabic heroes ──────────────────────────────────────────── */
+      .hero-ar {
+        font-family: var(--arabic); font-weight: 700; font-size: 150px;
+        line-height: 1.5; color: var(--ink); direction: rtl;
+      }
+      .hero-ar--long { font-size: 122px; }
+      .hero-rule {
+        width: 420px; height: 3px; background: var(--accent); opacity: 0.5;
+        margin: 6px 0 20px; transform-origin: 50% 50%; transform: scaleX(0);
+      }
+      .hero-tr {
+        font-family: var(--serif); font-style: italic; font-weight: 600;
+        font-size: 42px; color: var(--ink-2); letter-spacing: -0.01em;
+      }
+      .hero-en {
+        font-family: var(--serif); font-weight: 400; font-size: 36px;
+        color: var(--ink-3); margin-top: 6px;
+      }
+
+      /* ── The closing card ───────────────────────────────────────────── */
+      .brand-row { display: flex; align-items: center; gap: 34px; }
+      .tile {
+        width: 148px; height: 148px; border-radius: 34px;
+        background: var(--ink);
+        display: flex; align-items: center; justify-content: center;
+        box-shadow: 0 26px 60px rgba(41, 38, 33, 0.22);
+      }
+      .tile .t {
+        font-family: var(--brand); font-style: normal; font-weight: 600;
+        font-size: 92px; line-height: 1; color: var(--bg); padding-bottom: 8px;
+      }
+      .wordmark {
+        font-family: var(--brand); font-style: italic; font-weight: 500;
+        font-size: 108px; letter-spacing: -0.02em; color: var(--ink);
+        white-space: nowrap;
+      }
+      /* Both reveals are clips, not fades. Fading a child inside a group that
+         is itself fading compounds the two, and a half-opaque glyph measures
+         as a contrast failure mid-entrance even though its resting state is
+         13:1. A clip slides at full ink the whole way. */
+      .wm-clip  { overflow: hidden; padding: 6px 0; }
+      .url-clip { overflow: hidden; }
+      /* The same ochre rule the two Arabic cards drew under their phrase —
+         the close rhymes with them rather than introducing a new device. */
+      .close-rule {
+        width: 360px; height: 3px; background: var(--accent); opacity: 0.5;
+        margin: 40px 0 22px; transform-origin: 50% 50%; transform: scaleX(0);
+      }
+      .close-url {
+        font-family: var(--sans); font-size: 30px; font-weight: 500;
+        letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3);
+      }
+
+      /* ── The running foot ───────────────────────────────────────────── */
+      .foot {
+        position: absolute; left: 96px; right: 96px; top: 1478px;
+        display: flex; align-items: center; justify-content: space-between;
+        font-family: var(--sans); font-size: 24px; font-weight: 500;
+        letter-spacing: 0.1em; text-transform: uppercase; color: #8a8579;
+        padding-top: 22px; border-top: 1px solid var(--line);
+        opacity: 0;
+      }
+
+      /* ── The co-brand ─────────────────────────────────────────── */
+      /* Two organisations, stacked rather than strung across one line: set
+         side by side they run past 1000px and the lockup stops reading as a
+         pairing and starts reading as a sentence. The cross is ochre and
+         small — it joins the two names without competing with either. */
+      .cobrand { display: flex; align-items: center; gap: 22px; margin-top: 26px; }
+      .xm {
+        font-family: var(--serif); font-weight: 400; font-size: 46px;
+        color: var(--accent); opacity: 0.8; line-height: 1;
+      }
+      .sgs {
+        font-family: var(--sans); font-weight: 600; font-size: 54px;
+        letter-spacing: 0.06em; color: var(--ink); white-space: nowrap;
+      }
+      .sgs-clip { overflow: hidden; padding: 6px 0; }
+
+      /* ── The book ────────────────────────────────────────────── */
+      /* Drawn, not illustrated: the same hairline weight as the rules and the
+         same ochre as the marker, so it belongs to the page rather than
+         arriving from a different stylesheet. It lives ABOVE the caption
+         stage as its own element, because the three captions underneath it
+         change while it is open and a graphic inside a beat would leave with
+         the first of them. */
+      .bookwrap {
+        position: absolute; left: 0; right: 0; top: 386px;
+        display: flex; justify-content: center;
+        opacity: 0;
+      }
+      .bk-cover { fill: none; stroke: var(--ink); stroke-width: 2.6; stroke-linejoin: round; }
+      .bk-spine { stroke: var(--ink); stroke-width: 2.6; stroke-linecap: round; }
+      .bk-lines line { stroke: var(--accent); stroke-width: 3; stroke-linecap: round; opacity: 0.42; }
+
+      /* ── The drawn marks ──────────────────────────────────────── */
+      /* He is listing — salah, prayers, fasting, hajj — so the screen lists
+         too, one mark per item, instead of setting four nouns as a paragraph.
+         Same hairline ink and same ochre as the book, so the drawn things in
+         this film read as one set rather than as clip art. */
+      .icons { display: flex; align-items: flex-start; justify-content: center; gap: 40px; margin-top: 44px; }
+      .ic { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+      .ic-ink { fill: none; stroke: var(--ink); stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; }
+      .ic-acc { fill: none; stroke: var(--accent); stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; opacity: 0.85; }
+      .ic-label { font-family: var(--serif); font-weight: 700; font-size: 46px; letter-spacing: -0.015em; }

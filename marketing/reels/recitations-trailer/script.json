@@ -1,0 +1,116 @@
+{
+  "title": "Recitations — a Tafsir Lab tool",
+  "angle": "Your archive, finally usable.",
+  "bed": {
+    "file": "audio/bed.flac"
+  },
+  "foot": {
+    "left": "Recitations",
+    "right": "A TafsirLab tool"
+  },
+  "folder": [
+    "abdulbasit_juz1_cairo61.mp3",
+    "husary-kahf-FINAL(2).mp3",
+    "WhatsApp Audio 2019-11-03.m4a",
+    "minshawi_ali-imran_side-b.mp3",
+    "track07.mp3"
+  ],
+  "beats": [
+    {
+      "id": "folder",
+      "from": 0.0,
+      "to": 8.2,
+      "enter": "rise",
+      "lines": [
+        {
+          "cls": "ln ln--sm",
+          "text": "You have the recordings."
+        },
+        {
+          "cls": "ln",
+          "text": "You just can’t find them."
+        }
+      ]
+    },
+    {
+      "id": "b1",
+      "from": 8.2,
+      "to": 15.4,
+      "enter": "fast",
+      "screen": "01-home",
+      "lines": [
+        {
+          "cls": "ln ln--sm",
+          "text": "Every reciter you own,"
+        },
+        {
+          "cls": "ln ln--sm",
+          "text": "and what you hold of each."
+        }
+      ]
+    },
+    {
+      "id": "b2",
+      "from": 15.4,
+      "to": 23.6,
+      "enter": "side",
+      "screen": "02-qari",
+      "lines": [
+        {
+          "cls": "ln ln--sm",
+          "text": "Add them in any order."
+        },
+        {
+          "cls": "ln ln--sm",
+          "text": "They file themselves by juz."
+        }
+      ]
+    },
+    {
+      "id": "b3",
+      "from": 23.6,
+      "to": 31.4,
+      "enter": "rise",
+      "screen": "03-wheel",
+      "lines": [
+        {
+          "cls": "ln",
+          "text": "All 114 surahs."
+        },
+        {
+          "cls": "ln ln--sm",
+          "text": "Lit where you have one."
+        }
+      ]
+    },
+    {
+      "id": "b4",
+      "from": 31.4,
+      "to": 38.4,
+      "enter": "side",
+      "screen": "05-nowplaying",
+      "lines": [
+        {
+          "cls": "ln ln--sm",
+          "text": "No account. No upload. No wait."
+        },
+        {
+          "cls": "ln",
+          "text": "It just plays."
+        }
+      ]
+    },
+    {
+      "id": "close",
+      "from": 38.4,
+      "to": 45.0,
+      "enter": "slam"
+    }
+  ],
+  "notes": {
+    "order": "The screens arrive in the order you would actually reach them in the app — home, a reciter, the coverage wheel, the player — so the transitions are navigation rather than a slideshow.",
+    "folder": "The filenames in the opening beat are invented, and deliberately the kind you really end up with: a date-stamped WhatsApp export, a FINAL(2), a bare track07. They are the problem stated as evidence rather than as a claim.",
+    "claim": "The last line is the one place the local-first promise is stated, and it is stated as a consequence — what it gets you — rather than as architecture.",
+    "copy": "Two lines were rewritten after seeing them set: \"They file themselves by juz.\" was orphaning \"juz.\" at the display size, and the local-first line ran to four ragged lines with an em dash stranded on one of them. The claim is now three short sentences and a four-word payoff."
+  }
+}
