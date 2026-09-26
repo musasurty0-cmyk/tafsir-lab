@@ -37,7 +37,6 @@
       "from": 8.2,
       "to": 15.4,
       "enter": "fast",
-      "screen": "01-home",
       "lines": [
         {
           "cls": "ln ln--sm",
@@ -47,14 +46,14 @@
           "cls": "ln ln--sm",
           "text": "and what you hold of each."
         }
-      ]
+      ],
+      "shows": "the reciters, scrolling"
     },
     {
       "id": "b2",
       "from": 15.4,
       "to": 23.6,
       "enter": "side",
-      "screen": "02-qari",
       "lines": [
         {
           "cls": "ln ln--sm",
@@ -64,14 +63,14 @@
           "cls": "ln ln--sm",
           "text": "They file themselves by juz."
         }
-      ]
+      ],
+      "shows": "one reciter, scrolling by juz"
     },
     {
       "id": "b3",
       "from": 23.6,
       "to": 31.4,
       "enter": "rise",
-      "screen": "03-wheel",
       "lines": [
         {
           "cls": "ln",
@@ -81,24 +80,25 @@
           "cls": "ln ln--sm",
           "text": "Lit where you have one."
         }
-      ]
+      ],
+      "shows": "the coverage wheel, opened and filtered"
     },
     {
       "id": "b4",
       "from": 31.4,
       "to": 38.4,
       "enter": "side",
-      "screen": "05-nowplaying",
       "lines": [
         {
           "cls": "ln ln--sm",
-          "text": "No account. No upload. No wait."
+          "text": "No account. No upload."
         },
         {
           "cls": "ln",
           "text": "It just plays."
         }
-      ]
+      ],
+      "shows": "play, dock, full player"
     },
     {
       "id": "close",
@@ -111,6 +111,12 @@
     "order": "The screens arrive in the order you would actually reach them in the app — home, a reciter, the coverage wheel, the player — so the transitions are navigation rather than a slideshow.",
     "folder": "The filenames in the opening beat are invented, and deliberately the kind you really end up with: a date-stamped WhatsApp export, a FINAL(2), a bare track07. They are the problem stated as evidence rather than as a claim.",
     "claim": "The last line is the one place the local-first promise is stated, and it is stated as a consequence — what it gets you — rather than as architecture.",
-    "copy": "Two lines were rewritten after seeing them set: \"They file themselves by juz.\" was orphaning \"juz.\" at the display size, and the local-first line ran to four ragged lines with an em dash stranded on one of them. The claim is now three short sentences and a four-word payoff."
+    "copy": "Two lines were rewritten after seeing them set: \"They file themselves by juz.\" was orphaning \"juz.\" at the display size, and the local-first line ran to four ragged lines with an em dash stranded on one of them. The claim is now three short sentences and a four-word payoff. The local-first line was shortened again after seeing it rendered: at 31 characters it sat right on the 900px limit and the renderer broke it where the checker did not, which is the boundary case this project has hit before."
+  },
+  "session": {
+    "file": "assets/session.mp4",
+    "from": 8.2,
+    "duration": 30.2,
+    "note": "One continuous take of the app being used, recorded by record.mjs and timed against the beats: the reciters scroll for the first, one reciter's list scrolls by juz for the second, the coverage wheel opens and a surah is picked for the third, and it is played for the fourth. The first cut of this trailer used four stills held for seven seconds each, which is the slideshow fault this project has had to fix twice before."
   }
 }

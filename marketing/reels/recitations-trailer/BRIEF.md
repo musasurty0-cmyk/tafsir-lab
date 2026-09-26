@@ -37,27 +37,41 @@ The chosen angle asks the question first: you have the recordings already, and
 you cannot find anything. Then the mushaf ordering and the wheel arrive as the
 answer rather than as a feature list.
 
-## Assets
+## Assets — one continuous take, not stills
 
-Captured by `capture.mjs`, which drives the real app in headless Chrome at
-390×844 with `deviceScaleFactor: 3` — so each screen lands at **1170×2532** and
-sits in a 1080-wide frame with pixels to spare.
+`assets/session.mp4` is **thirty seconds of the app being used**, recorded in
+one pass by `record.mjs`: scrolled, opened, filtered, played.
 
-| file | screen |
-| ---- | ------ |
-| `assets/01-home.png` | the reciters, five of them, with what you hold of each |
-| `assets/02-qari.png` | one reciter's recordings, grouped **by juz** — the ordering, proved |
-| `assets/03-wheel.png` | the surah wheel: 114 rings, filled where you have a recording |
-| `assets/05-nowplaying.png` | the player, Arabic title, Read-along tab |
+The first cut of this trailer used four still screenshots, each held for seven
+or eight seconds while a headline sat above it. It read as a slideshow of a
+product rather than a product — the same fault the Maryam reel had before it
+was rebuilt as one page that scrolls, and the same one the opening of
+`../everything-you-do` had before the Arabic was made to ink word by word. The
+rule this project keeps relearning: **something has to be advancing, and the
+surface has to be continuous.**
 
-`assets/04-dock.png` was captured and is unused — the mini player says nothing
-the full player does not.
+So there are no stills. The take is timed against the beats, so each milestone
+lands where its headline does:
 
-The library those screens show is **seeded**, not real: five reciters and
-sixteen recordings written straight into IndexedDB by `capture.mjs`. The app
-reads metadata on boot and only touches audio on playback, so a two-second
-silent wav per recording is enough to make the archive behave. Nothing in the
-capture touches a real profile.
+| take | beat |
+| ---- | ---- |
+| 0.0–7.2 | the reciters, scrolling |
+| 7.2–15.4 | one reciter, scrolling by juz |
+| 15.4–23.2 | the coverage wheel, opened and filtered to Ya-Sin |
+| 23.2–30.2 | played — and the queue advances, Yusuf → Maryam → Ya-Sin |
+
+Recorded at 390×844 with `deviceScaleFactor: 2` (780×1688) into a 560px device
+box, so it is still above 1:1 at render size.
+
+**Known tell:** the seeded recordings carry realistic durations in their
+metadata (38:00, 47:00) but their audio is a two-second silent wav, so the
+player's own scrubber reads 0:02. That short file is also *why* the queue
+advances on camera, which is the best motion in the piece — a fair trade, but
+worth knowing it is there.
+
+The library is **seeded**, not real: five reciters and seventeen recordings
+written straight into IndexedDB by `seed-library.js`, evaluated in a throwaway
+headless profile. Nothing in the recording can reach a real one.
 
 ## Customizations
 
@@ -69,16 +83,18 @@ capture touches a real profile.
 - **The device is drawn, not photographed** — a rounded rectangle with a dark
   bezel ring and one soft shadow, in the same hairline idiom as the book and the
   marks in `../everything-you-do`.
-- **Screens enter as navigation**, sliding in from the right in the order you
-  would actually reach them: home → a reciter → the coverage wheel → the player.
+- **Nothing is done to the screen.** No push, no cross-fade, no Ken Burns — the
+  recording is already the motion, and pushing stills around was the first
+  cut's mistake: the transitions were the only thing moving, so the app read as
+  a set of pictures being flicked through.
 
 ## Shape
 
 | beat | what is on screen |
 | ---- | ----------------- |
 | the folder | filenames, monospace, unsorted — the problem, stated as evidence |
-| the reciters | `01-home` |
-| the ordering | `02-qari`, grouped by juz |
-| the whole archive | `03-wheel` |
-| playing | `05-nowplaying` |
+| the reciters | the take, scrolling |
+| the ordering | the take, scrolling through juz groups |
+| the whole archive | the take, the wheel opening and filtering |
+| playing | the take, the queue advancing |
 | close | TafsirLab mark, the app's name, the URL |
