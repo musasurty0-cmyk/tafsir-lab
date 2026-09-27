@@ -35,6 +35,7 @@ import { ayahKey, surahKey, selectionKey } from "@/lib/quran-objects";
 import { textBoxOnPage } from "@/lib/canvas-scope";
 export type Range = { start: number; end: number };
 import DrawingCanvas, { type DrawTool, type DrawingCanvasHandle } from "./DrawingCanvas";
+import { createGlide, pushSample, velocityOf, type Sample } from "@/lib/glide";
 import CanvasToolRail, {
   DEFAULT_PEN_COLOR,
   DEFAULT_PEN_SIZE,
@@ -1111,10 +1112,22 @@ export default function ModeBPage({
     let panStart:   { tx: number; ty: number; vx: number; vy: number } | null = null;
     let pinchStart: { dist: number; zoom: number; worldX: number; worldY: number } | null = null;
 
+    /* Momentum. The canvas used to stop dead the instant a finger lifted;
+       now a throw runs out the way a scroll does. `history` is the last ~80ms
+       of the drag, because what the hand was doing at the END is the intent. */
+    const history: Sample[] = [];
+    const glide = createGlide((dx, dy) => {
+      const vp = viewportRef.current;
+      const next = { ...vp, x: vp.x + dx, y: vp.y + dy };
+      setViewport(next); patchViewport(next);
+    });
+
     function startPanFromPts() {
       if (pts.size !== 1) return;
       const [p] = pts.values();
       panStart = { tx: p.x, ty: p.y, vx: viewportRef.current.x, vy: viewportRef.current.y };
+      history.length = 0;
+      pushSample(history, { x: p.x, y: p.y, t: performance.now() });
     }
 
     function startPinchFromPts() {
@@ -1139,6 +1152,10 @@ export default function ModeBPage({
     }
 
     function onTouchStart(e: TouchEvent) {
+      /* Interruptibility: a glide must be grabbable at any instant. Stopping
+         here rather than on the first MOVE means the canvas is already still
+         under the finger at the moment of contact. */
+      glide.stop();
       if (isInteractive(e)) return; // let click fire normally
       // A pen is drawing (flag set by DrawingCanvas's capture handlers) —
       // its Android compat-touches must never start a pan.
@@ -1185,6 +1202,7 @@ export default function ModeBPage({
         setViewport(next); patchViewport(next);
       } else if (pts.size === 1 && panStart) {
         const [p] = pts.values();
+        pushSample(history, { x: p.x, y: p.y, t: performance.now() });
         const next: CanvasViewport = {
           ...viewportRef.current,
           x: panStart.vx + (p.x - panStart.tx),
@@ -1219,7 +1237,14 @@ export default function ModeBPage({
         innerRef.current?.removeAttribute("data-zooming");
       }
       if (pts.size === 1 && panStart === null && toolRef.current !== "lasso") startPanFromPts();
-      if (pts.size === 0) { panStart = null; el.removeAttribute("data-panning"); }
+      if (pts.size === 0) {
+        /* The last finger has left: let the throw run out. A tap or a drag
+           that stopped before release measures below the flick threshold and
+           glide() ignores it, so this only fires on an actual throw. */
+        if (panStart) { const { vx, vy } = velocityOf(history); glide.start(vx, vy); }
+        panStart = null; history.length = 0;
+        el.removeAttribute("data-panning");
+      }
     }
 
     el.addEventListener("touchstart",  onTouchStart,  { passive: false });

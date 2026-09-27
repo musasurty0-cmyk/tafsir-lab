@@ -20,6 +20,7 @@ import { isTypingTarget } from "@/lib/is-typing";
 import type { NoteData } from "./NoteCard";
 import FreeTextBox, { TEXTBOX_DEFAULT_WIDTH } from "./FreeTextBox";
 import DrawingCanvas, { type DrawTool, type DrawingCanvasHandle } from "./DrawingCanvas";
+import { createGlide, pushSample, velocityOf, type Sample } from "@/lib/glide";
 import CanvasToolRail, {
   DEFAULT_PEN_COLOR, DEFAULT_PEN_SIZE,
   DEFAULT_HIGHLIGHT_COLOR, DEFAULT_HIGHLIGHT_SIZE,
@@ -257,7 +258,23 @@ export default function WhiteboardPage({
     const isInteractive = (e: TouchEvent) =>
       !!(e.target as HTMLElement).closest('button, a, input, select, textarea, [role="button"], .free-textbox');
 
-    function startPan() { if (pts.size !== 1) return; const [p] = pts.values(); panStart = { tx: p.x, ty: p.y, vx: viewportRef.current.x, vy: viewportRef.current.y }; }
+    /* Momentum. The canvas used to stop dead the instant a finger lifted;
+       now a throw runs out the way a scroll does. `history` is the last ~80ms
+       of the drag, because what the hand was doing at the END is the intent. */
+    const history: Sample[] = [];
+    const glide = createGlide((dx, dy) => {
+      const vp = viewportRef.current;
+      const next = { ...vp, x: vp.x + dx, y: vp.y + dy };
+      setViewport(next); patchViewport(next);
+    });
+
+    function startPan() {
+      if (pts.size !== 1) return;
+      const [p] = pts.values();
+      panStart = { tx: p.x, ty: p.y, vx: viewportRef.current.x, vy: viewportRef.current.y };
+      history.length = 0;
+      pushSample(history, { x: p.x, y: p.y, t: performance.now() });
+    }
     function startPinch() {
       if (pts.size < 2) return;
       const [a, b] = pts.values();
@@ -269,6 +286,9 @@ export default function WhiteboardPage({
     }
 
     function onStart(e: TouchEvent) {
+      /* Interruptibility: the board is grabbable mid-glide, and is already
+         still under the finger at the moment of contact. */
+      glide.stop();
       if (isInteractive(e)) return;
       if (el.dataset.penActive === "1") { e.preventDefault(); return; }
       for (let i = 0; i < e.changedTouches.length; i++) {
@@ -299,6 +319,7 @@ export default function WhiteboardPage({
         setViewport(next); patchViewport(next);
       } else if (pts.size === 1 && panStart) {
         const [p] = pts.values();
+        pushSample(history, { x: p.x, y: p.y, t: performance.now() });
         const next: Viewport = { ...viewportRef.current, x: panStart.vx + (p.x - panStart.tx), y: panStart.vy + (p.y - panStart.ty) };
         setViewport(next); patchViewport(next);
       }
@@ -317,7 +338,12 @@ export default function WhiteboardPage({
       for (const t of e.changedTouches) pts.delete(t.identifier);
       if (pts.size < 2) pinchStart = null;
       if (pts.size === 1 && panStart === null && toolRef.current !== "lasso") startPan();
-      if (pts.size === 0) panStart = null;
+      if (pts.size === 0) {
+        /* The last finger has left: let the throw run out. Below the flick
+           threshold glide() ignores it, so a tap cannot drift the board. */
+        if (panStart) { const { vx, vy } = velocityOf(history); glide.start(vx, vy); }
+        panStart = null; history.length = 0;
+      }
     }
     el.addEventListener("touchstart", onStart, { passive: false });
     el.addEventListener("touchmove",  onMove,  { passive: false });
