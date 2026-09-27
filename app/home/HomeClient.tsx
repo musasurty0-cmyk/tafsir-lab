@@ -26,7 +26,6 @@ import type { MemberRole } from "@/lib/services/workspaces.service";
 import type { RailItem } from "@/lib/services/bookmarks.service";
 import AppSidebar from "@/components/AppSidebar";
 import HomeRail from "@/components/HomeRail";
-import Announcement from "@/components/Announcement";
 import Onboarding from "@/components/Onboarding";
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -599,7 +598,6 @@ export default function HomeClient({
           )}
         </section>
 
-        <Announcement />
 
         {/* Join + replay */}
         <div className="home-join-row">

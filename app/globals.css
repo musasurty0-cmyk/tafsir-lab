@@ -11454,63 +11454,6 @@ body:has(.lab) .mode-b-zoom-controls {
 .ai-input:focus { border-color: var(--accent); outline: none; }
 .ai-panel-foot .an-btn { align-self: auto; }
 
-/* ── Announcement ──────────────────────────────────────────────────────── */
-
-.anno {
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  background: var(--panel);
-  overflow: hidden;
-  margin-top: var(--sp-4);
-}
-.anno-head {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: var(--sp-3);
-  padding: 14px 18px;
-  text-align: left;
-  transition: background var(--dur-hover) var(--ease-flow);
-}
-.anno-head:hover { background: var(--hover); }
-.anno-icon {
-  flex: none;
-  width: 34px; height: 34px;
-  display: grid; place-items: center;
-  border-radius: var(--radius);
-  background: var(--bg-elev);
-  color: var(--ink-2);
-}
-.anno-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
-.anno-text strong { font-size: 15px; }
-.anno-text span   { font-size: 13px; color: var(--ink-4); }
-.anno-chev {
-  flex: none;
-  color: var(--ink-4);
-  transition: transform var(--dur-slow) var(--ease-flow);
-}
-.anno[data-open="true"] .anno-chev { transform: rotate(-90deg); }
-
-.anno-body {
-  padding: 0 18px 16px 66px;
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-2);
-  animation: anno-open var(--dur-slow) var(--ease-flow) both;
-}
-.anno-body[hidden] { display: none; }
-@keyframes anno-open {
-  from { opacity: 0; transform: translateY(-6px); }
-  to   { opacity: 1; transform: none; }
-}
-.anno-body-label {
-  font-size: 11px; font-weight: 700; letter-spacing: 0.06em;
-  text-transform: uppercase; color: var(--ink-4);
-}
-.anno-body ul { display: flex; flex-direction: column; gap: 5px; }
-.anno-body li { font-size: 14px; color: var(--ink-2); }
-.anno-body li::before { content: "· "; color: var(--ink-4); }
-
 /* ── Narrow screens ────────────────────────────────────────────────────── */
 
 @media (max-width: 1100px) {
