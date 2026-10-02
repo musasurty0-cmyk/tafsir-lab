@@ -7,9 +7,9 @@
   },
   "audio": {
     "file": "audio/khutbah.flac",
-    "duration": 32.56,
-    "speechEnd": 32.56,
-    "note": "Gate, 3:1 compressor, limiter at -1.5 dBFS: -11.0 LUFS in the file, ~-12.1 once the renderer has taken its 1.1 dB for the second track."
+    "duration": 34.96,
+    "speechEnd": 34.96,
+    "note": "One continuous take, stereo as recorded, +3 dB with a -1 dBFS ceiling that touches a handful of plosives. No gate, no compression: see cut.py."
   },
   "bed": {
     "file": "audio/bed-nasheed.flac",
@@ -20,83 +20,79 @@
     {
       "id": "a1",
       "from": 0.0,
-      "to": 2.98,
+      "to": 3.88,
       "enter": "words",
       "lines": [
         {
-          "cls": "ln ln--xl",
+          "cls": "ln ln--sm",
           "range": [
             0,
             1
-          ],
-          "mark": [
-            0,
-            0
           ]
         },
         {
-          "cls": "ln ln--sm",
+          "cls": "ln ln--xl",
           "range": [
             2,
-            5
+            3
+          ],
+          "mark": [
+            2,
+            2
           ]
         },
         {
           "cls": "ln ln--sm",
           "range": [
-            6,
-            10
+            4,
+            7
+          ]
+        },
+        {
+          "cls": "ln ln--sm",
+          "range": [
+            8,
+            12
           ]
         }
       ]
     },
     {
       "id": "a2",
-      "from": 2.98,
-      "to": 5.3,
+      "from": 3.88,
+      "to": 6.21,
       "enter": "rise",
       "lines": [
         {
           "cls": "ln ln--sm",
           "range": [
-            11,
-            14
+            13,
+            16
           ],
           "mark": [
-            13,
-            14
+            15,
+            16
           ]
         },
         {
           "cls": "ln ln--sm",
           "range": [
-            15,
-            18
+            17,
+            20
           ]
         }
       ]
     },
     {
       "id": "b",
-      "from": 5.3,
-      "to": 7.8,
+      "from": 6.21,
+      "to": 8.71,
       "enter": "fast",
       "lines": [
         {
           "cls": "ln ln--sm",
           "range": [
-            19,
-            20
-          ]
-        },
-        {
-          "cls": "ln ln--sm",
-          "range": [
             21,
-            22
-          ],
-          "mark": [
-            22,
             22
           ]
         },
@@ -104,106 +100,110 @@
           "cls": "ln ln--sm",
           "range": [
             23,
-            25
+            24
+          ],
+          "mark": [
+            24,
+            24
+          ]
+        },
+        {
+          "cls": "ln ln--sm",
+          "range": [
+            25,
+            27
           ]
         }
       ]
     },
     {
       "id": "c",
-      "from": 7.8,
-      "to": 11.16,
+      "from": 8.71,
+      "to": 12.06,
       "enter": "side",
       "lines": [
         {
           "cls": "ln ln--sm",
           "range": [
-            26,
-            30
+            28,
+            32
           ]
         },
         {
           "cls": "ln ln--sm",
           "range": [
-            31,
-            34
-          ]
-        },
-        {
-          "cls": "ln ln--sm",
-          "range": [
-            35,
+            33,
             36
+          ]
+        },
+        {
+          "cls": "ln ln--sm",
+          "range": [
+            37,
+            38
           ]
         }
       ],
       "icons": [
         {
           "key": "rehal",
-          "at": 8.56
+          "at": 9.46
         },
         {
           "key": "people",
-          "at": 9.78
+          "at": 10.68
         }
       ]
     },
     {
       "id": "d",
-      "from": 11.16,
-      "to": 13.74,
+      "from": 12.06,
+      "to": 14.64,
       "enter": "rise",
       "lines": [
         {
           "cls": "ln ln--sm",
           "range": [
-            37,
-            41
+            39,
+            43
           ]
         },
         {
           "cls": "ln ln--sm",
           "range": [
-            42,
-            44
+            44,
+            46
           ]
         },
         {
           "cls": "ln ln--sm",
           "range": [
-            45,
-            47
+            47,
+            49
           ]
         }
       ],
       "icons": [
         {
           "key": "salah",
-          "at": 11.62
+          "at": 12.52
         },
         {
           "key": "people",
-          "at": 13.06
+          "at": 13.96
         }
       ]
     },
     {
       "id": "e",
-      "from": 13.74,
-      "to": 17.18,
+      "from": 14.64,
+      "to": 18.09,
       "enter": "tilt",
       "lines": [
         {
           "cls": "ln ln--sm",
           "range": [
-            48,
-            52
-          ]
-        },
-        {
-          "cls": "ln ln--sm",
-          "range": [
-            53,
+            50,
             54
           ]
         },
@@ -211,144 +211,166 @@
           "cls": "ln ln--sm",
           "range": [
             55,
-            57
+            56
+          ]
+        },
+        {
+          "cls": "ln ln--sm",
+          "range": [
+            57,
+            59
           ],
           "mark": [
-            55,
-            56
+            57,
+            58
           ]
         }
       ]
     },
     {
       "id": "f",
-      "from": 17.18,
-      "to": 19.64,
+      "from": 18.09,
+      "to": 20.5,
       "enter": "fast",
       "lines": [
         {
           "cls": "ln ln--sm",
           "range": [
-            58,
-            61
+            60,
+            63
           ]
         },
         {
           "cls": "ln ln--sm",
           "range": [
-            62,
-            64
-          ]
-        },
-        {
-          "cls": "ln ln--sm",
-          "range": [
-            65,
+            64,
             66
+          ]
+        },
+        {
+          "cls": "ln ln--sm",
+          "range": [
+            67,
+            68
           ]
         }
       ],
       "icons": [
         {
           "key": "tally",
-          "at": 17.36,
+          "at": 18.27,
           "fx": "tally",
           "strokes": [
-            17.36,
-            17.62,
-            17.82,
-            18.08,
-            18.34
+            18.27,
+            18.53,
+            18.73,
+            18.98,
+            19.25
           ],
-          "dimAt": 18.64
+          "dimAt": 19.55
+        }
+      ]
+    },
+    {
+      "id": "f2",
+      "from": 20.5,
+      "to": 22.03,
+      "enter": "fast",
+      "lines": [
+        {
+          "cls": "ln",
+          "range": [
+            69,
+            72
+          ]
         }
       ]
     },
     {
       "id": "g",
-      "from": 19.64,
-      "to": 23.28,
+      "from": 22.03,
+      "to": 25.68,
       "enter": "rise",
       "lines": [
         {
           "cls": "ln ln--sm",
           "range": [
-            67,
-            69
+            73,
+            75
           ]
         },
         {
           "cls": "ln ln--sm",
           "range": [
-            70,
-            71
-          ]
-        },
-        {
-          "cls": "ln ln--sm",
-          "range": [
-            72,
-            74
-          ]
-        },
-        {
-          "cls": "ln ln--sm",
-          "range": [
-            75,
+            76,
             77
+          ]
+        },
+        {
+          "cls": "ln ln--sm",
+          "range": [
+            78,
+            80
+          ]
+        },
+        {
+          "cls": "ln ln--sm",
+          "range": [
+            81,
+            83
           ],
           "mark": [
-            75,
-            77
+            81,
+            83
           ]
         }
       ],
       "icons": [
         {
           "key": "window",
-          "at": 21.38,
+          "at": 23.77,
           "fx": "fly",
-          "flyFrom": 21.96,
-          "flyTo": 23.0
+          "flyFrom": 24.36,
+          "flyTo": 25.39
         }
       ]
     },
     {
       "id": "h",
-      "from": 23.28,
-      "to": 26.46,
+      "from": 25.68,
+      "to": 28.86,
       "enter": "side",
       "lines": [
         {
           "cls": "ln ln--sm",
           "range": [
-            78,
-            82
+            84,
+            88
           ]
         },
         {
           "cls": "ln ln--sm",
           "range": [
-            83,
-            85
+            89,
+            91
           ],
           "mark": [
-            83,
-            85
+            89,
+            91
           ]
         },
         {
           "cls": "ln ln--sm",
           "range": [
-            86,
-            88
+            92,
+            94
           ]
         }
       ],
       "icons": [
         {
           "key": "renew",
-          "at": 24.22,
+          "at": 26.61,
           "fx": "draw",
           "drawFor": 0.78
         }
@@ -356,93 +378,93 @@
     },
     {
       "id": "i",
-      "from": 26.46,
-      "to": 28.46,
+      "from": 28.86,
+      "to": 30.86,
       "enter": "rise",
       "lines": [
         {
           "cls": "ln ln--sm",
           "range": [
-            89,
-            97
+            95,
+            103
           ],
           "mark": [
-            94,
-            94
+            100,
+            100
           ]
         }
       ],
       "icons": [
         {
           "key": "people",
-          "at": 26.56,
+          "at": 28.95,
           "fx": "leave",
-          "leaveAt": 27.5
+          "leaveAt": 29.89
         }
       ]
     },
     {
       "id": "j",
-      "from": 28.46,
-      "to": 31.22,
+      "from": 30.86,
+      "to": 33.5,
       "enter": "fast",
       "lines": [
         {
           "cls": "ln ln--sm",
           "range": [
-            98,
-            102
+            104,
+            108
           ]
         },
         {
           "cls": "ln ln--sm",
           "range": [
-            103,
-            106
+            109,
+            112
           ]
         },
         {
           "cls": "ln ln--sm",
           "range": [
-            107,
-            109
+            113,
+            115
           ]
         }
       ],
       "icons": [
         {
           "key": "salah",
-          "at": 29.32
+          "at": 31.71
         },
         {
           "key": "rehal",
-          "at": 30.56
+          "at": 32.95
         }
       ]
     },
     {
       "id": "k",
-      "from": 31.22,
-      "to": 34.2,
+      "from": 33.5,
+      "to": 36.6,
       "enter": "slam",
       "lines": [
         {
           "cls": "ln ln--xl",
           "range": [
-            110,
-            114
+            116,
+            120
           ],
           "mark": [
-            113,
-            114
+            119,
+            120
           ]
         }
       ]
     },
     {
       "id": "close",
-      "from": 34.2,
-      "to": 38.2,
+      "from": 36.6,
+      "to": 40.6,
       "enter": "rise"
     }
   ],
@@ -452,6 +474,7 @@
     "icons": "He gives the same two acts twice -- reading the Qur'an and praying -- first with people watching, then with nobody there. The drawn marks say it the same way: a rehal and a mihrab, each with the watchers beside it; then the watchers leave as he says 'nobody'; then the rehal and the mihrab again, alone. No mark stands for Allah's seeing -- the last line is words only, the largest on the reel.",
     "tally": "The number of prayers is a tally that draws on one stroke per word as he counts it up, and dims as he says it does not matter.",
     "window": "Everything else goes out the window: three ochre strokes leave through it as he says so.",
-    "lineBreaks": "Every caption is split into explicit lines where the sense breaks, and judged against the real layout by check-wraps.mjs -- left to wrap on its own, four of them stranded a word ('something.', 'around,', 'us,', 'wrong,')."
+    "lineBreaks": "Every caption is split into explicit lines where the sense breaks, and judged against the real layout by check-wraps.mjs -- left to wrap on its own, four of them stranded a word ('something.', 'around,', 'us,', 'wrong,').",
+    "falseStart": "He begins 'If our intention is...' and starts the sentence again. It stays -- in the sound and on screen, as its own short card -- because cutting it meant cutting between his breaths."
   }
 }

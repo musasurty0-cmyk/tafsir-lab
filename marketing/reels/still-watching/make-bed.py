@@ -6,9 +6,10 @@ The source has a dropout at 44.92-45.90 (a splice in the recording, not a rest
 in the music). This film is 38.2s, so it needs only the clean run before it --
 no loop, no join.
 
-Level is set against the voice, not in isolation: 16.3 LU under it, where the
-sibling reel's bed ended up after the owner asked for it to come down. Plus the
-1.1 dB the renderer takes from each track once there are two.
+Level is set against the voice FILE, not in isolation: 14.8 LU under it, the
+gap the owner has already heard and kept (the sibling reel's bed, 16.3 LU under
+the voice as rendered). Measured from audio/khutbah.flac each run, so the bed
+follows the voice when the voice changes.
 """
 import json
 import pathlib
@@ -22,9 +23,8 @@ DOC = json.loads((P / "script.json").read_text(encoding="utf-8"))
 
 FILM = DOC["beats"][-1]["to"]
 CLEAN_UNTIL = 44.80
-VOICE_LUFS = -11.8
-UNDER = DOC["bed"]["under"]
-RENDER_LOSS = 1.1
+GAP = 14.8
+VOICE = P / "audio" / "khutbah.flac"
 
 assert FILM <= CLEAN_UNTIL, "film %.2fs runs into the dropout" % FILM
 
@@ -48,8 +48,9 @@ def render(gain):
     return lufs(OUT)
 
 
-target = VOICE_LUFS - UNDER + RENDER_LOSS
+voice = lufs(VOICE)[0]
+target = voice - GAP
 i, _, _ = render(0.0)
 i, lra, pk = render(target - i)
 print("bed: %.1f LUFS, LRA %.1f, peak %.1f dBFS, %.2fs" % (i, lra, pk, FILM))
-print("     renders %.1f LU under the voice" % (VOICE_LUFS - (i - RENDER_LOSS)))
+print("     %.1f LU under the voice file (%.1f LUFS)" % (voice - i, voice))

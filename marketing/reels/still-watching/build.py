@@ -321,6 +321,10 @@ HTML = """<!DOCTYPE html>
           for (let i = first.range[0]; i <= last.range[1]; i++) {
             if (!wordEls[i]) continue;
             const at = Math.max(0, WORDS[i][0] - 0.05);
+            /* Hidden from t=0. A fromTo with immediateRender:false paints
+               nothing before its own start, so without this every word sat on
+               the card at full size before he said it, then dropped and rose. */
+            tl.set(wordEls[i].parentElement, { y: 52, opacity: 0 }, 0);
             tl.fromTo(wordEls[i].parentElement, { y: 52, opacity: 0 },
               { y: 0, opacity: 1, duration: 0.30, ease: "power3.out",
                 immediateRender: false }, at);
