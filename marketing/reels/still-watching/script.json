@@ -1,0 +1,457 @@
+{
+  "title": "Tawḥīd and intention",
+  "occasion": "Jumuʿah khuṭbah · SGS ISOC · 2 October 2026",
+  "source": {
+    "clip": "WhatsApp Video 2026-10-02 at 20.28.31.mp4",
+    "note": "A phone recording shared from the SGS ISOC chat: the picture is a WhatsApp screen, so only the sound is used. Trimmed at both ends and one false start removed -- see cut.py."
+  },
+  "audio": {
+    "file": "audio/khutbah.flac",
+    "duration": 32.56,
+    "speechEnd": 32.56,
+    "note": "Gate, 3:1 compressor, limiter at -1.5 dBFS: -11.0 LUFS in the file, ~-12.1 once the renderer has taken its 1.1 dB for the second track."
+  },
+  "bed": {
+    "file": "audio/bed-nasheed.flac",
+    "under": 16.3,
+    "note": "The same nasheed as the sibling reel, so the two read as one series. Built by make-bed.py."
+  },
+  "beats": [
+    {
+      "id": "a1",
+      "from": 0.0,
+      "to": 2.98,
+      "enter": "words",
+      "lines": [
+        {
+          "cls": "ln ln--xl",
+          "range": [
+            0,
+            1
+          ],
+          "mark": [
+            0,
+            0
+          ]
+        },
+        {
+          "cls": "ln ln--sm",
+          "range": [
+            2,
+            5
+          ]
+        },
+        {
+          "cls": "ln ln--sm",
+          "range": [
+            6,
+            10
+          ]
+        }
+      ]
+    },
+    {
+      "id": "a2",
+      "from": 2.98,
+      "to": 5.3,
+      "enter": "rise",
+      "lines": [
+        {
+          "cls": "ln ln--sm",
+          "range": [
+            11,
+            14
+          ],
+          "mark": [
+            13,
+            14
+          ]
+        },
+        {
+          "cls": "ln ln--sm",
+          "range": [
+            15,
+            18
+          ]
+        }
+      ]
+    },
+    {
+      "id": "b",
+      "from": 5.3,
+      "to": 7.8,
+      "enter": "fast",
+      "lines": [
+        {
+          "cls": "ln ln--sm",
+          "range": [
+            19,
+            20
+          ]
+        },
+        {
+          "cls": "ln ln--sm",
+          "range": [
+            21,
+            22
+          ],
+          "mark": [
+            22,
+            22
+          ]
+        },
+        {
+          "cls": "ln ln--sm",
+          "range": [
+            23,
+            25
+          ]
+        }
+      ]
+    },
+    {
+      "id": "c",
+      "from": 7.8,
+      "to": 11.16,
+      "enter": "side",
+      "lines": [
+        {
+          "cls": "ln ln--sm",
+          "range": [
+            26,
+            30
+          ]
+        },
+        {
+          "cls": "ln ln--sm",
+          "range": [
+            31,
+            34
+          ]
+        },
+        {
+          "cls": "ln ln--sm",
+          "range": [
+            35,
+            36
+          ]
+        }
+      ],
+      "icons": [
+        {
+          "key": "rehal",
+          "at": 8.56
+        },
+        {
+          "key": "people",
+          "at": 9.78
+        }
+      ]
+    },
+    {
+      "id": "d",
+      "from": 11.16,
+      "to": 13.74,
+      "enter": "rise",
+      "lines": [
+        {
+          "cls": "ln ln--sm",
+          "range": [
+            37,
+            41
+          ]
+        },
+        {
+          "cls": "ln ln--sm",
+          "range": [
+            42,
+            44
+          ]
+        },
+        {
+          "cls": "ln ln--sm",
+          "range": [
+            45,
+            47
+          ]
+        }
+      ],
+      "icons": [
+        {
+          "key": "salah",
+          "at": 11.62
+        },
+        {
+          "key": "people",
+          "at": 13.06
+        }
+      ]
+    },
+    {
+      "id": "e",
+      "from": 13.74,
+      "to": 17.18,
+      "enter": "tilt",
+      "lines": [
+        {
+          "cls": "ln ln--sm",
+          "range": [
+            48,
+            52
+          ]
+        },
+        {
+          "cls": "ln ln--sm",
+          "range": [
+            53,
+            54
+          ]
+        },
+        {
+          "cls": "ln ln--sm",
+          "range": [
+            55,
+            57
+          ],
+          "mark": [
+            55,
+            56
+          ]
+        }
+      ]
+    },
+    {
+      "id": "f",
+      "from": 17.18,
+      "to": 19.64,
+      "enter": "fast",
+      "lines": [
+        {
+          "cls": "ln ln--sm",
+          "range": [
+            58,
+            61
+          ]
+        },
+        {
+          "cls": "ln ln--sm",
+          "range": [
+            62,
+            64
+          ]
+        },
+        {
+          "cls": "ln ln--sm",
+          "range": [
+            65,
+            66
+          ]
+        }
+      ],
+      "icons": [
+        {
+          "key": "tally",
+          "at": 17.36,
+          "fx": "tally",
+          "strokes": [
+            17.36,
+            17.62,
+            17.82,
+            18.08,
+            18.34
+          ],
+          "dimAt": 18.64
+        }
+      ]
+    },
+    {
+      "id": "g",
+      "from": 19.64,
+      "to": 23.28,
+      "enter": "rise",
+      "lines": [
+        {
+          "cls": "ln ln--sm",
+          "range": [
+            67,
+            69
+          ]
+        },
+        {
+          "cls": "ln ln--sm",
+          "range": [
+            70,
+            71
+          ]
+        },
+        {
+          "cls": "ln ln--sm",
+          "range": [
+            72,
+            74
+          ]
+        },
+        {
+          "cls": "ln ln--sm",
+          "range": [
+            75,
+            77
+          ],
+          "mark": [
+            75,
+            77
+          ]
+        }
+      ],
+      "icons": [
+        {
+          "key": "window",
+          "at": 21.38,
+          "fx": "fly",
+          "flyFrom": 21.96,
+          "flyTo": 23.0
+        }
+      ]
+    },
+    {
+      "id": "h",
+      "from": 23.28,
+      "to": 26.46,
+      "enter": "side",
+      "lines": [
+        {
+          "cls": "ln ln--sm",
+          "range": [
+            78,
+            82
+          ]
+        },
+        {
+          "cls": "ln ln--sm",
+          "range": [
+            83,
+            85
+          ],
+          "mark": [
+            83,
+            85
+          ]
+        },
+        {
+          "cls": "ln ln--sm",
+          "range": [
+            86,
+            88
+          ]
+        }
+      ],
+      "icons": [
+        {
+          "key": "renew",
+          "at": 24.22,
+          "fx": "draw",
+          "drawFor": 0.78
+        }
+      ]
+    },
+    {
+      "id": "i",
+      "from": 26.46,
+      "to": 28.46,
+      "enter": "rise",
+      "lines": [
+        {
+          "cls": "ln ln--sm",
+          "range": [
+            89,
+            97
+          ],
+          "mark": [
+            94,
+            94
+          ]
+        }
+      ],
+      "icons": [
+        {
+          "key": "people",
+          "at": 26.56,
+          "fx": "leave",
+          "leaveAt": 27.5
+        }
+      ]
+    },
+    {
+      "id": "j",
+      "from": 28.46,
+      "to": 31.22,
+      "enter": "fast",
+      "lines": [
+        {
+          "cls": "ln ln--sm",
+          "range": [
+            98,
+            102
+          ]
+        },
+        {
+          "cls": "ln ln--sm",
+          "range": [
+            103,
+            106
+          ]
+        },
+        {
+          "cls": "ln ln--sm",
+          "range": [
+            107,
+            109
+          ]
+        }
+      ],
+      "icons": [
+        {
+          "key": "salah",
+          "at": 29.32
+        },
+        {
+          "key": "rehal",
+          "at": 30.56
+        }
+      ]
+    },
+    {
+      "id": "k",
+      "from": 31.22,
+      "to": 34.2,
+      "enter": "slam",
+      "lines": [
+        {
+          "cls": "ln ln--xl",
+          "range": [
+            110,
+            114
+          ],
+          "mark": [
+            113,
+            114
+          ]
+        }
+      ]
+    },
+    {
+      "id": "close",
+      "from": 34.2,
+      "to": 38.2,
+      "enter": "rise"
+    }
+  ],
+  "notes": {
+    "arabic": "There is none to set. A language-detect pass over every 3s window of the source came back English throughout; the only Arabic is 'ibad Allah, after the out-point, opening his next section.",
+    "marks": "The ochre bar goes under what each sentence turns on: Tawheed, more important, intention, people before, out the window, renew our intention, nobody, watching you.",
+    "icons": "He gives the same two acts twice -- reading the Qur'an and praying -- first with people watching, then with nobody there. The drawn marks say it the same way: a rehal and a mihrab, each with the watchers beside it; then the watchers leave as he says 'nobody'; then the rehal and the mihrab again, alone. No mark stands for Allah's seeing -- the last line is words only, the largest on the reel.",
+    "tally": "The number of prayers is a tally that draws on one stroke per word as he counts it up, and dims as he says it does not matter.",
+    "window": "Everything else goes out the window: three ochre strokes leave through it as he says so.",
+    "lineBreaks": "Every caption is split into explicit lines where the sense breaks, and judged against the real layout by check-wraps.mjs -- left to wrap on its own, four of them stranded a word ('something.', 'around,', 'us,', 'wrong,')."
+  }
+}
