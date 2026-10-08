@@ -31,7 +31,7 @@
     "test:watch": "vitest"
   },
   "engines": {
-    "node": ">=20.0.0 <21.0.0"
+    "node": "24.x"
   },
   "prisma": {
     "seed": "npm run db:seed"
