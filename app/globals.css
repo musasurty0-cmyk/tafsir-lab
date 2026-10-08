@@ -526,6 +526,26 @@ input, textarea { font: inherit; color: inherit; }
    whether or not the navigator is present. */
 .crumbs { display: flex; align-items: center; gap: 4px; font-size: 13px; color: var(--ink-3); flex: 0 1 auto; min-width: 0; }
 .crumb { padding: 3px 6px; border-radius: 4px; white-space: nowrap; transition: background var(--dur-fast) ease, color var(--dur-fast) ease; }
+/* Text gives way; controls never do. The crumbs are allowed to shrink so the
+   bar fits a narrow screen, but a nowrap crumb with nothing clipping it does
+   not shrink -- it SPILLS, and on an iPad the workspace and surah names were
+   painting straight over the Mushaf page navigator's back arrow. So each
+   crumb truncates with an ellipsis instead, the workspace name first (it is
+   the least useful thing on the bar once you are inside a surah), and every
+   arrow, separator and menu button keeps its full size. Clipping is per
+   crumb, not on .crumbs, because the surah menu's popover lives inside it. */
+.crumb { min-width: 0; overflow: hidden; text-overflow: ellipsis; flex: 0 1 auto; }
+.crumbs > .crumb:first-child { flex-shrink: 4; min-width: 3ch; }
+.crumbs > .crumb:nth-child(3) { min-width: 5ch; }   /* the surah name */
+/* And the container has a floor. With min-width:0 it collapsed to nothing on
+   a narrow bar while its fixed-size children (separators, the surah menu)
+   overflowed it -- straight onto the arrow that follows. The floor is what
+   those fixed parts need (two or three separators, the menu button, the gaps:
+   ~84px) plus the few letters each name keeps (8ch). min-content would not
+   do: it measures a nowrap crumb at its FULL text, so nothing would ever
+   truncate and the whole bar ran off the screen instead. */
+.crumbs { min-width: calc(8ch + 84px); }
+.crumb-sep, .crumb-menu, .topbar-loading { flex: none; }
 .crumb:hover { background: var(--hover); color: var(--ink); }
 .crumb[data-current="true"] { color: var(--ink); font-weight: 500; }
 .crumb-sep { color: var(--ink-4); font-size: 12px; }
@@ -3058,6 +3078,11 @@ input, textarea { font: inherit; color: inherit; }
 .tb-canvas-slot { display: contents; }
 
 .tb-page-nav {
+  /* Never shrinks: the ‹ › arrows are controls, and the breadcrumb text to
+     their left is what truncates when the bar runs out of room. */
+  flex: none;
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   gap: 1px;
@@ -9530,6 +9555,11 @@ body:has(.lab) .mode-b-zoom-controls {
   z-index: 20;
 }
 .whiteboard-shell-back {
+  /* The chevron stays; a long workspace name truncates rather than pushing
+     the bar's controls off the edge. */
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 40%;
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -9540,6 +9570,8 @@ body:has(.lab) .mode-b-zoom-controls {
   transition: background var(--dur-fast) ease, color var(--dur-fast) ease;
 }
 .whiteboard-shell-back:hover { background: var(--hover); color: var(--ink); }
+.whiteboard-shell-back .wsb-chev { flex: none; }
+.whiteboard-shell-back .wsb-name { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .whiteboard-shell-title {
   font-family: var(--font-serif);
   font-size: 16px;

@@ -163,7 +163,7 @@ export default function BookShell({
     <div className="whiteboard-shell">
       <header className="whiteboard-shell-bar">
         <Link href={`/workspaces/${workspaceId}`} className="whiteboard-shell-back">
-          <ChevronLeft size={16} /> {workspaceName}
+          <ChevronLeft size={16} className="wsb-chev" /> <span className="wsb-name">{workspaceName}</span>
         </Link>
         <span className="whiteboard-shell-title">📚 {bookTitle}</span>
         <div className="whiteboard-shell-presence">
