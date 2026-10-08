@@ -19,7 +19,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { useDismissable } from "@/lib/use-dismissable";
-import type { DrawTool } from "./DrawingCanvas";
+import type { DrawTool, SaveState } from "./DrawingCanvas";
 
 // ── Palette configuration ─────────────────────────────────────────────────
 
@@ -168,6 +168,30 @@ const ClearIcon = () => (
   </svg>
 );
 
+/* One cloud, four marks: a tick once the server has it, an up-arrow while
+   something is waiting or on its way, and a bang when the server refused.
+   The outline never changes, so the button stays findable in every state. */
+const SaveIcon = ({ state }: { state: SaveState }) => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M17.5 19H7a5 5 0 1 1 .9-9.92A6 6 0 0 1 19.5 11 4 4 0 0 1 17.5 19z"/>
+    {state === "saved" && <polyline points="9.2 13.6 11.4 15.8 15.2 11.6"/>}
+    {(state === "unsaved" || state === "saving") && (
+      <><line x1="12.2" y1="16.4" x2="12.2" y2="11"/><polyline points="9.8 13.2 12.2 10.8 14.6 13.2"/></>
+    )}
+    {state === "failed" && (
+      <><line x1="12.2" y1="10.6" x2="12.2" y2="13.8"/><line x1="12.2" y1="16.4" x2="12.21" y2="16.4"/></>
+    )}
+  </svg>
+);
+
+const SAVE_TITLE: Record<SaveState, string> = {
+  saved:   "All changes saved  ⌘S",
+  unsaved: "Unsaved changes — save now  ⌘S",
+  saving:  "Saving…",
+  failed:  "Couldn’t save — tap to try again",
+};
+
 // ── Width preview ─────────────────────────────────────────────────────────
 
 function WidthBar({ value, isHighlight }: { value: number; isHighlight: boolean }) {
@@ -220,6 +244,10 @@ interface Props {
   onRedo:                 () => void;
   /** When provided, a trash button appears at the bottom of the rail. */
   onClear?:               () => void;
+  /** When provided, a save button appears under undo/redo, showing whether
+   *  the ink has reached the server. */
+  saveState?:             SaveState;
+  onSave?:                () => void;
   /** Tools this host does not implement. FocusAnnotation draws on its own
    *  canvas rather than DrawingCanvas, so it has no lasso to offer, and a
    *  button that selects a tool nothing handles is worse than no button. */
@@ -237,6 +265,7 @@ export default function CanvasToolRail({
   canUndo, canRedo,
   onUndo, onRedo,
   onClear,
+  saveState = "saved", onSave,
   omitTools,
 }: Props) {
 
@@ -447,6 +476,20 @@ export default function CanvasToolRail({
       >
         <RedoIcon />
       </button>
+
+      {/* ── Save ── always pressable: on "saved" it simply confirms. */}
+      {onSave && (
+        <button
+          className="ctr-btn ctr-save"
+          data-save={saveState}
+          title={SAVE_TITLE[saveState]}
+          aria-label={SAVE_TITLE[saveState]}
+          onClick={onTap(onSave)}
+          onPointerUp={penTap(onSave)}
+        >
+          <SaveIcon state={saveState} />
+        </button>
+      )}
 
       {/* ── Clear all (optional) ── */}
       {onClear && (

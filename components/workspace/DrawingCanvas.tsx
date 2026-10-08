@@ -68,7 +68,15 @@ export interface DrawingCanvasHandle {
   /** Drop finished strokes in as if they had just been drawn — used by the
    *  mindmap, whose connectors are ordinary arrow ink. */
   addStrokes: (strokes: InkStroke[]) => void;
+  /** Save now instead of waiting for the debounce. Resolves true once the
+   *  server has everything, false if it refused. */
+  saveNow: () => Promise<boolean>;
 }
+
+/** saved: the server has it all. unsaved: edits waiting on the debounce.
+ *  saving: a request is out. failed: the last attempt was refused — the ink
+ *  is still on screen and queued, but not yet stored anywhere. */
+export type SaveState = "saved" | "unsaved" | "saving" | "failed";
 
 // Stroke shape + rendering live in lib/ink (shared with the editor ink
 // overlay). Canvas strokes are world-space, tagged surface:"canvas".
@@ -122,6 +130,9 @@ interface Props {
    *  active; new strokes are tagged with the active layer. */
   activeAnchor?:     string | null;
   onHistoryChange?:  (canUndo: boolean, canRedo: boolean) => void;
+  /** Whether this board's ink has reached the server. Drives the save
+   *  button, so a save that fails is something you can SEE. */
+  onSaveStateChange?: (state: SaveState) => void;
   /** Text tool: called with world-space coordinates when the user clicks
    *  the canvas to place a free text box. */
   onTextPlace?:      (worldX: number, worldY: number) => void;
@@ -135,7 +146,7 @@ interface Props {
 // ── Component ─────────────────────────────────────────────────────────────
 
 const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCanvas(
-  { pageId, mushafPage, tool, strokeColor, strokeWidth, viewport, roomSocket, activeAnchor = null, onHistoryChange, onTextPlace, onAnchorsChange, eraserRadius = ERASER_RADIUS },
+  { pageId, mushafPage, tool, strokeColor, strokeWidth, viewport, roomSocket, activeAnchor = null, onHistoryChange, onSaveStateChange, onTextPlace, onAnchorsChange, eraserRadius = ERASER_RADIUS },
   ref,
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -292,6 +303,22 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
   function markDirty(ids: Iterable<string>) {
     for (const id of ids) dirtyRef.current.set(id, ++editSeqRef.current);
   }
+  /* Deletions are tracked by count rather than by id: tombstones are re-sent
+     with every save, so what matters is only whether the latest deletion has
+     been confirmed yet. */
+  const deleteSeqRef      = useRef(0);
+  const savedDeleteSeqRef = useRef(0);
+
+  const onSaveStateRef = useRef(onSaveStateChange);
+  useEffect(() => { onSaveStateRef.current = onSaveStateChange; }, [onSaveStateChange]);
+  const saveStateRef = useRef<SaveState>("saved");
+  const setSaveState = useCallback((s: SaveState) => {
+    if (saveStateRef.current === s) return;
+    saveStateRef.current = s;
+    onSaveStateRef.current?.(s);
+  }, []);
+  const hasUnsaved = useCallback(() =>
+    dirtyRef.current.size > 0 || deleteSeqRef.current !== savedDeleteSeqRef.current, []);
 
   /** Two-way reconcile of MY strokes against a fresh server read:
    *  add server strokes we don't have (drawn on another device), drop local
@@ -647,6 +674,9 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     savedIdsRef.current     = new Set();
     savedAtRef.current      = new Map();
     dirtyRef.current        = new Map();
+    deleteSeqRef.current    = 0;
+    savedDeleteSeqRef.current = 0;
+    setSaveState("saved");
     setMyStrokes([]);
 
     function load() {
@@ -864,8 +894,13 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
       if (v !== undefined) { strokes.push(s); sent.set(s.id, v); }
     }
     const deletedIds = [...tombstonesRef.current];
-    if (!strokes.length && !deletedIds.length) return Promise.resolve(null);
+    const delSeq     = deleteSeqRef.current;
+    if (!strokes.length && !deletedIds.length) {
+      setSaveState("saved");
+      return Promise.resolve(null);
+    }
 
+    setSaveState("saving");
     const body = JSON.stringify({ strokes, surface: "canvas", deletedIds });
     return fetch(`/api/pages/${pageId}/drawings`, {
       method:  "PUT",
@@ -884,11 +919,20 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
         savedIdsRef.current.add(id);
         savedAtRef.current.set(id, t);
       }
+      savedDeleteSeqRef.current = Math.max(savedDeleteSeqRef.current, delSeq);
+      // Edits made while this was in flight are still waiting on their own save.
+      setSaveState(hasUnsaved() ? "unsaved" : "saved");
       return r;
+    }).catch((err) => {
+      // .catch, not then's second argument: a refused save throws INSIDE the
+      // handler above, which a sibling rejection handler would never see.
+      setSaveState("failed");
+      throw err;
     });
-  }, [pageId]);
+  }, [pageId, setSaveState, hasUnsaved]);
 
   const scheduleSave = useCallback(() => {
+    setSaveState("unsaved");
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     if (retryTimerRef.current) { clearTimeout(retryTimerRef.current); retryTimerRef.current = null; }
     saveTimerRef.current = setTimeout(() => {
@@ -906,7 +950,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
       };
       attempt(0);
     }, SAVE_DEBOUNCE);
-  }, [putStrokes]);
+  }, [putStrokes, setSaveState]);
 
   // Flush pending saves before the tab suspends; refresh peers on refocus.
   useEffect(() => {
@@ -1028,6 +1072,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
   function applyRemove(ids: Set<string>) {
     if (!ids.size) return;
     for (const id of ids) { tombstonesRef.current.add(id); dirtyRef.current.delete(id); }
+    deleteSeqRef.current++;
     allMyStrokesRef.current = allMyStrokesRef.current.filter((s) => !ids.has(s.id));
     const next = myStrokesRef.current.filter((s) => !ids.has(s.id));
     myStrokesRef.current = next;
@@ -1290,7 +1335,16 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
       broadcast(add);
       scheduleRender();
     },
-  }), [scheduleSave, roomSocket]);  
+    /* The save button. Skips the debounce and any backoff in progress, and
+       reports the outcome rather than retrying quietly: a person who pressed
+       Save wants to know, and pressing it again IS the retry. */
+    async saveNow() {
+      if (saveTimerRef.current)  { clearTimeout(saveTimerRef.current);  saveTimerRef.current  = null; }
+      if (retryTimerRef.current) { clearTimeout(retryTimerRef.current); retryTimerRef.current = null; }
+      try { await putStrokes(); return true; }
+      catch { return false; }
+    },
+  }), [scheduleSave, putStrokes, roomSocket]);  
 
   // ── Coordinate helpers ─────────────────────────────────────────────────
 

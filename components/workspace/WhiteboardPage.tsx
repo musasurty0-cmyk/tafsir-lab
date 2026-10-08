@@ -19,7 +19,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import { isTypingTarget } from "@/lib/is-typing";
 import type { NoteData } from "./NoteCard";
 import FreeTextBox, { TEXTBOX_DEFAULT_WIDTH } from "./FreeTextBox";
-import DrawingCanvas, { type DrawTool, type DrawingCanvasHandle } from "./DrawingCanvas";
+import DrawingCanvas, { type DrawTool, type DrawingCanvasHandle, type SaveState } from "./DrawingCanvas";
 import { createGlide, pushSample, velocityOf, type Sample } from "@/lib/glide";
 import CanvasToolRail, {
   DEFAULT_PEN_COLOR, DEFAULT_PEN_SIZE,
@@ -117,6 +117,7 @@ export default function WhiteboardPage({
   const [hlColor, setHlColor]               = useState(DEFAULT_HIGHLIGHT_COLOR);
   const [hlSize, setHlSize]                 = useState(DEFAULT_HIGHLIGHT_SIZE);
   const [canUndo, setCanUndo]               = useState(false);
+  const [saveState, setSaveState]           = useState<SaveState>("saved");
   const [canRedo, setCanRedo]               = useState(false);
 
   // Eraser radius (screen px) — remembered across sessions.
@@ -193,6 +194,12 @@ export default function WhiteboardPage({
     function onKey(e: KeyboardEvent) {
       /* Also covers the active element and IME composition, which the
          target-only test missed. */
+      /* Save: ⌘/Ctrl + S. Checked before the typing guard so it also works
+         from inside a text box, where the browser would otherwise offer to
+         save the web page. */
+      if (e.key === "s" && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault(); void drawingRef.current?.saveNow(); return;
+      }
       if (isTypingTarget(e)) return;
       if (!e.metaKey && !e.ctrlKey) {
         const t = TOOL_HOTKEYS[e.key.toLowerCase()];
@@ -454,6 +461,7 @@ export default function WhiteboardPage({
         onTextPlace={createTempAt}
         eraserRadius={eraserSize}
         onHistoryChange={(u, r) => { setCanUndo(u); setCanRedo(r); }}
+        onSaveStateChange={setSaveState}
       />
 
       <CanvasToolRail
@@ -471,6 +479,8 @@ export default function WhiteboardPage({
         canRedo={canRedo}
         onUndo={() => drawingRef.current?.undo()}
         onRedo={() => drawingRef.current?.redo()}
+        saveState={saveState}
+        onSave={() => { void drawingRef.current?.saveNow(); }}
       />
 
       <div className="mode-b-zoom-controls" onPointerDown={(e) => e.stopPropagation()}>

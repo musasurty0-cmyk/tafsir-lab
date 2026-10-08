@@ -4045,6 +4045,26 @@ input, textarea { font: inherit; color: inherit; }
   color: oklch(0.44 0.2 20);
 }
 
+/* ── Save ── quiet when everything is stored; a dot while edits are waiting;
+   loud when the server refused, because that is the one state where ink can
+   still be lost and the person needs to act. */
+.ctr-save[data-save="unsaved"]::after {
+  content: "";
+  position: absolute; top: 7px; right: 7px;
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--accent);
+}
+.ctr-save[data-save="saving"] { color: var(--ink-2); animation: ctr-save-pulse 0.9s ease-in-out infinite; }
+.ctr-save[data-save="failed"] {
+  color: var(--danger);
+  background: color-mix(in oklch, var(--danger) 12%, transparent);
+}
+.ctr-save[data-save="failed"]:hover:not(:disabled) {
+  color: var(--danger);
+  background: color-mix(in oklch, var(--danger) 18%, transparent);
+}
+@keyframes ctr-save-pulse { 50% { opacity: 0.45; } }
+
 /* ── Separator ── */
 .ctr-sep {
   /* The rail is a column, so its separator lies across it. The one place the

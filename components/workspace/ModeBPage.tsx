@@ -34,7 +34,7 @@ import ConnectionsPanel from "./ConnectionsPanel";
 import { ayahKey, surahKey, selectionKey } from "@/lib/quran-objects";
 import { textBoxOnPage } from "@/lib/canvas-scope";
 export type Range = { start: number; end: number };
-import DrawingCanvas, { type DrawTool, type DrawingCanvasHandle } from "./DrawingCanvas";
+import DrawingCanvas, { type DrawTool, type DrawingCanvasHandle, type SaveState } from "./DrawingCanvas";
 import { createGlide, pushSample, velocityOf, type Sample } from "@/lib/glide";
 import CanvasToolRail, {
   DEFAULT_PEN_COLOR,
@@ -594,6 +594,7 @@ export default function ModeBPage({
   const [hlColor,  setHlColor]  = useState(DEFAULT_HIGHLIGHT_COLOR);
   const [hlSize,   setHlSize]   = useState(DEFAULT_HIGHLIGHT_SIZE);
   const [canUndo, setCanUndo]   = useState(false);
+  const [saveState, setSaveState] = useState<SaveState>("saved");
   const [canRedo, setCanRedo]   = useState(false);
   const drawingRef              = useRef<DrawingCanvasHandle>(null);
 
@@ -821,6 +822,12 @@ export default function ModeBPage({
          every text container on this canvas is contenteditable, so typing a
          word containing h/p/l/a/e/t switched tools mid-sentence. */
       if (e.key === "Escape" && focusAnchor) { closeFocus(); return; }
+      /* Save: ⌘/Ctrl + S. Checked before the typing guard so it also works
+         from inside a text box, where the browser would otherwise offer to
+         save the web page. */
+      if (e.key === "s" && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault(); void drawingRef.current?.saveNow(); return;
+      }
       if (isTypingTarget(e)) return;
       // Tool shortcuts (no modifier)
       if (!e.metaKey && !e.ctrlKey) {
@@ -1482,6 +1489,7 @@ export default function ModeBPage({
         roomSocket={roomSocket ?? null}
         activeAnchor={activeAnchorKey}
         onHistoryChange={handleHistory}
+        onSaveStateChange={setSaveState}
         onTextPlace={placeTextBox}
         eraserRadius={eraserSize}
         onAnchorsChange={setStrokeAnchors}
@@ -1645,6 +1653,8 @@ export default function ModeBPage({
         canRedo={canRedo}
         onUndo={() => drawingRef.current?.undo()}
         onRedo={() => drawingRef.current?.redo()}
+        saveState={saveState}
+        onSave={() => { void drawingRef.current?.saveNow(); }}
       />
       </div>
       )}
