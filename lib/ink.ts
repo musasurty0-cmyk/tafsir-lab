@@ -56,10 +56,19 @@ export function normPts(raw: unknown[]): Pt[] {
    any display can resolve, so this cannot change the shape of a stroke.
 
    normPts above already reads both shapes, so old drawings keep working and
-   are re-encoded the next time they are saved.                              */
+   are re-encoded the next time they are saved.
+
+   PRESSURE was left at full precision, and it turned out to be the larger
+   half: a Pencil reports it as a float32, which serialises as
+   "0.3333333432674408" -- 18 characters of a 32-character point. On the
+   biggest board that was ~2 MB of 4.5, and 4.5 MB is where Vercel refuses a
+   request or a response outright, so the board stopped saving and loading.
+   Hundredths are finer than any width difference a stroke can show.        */
 
 /** Round to a tenth of a pixel. Sub-0.1px precision is unrenderable. */
 const q = (n: number) => Math.round(n * 10) / 10;
+/** Round pressure to a hundredth: a 1% change in width is invisible. */
+const qp = (n: number) => Math.round(n * 100) / 100;
 
 /**
  * Put one stroke into its storage form. Idempotent — a stroke already packed
@@ -69,7 +78,7 @@ export function packStroke<T extends { points?: unknown }>(s: T): T {
   const raw = Array.isArray(s.points) ? s.points : [];
   if (!raw.length) return s;
   const pts = normPts(raw as unknown[]).map(
-    (p) => [q(p[0]), q(p[1]), p[2] ?? 0.5] as Pt,
+    (p) => [q(p[0]), q(p[1]), qp(p[2] ?? 0.5)] as Pt,
   );
   return { ...s, points: pts };
 }

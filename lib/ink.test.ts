@@ -59,6 +59,17 @@ describe("packStroke — the thing that must not lose ink", () => {
     expect(packStroke(s).points).toEqual([[1, 2.1, 0.9]]);
   });
 
+  it("rounds float32 pressure to hundredths", () => {
+    // The shape a Pencil actually produces, and what filled the largest board.
+    const s = { id: "a", points: [[915, 241.4, 0.3333333432674408], [916.5, 239.8, 0.4507936835289001]] };
+    expect(packStroke(s).points).toEqual([[915, 241.4, 0.33], [916.5, 239.8, 0.45]]);
+  });
+
+  it("is still idempotent once pressure is rounded", () => {
+    const once = packStroke({ id: "a", points: [[1, 2, 0.4849817156791687]] });
+    expect(packStroke(once)).toEqual(once);
+  });
+
   it("keeps every non-point field untouched", () => {
     const s = { id: "a", tool: "pen", color: "#18181b", width: 3, opacity: 1,
                 mushafPage: 7, surface: "canvas", points: objPts(3) };

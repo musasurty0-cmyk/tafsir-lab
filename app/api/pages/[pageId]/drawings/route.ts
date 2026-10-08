@@ -18,6 +18,7 @@
  *   layers "randomly disappearing".
  */
 
+import { gzipSync } from "node:zlib";
 import { NextRequest, NextResponse } from "next/server";
 import { packStrokes } from "@/lib/ink";
 import { Prisma } from "@prisma/client";
@@ -29,7 +30,7 @@ import { apiError } from "@/lib/api-errors";
 // ── GET ────────────────────────────────────────────────────────────────────
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ pageId: string }> },
 ) {
   try {
@@ -59,10 +60,28 @@ export async function GET(
         strokes:    parseStrokes(d.strokes),
       }));
 
-    return NextResponse.json({
+    const json = JSON.stringify({
       myStrokes:   mine ? parseStrokes(mine.strokes) : [],
       otherLayers: others,
     });
+
+    /* Compressed here, in the function, because Vercel refuses any function
+       response over 4.5 MB -- measured on the body the function returns,
+       before the edge would have compressed it. This reply carries EVERY
+       author's ink on the page, and a page two people had both written on
+       came to 4.7 MB: it could not load for either of them, and ink drawn on
+       an empty-looking board was the only copy. Stroke JSON is mostly digits
+       and gzips about 6x, which puts the largest real board at 0.76 MB. */
+    if (/\bgzip\b/.test(req.headers.get("accept-encoding") ?? "")) {
+      return new NextResponse(new Uint8Array(gzipSync(json)), {
+        headers: {
+          "Content-Type":     "application/json",
+          "Content-Encoding": "gzip",
+          "Vary":             "Accept-Encoding",
+        },
+      });
+    }
+    return new NextResponse(json, { headers: { "Content-Type": "application/json" } });
   } catch (err) {
     return apiError(err);
   }

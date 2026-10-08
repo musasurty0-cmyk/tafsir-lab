@@ -273,6 +273,25 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
   const tombstonesRef = useRef<Set<string>>(new Set());
   const savedIdsRef   = useRef<Set<string>>(new Set());
   const loadedRef     = useRef(false);
+  /* dirty: id -> edit number, for every stroke added or moved since the
+     server last confirmed it. A save sends THESE, not the whole board.
+
+     Sending the whole board is what made handwriting vanish for good. Every
+     save carried every stroke on the page, so the request grew with the
+     board -- and Vercel rejects any request over 4.5 MB before the route
+     runs. The largest board reached 4.48 MB; from the next stroke on, every
+     save failed, silently, and a refresh threw away everything since. The
+     server already merges by id and keeps what it is not sent, so a save
+     only ever needed the strokes that changed.
+
+     The edit number lets a save that was in flight while the same stroke
+     changed again leave it dirty: it is cleared only if the edit the server
+     confirmed is still the latest one. */
+  const dirtyRef      = useRef<Map<string, number>>(new Map());
+  const editSeqRef    = useRef(0);
+  function markDirty(ids: Iterable<string>) {
+    for (const id of ids) dirtyRef.current.set(id, ++editSeqRef.current);
+  }
 
   /** Two-way reconcile of MY strokes against a fresh server read:
    *  add server strokes we don't have (drawn on another device), drop local
@@ -627,6 +646,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     tombstonesRef.current   = new Set();
     savedIdsRef.current     = new Set();
     savedAtRef.current      = new Map();
+    dirtyRef.current        = new Map();
     setMyStrokes([]);
 
     function load() {
@@ -665,12 +685,13 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
             notifyHistory();
 
             if (changed) {
-              // Fire-and-forget — server merges by id, so this only updates
-              // the migrated copies and can't clobber anything else.
+              // Fire-and-forget — server merges by id, so sending only the
+              // re-tagged strokes updates those and touches nothing else.
+              const retagged = migrated.filter((s, i) => s !== mine[i]);
               fetch(`/api/pages/${pageId}/drawings`, {
                 method:  "PUT",
                 headers: { "Content-Type": "application/json" },
-                body:    JSON.stringify({ strokes: allMyStrokesRef.current, surface: "canvas" }),
+                body:    JSON.stringify({ strokes: retagged, surface: "canvas" }),
               }).catch(() => {});
             }
           }
@@ -824,30 +845,44 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
   }, [roomSocket, pageId, syncMyStrokes]);
 
   // ── Debounced save ─────────────────────────────────────────────────────
-  // Previously fire-and-forget: a failed PUT was silently swallowed and the
-  // in-memory strokes were the only copy. Now: one retry after 3 s, and a
-  // keepalive flush when the tab is hidden/closed (mosque Wi-Fi reality).
+  // A save sends only the strokes edited since the server last confirmed
+  // them (see dirtyRef), plus the user's deletions. A failed save leaves its
+  // strokes dirty, so they go with the next one instead of being lost;
+  // retries back off, and a keepalive flush runs when the tab is
+  // hidden/closed (mosque Wi-Fi reality).
+
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const putStrokes = useCallback((keepalive = false) => {
     // surface:"canvas" → the server merges by id within this surface,
-    // preserving editor-surface strokes AND any canvas strokes this client
-    // doesn't have (other device, draw-before-load). deletedIds carries the
-    // user's explicit deletions so those still propagate.
-    const snapshot = allMyStrokesRef.current;
-    const body = JSON.stringify({
-      strokes:    snapshot,
-      surface:    "canvas",
-      deletedIds: [...tombstonesRef.current],
-    });
+    // preserving editor-surface strokes AND every canvas stroke this save
+    // does not mention. deletedIds carries the user's explicit deletions.
+    const sent = new Map<string, number>();
+    const strokes: Stroke[] = [];
+    for (const s of allMyStrokesRef.current) {
+      const v = dirtyRef.current.get(s.id);
+      if (v !== undefined) { strokes.push(s); sent.set(s.id, v); }
+    }
+    const deletedIds = [...tombstonesRef.current];
+    if (!strokes.length && !deletedIds.length) return Promise.resolve(null);
+
+    const body = JSON.stringify({ strokes, surface: "canvas", deletedIds });
     return fetch(`/api/pages/${pageId}/drawings`, {
       method:  "PUT",
       headers: { "Content-Type": "application/json" },
       body,
-      keepalive,
+      // The browser refuses a keepalive request over 64 KB outright, which
+      // would lose the flush; past that, send it as an ordinary request.
+      keepalive: keepalive && body.length < 60_000,
     }).then((r) => {
-      if (r.ok) {
-        const t = Date.now();
-        for (const s of snapshot) { savedIdsRef.current.add(s.id); savedAtRef.current.set(s.id, t); }
+      // A rejected save (413, 500, an expired session) is a FAILURE: throw so
+      // the caller retries. It used to be counted as done.
+      if (!r.ok) throw new Error("save failed: " + r.status);
+      const t = Date.now();
+      for (const [id, v] of sent) {
+        if (dirtyRef.current.get(id) === v) dirtyRef.current.delete(id);
+        savedIdsRef.current.add(id);
+        savedAtRef.current.set(id, t);
       }
       return r;
     });
@@ -855,12 +890,21 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
 
   const scheduleSave = useCallback(() => {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    if (retryTimerRef.current) { clearTimeout(retryTimerRef.current); retryTimerRef.current = null; }
     saveTimerRef.current = setTimeout(() => {
       saveTimerRef.current = null;
-      putStrokes().catch(() => {
-        // One retry — covers transient network blips during a lesson.
-        setTimeout(() => { putStrokes().catch(() => {}); }, 3000);
-      });
+      // Back off 3s, 6s, 12s, 24s, 48s. Anything still dirty after that goes
+      // with the next edit, or with the flush when the tab is hidden.
+      const attempt = (n: number) => {
+        putStrokes().catch(() => {
+          if (n >= 5) return;
+          retryTimerRef.current = setTimeout(() => {
+            retryTimerRef.current = null;
+            attempt(n + 1);
+          }, 3000 * 2 ** n);
+        });
+      };
+      attempt(0);
     }, SAVE_DEBOUNCE);
   }, [putStrokes]);
 
@@ -871,9 +915,11 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
        reader is likely to come back and immediately move to another page. */
     let live = true;
     function flushPending() {
-      if (!saveTimerRef.current) return;
-      clearTimeout(saveTimerRef.current);
-      saveTimerRef.current = null;
+      // Flush whenever anything is unsaved -- including strokes whose save
+      // failed and are waiting on a retry, not only a pending debounce.
+      if (!saveTimerRef.current && !dirtyRef.current.size) return;
+      if (saveTimerRef.current) { clearTimeout(saveTimerRef.current); saveTimerRef.current = null; }
+      if (retryTimerRef.current) { clearTimeout(retryTimerRef.current); retryTimerRef.current = null; }
       putStrokes(true).catch(() => {});
     }
     function onVisibility() {
@@ -902,6 +948,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
 
   useEffect(() => () => {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
     cancelAnimationFrame(rafRef.current);
   }, []);
 
@@ -968,6 +1015,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     const fresh = strokes.filter((s) => !have.has(s.id));
     if (!fresh.length) return;
     allMyStrokesRef.current = [...allMyStrokesRef.current, ...fresh];
+    markDirty(fresh.map((s) => s.id));
     const visible = filterForPage(fresh, mushafPageRef.current);
     if (visible.length) {
       const next = [...myStrokesRef.current, ...visible];
@@ -979,7 +1027,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
 
   function applyRemove(ids: Set<string>) {
     if (!ids.size) return;
-    for (const id of ids) tombstonesRef.current.add(id);
+    for (const id of ids) { tombstonesRef.current.add(id); dirtyRef.current.delete(id); }
     allMyStrokesRef.current = allMyStrokesRef.current.filter((s) => !ids.has(s.id));
     const next = myStrokesRef.current.filter((s) => !ids.has(s.id));
     myStrokesRef.current = next;
@@ -1008,6 +1056,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     const next = myStrokesRef.current.map((s) => byId.get(s.id) ?? s);
     myStrokesRef.current = next;
     setMyStrokes(next);
+    markDirty(byId.keys());
     scheduleSave(); notifyHistory();
     return moved;
   }
