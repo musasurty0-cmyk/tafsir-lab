@@ -21,6 +21,9 @@ import { createPortal } from "react-dom";
 import { isTypingTarget } from "@/lib/is-typing";
 
 const HINT_KEY        = "tl-word-tap-hint-dismissed";
+/** Whether pressing into an ayah shows it in the page or alone. */
+const AYAH_VIEW_KEY   = "tl-ayah-view";
+const AYAH_ALONE_MAX_ZOOM = 2.5;
 const MUSHAF_PAGE_KEY = (pageId: string) => `tl-mushaf-page:${pageId}`;
 import type { Verse, Chapter, QCFVerse } from "@/lib/types";
 import type { ProgressStatus } from "@/lib/services/progress.service";
@@ -511,6 +514,23 @@ export default function ModeBPage({
 
   const closeFocus = useCallback(() => setFocusAnchor(null), []);
 
+  /* Two ways into an ayah: in the page, with the rest of the surah around it
+     (how it always opened), or the ayah alone. The choice is remembered, so
+     whichever you use most is what the next press opens. */
+  const [ayahView, setAyahView] = useState<"page" | "alone">("page");
+  useEffect(() => {
+    try { if (localStorage.getItem(AYAH_VIEW_KEY) === "alone") setAyahView("alone"); } catch {}
+  }, []);
+  const chooseAyahView = useCallback((v: "page" | "alone") => {
+    setAyahView(v);
+    try { localStorage.setItem(AYAH_VIEW_KEY, v); } catch {}
+  }, []);
+  /* A Selection spans several ayāt, so "alone" applies to an ayah or a word's
+     ayah, never to a Selection. */
+  const isolateAyah = focusAnchor && !focusAnchor.segmentId && ayahView === "alone"
+    ? Number(focusAnchor.verseKey.split(":")[1])
+    : null;
+
   // Entering a layer: smooth-animate the camera back to the centred page
   // (never restore old zoom/pan) and auto-activate the Pen.
   useEffect(() => {
@@ -524,6 +544,54 @@ export default function ModeBPage({
     return () => clearTimeout(t);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusAnchor]);
+
+  /* Frame the ayah when it is alone; put the page back when it is not. The
+     ayah is measured from its own glyphs, so a two-word ayah and a
+     half-page one both fill the view. Waits out the camera glide that
+     opening a layer starts, or it would measure a page still in motion. */
+  const prevIsolateRef = useRef<number | null>(null);
+  const focusOpenedAtRef = useRef(0);
+  useEffect(() => { if (focusAnchor) focusOpenedAtRef.current = performance.now(); }, [focusAnchor]);
+  useEffect(() => {
+    const was = prevIsolateRef.current;
+    prevIsolateRef.current = isolateAyah;
+    if (isolateAyah == null) {
+      // Back to the page -- but only when switching views mid-session.
+      // Closing the layer leaves the camera where the reader put it.
+      if (was != null && focusAnchor) tweenTo({ x: centeredX(1), y: 40, zoom: 1 });
+      return;
+    }
+    const sinceOpen = performance.now() - focusOpenedAtRef.current;
+    const t = setTimeout(() => {
+      const el = containerRef.current;
+      const card = mushafCardRef.current;
+      if (!el || !card) return;
+      const glyphs = card.querySelectorAll<HTMLElement>(`.qcf-glyph[data-ayah="${isolateAyah}"]`);
+      if (!glyphs.length) return;
+      const box = el.getBoundingClientRect();
+      const vp  = viewportRef.current;
+      let l = Infinity, tp = Infinity, r = -Infinity, b = -Infinity;
+      glyphs.forEach((g) => {
+        const q = g.getBoundingClientRect();
+        l = Math.min(l, q.left); tp = Math.min(tp, q.top);
+        r = Math.max(r, q.right); b = Math.max(b, q.bottom);
+      });
+      // Screen -> world, the same mapping the ink uses.
+      const wl = (l - box.left - vp.x) / vp.zoom, wr = (r - box.left - vp.x) / vp.zoom;
+      const wt = (tp - box.top - vp.y) / vp.zoom, wb = (b - box.top - vp.y) / vp.zoom;
+      /* Capped at 2.5x: a two-word ayah would otherwise fill the screen at
+         4x and leave no paper around it to write on. */
+      const zoom = clamp(Math.min((box.width * 0.82) / (wr - wl), (box.height * 0.55) / (wb - wt)), 1, AYAH_ALONE_MAX_ZOOM);
+      tweenTo({
+        zoom,
+        x: box.width / 2 - ((wl + wr) / 2) * zoom,
+        // A little above centre: the session chip sits at the bottom.
+        y: box.height * 0.44 - ((wt + wb) / 2) * zoom,
+      });
+    }, sinceOpen < 420 ? 420 - sinceOpen : 30);
+    return () => clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isolateAyah]);
 
   // ── QCF page data (fetched client-side when the page changes) ─────────
   // Fix #1 — surah page filtering: the page API returns ALL verses on a
@@ -1368,6 +1436,7 @@ export default function ModeBPage({
           chapter={chapter}
           loading={qcfLoading}
           cardRef={mushafCardRef}
+          isolateAyah={isolateAyah}
           onRegisterAyahRef={registerAyahRef}
           onRegisterWordRef={registerWordRef}
           onOpenFocus={openFocus}
@@ -1505,6 +1574,25 @@ export default function ModeBPage({
               ? `Word notes · ${focusAnchor.verseKey}`
               : `Ayah notes · ${focusAnchor.verseKey}`}
           </span>
+
+          {!focusAnchor.segmentId && (
+            <span className="anchor-session-view" role="group" aria-label="How to show the ayah">
+              <button
+                aria-pressed={ayahView === "page"}
+                onClick={() => chooseAyahView("page")}
+                title="Show the ayah in the page, with the rest of the surah"
+              >
+                In page
+              </button>
+              <button
+                aria-pressed={ayahView === "alone"}
+                onClick={() => chooseAyahView("alone")}
+                title="Show just this ayah"
+              >
+                Ayah alone
+              </button>
+            </span>
+          )}
 
           {/* Colour lives INSIDE the session: it identifies the Selection on
               the Mushaf, so it is chosen while looking at the work it labels

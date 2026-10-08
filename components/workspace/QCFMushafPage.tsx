@@ -68,6 +68,11 @@ interface Props {
   /** Receives every Selection covering the tapped ayah, innermost last. More
    *  than one means the tap is ambiguous and the caller should ask. */
   onSegmentClick?:   (ids: string[]) => void;
+  /** "Ayah alone": every other ayah, the surah header and the page number
+   *  fade out, leaving this one (an ayah number in this surah). It is hidden
+   *  in place rather than re-laid-out, so the ayah keeps its exact position on
+   *  the page and ink written in either view lines up in the other. */
+  isolateAyah?:      number | null;
 }
 
 /** Wash for the ayah whose annotation layer is currently open. */
@@ -142,6 +147,7 @@ function QCFMushafPage({
   segments = [],
   activeSegmentId = null,
   onSegmentClick,
+  isolateAyah = null,
 }: Props) {
 
   const [fontReady, setFontReady] = useState(false);
@@ -390,6 +396,7 @@ function QCFMushafPage({
     <div
       ref={cardRef}
       className="qcf-page"
+      data-isolate={isolateAyah != null ? "true" : undefined}
       onMouseDown={(e) => e.stopPropagation()}
       onPointerLeave={() => { if (dragRef.current) endDrag(); }}
       dir="rtl"
@@ -530,7 +537,9 @@ function QCFMushafPage({
                   isEnd  ? "qcf-end"  : "",
                   noted    ? "qcf-word--noted"    : "",
                   selected ? "qcf-word--selected" : "",
+                  isolateAyah != null && word.ayahNum !== isolateAyah ? "qcf-glyph--away" : "",
                 ].join(" ").trim()}
+                data-ayah={word.ayahNum}
                 // font-family per-span; noted words get their soft
                 // translucent highlight colour inline (rotating palette).
                 style={{
@@ -606,11 +615,11 @@ function QCFMushafPage({
                        keep their flat wash. A multi-line ayah produces one run
                        per line and they all get the class, so they rise by the
                        same amount and read as a single selection. */
-                    className={
-                      run.wash === AYAH_ACTIVE_WASH
-                        ? "qcf-ayah-run qcf-ayah-run--active"
-                        : "qcf-ayah-run"
-                    }
+                    className={[
+                      "qcf-ayah-run",
+                      run.wash === AYAH_ACTIVE_WASH ? "qcf-ayah-run--active" : "",
+                      isolateAyah != null && run.ayahNum !== isolateAyah ? "qcf-ayah-run--away" : "",
+                    ].join(" ").trim()}
                     style={{ background: run.wash }}
                   >
                     {run.entries.map(renderGlyph)}

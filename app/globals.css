@@ -13870,3 +13870,31 @@ body:has(.lab) .mode-b-zoom-controls {
 }
 .crumb-pop-name { flex: 1; }
 .crumb-pop-ar { flex: none; color: var(--ink-2); }
+
+/* ── Ayah alone ──────────────────────────────────────────────────────────
+   Pressing into an ayah can show it by itself: everything else on the Mushaf
+   page fades to nothing IN PLACE, so the ayah keeps its exact position and
+   ink written around it lines up in both views. Hidden, not removed, and not
+   clickable while hidden, so a stray tap cannot open a neighbouring ayah. */
+.qcf-glyph, .qcf-ayah-run, .qcf-surah-header, .qcf-page-num {
+  transition: opacity 0.3s ease, background-color 0.3s ease;
+}
+.qcf-glyph--away { opacity: 0; pointer-events: none; }
+.qcf-ayah-run--away { background: transparent !important; }
+.qcf-page[data-isolate="true"] .qcf-surah-header,
+.qcf-page[data-isolate="true"] .qcf-page-num { opacity: 0; pointer-events: none; }
+
+/* The two ways into an ayah, on the session chip. */
+.anchor-session-view {
+  display: inline-flex; padding: 2px; gap: 2px;
+  border-radius: 999px; background: var(--hover);
+}
+.anchor-session-view button {
+  border: none; background: transparent; cursor: pointer;
+  font: inherit; font-size: 12px; color: var(--ink-3);
+  padding: 4px 10px; border-radius: 999px; white-space: nowrap;
+}
+.anchor-session-view button[aria-pressed="true"] {
+  background: var(--bg-elev); color: var(--ink); font-weight: 500;
+  box-shadow: var(--shadow-sm);
+}
