@@ -8,7 +8,7 @@ export default function LeaveButton() {
   return (
     <button
       type="button"
-      className="ym-link-btn"
+      className="y-leave"
       onClick={async () => {
         await fetch("/api/youth-majlis/unlock", { method: "DELETE" }).catch(() => null);
         router.push("/youth-majlis");

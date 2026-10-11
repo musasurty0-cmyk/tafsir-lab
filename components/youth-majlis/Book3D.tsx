@@ -15,7 +15,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 const REST = { x: -6, y: -28 };
 
-export default function Book3D() {
+export default function Book3D({ compact = false }: { compact?: boolean }) {
   const [rot, setRot] = useState(REST);
   const [dragging, setDragging] = useState(false);
   const start = useRef<{ px: number; py: number; x: number; y: number } | null>(null);
@@ -59,7 +59,7 @@ export default function Book3D() {
 
   return (
     <div
-      className="bk-stage"
+      className={`bk-stage${compact ? " bk-stage--compact" : ""}`}
       role="img"
       aria-label="Principles of Islamic Jurisprudence by Mohammad Hashim Kamali. Drag or use the arrow keys to turn the book."
       tabIndex={0}

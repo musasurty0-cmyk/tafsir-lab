@@ -5,8 +5,11 @@
  * and when it meets. It does not duplicate the editor or the canvas; every
  * sūrah opens straight into TafsirLab, which is where the study happens.
  *
- *   TafsirLab   = where I study the Qur’an.
+ *   TafsirLab    = where I study the Qur’an.
  *   Youth Majlis = where Shaykh Omid guides my journey through it.
+ *
+ * Laid out as a product page: full-bleed bands, one idea per band, large type
+ * carrying the structure instead of boxes and outlines.
  */
 
 export const dynamic = "force-dynamic";
@@ -14,6 +17,7 @@ export const dynamic = "force-dynamic";
 import Link from "next/link";
 import Gate from "@/components/youth-majlis/Gate";
 import LeaveButton from "@/components/youth-majlis/LeaveButton";
+import Book3D from "@/components/youth-majlis/Book3D";
 import { hasAccess } from "@/lib/youth-majlis/gate";
 import {
   AIM, AIM_DETAIL, AREAS, COHORT, CURRENT_MODULE, LEVELS, METHOD, MODULES,
@@ -21,17 +25,18 @@ import {
 } from "@/lib/youth-majlis/content";
 
 const openHref = (m: Module) => `/youth-majlis/open/${m.surah}`;
+const list = (xs: string[]) => xs.join(", ").replace(/, ([^,]*)$/, " and $1");
 
-function nextMajlisText(): { line: string; detail: string } {
-  if (!NEXT_MAJLIS) return { line: "Date to be announced", detail: `With ${SHAYKH}` };
+function nextMajlis(): { when: string; detail: string } {
+  if (!NEXT_MAJLIS) return { when: "Date to be announced.", detail: `With ${SHAYKH}.` };
   const d = new Date(NEXT_MAJLIS.when);
-  const line = new Intl.DateTimeFormat("en-GB", {
+  const when = new Intl.DateTimeFormat("en-GB", {
     weekday: "long", day: "numeric", month: "long", hour: "numeric", minute: "2-digit",
     timeZone: "Europe/London",
   }).format(d);
   const days = Math.ceil((d.getTime() - Date.now()) / 86_400_000);
-  const when = days > 1 ? `in ${days} days` : days === 1 ? "tomorrow" : days === 0 ? "today" : "";
-  return { line, detail: [`With ${SHAYKH}`, NEXT_MAJLIS.where, when].filter(Boolean).join(" · ") };
+  const away = days > 1 ? `In ${days} days.` : days === 1 ? "Tomorrow." : days === 0 ? "Today." : "";
+  return { when: `${when}.`, detail: [away, `With ${SHAYKH}.`, NEXT_MAJLIS.where].filter(Boolean).join(" ") };
 }
 
 export default async function YouthMajlisPage() {
@@ -39,242 +44,189 @@ export default async function YouthMajlisPage() {
     return (
       <Gate
         area="majlis"
-        eyebrow="TafsirLab × Youth Majlis"
-        title="Youth Majlis"
-        subtitle="A closed study circle of the Qur’an with Shaykh Omid Azizi. Enter the cohort’s password to continue."
-      >
-        <Mark />
-      </Gate>
+        title="Youth Majlis."
+        subtitle="A closed study circle of the Qur’an with Shaykh Omid Azizi."
+        mark={<span className="y-mark" aria-hidden>T</span>}
+      />
     );
   }
 
   const current = MODULES.find((m) => m.n === CURRENT_MODULE) ?? MODULES[0];
-  const next = nextMajlisText();
+  const next = nextMajlis();
 
   return (
-    <div className="ym-page">
-      <header className="ym-top">
-        <Link href="/home" className="ym-brand" title="Open TafsirLab">
-          <Mark small />
-          <span className="ym-brand-name">TafsirLab</span>
-          <span className="ym-brand-x">×</span>
-          <span className="ym-brand-name ym-brand-name--alt">Youth Majlis</span>
-        </Link>
-        <nav className="ym-top-nav" aria-label="Sections">
-          <a href="#journey">Journey</a>
-          <a href="#modules">Modules</a>
-          <a href="#questions">The 10 questions</a>
-          <Link href="/youth-majlis/ilmi">ʿIlmī</Link>
+    <div className="y-page">
+      <header className="y-nav">
+        <div className="y-nav-in">
+          <Link href="/home" className="y-nav-brand" title="Open TafsirLab">
+            <span className="y-mark y-mark--s" aria-hidden>T</span>
+            Youth Majlis
+          </Link>
+          <nav className="y-nav-links" aria-label="Sections">
+            <a href="#journey">Journey</a>
+            <a href="#modules">Modules</a>
+            <a href="#method">Method</a>
+            <Link href="/youth-majlis/ilmi">ʿIlmī</Link>
+          </nav>
           <LeaveButton />
-        </nav>
+        </div>
       </header>
 
-      <main className="ym-main">
-        {/* ── Continue your journey ── */}
-        <section className="ym-hero" aria-labelledby="ym-hero-title">
-          <p className="ym-basmala" lang="ar" dir="rtl">بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ</p>
-          <p className="ym-eyebrow">Continue your journey · {LEVELS[0].name} · Module {String(current.n).padStart(2, "0")}</p>
-          <p className="ym-hero-ar" lang="ar" dir="rtl">{current.titleAr ?? current.surahAr}</p>
-          <h1 id="ym-hero-title" className="ym-hero-title">Sūrah {current.surahEn}</h1>
-          <p className="ym-hero-sub">{current.title}</p>
-
-          <div className="ym-hero-next">
-            <span className="ym-next-label">Next Majlis</span>
-            <span className="ym-next-line">{next.line}</span>
-            <span className="ym-next-detail">{next.detail}</span>
+      <main>
+        {/* ── Hero ── */}
+        <section className="y-band y-hero" aria-labelledby="y-hero-h">
+          <p className="y-basmala" lang="ar" dir="rtl">بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ</p>
+          <p className="y-kicker">{LEVELS[0].name} · Module {current.n}</p>
+          <p className="y-hero-ar" lang="ar" dir="rtl">{current.titleAr ?? current.surahAr}</p>
+          <h1 id="y-hero-h" className="y-display">{current.surahEn}.</h1>
+          <p className="y-hero-sub">{current.title}.</p>
+          <div className="y-cta">
+            <a className="y-btn" href={openHref(current)}>Open in TafsirLab</a>
+            <a className="y-more" href={`#module-${current.n}`}>Prepare for the Majlis</a>
           </div>
-
-          <div className="ym-hero-actions">
-            <a className="ym-btn ym-btn--primary" href={openHref(current)}>
-              Open {current.surahEn} in TafsirLab <span aria-hidden>→</span>
-            </a>
-            <a className="ym-btn" href={`#module-${current.n}`}>Prepare for the Majlis</a>
-          </div>
+          <p className="y-next"><strong>Next Majlis.</strong> {next.when} <span>{next.detail}</span></p>
         </section>
 
-        {/* ── The journey ── */}
-        <section id="journey" className="ym-section" aria-labelledby="ym-journey-title">
-          <div className="ym-section-head">
-            <p className="ym-eyebrow">Your journey</p>
-            <h2 id="ym-journey-title" className="ym-h2">Three levels, built one upon the other</h2>
+        {/* ── Journey ── */}
+        <section id="journey" className="y-band y-band--alt" aria-labelledby="y-j-h">
+          <div className="y-wrap">
+            <h2 id="y-j-h" className="y-h2">The journey.</h2>
+            <p className="y-h2-sub">Three levels, each built upon the one before.</p>
           </div>
-          <ol className="ym-levels">
-            {LEVELS.map((lv) => (
-              <li key={lv.n} className="ym-level" data-locked={lv.n > 1 ? "true" : undefined}>
-                <div className="ym-level-head">
-                  <span className="ym-level-n">Level {String(lv.n).padStart(2, "0")}</span>
-                  <span className="ym-level-name">{lv.name}</span>
-                </div>
-                {lv.n === 1 ? (
-                  <ol className="ym-steps">
-                    {MODULES.map((m) => {
-                      const state = m.n < CURRENT_MODULE ? "done" : m.n === CURRENT_MODULE ? "current" : "upcoming";
-                      return (
-                        <li key={m.n} className="ym-step" data-state={state}>
-                          <a href={`#module-${m.n}`}>
-                            <span className="ym-step-dot" aria-hidden />
-                            <span className="ym-step-n">{String(m.n).padStart(2, "0")}</span>
-                            <span className="ym-step-ar" lang="ar" dir="rtl">{m.surahAr}</span>
-                            <span className="ym-step-en">{m.surahEn}</span>
-                            <span className="ym-step-title">{m.title}</span>
-                            <span className="ym-step-state">
-                              {state === "done" ? "Completed" : state === "current" ? "Current" : "Upcoming"}
-                            </span>
-                          </a>
-                        </li>
-                      );
-                    })}
-                  </ol>
-                ) : (
-                  <p className="ym-level-locked">Opens after {LEVELS[lv.n - 2].name}</p>
-                )}
-              </li>
-            ))}
-          </ol>
-        </section>
-
-        {/* ── Modules ── */}
-        <section id="modules" className="ym-section" aria-labelledby="ym-modules-title">
-          <div className="ym-section-head">
-            <p className="ym-eyebrow">Level 01 · {LEVELS[0].name}</p>
-            <h2 id="ym-modules-title" className="ym-h2">The modules</h2>
-          </div>
-          <div className="ym-modules">
-            {MODULES.map((m) => (
-              <article key={m.n} id={`module-${m.n}`} className="ym-module" data-current={m.n === CURRENT_MODULE ? "true" : undefined}>
-                <header className="ym-module-head">
-                  <div>
-                    <p className="ym-module-n">Module {String(m.n).padStart(2, "0")}</p>
-                    <h3 className="ym-module-title">Sūrah {m.surahEn}</h3>
-                    <p className="ym-module-sub">{m.title}</p>
-                    <p className="ym-module-range">
-                      {m.passage ? `Āyāt ${m.passage.from}–${m.passage.to}` : `${m.ayat} āyāt`} · Sūrah {m.surah}
-                    </p>
-                  </div>
-                  <p className="ym-module-ar" lang="ar" dir="rtl">{m.titleAr ?? m.surahAr}</p>
-                </header>
-
-                <div className="ym-module-body">
-                  <div>
-                    <h4 className="ym-h4">Themes</h4>
-                    <ul className="ym-list">{m.themes.map((t) => <li key={t}>{t}</li>)}</ul>
-                  </div>
-                  {m.exercises.length > 0 && (
-                    <div>
-                      <h4 className="ym-h4">Exercises</h4>
-                      <ul className="ym-exercises">
-                        {m.exercises.map((x) => <li key={x}>{x}</li>)}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-
-                <footer className="ym-module-foot">
-                  <span className="ym-tags">
-                    {m.areas.map((a) => (
-                      <span key={a} className="ym-tag">{AREAS.find((x) => x.id === a)?.en}</span>
-                    ))}
-                  </span>
-                  <span className="ym-module-actions">
-                    <a className="ym-btn ym-btn--small" href="#questions">The 10 questions</a>
-                    <a className="ym-btn ym-btn--primary ym-btn--small" href={openHref(m)}>
-                      Open in TafsirLab <span aria-hidden>→</span>
-                    </a>
-                  </span>
-                </footer>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        {/* ── The ten questions ── */}
-        <section id="questions" className="ym-section" aria-labelledby="ym-q-title">
-          <div className="ym-section-head">
-            <p className="ym-eyebrow">The method</p>
-            <h2 id="ym-q-title" className="ym-h2">Every module is studied through the same ten questions</h2>
-            <p className="ym-lede">
-              They are the research pathways for each sūrah. Bring them to TafsirLab — the tafāsīr, the
-              Arabic and your notes are there — and bring what you find to the Majlis.
-            </p>
-          </div>
-          <ol className="ym-questions">
-            {QUESTIONS.map((q) => (
-              <li key={q.n} className="ym-q">
-                <span className="ym-q-n">{String(q.n).padStart(2, "0")}</span>
-                <span className="ym-q-label">{q.label}</span>
-                <span className="ym-q-text">{q.q}</span>
-              </li>
-            ))}
-          </ol>
-          <ul className="ym-method" aria-label="How we study">
-            {METHOD.map((x) => <li key={x}>{x}</li>)}
-          </ul>
-        </section>
-
-        {/* ── Four areas ── */}
-        <section className="ym-section" aria-labelledby="ym-areas-title">
-          <div className="ym-section-head">
-            <p className="ym-eyebrow">The curriculum</p>
-            <h2 id="ym-areas-title" className="ym-h2">Four areas of Qur’anic development</h2>
-            <p className="ym-lede">
-              Which modules take up each one. This maps the course — it does not measure anyone’s
-              īmān or character.
-            </p>
-          </div>
-          <div className="ym-areas">
-            {AREAS.map((a) => (
-              <div key={a.id} className="ym-area">
-                <span className="ym-area-ar" lang="ar" dir="rtl">{a.ar}</span>
-                <span className="ym-area-en">{a.en}</span>
-                <span className="ym-area-mods">
-                  {MODULES.filter((m) => m.areas.includes(a.id)).map((m) => (
-                    <a key={m.n} href={`#module-${m.n}`} className="ym-tag">{m.surahEn}</a>
-                  ))}
-                </span>
+          <div className="y-rail" role="list">
+            {MODULES.map((m) => {
+              const state = m.n < CURRENT_MODULE ? "Completed" : m.n === CURRENT_MODULE ? "Now studying" : "Coming up";
+              return (
+                <a key={m.n} href={`#module-${m.n}`} className="y-tile" role="listitem" data-current={m.n === CURRENT_MODULE ? "" : undefined}>
+                  <span className="y-tile-state">{state}</span>
+                  <span className="y-tile-ar" lang="ar" dir="rtl">{m.surahAr}</span>
+                  <span className="y-tile-name">{m.surahEn}</span>
+                  <span className="y-tile-title">{m.title}</span>
+                  <span className="y-tile-n">Level 1 · Module {m.n}</span>
+                </a>
+              );
+            })}
+            {LEVELS.slice(1).map((lv) => (
+              <div key={lv.n} className="y-tile y-tile--locked" role="listitem">
+                <span className="y-tile-state">Later</span>
+                <span className="y-tile-level">{lv.n}</span>
+                <span className="y-tile-name">{lv.name}</span>
+                <span className="y-tile-title">Opens after {LEVELS[lv.n - 2].name}.</span>
+                <span className="y-tile-n">Level {lv.n}</span>
               </div>
             ))}
           </div>
         </section>
 
-        {/* ── Aim + cohort ── */}
-        <section className="ym-section ym-split" aria-labelledby="ym-aim-title">
-          <div>
-            <p className="ym-eyebrow">Aim &amp; objective</p>
-            <h2 id="ym-aim-title" className="ym-h2">{AIM}</h2>
-            <p className="ym-lede">{AIM_DETAIL}</p>
+        {/* ── Modules, one band each ── */}
+        <div id="modules">
+          {MODULES.map((m, i) => (
+            <section
+              key={m.n}
+              id={`module-${m.n}`}
+              className={`y-band y-module${i % 2 ? " y-band--alt" : ""}`}
+              aria-labelledby={`y-m${m.n}`}
+            >
+              <div className="y-wrap y-module-grid">
+                <div className="y-module-text">
+                  <p className="y-kicker">Module {m.n}{m.n === CURRENT_MODULE ? " · Now studying" : ""}</p>
+                  <h2 id={`y-m${m.n}`} className="y-h2">{m.surahEn}.</h2>
+                  <p className="y-h2-sub">{m.title}.</p>
+                  <ul className="y-themes">{m.themes.map((t) => <li key={t}>{t}</li>)}</ul>
+                  <div className="y-cta y-cta--left">
+                    <a className="y-btn" href={openHref(m)}>Open in TafsirLab</a>
+                    <a className="y-more" href="#method">Study it through the ten questions</a>
+                  </div>
+                </div>
+                <div className="y-module-side">
+                  <p className="y-module-ar" lang="ar" dir="rtl">{m.titleAr ?? m.surahAr}</p>
+                  <p className="y-module-range">
+                    {m.passage ? `Āyāt ${m.passage.from}–${m.passage.to}` : `${m.ayat} āyāt`} · Sūrah {m.surah}
+                  </p>
+                  {m.exercises.length > 0 && (
+                    <div className="y-exercise">
+                      <p className="y-exercise-h">Exercises</p>
+                      {m.exercises.map((x) => <p key={x} className="y-exercise-q">{x}</p>)}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </section>
+          ))}
+        </div>
+
+        {/* ── Method ── */}
+        <section id="method" className="y-band y-band--dark" aria-labelledby="y-q-h">
+          <div className="y-wrap">
+            <h2 id="y-q-h" className="y-h2">Ten questions.<br />Every sūrah.</h2>
+            <p className="y-h2-sub">The same questions guide every module. Bring them to TafsirLab, where the tafāsīr, the Arabic and your notes are, and bring what you find to the Majlis.</p>
+            <ol className="y-questions">
+              {QUESTIONS.map((q) => (
+                <li key={q.n}>
+                  <span className="y-q-n">{q.n}</span>
+                  <span className="y-q-label">{q.label}</span>
+                  <span className="y-q-text">{q.q}</span>
+                </li>
+              ))}
+            </ol>
+            <p className="y-method">{METHOD.join("  ·  ")}</p>
           </div>
-          <div>
-            <p className="ym-eyebrow">The cohort</p>
-            <ul className="ym-cohort">
-              {COHORT.map((n) => <li key={n}>{n}</li>)}
-            </ul>
+        </section>
+
+        {/* ── Areas ── */}
+        <section className="y-band" aria-labelledby="y-a-h">
+          <div className="y-wrap">
+            <h2 id="y-a-h" className="y-h2">Four areas of growth.</h2>
+            <p className="y-h2-sub">Where each module takes us. A map of the course — never a measure of anyone’s īmān or character.</p>
+            <div className="y-areas">
+              {AREAS.map((a) => (
+                <div key={a.id} className="y-area">
+                  <span className="y-area-ar" lang="ar" dir="rtl">{a.ar}</span>
+                  <span className="y-area-en">{a.en}</span>
+                  <span className="y-area-mods">
+                    {MODULES.filter((m) => m.areas.includes(a.id)).map((m) => m.surahEn).join(" · ")}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── Aim ── */}
+        <section className="y-band y-band--alt" aria-labelledby="y-aim-h">
+          <div className="y-wrap y-statement">
+            <h2 id="y-aim-h" className="y-statement-h">{AIM}</h2>
+            <p className="y-statement-p">{AIM_DETAIL}</p>
+          </div>
+        </section>
+
+        {/* ── Cohort ── */}
+        <section className="y-band" aria-labelledby="y-c-h">
+          <div className="y-wrap">
+            <h2 id="y-c-h" className="y-h2">The cohort.</h2>
+            <p className="y-names">{COHORT.join("   ")}</p>
           </div>
         </section>
 
         {/* ── ʿIlmī ── */}
-        <section className="ym-section">
-          <Link href="/youth-majlis/ilmi" className="ym-ilmi-card">
-            <span className="ym-ilmi-mini" aria-hidden><span /></span>
-            <span className="ym-ilmi-text">
-              <span className="ym-eyebrow ym-eyebrow--light">ʿIlmī · closed</span>
-              <span className="ym-ilmi-title">Uṣūl al-Fiqh — an intensive with Shaykh Omid</span>
-              <span className="ym-ilmi-sub">
-                For {ILMI_COHORT.join(", ").replace(/, ([^,]*)$/, " and $1")}. Its own password.
-              </span>
-            </span>
-            <span className="ym-ilmi-go" aria-hidden>→</span>
-          </Link>
+        <section className="y-band y-band--dark y-promo" aria-labelledby="y-i-h">
+          <div className="y-wrap y-promo-grid">
+            <div className="y-promo-book"><Book3D compact /></div>
+            <div>
+              <p className="y-kicker y-kicker--light">ʿIlmī</p>
+              <h2 id="y-i-h" className="y-h2">Uṣūl al-Fiqh.</h2>
+              <p className="y-h2-sub">An intensive with {SHAYKH}, for {list(ILMI_COHORT)}. On its own password.</p>
+              <div className="y-cta y-cta--left">
+                <Link className="y-btn y-btn--light" href="/youth-majlis/ilmi">Enter ʿIlmī</Link>
+              </div>
+            </div>
+          </div>
         </section>
       </main>
 
-      <footer className="ym-footer">
-        Under the guidance of {SHAYKH} · Powered by <Link href="/home">TafsirLab</Link>
+      <footer className="y-foot">
+        Under the guidance of {SHAYKH}. Powered by <Link href="/home">TafsirLab</Link>.
       </footer>
     </div>
   );
-}
-
-/** The TafsirLab tile — the same mark as the app and the reels. */
-function Mark({ small = false }: { small?: boolean }) {
-  return <span className={`ym-mark${small ? " ym-mark--small" : ""}`} aria-hidden>T</span>;
 }

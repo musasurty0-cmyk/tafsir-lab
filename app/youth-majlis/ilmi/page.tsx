@@ -2,8 +2,9 @@
  * /youth-majlis/ilmi — the ʿIlmī track: an intensive in Uṣūl al-Fiqh with
  * Shaykh Omid, for four students, behind its own password.
  *
- * Centred on the set text, Kamali's Principles of Islamic Jurisprudence, and
- * on what to read before the first session.
+ * Opens on the set text, Kamali's Principles of Islamic Jurisprudence, turning
+ * on a black stage; then what the discipline is, the road map, and what to
+ * read before the first session.
  */
 
 export const dynamic = "force-dynamic";
@@ -18,7 +19,7 @@ import {
   ILMI_BOOK, ILMI_COHORT, ILMI_READING, ILMI_SESSIONS, ILMI_TERMS, SHAYKH,
 } from "@/lib/youth-majlis/content";
 
-const LEVELS = ["Start here", "Alongside", "Going further"] as const;
+const TIERS = ["Start here", "Alongside", "Going further"] as const;
 
 export default async function IlmiPage() {
   // The ʿIlmī section sits inside the portal: its gate comes second.
@@ -28,160 +29,147 @@ export default async function IlmiPage() {
     return (
       <Gate
         area="ilmi"
-        eyebrow="Youth Majlis · ʿIlmī"
-        title="Uṣūl al-Fiqh"
-        subtitle={`A closed intensive with ${SHAYKH}. Enter the ʿIlmī password.`}
-      >
-        <span className="ym-gate-book" aria-hidden />
-      </Gate>
+        title="Uṣūl al-Fiqh."
+        subtitle={`An intensive with ${SHAYKH}. Enter the ʿIlmī password.`}
+        mark={<span className="y-gate-book" aria-hidden />}
+      />
     );
   }
 
   return (
-    <div className="ym-page ym-page--ilmi">
-      <header className="ym-top">
-        <Link href="/youth-majlis" className="ym-brand">
-          <span className="ym-mark ym-mark--small" aria-hidden>T</span>
-          <span className="ym-brand-name">Youth Majlis</span>
-          <span className="ym-brand-x">·</span>
-          <span className="ym-brand-name ym-brand-name--alt">ʿIlmī</span>
-        </Link>
-        <nav className="ym-top-nav" aria-label="Sections">
-          <a href="#what">What it is</a>
-          <a href="#roadmap">Road map</a>
-          <a href="#reading">Pre-reading</a>
-          <Link href="/youth-majlis">← The Majlis</Link>
+    <div className="y-page">
+      <header className="y-nav y-nav--dark">
+        <div className="y-nav-in">
+          <Link href="/youth-majlis" className="y-nav-brand">
+            <span className="y-mark y-mark--s" aria-hidden>T</span>
+            ʿIlmī
+          </Link>
+          <nav className="y-nav-links" aria-label="Sections">
+            <a href="#what">Uṣūl al-Fiqh</a>
+            <a href="#roadmap">Road map</a>
+            <a href="#reading">Pre-reading</a>
+            <Link href="/youth-majlis">The Majlis</Link>
+          </nav>
           <LeaveButton />
-        </nav>
+        </div>
       </header>
 
-      <main className="ym-main">
+      <main>
         {/* ── The book ── */}
-        <section className="il-hero" aria-labelledby="il-title">
+        <section className="y-band y-band--dark y-ilmi-hero" aria-labelledby="y-il-h">
+          <p className="y-kicker y-kicker--light">The set text</p>
           <Book3D />
-          <div className="il-hero-text">
-            <p className="ym-eyebrow">The set text</p>
-            <h1 id="il-title" className="il-title">{ILMI_BOOK.title}</h1>
-            <p className="il-author">{ILMI_BOOK.author}</p>
-            <p className="ym-lede">{ILMI_BOOK.note}</p>
-            <p className="il-meta">
-              With {SHAYKH} · two or three Saturdays · intense, long sessions · dates to be confirmed
-            </p>
-          </div>
+          <h1 id="y-il-h" className="y-display y-display--book">{ILMI_BOOK.title}.</h1>
+          <p className="y-hero-sub">{ILMI_BOOK.author}</p>
+          <p className="y-ilmi-note">{ILMI_BOOK.note}</p>
+          <p className="y-next"><strong>With {SHAYKH}.</strong> Two or three Saturdays, intense and long. <span>Dates to be confirmed.</span></p>
         </section>
 
         {/* ── What it is ── */}
-        <section id="what" className="ym-section il-what" aria-labelledby="il-what-title">
-          <p className="il-what-ar" lang="ar" dir="rtl">أُصُولُ ٱلْفِقْه</p>
-          <h2 id="il-what-title" className="ym-h2">What is Uṣūl al-Fiqh?</h2>
-          <div className="il-prose">
-            <p>
-              <strong>Fiqh</strong> is the understanding of the practical rulings of Islam — how to
-              pray, fast, trade, marry and inherit — as derived from their detailed evidences.
-              <strong> Uṣūl al-Fiqh</strong>, literally <em>the roots of fiqh</em>, is the discipline
-              that studies those evidences and the method of deriving rulings from them.
+        <section id="what" className="y-band" aria-labelledby="y-what-h">
+          <div className="y-wrap y-what">
+            <p className="y-what-ar" lang="ar" dir="rtl">أُصُولُ ٱلْفِقْهِ</p>
+            <h2 id="y-what-h" className="y-h2">What is Uṣūl al-Fiqh?</h2>
+            <p className="y-lead">
+              If fiqh is the answer, uṣūl is how the answer was reached.
             </p>
-            <p>
-              It asks what counts as a source of law — the Qur’an, the Sunnah, consensus (ijmāʿ) and
-              analogy (qiyās), and the further sources the schools debate; how a text is to be read —
-              general and specific, absolute and qualified, command and prohibition, abrogation; how
-              evidences that seem to conflict are reconciled; and who is qualified to do all of this.
-            </p>
-            <p>
-              If fiqh is the answer, uṣūl is how the answer was reached. Imām al-Shāfiʿī’s
-              <em> al-Risālah</em> is counted the first work to set it out systematically, and every
-              school since has built upon it and argued with it.
-            </p>
-            <p className="il-tie">
-              It is also what stands behind the eighth question of the Majlis — <em>what jurisprudential
-              rulings and principles can be derived from these āyāt?</em> — and what lets you follow a
-              tafsīr’s legal discussion step by step rather than taking its conclusion on trust.
-            </p>
+            <div className="y-prose">
+              <p>
+                <strong>Fiqh</strong> is the understanding of the practical rulings of Islam — how to
+                pray, fast, trade, marry and inherit — as derived from their detailed evidences.
+                <strong> Uṣūl al-Fiqh</strong>, literally <em>the roots of fiqh</em>, is the discipline
+                that studies those evidences and the method of deriving rulings from them.
+              </p>
+              <p>
+                It asks what counts as a source of law — the Qur’an, the Sunnah, consensus (ijmāʿ) and
+                analogy (qiyās), and the further sources the schools debate; how a text is to be read —
+                general and specific, absolute and qualified, command and prohibition, abrogation; how
+                evidences that seem to conflict are reconciled; and who is qualified to do all of this.
+              </p>
+              <p>
+                Imām al-Shāfiʿī’s <em>al-Risālah</em> is counted the first work to set it out
+                systematically, and every school since has built upon it and argued with it.
+              </p>
+              <p className="y-prose-tie">
+                It is also what stands behind the eighth question of the Majlis — <em>what jurisprudential
+                rulings and principles can be derived from these āyāt?</em> — and what lets you follow a
+                tafsīr’s legal discussion step by step, rather than taking its conclusion on trust.
+              </p>
+            </div>
           </div>
         </section>
 
         {/* ── Road map ── */}
-        <section id="roadmap" className="ym-section" aria-labelledby="il-road-title">
-          <div className="ym-section-head">
-            <p className="ym-eyebrow">The road map</p>
-            <h2 id="il-road-title" className="ym-h2">Three madākhil — three entrances to the Sharīʿah</h2>
-            <p className="ym-lede">Each its own session, in the order the Shaykh has proposed.</p>
+        <section id="roadmap" className="y-band y-band--alt" aria-labelledby="y-road-h">
+          <div className="y-wrap">
+            <h2 id="y-road-h" className="y-h2">Three entrances.<br />Three Saturdays.</h2>
+            <p className="y-h2-sub">The madākhil to the Sharīʿah, each its own session, in the order the Shaykh has proposed.</p>
+            <ol className="y-road">
+              {ILMI_SESSIONS.map((s) => (
+                <li key={s.n} className="y-stop">
+                  <span className="y-stop-n">{s.n}</span>
+                  <span className="y-stop-ar" lang="ar" dir="rtl">{s.ar}</span>
+                  <span className="y-stop-en">{s.en}</span>
+                  <p className="y-stop-gist">{s.gist}</p>
+                  <span className="y-stop-date">{s.date ?? "Saturday, date to be confirmed."}</span>
+                </li>
+              ))}
+            </ol>
           </div>
-          <ol className="il-road">
-            {ILMI_SESSIONS.map((s) => (
-              <li key={s.n} className="il-stop">
-                <span className="il-stop-n">Session {s.n}</span>
-                <span className="il-stop-ar" lang="ar" dir="rtl">{s.ar}</span>
-                <span className="il-stop-en">{s.en}</span>
-                <p className="il-stop-gist">{s.gist}</p>
-                <span className="il-stop-date">{s.date ?? "Saturday · date to be confirmed"}</span>
-              </li>
-            ))}
-          </ol>
         </section>
 
         {/* ── Pre-reading ── */}
-        <section id="reading" className="ym-section" aria-labelledby="il-read-title">
-          <div className="ym-section-head">
-            <p className="ym-eyebrow">Before the first session</p>
-            <h2 id="il-read-title" className="ym-h2">Recommended pre-reading</h2>
-            <p className="ym-lede">
-              Start with the first two. The rest are there for whoever wants to go further before we
-              begin — not required.
-            </p>
+        <section id="reading" className="y-band" aria-labelledby="y-read-h">
+          <div className="y-wrap">
+            <h2 id="y-read-h" className="y-h2">Before the first session.</h2>
+            <p className="y-h2-sub">Start with the first two. The rest are for whoever wants to go further before we begin.</p>
+            {TIERS.map((tier) => (
+              <div key={tier} className="y-tier">
+                <h3 className="y-tier-h">{tier}</h3>
+                <ul className="y-reads">
+                  {ILMI_READING.filter((r) => r.level === tier).map((r) => (
+                    <li key={r.title}>
+                      <span className="y-read-title">{r.title}</span>
+                      <span className="y-read-author">{r.author}</span>
+                      <span className="y-read-why">{r.why}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
           </div>
-          {LEVELS.map((lv) => (
-            <div key={lv} className="il-read-group">
-              <h3 className="ym-h4">{lv}</h3>
-              <ul className="il-reads">
-                {ILMI_READING.filter((r) => r.level === lv).map((r) => (
-                  <li key={r.title} className="il-read">
-                    <span className="il-read-title">{r.title}</span>
-                    <span className="il-read-author">{r.author}</span>
-                    <span className="il-read-why">{r.why}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
         </section>
 
         {/* ── Terms ── */}
-        <section className="ym-section" aria-labelledby="il-terms-title">
-          <div className="ym-section-head">
-            <p className="ym-eyebrow">Worth knowing</p>
-            <h2 id="il-terms-title" className="ym-h2">Nine terms you will meet in the first hour</h2>
+        <section className="y-band y-band--alt" aria-labelledby="y-terms-h">
+          <div className="y-wrap">
+            <h2 id="y-terms-h" className="y-h2">Nine words for the first hour.</h2>
+            <dl className="y-terms">
+              {ILMI_TERMS.map((t) => (
+                <div key={t.tr} className="y-term">
+                  <dt>
+                    <span className="y-term-ar" lang="ar" dir="rtl">{t.ar}</span>
+                    <span className="y-term-tr">{t.tr}</span>
+                  </dt>
+                  <dd>{t.en}</dd>
+                </div>
+              ))}
+            </dl>
           </div>
-          <dl className="il-terms">
-            {ILMI_TERMS.map((t) => (
-              <div key={t.tr} className="il-term">
-                <dt>
-                  <span className="il-term-ar" lang="ar" dir="rtl">{t.ar}</span>
-                  <span className="il-term-tr">{t.tr}</span>
-                </dt>
-                <dd>{t.en}</dd>
-              </div>
-            ))}
-          </dl>
         </section>
 
         {/* ── Cohort ── */}
-        <section className="ym-section ym-split">
-          <div>
-            <p className="ym-eyebrow">The ʿIlmī cohort</p>
-            <ul className="ym-cohort ym-cohort--big">
-              {ILMI_COHORT.map((n) => <li key={n}>{n}</li>)}
-            </ul>
-          </div>
-          <div>
-            <p className="ym-eyebrow">Under the guidance of</p>
-            <p className="il-shaykh">{SHAYKH}</p>
+        <section className="y-band" aria-labelledby="y-ic-h">
+          <div className="y-wrap">
+            <h2 id="y-ic-h" className="y-h2">Four students.</h2>
+            <p className="y-names y-names--big">{ILMI_COHORT.join("   ")}</p>
+            <p className="y-h2-sub">Under the guidance of {SHAYKH}.</p>
           </div>
         </section>
       </main>
 
-      <footer className="ym-footer">
-        Under the guidance of {SHAYKH} · Powered by <Link href="/home">TafsirLab</Link>
+      <footer className="y-foot">
+        Under the guidance of {SHAYKH}. Powered by <Link href="/home">TafsirLab</Link>.
       </footer>
     </div>
   );
