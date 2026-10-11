@@ -84,6 +84,8 @@ export interface NoteData {
   segmentId?: string | null;
   /** Mushaf page a canvas text box belongs to. null on rows predating the column. */
   mushafPage?: number | null;
+  /** Ayah/word layers: "alone" when written with the ayah on its own. */
+  layerView?: string | null;
   content: unknown;
   color: string | null;
   offsetX: number;

@@ -32,6 +32,8 @@ export interface CreateNoteInput {
   segmentId?: string;
   /** Mushaf page a canvas text box was placed on; scopes it to that page. */
   mushafPage?: number;
+  /** Ayah/word layers: "alone" when written with the ayah on its own. */
+  layerView?: "alone";
   content: unknown; // TipTap JSON
   color?: string;
   offsetX?: number;
@@ -186,6 +188,7 @@ export async function createNote(
       wordPosition: input.wordPosition ?? null,
       segmentId: input.segmentId ?? null,
       mushafPage: input.mushafPage ?? null,
+      layerView: (input.anchorType === "ayah" || input.anchorType === "word") ? (input.layerView ?? null) : null,
       content: input.content as never,
       color: input.color ?? null,
       offsetX: input.offsetX ?? 40,

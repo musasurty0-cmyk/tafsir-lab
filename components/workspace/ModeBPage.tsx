@@ -454,7 +454,7 @@ export default function ModeBPage({
       .forEach((n) => add(`${n.ayahNumber}:${n.wordPosition}`));
     // Drawing layers anchored to words ("w:{surah}:{ayah}:{pos}")
     for (const a of strokeAnchors) {
-      const m = a.match(/^w:\d+:(\d+):(\d+)$/);
+      const m = a.match(/^w:\d+:(\d+):(\d+)(?:\|alone)?$/);
       if (m) add(`${m[1]}:${m[2]}`);
     }
     return map;
@@ -466,7 +466,7 @@ export default function ModeBPage({
     const AYAH_WASH = "oklch(0.88 0.09 250 / 0.42)"; // soft blue
     const map = new Map<number, string>();
     for (const a of strokeAnchors) {
-      const m = a.match(/^a:\d+:(\d+)$/);
+      const m = a.match(/^a:\d+:(\d+)(?:\|alone)?$/);
       if (m) {
         const ayah = Number(m[1]);
         if (!map.has(ayah)) map.set(ayah, AYAH_WASH);
@@ -481,6 +481,23 @@ export default function ModeBPage({
     return map;
   }, [strokeAnchors, notes]);
 
+  /* Two ways into an ayah: in the page, with the rest of the surah around it
+     (how it always opened), or the ayah alone. The choice is remembered, so
+     whichever you use most is what the next press opens. */
+  const [ayahView, setAyahView] = useState<"page" | "alone">("page");
+  useEffect(() => {
+    try { if (localStorage.getItem(AYAH_VIEW_KEY) === "alone") setAyahView("alone"); } catch {}
+  }, []);
+  const chooseAyahView = useCallback((v: "page" | "alone") => {
+    setAyahView(v);
+    try { localStorage.setItem(AYAH_VIEW_KEY, v); } catch {}
+  }, []);
+  /* A Selection spans several ayāt, so "alone" applies to an ayah or a word's
+     ayah, never to a Selection. */
+  const isolateAyah = focusAnchor && !focusAnchor.segmentId && ayahView === "alone"
+    ? Number(focusAnchor.verseKey.split(":")[1])
+    : null;
+
   // ── Annotation-layer session ───────────────────────────────────────────
   /* Anchor keys: "w:{verseKey}:{wordPos}" for words, "a:{verseKey}" for ayahs,
      "s:{id}" for a Selection. A Selection's whiteboard is therefore the SAME
@@ -492,6 +509,11 @@ export default function ModeBPage({
         : focusAnchor.wordPos != null
         ? `w:${focusAnchor.verseKey}:${focusAnchor.wordPos}`
         : `a:${focusAnchor.verseKey}`)
+      /* The ayah alone is its own writing space. With the rest of the page
+         hidden and the camera zoomed in, ink put down there sits where the
+         neighbouring ayat are, so sharing a layer with the page view laid it
+         over them. "|alone" keeps the two apart. */
+      + (isolateAyah != null ? "|alone" : "")
     : null;
 
   const [cameraAnim, setCameraAnim] = useState(false);
@@ -515,22 +537,6 @@ export default function ModeBPage({
 
   const closeFocus = useCallback(() => setFocusAnchor(null), []);
 
-  /* Two ways into an ayah: in the page, with the rest of the surah around it
-     (how it always opened), or the ayah alone. The choice is remembered, so
-     whichever you use most is what the next press opens. */
-  const [ayahView, setAyahView] = useState<"page" | "alone">("page");
-  useEffect(() => {
-    try { if (localStorage.getItem(AYAH_VIEW_KEY) === "alone") setAyahView("alone"); } catch {}
-  }, []);
-  const chooseAyahView = useCallback((v: "page" | "alone") => {
-    setAyahView(v);
-    try { localStorage.setItem(AYAH_VIEW_KEY, v); } catch {}
-  }, []);
-  /* A Selection spans several ayāt, so "alone" applies to an ayah or a word's
-     ayah, never to a Selection. */
-  const isolateAyah = focusAnchor && !focusAnchor.segmentId && ayahView === "alone"
-    ? Number(focusAnchor.verseKey.split(":")[1])
-    : null;
 
   // Entering a layer: smooth-animate the camera back to the centred page
   // (never restore old zoom/pan) and auto-activate the Pen.
@@ -803,8 +809,8 @@ export default function ModeBPage({
       ? anchor.segmentId
         ? { anchorType: "segment", segmentId: anchor.segmentId }
         : anchor.wordPos != null
-        ? { anchorType: "word", surahNumber: Number(surahStr), ayahNumber: Number(ayahStr), wordPosition: anchor.wordPos }
-        : { anchorType: "ayah", surahNumber: Number(surahStr), ayahNumber: Number(ayahStr) }
+        ? { anchorType: "word", surahNumber: Number(surahStr), ayahNumber: Number(ayahStr), wordPosition: anchor.wordPos, ...(isolateAyah != null ? { layerView: "alone" } : {}) }
+        : { anchorType: "ayah", surahNumber: Number(surahStr), ayahNumber: Number(ayahStr), ...(isolateAyah != null ? { layerView: "alone" } : {}) }
       /* A page-anchored box is anchored to the Page ROW — the whole surah — so
          it needs the Mushaf page recorded separately, or it shows up again on
          every other page of that surah. Anchored boxes (ayah/word/segment) are
@@ -828,6 +834,7 @@ export default function ModeBPage({
       /* Same reason as segmentId above: the render filter matches on
          mushafPage, so a temp without one is hidden the moment it appears. */
       mushafPage: (anchorFields as { mushafPage?: number }).mushafPage ?? null,
+      layerView: (anchorFields as { layerView?: string }).layerView ?? null,
       content: { type: "doc", content: [{ type: "paragraph" }] },
       color: null,
       offsetX: Math.round(wx), offsetY: Math.round(wy),
@@ -839,7 +846,7 @@ export default function ModeBPage({
     onNoteCreated?.(temp);
     setFreshTextBoxId(tempId);
     setTool("hand"); // hand mode lets clicks reach the new box for editing
-  }, [focusAnchor, onNoteCreated]);
+  }, [focusAnchor, isolateAyah, onNoteCreated]);
 
   // Persist a temp container (called by the rich body on blur, with content
   // and final position). Anchor fields were captured at placement time.
@@ -1520,6 +1527,8 @@ export default function ModeBPage({
               return n.anchorType === "segment" && n.segmentId === focusAnchor.segmentId;
             }
             const [s, a] = focusAnchor.verseKey.split(":").map(Number);
+            // The page view and the ayah alone are separate writing spaces.
+            if ((n.layerView ?? null) !== (isolateAyah != null ? "alone" : null)) return false;
             if (focusAnchor.wordPos != null) {
               return n.anchorType === "word" && n.surahNumber === s &&
                      n.ayahNumber === a && n.wordPosition === focusAnchor.wordPos;

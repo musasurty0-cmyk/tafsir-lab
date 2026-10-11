@@ -69,6 +69,7 @@ export async function POST(
       wordPosition?: unknown;
       segmentId?:   unknown;
       mushafPage?:  unknown;
+      layerView?:   unknown;
       content?:     unknown;
       color?:       unknown;
       visibility?:  unknown;
@@ -94,6 +95,7 @@ export async function POST(
       wordPosition:typeof body.wordPosition=== "number" ? body.wordPosition: undefined,
       segmentId:   typeof body.segmentId    === "string" ? body.segmentId   : undefined,
       mushafPage:  typeof body.mushafPage   === "number" ? body.mushafPage  : undefined,
+      layerView:   body.layerView === "alone" ? "alone" : undefined,
       content:     body.content,
       color:       typeof body.color === "string" ? body.color : undefined,
       visibility:  (body.visibility === "private" || body.visibility === "workspace" || body.visibility === "admin")

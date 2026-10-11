@@ -363,6 +363,9 @@ model StructuredNote {
   // Nullable: rows created before this column stay valid (see the filter in
   // ModeBPage for how they are treated).
   mushafPage   Int?
+  // Ayah/word layers only: NULL = opened in the page, 'alone' = the ayah on
+  // its own. Two separate writing spaces (prisma/sql/012).
+  layerView    String?
   content      Json // TipTap JSON — rich text, full-text searchable
   // 'amber' | 'emerald' | 'sky' | 'rose' | null
   color        String?
