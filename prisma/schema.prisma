@@ -44,6 +44,7 @@ model User {
   bookmarks        Bookmark[]
   friendshipsSent  Friendship[]           @relation("FriendRequester")
   friendshipsRecvd Friendship[]           @relation("FriendAddressee")
+  youthMajlis      YouthMajlisProgress?
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -568,4 +569,20 @@ model BetaRequest {
   createdAt  DateTime @default(now())
 
   @@index([createdAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// YOUTH MAJLIS — portal progress, synced to the student's account
+// (prisma/sql/007_youth_majlis_progress.sql)
+// ─────────────────────────────────────────────────────────────
+
+model YouthMajlisProgress {
+  userId      String   @id @db.Uuid
+  // { "<key>": { "v": value, "at": ms } } — merged key by key on the newest "at"
+  entries     Json     @default("{}")
+  // The workspace "Open in TafsirLab" uses, pinned on first open
+  workspaceId String?  @db.Uuid
+  updatedAt   DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

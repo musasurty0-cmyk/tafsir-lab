@@ -7,12 +7,13 @@
  *                 meaning on the back. Tap to turn; "Shuffle" for a test.
  *   ReadingList — the pre-reading as a checklist, with a running count.
  *
- * Both remember their state on this device only.
+ * The checklist is synced to the student's TafsirLab account.
  */
 
 import { useState } from "react";
 import { useLocal } from "./useLocal";
 import { Ring } from "./QuestionExplorer";
+import SyncNote from "./SyncNote";
 
 type Term = { ar: string; tr: string; en: string };
 
@@ -47,7 +48,7 @@ export function TermDeck({ terms }: { terms: Term[] }) {
               data-flipped={on ? "" : undefined}
               onClick={() => flip(tr)}
               aria-pressed={on}
-              aria-label={on ? `${t.tr}: ${t.en}` : `${t.tr} — tap to see its meaning`}
+              aria-label={on ? `${t.tr}: ${t.en}` : `${t.tr}. Tap to see its meaning`}
               data-reveal data-reveal-i={i % 3}
             >
               <span className="y-card-in">
@@ -80,8 +81,9 @@ export function ReadingList({ reading, tiers }: { reading: Read[]; tiers: readon
     <>
       <div className="y-read-progress" data-reveal>
         <Ring value={count} max={reading.length} label={`${count} of ${reading.length} read`} />
-        <span><strong>{count} of {reading.length}</strong> read{count === reading.length ? " — ready for the first session." : "."}</span>
+        <span><strong>{count} of {reading.length}</strong> read{count === reading.length ? ". Ready for the first session." : "."}</span>
       </div>
+      <SyncNote />
       {tiers.map((tier) => (
         <div key={tier} className="y-tier">
           <h3 className="y-tier-h" data-reveal>{tier}</h3>

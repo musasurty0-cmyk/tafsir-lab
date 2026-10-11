@@ -26,11 +26,10 @@ import Exercises from "@/components/youth-majlis/Exercises";
 import { hasAccess } from "@/lib/youth-majlis/gate";
 import {
   AIM, AIM_DETAIL, AREAS, COHORT, CURRENT_MODULE, LEVELS, METHOD, MODULES,
-  NEXT_MAJLIS, QUESTIONS, SHAYKH, ILMI_COHORT, type Module,
+  NEXT_MAJLIS, QUESTIONS, SHAYKH, type Module,
 } from "@/lib/youth-majlis/content";
 
 const openHref = (m: Module) => `/youth-majlis/open/${m.surah}`;
-const list = (xs: string[]) => xs.join(", ").replace(/, ([^,]*)$/, " and $1");
 
 function nextMajlis(): { when: string; detail: string } {
   if (!NEXT_MAJLIS) return { when: "Date to be announced.", detail: `With ${SHAYKH}.` };
@@ -65,7 +64,6 @@ export default async function YouthMajlisPage() {
   if (!(await hasAccess("majlis"))) {
     return (
       <Gate
-        area="majlis"
         title="Youth Majlis."
         subtitle="A closed study circle of the Qur’an with Shaykh Omid Azizi."
         mark={<span className="y-mark" aria-hidden>T</span>}
@@ -176,7 +174,7 @@ export default async function YouthMajlisPage() {
         <section className="y-band" aria-labelledby="y-a-h">
           <div className="y-wrap">
             <Words id="y-a-h" className="y-h2" text="Four areas of growth." />
-            <p className="y-h2-sub" data-reveal>Where each module takes us. A map of the course — never a measure of anyone’s īmān or character.</p>
+            <p className="y-h2-sub" data-reveal>Where each module takes us. A map of the course, never a measure of anyone’s īmān or character.</p>
             <div className="y-areas">
               {AREAS.map((a, ai) => (
                 <div key={a.id} className="y-area" data-reveal data-reveal-i={ai}>
@@ -223,7 +221,6 @@ export default async function YouthMajlisPage() {
             <div>
               <p className="y-kicker y-kicker--light" data-reveal>ʿIlmī</p>
               <Words id="y-i-h" className="y-h2" text="Uṣūl al-Fiqh." />
-              <p className="y-h2-sub" data-reveal>An intensive with {SHAYKH}, for {list(ILMI_COHORT)}. On its own password.</p>
               <div className="y-cta y-cta--left" data-reveal>
                 <Link className="y-btn y-btn--light" href="/youth-majlis/ilmi">Enter ʿIlmī</Link>
               </div>

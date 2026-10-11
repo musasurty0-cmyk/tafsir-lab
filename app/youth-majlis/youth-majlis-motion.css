@@ -303,3 +303,17 @@ a.y-tile:hover .y-tile-ar { transform: scale(1.06); }
   .y .y-reads .y-read-why { grid-column: 2; grid-row: auto; margin-top: 8px; }
   .y-scroll-cue { display: none; }
 }
+
+/* ── Where progress is saved ── */
+.y-sync { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; color: var(--ink-3); }
+.y-sync-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ink-4); flex: none; }
+.y-sync[data-status="synced"] .y-sync-dot { background: var(--accent); }
+.y-sync[data-status="saving"] .y-sync-dot { background: var(--accent); animation: y-pulse 1s ease-in-out infinite; }
+.y-sync[data-status="offline"] .y-sync-dot { background: oklch(0.75 0.13 75); }
+.y-sync-link { color: var(--accent-ink); font-weight: 600; }
+.y-sync-link:hover { text-decoration: underline; }
+.y-sync--night { display: flex; margin-top: 16px; color: color-mix(in oklch, var(--y-on-night) 55%, transparent); }
+.y-sync--night .y-sync-link { color: var(--y-mint); }
+.y-sync--night[data-status="synced"] .y-sync-dot, .y-sync--night[data-status="saving"] .y-sync-dot { background: var(--y-mint); }
+.y-read-progress + .y-sync { margin-top: 10px; }
+@keyframes y-pulse { 50% { opacity: 0.3; } }

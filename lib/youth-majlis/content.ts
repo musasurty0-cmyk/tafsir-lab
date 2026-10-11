@@ -29,7 +29,7 @@ export const AIM =
   "To study the Noble Qur’an and seek its guidance and direction on contemporary issues and dilemmas affecting Muslim youth, the Muslim community and wider society.";
 
 export const AIM_DETAIL =
-  "Closed, monthly and interactive gatherings with Shaykh Omid Azizi, with an emphasis on developing a deeper connection and relationship with the Book of Allah (SWT) — not only understanding the Qur’an, but reflecting upon what Allah wants from us, and how His guidance should shape us as individuals, our communities and wider society.";
+  "Closed, monthly and interactive gatherings with Shaykh Omid Azizi, with an emphasis on developing a deeper connection and relationship with the Book of Allah (SWT): not only understanding the Qur’an, but reflecting upon what Allah wants from us, and how His guidance should shape us as individuals, our communities and wider society.";
 
 export const METHOD = [
   "Tafsīr-based study",
@@ -43,25 +43,40 @@ export const METHOD = [
 /** The common set of questions every module is studied through. */
 export const QUESTIONS: { n: number; label: string; q: string; how: string }[] = [
   { n: 1,  label: "Identity",    q: "What are the names of the Sūrah, and why?",
-    how: "See how the classical tafāsīr open the sūrah — Ibn Kathīr and al-Qurṭubī gather its names and the reports behind each one. A sūrah’s names often point straight at its theme." },
+    how: "See how the classical tafāsīr open the sūrah. Ibn Kathīr and al-Qurṭubī gather its names and the reports behind each one. A sūrah’s names often point straight at its theme." },
   { n: 2,  label: "Virtues",     q: "What are the merits and virtues of the Sūrah and its āyāt?",
     how: "Collect the ḥadīth on the sūrah’s merits, and check how each is graded: tafāsīr quote weak reports alongside sound ones, so note which is which." },
   { n: 3,  label: "Revelation",  q: "When were these āyāt revealed?",
     how: "Makkī or Madanī, and where in the sequence of revelation. The tafāsīr state it at the start of the sūrah; where scholars differ, note both views and their reasons." },
   { n: 4,  label: "Context",     q: "Why were these āyāt revealed? What are the Asbāb al-Nuzūl, the historical context and the circumstances of their revelation?",
-    how: "The asbāb al-nuzūl — the occasions of revelation. Al-Wāḥidī’s Asbāb al-Nuzūl is the classical collection; then read what the tafāsīr make of each report." },
+    how: "The asbāb al-nuzūl, the occasions of revelation. Al-Wāḥidī’s Asbāb al-Nuzūl is the classical collection; then read what the tafāsīr make of each report." },
   { n: 5,  label: "Language",    q: "What are the linguistic style, rhetorical features and eloquence of these āyāt? Why is Allah (SWT) speaking in this particular manner?",
     how: "Read the Arabic slowly in TafsirLab: word choice, word order, repetition, a shift in who is speaking or being spoken to. Ibn ʿĀshūr’s al-Taḥrīr wa al-Tanwīr is the richest on rhetoric." },
   { n: 6,  label: "Structure",   q: "What is the order and structure of these āyāt within the Sūrah and the wider Qur’an? How do they relate to what comes before and after them?",
     how: "Munāsabāt: how each passage connects to its neighbours, and how a sūrah’s opening and close answer one another. Al-Biqāʿī’s Naẓm al-Durar is devoted to exactly this." },
   { n: 7,  label: "Message",     q: "What are the core messages of these āyāt? What does Allah (SWT) want from us?",
-    how: "Put it in one sentence of your own — what is being asked of the reader — then test that sentence against the tafāsīr." },
+    how: "Put it in one sentence of your own, saying what is being asked of the reader. Then test that sentence against the tafāsīr." },
   { n: 8,  label: "Rulings",     q: "What jurisprudential rulings and principles can be derived from these āyāt?",
     how: "Which āyāt carry a ruling or a principle, and how is it drawn out? Al-Qurṭubī’s al-Jāmiʿ li-Aḥkām al-Qur’ān is built around this question." },
   { n: 9,  label: "Reflection",  q: "What personal reflections, lessons and anecdotes can be derived from these āyāt?",
-    how: "What did these āyāt show you about yourself? Write it down before the Majlis — for your eyes only." },
+    how: "What did these āyāt show you about yourself? Write it down before the Majlis, for your eyes only." },
   { n: 10, label: "Application", q: "How can we implement these āyāt in our lives? What are their implications for our personal and communal lives?",
-    how: "One concrete change for yourself and one for the community — and how you would know you had made it." },
+    how: "One concrete change for yourself and one for the community, and how you would know you had made it." },
+];
+
+/** The ten points as tabs in TafsirLab, titled exactly as the cohort titled
+ *  them in their own Youth Majlis workspace, so every sūrah matches. */
+export const TAB_TITLES = [
+  "1. Names of The Surah",
+  "2. Merits and Virtues",
+  "3. Time of Revelation",
+  "4. Reason for Revelation",
+  "5. Language and Style",
+  "6. Structure and Order",
+  "7. Core Message",
+  "8. Jurisprudential Rulings",
+  "9. Personal Reflections",
+  "10. Actions Plan",
 ];
 
 export type Area = "faith" | "worship" | "character" | "dawah";
@@ -133,7 +148,7 @@ export const MODULES: Module[] = [
     titleAr: "عِبَادُ ٱلرَّحْمَٰنِ",
     themes: [
       "The Qur’an describes believers through their character, worship and social interaction. Revival is therefore built not only upon belief, but upon behaviour.",
-      "True empowerment reflects mercy, humility and emotional intelligence — responding to ignorance with peace rather than pride.",
+      "True empowerment reflects mercy, humility and emotional intelligence: responding to ignorance with peace rather than pride.",
     ],
     exercises: [
       "Which qualities of ʿIbād al-Raḥmān do I already embody, and which require further development?",
@@ -167,27 +182,28 @@ export const ILMI_COHORT = ["Musa", "Ismail", "Yusuf", "Bilal"];
 export const ILMI_BOOK = {
   title:  "Principles of Islamic Jurisprudence",
   author: "Mohammad Hashim Kamali",
-  note:   "The text Shaykh Omid has chosen to take us through — the same one used at Qatar University and Universiti Malaya.",
+  note:   "The text Shaykh Omid has chosen to take us through, the same one used at Qatar University and Universiti Malaya.",
 };
 
-/** The road map: three madākhil, each its own session. Dates are set by the
- *  Shaykh; until then each reads "date to be confirmed". */
+/** The road map: three madākhil, each its own session, and each session taught
+ *  over three Saturdays. Dates are set by the Shaykh; until then each reads
+ *  "dates to be confirmed". */
 export const ILMI_SESSIONS: {
   n: number; ar: string; en: string; gist: string; date: string | null;
 }[] = [
   {
     n: 1, ar: "أُصُولُ ٱلْفِقْه", en: "Uṣūl al-Fiqh",
-    gist: "The sources of the law and the method of deriving rulings from them: how a scholar moves from a text of the Qur’an or Sunnah to a ruling — through its wording, its implications, consensus and analogy.",
+    gist: "The sources of the law and the method of deriving rulings from them: how a scholar moves from a text of the Qur’an or Sunnah to a ruling, through its wording, its implications, consensus and analogy.",
     date: null,
   },
   {
     n: 2, ar: "ٱلْقَوَاعِدُ ٱلْفِقْهِيَّة", en: "Al-Qawāʿid al-Fiqhiyyah",
-    gist: "The legal maxims: short, general statements that gather thousands of particular rulings under one principle — “matters are judged by their purposes”, “certainty is not removed by doubt”, “hardship brings ease”, “harm is to be removed”, “custom is authoritative”.",
+    gist: "The legal maxims: short, general statements that gather thousands of particular rulings under one principle: “matters are judged by their purposes”, “certainty is not removed by doubt”, “hardship brings ease”, “harm is to be removed”, “custom is authoritative”.",
     date: null,
   },
   {
     n: 3, ar: "مَقَاصِدُ ٱلشَّرِيعَة", en: "Maqāṣid al-Sharīʿah",
-    gist: "The higher objectives of the Sharīʿah — what the law as a whole is for. Classically, the preservation of religion, life, intellect, lineage and wealth, and how keeping those purposes in view shapes the way rulings are understood and applied.",
+    gist: "The higher objectives of the Sharīʿah: what the law as a whole is for. Classically, the preservation of religion, life, intellect, lineage and wealth, and how keeping those purposes in view shapes the way rulings are understood and applied.",
     date: null,
   },
 ];
@@ -197,15 +213,15 @@ export const ILMI_READING: {
   title: string; author: string; why: string; level: "Start here" | "Alongside" | "Going further";
 }[] = [
   {
-    title: "Principles of Islamic Jurisprudence — Chapter 1: Introduction to Uṣūl al-Fiqh",
+    title: "Principles of Islamic Jurisprudence, Chapter 1: Introduction to Uṣūl al-Fiqh",
     author: "Mohammad Hashim Kamali",
-    why: "The set text. Its first chapter defines the discipline, separates it from fiqh, and sketches its history — the ground the first session stands on.",
+    why: "The set text. Its first chapter defines the discipline, separates it from fiqh, and sketches its history. It is the ground the first session stands on.",
     level: "Start here",
   },
   {
     title: "Al-Waraqāt",
     author: "Imām al-Ḥaramayn al-Juwaynī",
-    why: "The classic short primer that students have memorised for nine centuries — a few pages that name every core concept. Best read with a commentary or a teacher’s notes.",
+    why: "The classic short primer that students have memorised for nine centuries: a few pages that name every core concept. Best read with a commentary or a teacher’s notes.",
     level: "Start here",
   },
   {
@@ -216,7 +232,7 @@ export const ILMI_READING: {
   },
   {
     title: "Al-Risālah (The Epistle on Legal Theory)",
-    author: "Imām al-Shāfiʿī — trans. Joseph E. Lowry",
+    author: "Imām al-Shāfiʿī, translated by Joseph E. Lowry",
     why: "The first systematic work of uṣūl. Reading even a part of it shows the questions the whole discipline grew out of.",
     level: "Going further",
   },
@@ -237,14 +253,14 @@ export const ILMI_READING: {
 /** Terms worth knowing before the first session. */
 export const ILMI_TERMS: { ar: string; tr: string; en: string }[] = [
   { ar: "فِقْه",       tr: "Fiqh",        en: "The understanding of the practical rulings of the Sharīʿah, derived from their detailed evidences." },
-  { ar: "أُصُول",      tr: "Uṣūl",        en: "Roots, foundations — the sources and methods fiqh is built upon." },
-  { ar: "حُكْم شَرْعِي", tr: "Ḥukm sharʿī", en: "A legal ruling: obligatory, recommended, permissible, disliked or forbidden — and the conditions that make it so." },
+  { ar: "أُصُول",      tr: "Uṣūl",        en: "Roots, foundations: the sources and methods fiqh is built upon." },
+  { ar: "حُكْم شَرْعِي", tr: "Ḥukm sharʿī", en: "A legal ruling: obligatory, recommended, permissible, disliked or forbidden, and the conditions that make it so." },
   { ar: "دَلِيل",      tr: "Dalīl",       en: "An evidence or proof from which a ruling is derived." },
   { ar: "إِجْمَاع",     tr: "Ijmāʿ",       en: "The consensus of the qualified scholars of an age on a ruling." },
   { ar: "قِيَاس",      tr: "Qiyās",       en: "Analogy: extending a ruling to a new case that shares its effective cause." },
-  { ar: "عِلَّة",       tr: "ʿIllah",      en: "The effective cause of a ruling — what qiyās turns on." },
+  { ar: "عِلَّة",       tr: "ʿIllah",      en: "The effective cause of a ruling, on which qiyās turns." },
   { ar: "اِجْتِهَاد",    tr: "Ijtihād",     en: "The qualified scholar’s full effort to derive a ruling from the evidence." },
-  { ar: "مَصْلَحَة",    tr: "Maṣlaḥah",    en: "Benefit, public interest — central to the study of the maqāṣid." },
+  { ar: "مَصْلَحَة",    tr: "Maṣlaḥah",    en: "Benefit, public interest. Central to the study of the maqāṣid." },
 ];
 
 export function moduleBySurah(surah: number): Module | undefined {

@@ -1,6 +1,6 @@
 /**
  * /youth-majlis/ilmi — the ʿIlmī track: an intensive in Uṣūl al-Fiqh with
- * Shaykh Omid, for four students, behind its own password.
+ * Shaykh Omid, for four students. Inside the portal, behind its one password.
  *
  * Opens on the set text, Kamali's Principles of Islamic Jurisprudence, turning
  * on a black stage; then what the discipline is, the road map, and what to
@@ -11,7 +11,6 @@ export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import Gate from "@/components/youth-majlis/Gate";
 import Book3D from "@/components/youth-majlis/Book3D";
 import LeaveButton from "@/components/youth-majlis/LeaveButton";
 import Motion from "@/components/youth-majlis/Motion";
@@ -24,19 +23,8 @@ import {
 const TIERS = ["Start here", "Alongside", "Going further"] as const;
 
 export default async function IlmiPage() {
-  // The ʿIlmī section sits inside the portal: its gate comes second.
+  // Part of the portal, behind the portal's one password.
   if (!(await hasAccess("majlis"))) redirect("/youth-majlis");
-
-  if (!(await hasAccess("ilmi"))) {
-    return (
-      <Gate
-        area="ilmi"
-        title="Uṣūl al-Fiqh."
-        subtitle={`An intensive with ${SHAYKH}. Enter the ʿIlmī password.`}
-        mark={<span className="y-gate-book" aria-hidden />}
-      />
-    );
-  }
 
   return (
     <div className="y-page">
@@ -67,7 +55,7 @@ export default async function IlmiPage() {
           <h1 id="y-il-h" className="y-display y-display--book y-in" style={{ "--d": "500ms" } as React.CSSProperties}>{ILMI_BOOK.title}.</h1>
           <p className="y-hero-sub y-in" style={{ "--d": "650ms" } as React.CSSProperties}>{ILMI_BOOK.author}</p>
           <p className="y-ilmi-note y-in" style={{ "--d": "800ms" } as React.CSSProperties}>{ILMI_BOOK.note}</p>
-          <p className="y-next y-in" style={{ "--d": "950ms" } as React.CSSProperties}><strong>With {SHAYKH}.</strong> Two or three Saturdays, intense and long. <span>Dates to be confirmed.</span></p>
+          <p className="y-next y-in" style={{ "--d": "950ms" } as React.CSSProperties}><strong>With {SHAYKH}.</strong> Three sessions, each over three Saturdays, intense and long. <span>Dates to be confirmed.</span></p>
         </section>
 
         {/* ── What it is ── */}
@@ -80,15 +68,15 @@ export default async function IlmiPage() {
             </p>
             <div className="y-prose" data-reveal>
               <p>
-                <strong>Fiqh</strong> is the understanding of the practical rulings of Islam — how to
-                pray, fast, trade, marry and inherit — as derived from their detailed evidences.
+                <strong>Fiqh</strong> is the understanding of the practical rulings of Islam (how to
+                pray, fast, trade, marry and inherit) as derived from their detailed evidences.
                 <strong> Uṣūl al-Fiqh</strong>, literally <em>the roots of fiqh</em>, is the discipline
                 that studies those evidences and the method of deriving rulings from them.
               </p>
               <p>
-                It asks what counts as a source of law — the Qur’an, the Sunnah, consensus (ijmāʿ) and
-                analogy (qiyās), and the further sources the schools debate; how a text is to be read —
-                general and specific, absolute and qualified, command and prohibition, abrogation; how
+                It asks what counts as a source of law: the Qur’an, the Sunnah, consensus (ijmāʿ) and
+                analogy (qiyās), and the further sources the schools debate; how a text is to be read (general and
+                specific, absolute and qualified, command and prohibition, abrogation); how
                 evidences that seem to conflict are reconciled; and who is qualified to do all of this.
               </p>
               <p>
@@ -96,8 +84,8 @@ export default async function IlmiPage() {
                 systematically, and every school since has built upon it and argued with it.
               </p>
               <p className="y-prose-tie">
-                It is also what stands behind the eighth question of the Majlis — <em>what jurisprudential
-                rulings and principles can be derived from these āyāt?</em> — and what lets you follow a
+                It is also what stands behind the eighth question of the Majlis, <em>what jurisprudential
+                rulings and principles can be derived from these āyāt?</em>, and what lets you follow a
                 tafsīr’s legal discussion step by step, rather than taking its conclusion on trust.
               </p>
             </div>
@@ -107,8 +95,8 @@ export default async function IlmiPage() {
         {/* ── Road map ── */}
         <section id="roadmap" className="y-band y-band--alt" aria-labelledby="y-road-h">
           <div className="y-wrap">
-            <h2 id="y-road-h" className="y-h2" data-reveal>Three entrances.<br />Three Saturdays.</h2>
-            <p className="y-h2-sub" data-reveal>The madākhil to the Sharīʿah, each its own session, in the order the Shaykh has proposed.</p>
+            <h2 id="y-road-h" className="y-h2" data-reveal>Three entrances.<br />Three Saturdays each.</h2>
+            <p className="y-h2-sub" data-reveal>The madākhil to the Sharīʿah. Each is its own session, taught over three Saturdays, in the order the Shaykh has proposed.</p>
             <ol className="y-road">
               {ILMI_SESSIONS.map((s) => (
                 <li key={s.n} className="y-stop" data-reveal data-reveal-i={s.n - 1}>
@@ -116,7 +104,7 @@ export default async function IlmiPage() {
                   <span className="y-stop-ar" lang="ar" dir="rtl">{s.ar}</span>
                   <span className="y-stop-en">{s.en}</span>
                   <p className="y-stop-gist">{s.gist}</p>
-                  <span className="y-stop-date">{s.date ?? "Saturday, date to be confirmed."}</span>
+                  <span className="y-stop-date">{s.date ?? "Three Saturdays. Dates to be confirmed."}</span>
                 </li>
               ))}
             </ol>
@@ -127,7 +115,7 @@ export default async function IlmiPage() {
         <section id="reading" className="y-band" aria-labelledby="y-read-h">
           <div className="y-wrap">
             <h2 id="y-read-h" className="y-h2" data-reveal>Before the first session.</h2>
-            <p className="y-h2-sub" data-reveal>Start with the first two. Tick each off as you go — it stays on this device.</p>
+            <p className="y-h2-sub" data-reveal>Start with the first two. Tick each off as you go.</p>
             <ReadingList reading={ILMI_READING} tiers={TIERS} />
           </div>
         </section>

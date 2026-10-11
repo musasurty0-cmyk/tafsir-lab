@@ -2,13 +2,15 @@
 
 /**
  * A module's exercises, each with somewhere to answer it. Tap "Reflect" and a
- * writing space opens under the question; it saves as you type, to this
- * device only — some of these are deeply personal, and the page says plainly
- * that nobody else will see them.
+ * writing space opens under the question; it saves as you type, to the
+ * student's TafsirLab account (or this device, if they are not signed in).
+ * Some of these are deeply personal; nobody else can see them, and the page
+ * says so.
  */
 
 import { useEffect, useRef, useState } from "react";
 import { useLocal } from "./useLocal";
+import SyncNote from "./SyncNote";
 
 function Exercise({ moduleN, i, q }: { moduleN: number; i: number; q: string }) {
   const [text, setText] = useLocal<string>(`reflect:${moduleN}:${i}`, "");
@@ -51,7 +53,7 @@ function Exercise({ moduleN, i, q }: { moduleN: number; i: number; q: string }) 
             tabIndex={open ? 0 : -1}
           />
           <p className="y-ex-meta">
-            <span>Private · saved on this device only</span>
+            <span>Private to you. <SyncNote /></span>
             <span>{words ? `${words} word${words === 1 ? "" : "s"}` : ""}{saved && words ? " · Saved" : ""}</span>
           </p>
         </div>

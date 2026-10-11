@@ -6,11 +6,12 @@
  * Choose a module, step through the questions one at a time, read how to
  * research each, and mark it explored. The ring fills as you go, and the
  * journey tile for that module fills with it (both read the same store).
- * Progress is the student's own and stays on their device.
+ * Progress is the student's own, synced to their TafsirLab account.
  */
 
 import { useRef, useState } from "react";
 import { useLocal, exploredKey } from "./useLocal";
+import SyncNote from "./SyncNote";
 
 type Q = { n: number; label: string; q: string; how: string };
 type M = { n: number; surah: number; surahEn: string };
@@ -77,6 +78,8 @@ export default function QuestionExplorer({ questions, modules, current }: {
           <span><strong>{explored.length} of {questions.length}</strong> explored<br />for {m.surahEn}</span>
         </div>
       </div>
+
+      <SyncNote className="y-sync--night" />
 
       <div className="qx-body">
         <ol
