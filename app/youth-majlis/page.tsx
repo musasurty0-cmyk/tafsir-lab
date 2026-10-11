@@ -275,6 +275,11 @@ export default async function YouthMajlisPage() {
           <div className="y-wrap">
             <Words id="y-s-h" className="y-h2" text="Every session." />
             <p className="y-h2-sub" data-reveal>What was covered, and what Shaykh Omid wanted us to keep.</p>
+            {withNotes.size > 0 && (
+              <p className="y-notes-pdf" data-reveal>
+                <a className="y-more" href="/youth-majlis/notes/pdf" download>Download the class notes as a PDF</a>
+              </p>
+            )}
             {[...MODULES].reverse().filter((m) => counts[m.n]).map((m) => (
               <div key={m.n} className="y-sess-mod" data-reveal>
                 <h3 className="y-sess-mod-h">

@@ -42,6 +42,7 @@ export default async function NotesPage({ params }: { params: Promise<{ n: strin
             <a href="#points">The ten points</a>
             {notes.summary && <a href="#summary">Summary</a>}
             {sources && <a href="#sources">Sources</a>}
+            <a href="/youth-majlis/notes/pdf" download>PDF</a>
           </nav>
           <LeaveButton />
         </div>
@@ -61,6 +62,7 @@ export default async function NotesPage({ params }: { params: Promise<{ n: strin
           <div className="y-cta y-in" style={{ "--d": "600ms" } as React.CSSProperties}>
             <a className="y-btn" href="#points">Read the notes</a>
             <a className="y-more" href={`/youth-majlis/open/${mod.surah}`}>Open in TafsirLab</a>
+            <a className="y-more" href="/youth-majlis/notes/pdf" download>Download as PDF</a>
           </div>
           <p className="yn-credit y-in" style={{ "--d": "720ms" } as React.CSSProperties}>
             Study notes and reflections of the Majlis, under the guidance of {SHAYKH}.

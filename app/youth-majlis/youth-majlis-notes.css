@@ -160,6 +160,7 @@
 
 /* ── Notes, from the home page ── */
 .y-notes-link { font-size: 15px; margin-left: auto; }
+.y-notes-pdf { margin-top: 18px; }
 .y-sess-mod-h .y-notes-link { font-family: var(--y-text); font-weight: 500; letter-spacing: -0.01em; }
 
 @media (max-width: 900px) {

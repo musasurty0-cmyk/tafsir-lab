@@ -666,6 +666,14 @@ model YouthMajlisNote {
   updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz(6)
 }
 
+/// Files the portal hands out (the class notes PDF), behind its password (prisma/sql/011).
+model YouthMajlisFile {
+  name        String   @id
+  contentType String
+  data        Bytes
+  updatedAt   DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+}
+
 /// An open demo checks in; closing it stamps closedAt (prisma/sql/009).
 model DemoPresence {
   userId   String    @id @db.Uuid
