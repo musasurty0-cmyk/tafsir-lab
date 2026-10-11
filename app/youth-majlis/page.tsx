@@ -23,6 +23,7 @@ import Motion from "@/components/youth-majlis/Motion";
 import JourneyRail from "@/components/youth-majlis/JourneyRail";
 import QuestionExplorer from "@/components/youth-majlis/QuestionExplorer";
 import Exercises from "@/components/youth-majlis/Exercises";
+import IlmiEnter from "@/components/youth-majlis/IlmiEnter";
 import { hasAccess } from "@/lib/youth-majlis/gate";
 import {
   AIM, AIM_DETAIL, AREAS, COHORT, CURRENT_MODULE, LEVELS, METHOD, MODULES,
@@ -72,6 +73,7 @@ export default async function YouthMajlisPage() {
   }
 
   const current = MODULES.find((m) => m.n === CURRENT_MODULE) ?? MODULES[0];
+  const ilmiOpen = await hasAccess("ilmi");
   const next = nextMajlis();
   const slim = MODULES.map(({ n, surah, surahEn, surahAr, title }) => ({ n, surah, surahEn, surahAr, title }));
 
@@ -222,7 +224,7 @@ export default async function YouthMajlisPage() {
               <p className="y-kicker y-kicker--light" data-reveal>ʿIlmī</p>
               <Words id="y-i-h" className="y-h2" text="Uṣūl al-Fiqh." />
               <div className="y-cta y-cta--left" data-reveal>
-                <Link className="y-btn y-btn--light" href="/youth-majlis/ilmi">Enter ʿIlmī</Link>
+                <IlmiEnter unlocked={ilmiOpen} />
               </div>
             </div>
           </div>

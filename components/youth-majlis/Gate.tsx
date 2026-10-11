@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * The password gate for the Youth Majlis portal. The
+ * The password gate for the Youth Majlis portal and its ʿIlmī section. The
  * check happens on the server (see lib/youth-majlis/gate.ts); on success the
  * page refreshes and the server renders what is behind the gate.
  *
@@ -13,8 +13,9 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 export default function Gate({
-  title, subtitle, mark,
+  area = "majlis", title, subtitle, mark,
 }: {
+  area?: "majlis" | "ilmi";
   title: string;
   subtitle: string;
   mark?: React.ReactNode;
@@ -31,7 +32,7 @@ export default function Gate({
     const r = await fetch("/api/youth-majlis/unlock", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password: value }),
+      body: JSON.stringify({ area, password: value }),
     }).catch(() => null);
     if (r?.ok) { router.refresh(); return; }
     const d = await r?.json().catch(() => null) as { error?: string } | null;

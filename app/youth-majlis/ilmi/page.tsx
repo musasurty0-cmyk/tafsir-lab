@@ -1,6 +1,6 @@
 /**
  * /youth-majlis/ilmi — the ʿIlmī track: an intensive in Uṣūl al-Fiqh with
- * Shaykh Omid, for four students. Inside the portal, behind its one password.
+ * Shaykh Omid, for four students. Inside the portal, behind a second password.
  *
  * Opens on the set text, Kamali's Principles of Islamic Jurisprudence, turning
  * on a black stage; then what the discipline is, the road map, and what to
@@ -11,6 +11,7 @@ export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import Gate from "@/components/youth-majlis/Gate";
 import Book3D from "@/components/youth-majlis/Book3D";
 import LeaveButton from "@/components/youth-majlis/LeaveButton";
 import Motion from "@/components/youth-majlis/Motion";
@@ -23,8 +24,18 @@ import {
 const TIERS = ["Start here", "Alongside", "Going further"] as const;
 
 export default async function IlmiPage() {
-  // Part of the portal, behind the portal's one password.
+  // Inside the portal: the portal's password first, then ʿIlmī's own.
   if (!(await hasAccess("majlis"))) redirect("/youth-majlis");
+  if (!(await hasAccess("ilmi"))) {
+    return (
+      <Gate
+        area="ilmi"
+        title="ʿIlmī."
+        subtitle="Enter the ʿIlmī password to continue."
+        mark={<span className="y-gate-book" aria-hidden />}
+      />
+    );
+  }
 
   return (
     <div className="y-page">
