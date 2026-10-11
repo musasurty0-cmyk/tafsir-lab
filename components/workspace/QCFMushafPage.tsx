@@ -25,7 +25,8 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState, useLayoutEffect} from "react";
 import type { QCFVerse, Chapter } from "@/lib/types";
 import { loadQCFFont } from "@/lib/qcf-font";
-import { Info, Pencil } from "lucide-react";
+import { BookOpen, Pencil } from "lucide-react";
+import SurahCrumbMenu from "./SurahCrumbMenu";
 
 // ── Props ───────────────────────────────────────────────────────────────────
 
@@ -52,6 +53,8 @@ interface Props {
    *  not selectable, so the default experience is reading rather than
    *  annotating. The Mushaf itself renders identically in both modes. */
   studyMode?:        boolean;
+  /** For the sūrah switcher on the header bar's Latin name. */
+  workspaceId?:      string;
   /** Reading Mode only — the surah title is the entry point into Study Mode. */
   onEnterStudy?:     () => void;
   /** Ayah range currently being selected, inclusive. Rendered as ONE
@@ -142,6 +145,7 @@ function QCFMushafPage({
   selectedEndKey,
   studyMode = true,
   onEnterStudy,
+  workspaceId,
   rangeSelection = null,
   onRangeChange,
   segments = [],
@@ -413,7 +417,7 @@ function QCFMushafPage({
                 is what says so. In Study Mode it is plain text again, since
                 the workspace is already open. */}
             {studyMode ? (
-              <span className="qcf-plate">{chapter.name_arabic}</span>
+              <span className="qcf-plate"><span className="qcf-plate-name">{chapter.name_arabic}</span></span>
             ) : (
               <button
                 type="button"
@@ -423,28 +427,41 @@ function QCFMushafPage({
                 onPointerDown={(e) => e.stopPropagation()}
                 title="Open study notes"
               >
-                {chapter.name_arabic}
-                <Pencil size={13} aria-hidden className="qcf-plate-pen" />
+                <span className="qcf-plate-name">{chapter.name_arabic}</span>
+                <span className="qcf-plate-pen" aria-hidden><Pencil size={14} /></span>
               </button>
             )}
 
-            {/* On every page of the surah, not only its opening one. The bar
-                is a persistent header naming where you are, and the basmala
-                is part of that identity — gating it on the first sheet left
-                the heading a different shape on page 2 than on page 1.
+            {/* The basmala between two ruled lines, on every page of the
+                surah. Unicode, not glyph codes, so it is set in the Qur'anic
+                text face rather than the page font, which only renders
+                code_v2. Al-Fatihah has none (its first verse is the basmala),
+                so its bar keeps the rule alone. */}
+            <span className="qcf-bar-mid" aria-hidden={!chapter.bismillah_pre || undefined}>
+              {chapter.bismillah_pre ? (
+                <>
+                  <span className="qcf-rule" aria-hidden />
+                  <span className="qcf-bar-basmala" dir="rtl">
+                    بِسۡمِ ٱللَّهِ ٱلرَّحۡمَـٰنِ ٱلرَّحِيمِ
+                  </span>
+                  <span className="qcf-rule" aria-hidden />
+                </>
+              ) : (
+                <span className="qcf-rule qcf-rule--solo" aria-hidden />
+              )}
+            </span>
 
-                Unicode, not glyph codes, so it is set in the Qur'anic text
-                face rather than the page font, which only renders code_v2. */}
-            {chapter.bismillah_pre && (
-              <span className="qcf-bar-basmala" dir="rtl">
-                بِسۡمِ ٱللَّهِ ٱلرَّحۡمَـٰنِ ٱلرَّحِيمِ
-              </span>
-            )}
-
-            {/* dir="ltr" so the Latin name is not reordered by the RTL page. */}
-            <span className="qcf-bar-en" dir="ltr">
-              <Info size={12.5} aria-hidden />
-              {chapter.name_simple}
+            {/* dir="ltr" so the Latin side is not reordered by the RTL page:
+                the book mark in its own cell, the name, and the switcher. */}
+            <span
+              className="qcf-bar-en"
+              dir="ltr"
+              onMouseDown={(e) => e.stopPropagation()}
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              <span className="qcf-bar-book"><BookOpen size={15} aria-hidden /></span>
+              <span className="qcf-bar-name">{chapter.name_simple}</span>
+              {workspaceId && <SurahCrumbMenu workspaceId={workspaceId} current={chapter.id} />}
             </span>
           </div>
           {/* Reading Mode only: the surah name is the way in, but nothing says

@@ -18,6 +18,7 @@ import {
   useRef, useState,
 } from "react";
 import { createPortal } from "react-dom";
+import { Minus, Plus, RotateCw } from "lucide-react";
 import { isTypingTarget } from "@/lib/is-typing";
 
 const HINT_KEY        = "tl-word-tap-hint-dismissed";
@@ -1442,6 +1443,7 @@ export default function ModeBPage({
           onOpenFocus={openFocus}
           studyMode={studyMode}
           onEnterStudy={enterStudy}
+          workspaceId={workspaceId}
           rangeSelection={range}
           onRangeChange={handleRangeChange}
           segments={segments}
@@ -1749,10 +1751,10 @@ export default function ModeBPage({
 
       {/* ── Zoom HUD ── */}
       <div className="mode-b-zoom-controls">
-        <button className="mode-b-zoom-btn" title="Zoom in"  onClick={() => zoomByStep(ZOOM_BUTTON_STEP)}>+</button>
+        <button className="mode-b-zoom-btn" title="Zoom out" aria-label="Zoom out" onClick={() => zoomByStep(1 / ZOOM_BUTTON_STEP)}><Minus size={15} /></button>
         <span className="mode-b-zoom-label">{Math.round(viewport.zoom * 100)}%</span>
-        <button className="mode-b-zoom-btn" title="Zoom out" onClick={() => zoomByStep(1 / ZOOM_BUTTON_STEP)}>−</button>
-        <button className="mode-b-zoom-btn" title="Reset view" onClick={() => tweenTo({ x: centeredX(1), y: 40, zoom: 1 })} style={{ fontSize: "0.7rem" }}>↺</button>
+        <button className="mode-b-zoom-btn" title="Zoom in" aria-label="Zoom in" onClick={() => zoomByStep(ZOOM_BUTTON_STEP)}><Plus size={15} /></button>
+        <button className="mode-b-zoom-btn mode-b-zoom-reset" title="Reset view" aria-label="Reset view" onClick={() => tweenTo({ x: centeredX(1), y: 40, zoom: 1 })}><RotateCw size={14} /></button>
       </div>
 
       {/* ── Mushaf page navigator — rendered into the TOP BANNER ──────────

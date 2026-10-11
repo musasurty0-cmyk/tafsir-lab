@@ -13976,3 +13976,94 @@ body:has(.lab) .mode-b-zoom-controls {
 .sidebar-footer-link { font-size: 12.5px; color: var(--ink-2); gap: 9px; padding: 7px 8px; border-radius: 7px; }
 .sidebar-footer-link svg { color: var(--ink-3); flex-shrink: 0; }
 .sidebar-footer-link:hover svg { color: var(--ink); }
+
+/* ═══ Mushaf heading bar and zoom ═════════════════════════════════════════
+   One rounded bar across the head of the page: on the right the name plate,
+   the pencil in its own cell; in the middle the basmala between two ruled
+   lines ending in small rings; on the left the book mark in its own cell,
+   the Latin name and the sūrah switcher. */
+.qcf-surah-bar,
+.qcf-surah-bar:not(:has(.qcf-bar-basmala)) {
+  width: min(640px, 100%);
+  justify-content: space-between;
+  gap: 14px;
+  padding: 6px;
+  border: 1px solid var(--paper-line);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--paper-ink) 2.5%, transparent);
+}
+.qcf-plate {
+  flex: none; padding: 0; gap: 0; height: 36px;
+  border-radius: 9px; overflow: hidden;
+  background: color-mix(in srgb, var(--paper-ink) 8%, transparent);
+}
+.qcf-plate-name { padding: 0 14px; font-size: 18px; font-weight: 600; line-height: 36px; }
+/* In this right-to-left bar inline-start is the pen cell's right edge: the
+   divider falls between the name and the pencil. */
+.qcf-plate-pen {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 38px; height: 100%;
+  border-inline-start: 1px solid var(--paper-line);
+  opacity: 0.7;
+  transition: opacity var(--dur-hover) var(--ease-soft);
+}
+.qcf-plate--btn:hover .qcf-plate-pen { opacity: 1; }
+
+.qcf-bar-mid { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; gap: 14px; }
+.qcf-rule {
+  --rule: color-mix(in srgb, var(--paper-ink) 30%, transparent);
+  flex: 1; max-width: 92px; height: 7px; position: relative;
+  /* The line stops short of the rings, so they read as open. */
+  background: linear-gradient(var(--rule), var(--rule)) center / calc(100% - 14px) 1px no-repeat;
+}
+.qcf-rule::before, .qcf-rule::after {
+  content: ""; position: absolute; top: 0;
+  width: 5px; height: 5px; border: 1px solid var(--rule); border-radius: 50%;
+}
+.qcf-rule::before { left: 0; }
+.qcf-rule::after  { right: 0; }
+.qcf-bar-basmala { flex: none; }
+.qcf-rule--solo { max-width: 240px; }
+
+.qcf-bar-en {
+  flex: none; gap: 0; height: 36px;
+  font-size: 14px; font-weight: 500; letter-spacing: 0;
+  color: color-mix(in srgb, var(--paper-ink) 78%, transparent);
+}
+.qcf-bar-book {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 40px; height: 100%; margin-right: 12px;
+  border-right: 1px solid var(--paper-line);
+}
+.qcf-bar-book svg { opacity: 0.8; }
+.qcf-bar-name { white-space: nowrap; }
+.qcf-bar-en .crumb-menu { margin: 0 4px 0 6px; }
+.qcf-bar-en .crumb-menu-btn { width: 24px; height: 24px; color: inherit; border-radius: 6px; }
+.qcf-bar-en .crumb-menu-btn:hover { border-color: var(--paper-line); }
+.qcf-bar-en .crumb-pop { text-align: left; font-family: var(--font-sans); }
+
+/* Zoom: one panel, minus, the level, plus, then reset. The same on the
+   Mushaf canvas, the board and the note editor. */
+.mode-b-zoom-controls,
+.doc-zoom {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 5px 6px;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  background: var(--bg-elev);
+  box-shadow: var(--shadow-md);
+}
+.mode-b-zoom-btn,
+.doc-zoom button {
+  width: 32px; height: 32px; min-width: 32px; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 8px; color: var(--ink-2);
+  font-family: inherit;
+}
+.mode-b-zoom-label,
+.doc-zoom-label {
+  min-width: 52px; text-align: center;
+  font-family: var(--font-sans); font-size: 13px; font-weight: 500;
+  color: var(--ink-2); font-variant-numeric: tabular-nums;
+}
+.mode-b-zoom-reset, .doc-zoom-reset { margin-left: 6px; }
