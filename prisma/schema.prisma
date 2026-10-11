@@ -45,6 +45,7 @@ model User {
   friendshipsSent  Friendship[]           @relation("FriendRequester")
   friendshipsRecvd Friendship[]           @relation("FriendAddressee")
   youthMajlis      YouthMajlisProgress?
+  youthAssignments YouthMajlisAssignee[]
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -582,7 +583,73 @@ model YouthMajlisProgress {
   entries     Json     @default("{}")
   // The workspace "Open in TafsirLab" uses, pinned on first open
   workspaceId String?  @db.Uuid
+  // 'student' | 'organiser' | 'left' (prisma/sql/008)
+  role        String   @default("student")
+  joinedAt    DateTime @default(now()) @db.Timestamptz(6)
   updatedAt   DateTime @default(now()) @updatedAt @db.Timestamptz(6)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+/// One Majlis gathering (prisma/sql/008). Dates are UK calendar dates.
+model YouthMajlisSession {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  moduleN      Int
+  seq          Int
+  date         DateTime? @db.Date
+  startTime    String?
+  endTime      String?
+  venue        String?
+  ayahFrom     Int?
+  ayahTo       Int?
+  /// [{ text: string }]
+  prep         Json      @default("[]")
+  prepDue      DateTime? @db.Date
+  /// string[]
+  takeaways    Json      @default("[]")
+  recordingUrl String?
+  followUp     String?
+  /// [{ time: string, item: string }]
+  agenda       Json      @default("[]")
+  createdAt    DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt    DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
+
+  assignments YouthMajlisAssignment[]
+
+  @@unique([moduleN, seq])
+  @@index([date])
+}
+
+/// Research set for a session: a point and/or an āyah range, for one or more students.
+model YouthMajlisAssignment {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sessionId String    @db.Uuid
+  point     Int?
+  ayahFrom  Int?
+  ayahTo    Int?
+  note      String?
+  due       DateTime? @db.Date
+  createdAt DateTime  @default(now()) @db.Timestamptz(6)
+
+  session   YouthMajlisSession    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  assignees YouthMajlisAssignee[]
+
+  @@index([sessionId])
+}
+
+model YouthMajlisAssignee {
+  assignmentId String @db.Uuid
+  userId       String @db.Uuid
+
+  assignment YouthMajlisAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  user       User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([assignmentId, userId])
+}
+
+/// Portal-wide settings, one row per key (announcement, cohort workspace).
+model YouthMajlisSettings {
+  id        String   @id
+  data      Json     @default("{}")
+  updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz(6)
 }

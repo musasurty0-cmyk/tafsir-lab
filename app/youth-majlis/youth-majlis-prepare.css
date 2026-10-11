@@ -1,0 +1,118 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Youth Majlis — the parts of the portal that run the Majlis: the next
+   session, tonight's running order, the prep pack, assigned research, the
+   ten points as they really stand, and the archive of sessions.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Announcement ── */
+.y-announce {
+  display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 6px 14px;
+  padding: 12px 22px; text-align: center;
+  background: var(--accent); color: #fff; font-size: 15px; font-weight: 500; letter-spacing: -0.01em;
+}
+.y-announce-tag { font-size: 12px; font-weight: 700; opacity: 0.8; }
+
+/* ── The next session, under the hero title ── */
+.y-when { margin-top: 44px; display: flex; flex-direction: column; align-items: center; }
+.y-when-date { font-family: var(--y-display); font-size: clamp(24px, 3vw, 32px); font-weight: 700; letter-spacing: -0.03em; }
+.y-when-meta { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 18px; margin-top: 6px; font-size: 17px; color: var(--ink-3); }
+.y-when-meta a { color: var(--accent-ink); font-weight: 500; }
+.y-when-meta a::after { content: " ↗"; font-size: 14px; }
+.y-when-meta a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.y-when .y-cta { margin-top: 28px; }
+
+/* ── Tonight ── */
+.y-tonight {
+  margin-top: 56px; width: min(820px, 100%);
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; text-align: left;
+}
+.y-agenda, .y-presenters { padding: 26px 28px; border-radius: 24px; background: var(--panel); }
+.y-agenda li { display: grid; grid-template-columns: 64px 1fr; padding: 7px 0; font-size: 17px; }
+.y-agenda li span { font-weight: 700; font-variant-numeric: tabular-nums; color: var(--accent-ink); }
+.y-presenters li + li { margin-top: 12px; }
+.y-presenters a { display: flex; flex-direction: column; gap: 2px; }
+.y-presenters strong { font-size: 17px; }
+.y-presenters span { font-size: 15px; color: var(--ink-3); }
+.y-presenters a:hover strong { color: var(--accent-ink); }
+
+/* ── Before the Majlis ── */
+.y-prep-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; margin-top: 56px; }
+.y-prep-card, .y-points { padding: 30px; border-radius: 28px; background: var(--bg); }
+.y-prep-h { font-family: var(--y-display); font-size: 22px; font-weight: 700; letter-spacing: -0.022em; }
+.y-prep-empty { margin-top: 12px; font-size: 16px; line-height: 1.5; color: var(--ink-3); }
+.y-prep-empty .y-more { font-size: 16px; margin-left: 4px; }
+.y-prep-list { margin-top: 14px; display: flex; flex-direction: column; gap: 10px; }
+.y-prep-list li { position: relative; padding-left: 22px; font-size: 17px; line-height: 1.45; }
+.y-prep-list li::before { content: ""; position: absolute; left: 2px; top: 9px; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+
+.y-assignments { margin-top: 14px; display: flex; flex-direction: column; gap: 14px; }
+.y-assignments li { padding: 18px; border-radius: 18px; background: var(--panel); }
+.y-assign-what { font-weight: 700; font-size: 17px; letter-spacing: -0.012em; }
+.y-assign-meta { margin-top: 2px; font-size: 14px; color: var(--ink-3); }
+.y-assign-note { margin-top: 8px; font-size: 15px; color: var(--ink-2); }
+.y-assign-foot { margin-top: 12px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.y-assign-foot .y-more { font-size: 16px; }
+
+/* A status word with its dot: not started / started / written. */
+.y-state { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: var(--ink-3); }
+.y-state::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: color-mix(in oklch, var(--ink) 15%, transparent); }
+.y-state[data-state="started"] { color: oklch(0.5 0.1 70); }
+.y-state[data-state="started"]::before { background: oklch(0.75 0.13 75); }
+.y-state[data-state="written"] { color: var(--accent-ink); }
+.y-state[data-state="written"]::before { background: var(--accent); }
+
+/* ── The ten points, as they really stand ── */
+.y-points { margin-top: 20px; }
+.y-points-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.y-points-count { font-size: 15px; font-weight: 600; color: var(--accent-ink); }
+.y-points-list { margin-top: 16px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 28px; }
+.y-points-list a {
+  display: grid; grid-template-columns: 14px 1fr auto; align-items: center; gap: 12px;
+  padding: 12px 10px; border-radius: 12px; transition: background 200ms ease;
+}
+.y-points-list a:hover { background: var(--panel); }
+.y-pt-dot { width: 12px; height: 12px; border-radius: 50%; background: color-mix(in oklch, var(--ink) 13%, transparent); }
+.y-points-list a[data-state="started"] .y-pt-dot { background: linear-gradient(90deg, var(--accent) 50%, color-mix(in oklch, var(--ink) 13%, transparent) 50%); }
+.y-points-list a[data-state="written"] .y-pt-dot { background: var(--accent); }
+.y-pt-title { font-size: 16px; font-weight: 600; letter-spacing: -0.01em; }
+.y-pt-meta { font-size: 14px; color: var(--ink-3); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.y-points-list a::after { content: "›"; display: none; }
+
+/* ── Every session ── */
+.y-sess-mod { margin-top: 56px; }
+.y-sess-mod-h { display: flex; align-items: baseline; gap: 14px; font-family: var(--y-display); font-size: 24px; font-weight: 700; letter-spacing: -0.025em; }
+.y-sess-mod-h [lang="ar"] { font-size: 34px; }
+.y-sess-list { margin-top: 16px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.y-sess { padding: 24px; border-radius: 24px; background: var(--bg); display: flex; flex-direction: column; gap: 12px; }
+.y-sess[data-when="next"] { background: var(--y-night); color: var(--y-on-night); }
+.y-sess-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
+.y-sess-n { font-weight: 700; font-size: 17px; }
+.y-sess-date { font-size: 15px; color: var(--ink-3); }
+.y-sess[data-when="next"] .y-sess-date { color: color-mix(in oklch, var(--y-on-night) 65%, transparent); }
+.y-sess-tag { font-size: 12px; font-weight: 700; color: var(--y-mint); }
+.y-sess-ayat { font-size: 13px; color: var(--accent-ink); font-weight: 600; }
+.y-sess-takeaways { counter-reset: tk; display: flex; flex-direction: column; gap: 8px; }
+.y-sess-takeaways li { counter-increment: tk; display: grid; grid-template-columns: 22px 1fr; font-size: 15px; line-height: 1.45; }
+.y-sess-takeaways li::before { content: counter(tk); font-weight: 700; color: var(--accent-ink); }
+.y-sess-foot { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: baseline; font-size: 14px; color: var(--ink-3); }
+.y-sess-foot .y-more { font-size: 15px; }
+.y-sess-none { font-size: 14px; color: var(--ink-4); }
+
+/* ── Exercises, answered in tab 9 ── */
+.y-exercise-go { margin-top: 22px; font-size: 16px; }
+
+/* ── Explorer: real status ── */
+.qx-li-done[data-state="started"] { background: oklch(0.8 0.12 75); transform: scale(1); }
+.qx-li-done[data-state="written"] { background: var(--y-mint); transform: scale(1); }
+.qx-status { display: inline-flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 600; color: color-mix(in oklch, var(--y-on-night) 72%, transparent); }
+.qx-status-dot { width: 10px; height: 10px; border-radius: 50%; background: oklch(1 0 0 / 0.25); }
+.qx-status[data-state="started"] .qx-status-dot { background: oklch(0.8 0.12 75); }
+.qx-status[data-state="written"] { color: var(--y-on-night); }
+.qx-status[data-state="written"] .qx-status-dot { background: var(--y-mint); }
+
+@media (max-width: 900px) {
+  .y-sess-list { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 720px) {
+  .y-prep-grid, .y-points-list, .y-sess-list { grid-template-columns: 1fr; }
+}

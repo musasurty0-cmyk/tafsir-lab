@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { preload } from "react-dom";
 import "./youth-majlis.css";
 import "./youth-majlis-motion.css";
+import "./youth-majlis-organise.css";
+import "./youth-majlis-prepare.css";
 
 /* Private to the cohort: never indexed, never followed. */
 export const metadata: Metadata = {

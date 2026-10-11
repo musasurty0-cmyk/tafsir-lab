@@ -4,7 +4,7 @@
  * The ʿIlmī page's two things to do before the first session.
  *
  *   TermDeck    — the key terms as flashcards: the Arabic on the face, the
- *                 meaning on the back. Tap to turn; "Shuffle" for a test.
+ *                 meaning on the back. Tap to turn.
  *   ReadingList — the pre-reading as a checklist, with a running count.
  *
  * The checklist is synced to the student's TafsirLab account.
@@ -19,15 +19,11 @@ type Term = { ar: string; tr: string; en: string };
 
 export function TermDeck({ terms }: { terms: Term[] }) {
   const [flipped, setFlipped] = useState<Set<string>>(new Set());
-  const [order, setOrder] = useState(terms.map((t) => t.tr));
+  const order = terms.map((t) => t.tr);
   const byTr = new Map(terms.map((t) => [t.tr, t]));
 
   function flip(tr: string) {
     setFlipped((s) => { const n = new Set(s); if (n.has(tr)) n.delete(tr); else n.add(tr); return n; });
-  }
-  function shuffle() {
-    setOrder((o) => [...o].sort(() => Math.random() - 0.5));
-    setFlipped(new Set());
   }
 
   return (
@@ -35,7 +31,6 @@ export function TermDeck({ terms }: { terms: Term[] }) {
       <div className="y-deck-ctl" data-reveal>
         <span>{flipped.size} of {terms.length} turned</span>
         <button className="y-more" onClick={() => setFlipped(new Set(terms.map((t) => t.tr)))}>Turn all</button>
-        <button className="y-more" onClick={shuffle}>Shuffle and test yourself</button>
       </div>
       <div className="y-terms">
         {order.map((tr, i) => {

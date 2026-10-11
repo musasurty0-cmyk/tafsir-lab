@@ -1,17 +1,16 @@
 "use client";
 
 /**
- * The ten questions, as something you work through rather than read.
+ * The ten questions, each tied to the tab where it is answered.
  *
- * Choose a module, step through the questions one at a time, read how to
- * research each, and mark it explored. The ring fills as you go, and the
- * journey tile for that module fills with it (both read the same store).
- * Progress is the student's own, synced to their TafsirLab account.
+ * Choose a module, step through the questions, read how to research each,
+ * and see where you actually are: the status comes from what is written in
+ * that tab of your Youth Majlis workspace in TafsirLab, not from a box you
+ * ticked. "Open" lands on the tab itself.
  */
 
 import { useRef, useState } from "react";
-import { useLocal, exploredKey } from "./useLocal";
-import SyncNote from "./SyncNote";
+import type { TabStat } from "@/lib/youth-majlis/data";
 
 type Q = { n: number; label: string; q: string; how: string };
 type M = { n: number; surah: number; surahEn: string };
@@ -37,22 +36,25 @@ export function Ring({ value, max, size = 56, stroke = 5, label }: {
   );
 }
 
-export default function QuestionExplorer({ questions, modules, current }: {
+const STATE_TEXT = { written: "Written", started: "Started", empty: "Not started" } as const;
+
+export default function QuestionExplorer({ questions, modules, current, stats, signedIn }: {
   questions: Q[]; modules: M[]; current: number;
+  /** Per module number, the ten tabs in the student's workspace. */
+  stats: Record<number, TabStat[]>;
+  signedIn: boolean;
 }) {
   const [mod, setMod] = useState(current);
   const [qn, setQn]   = useState(1);
-  const [explored, setExplored] = useLocal<number[]>(exploredKey(mod), []);
   const listRef = useRef<HTMLOListElement>(null);
 
   const m = modules.find((x) => x.n === mod) ?? modules[0];
   const q = questions.find((x) => x.n === qn) ?? questions[0];
-  const isDone = explored.includes(qn);
+  const tabs = stats[mod] ?? [];
+  const tab = tabs.find((t) => t.n === qn);
+  const written = tabs.filter((t) => t.state === "written").length;
   const mi = modules.findIndex((x) => x.n === mod);
 
-  function toggle() {
-    setExplored(isDone ? explored.filter((x) => x !== qn) : [...explored, qn].sort((a, b) => a - b));
-  }
   function go(n: number) {
     const next = Math.min(questions.length, Math.max(1, n));
     setQn(next);
@@ -65,21 +67,16 @@ export default function QuestionExplorer({ questions, modules, current }: {
         <div className="qx-seg" role="radiogroup" aria-label="Module" style={{ "--i": mi, "--n": modules.length } as React.CSSProperties}>
           <span className="qx-seg-thumb" aria-hidden />
           {modules.map((x) => (
-            <button
-              key={x.n} role="radio" aria-checked={x.n === mod}
-              onClick={() => setMod(x.n)}
-            >
-              {x.surahEn}
-            </button>
+            <button key={x.n} role="radio" aria-checked={x.n === mod} onClick={() => setMod(x.n)}>{x.surahEn}</button>
           ))}
         </div>
-        <div className="qx-progress">
-          <Ring value={explored.length} max={questions.length} label={`${explored.length} of ${questions.length} questions explored for ${m.surahEn}`} />
-          <span><strong>{explored.length} of {questions.length}</strong> explored<br />for {m.surahEn}</span>
-        </div>
+        {signedIn && (
+          <div className="qx-progress">
+            <Ring value={written} max={questions.length} label={`${written} of ${questions.length} points written for ${m.surahEn}`} />
+            <span><strong>{written} of {questions.length}</strong> written<br />for {m.surahEn}</span>
+          </div>
+        )}
       </div>
-
-      <SyncNote className="y-sync--night" />
 
       <div className="qx-body">
         <ol
@@ -90,20 +87,23 @@ export default function QuestionExplorer({ questions, modules, current }: {
             if (e.key === "ArrowUp")   { e.preventDefault(); go(qn - 1); }
           }}
         >
-          {questions.map((x) => (
-            <li key={x.n}>
-              <button
-                role="tab" data-q={x.n}
-                aria-selected={x.n === qn} tabIndex={x.n === qn ? 0 : -1}
-                aria-controls="qx-panel"
-                onClick={() => setQn(x.n)}
-              >
-                <span className="qx-li-n">{x.n}</span>
-                <span className="qx-li-l">{x.label}</span>
-                <span className="qx-li-done" data-on={explored.includes(x.n) ? "" : undefined} aria-label={explored.includes(x.n) ? "explored" : undefined} />
-              </button>
-            </li>
-          ))}
+          {questions.map((x) => {
+            const st = tabs.find((t) => t.n === x.n)?.state ?? "empty";
+            return (
+              <li key={x.n}>
+                <button
+                  role="tab" data-q={x.n}
+                  aria-selected={x.n === qn} tabIndex={x.n === qn ? 0 : -1}
+                  aria-controls="qx-panel"
+                  onClick={() => setQn(x.n)}
+                >
+                  <span className="qx-li-n">{x.n}</span>
+                  <span className="qx-li-l">{x.label}</span>
+                  <span className="qx-li-done" data-state={signedIn ? st : undefined} aria-label={signedIn ? STATE_TEXT[st] : undefined} />
+                </button>
+              </li>
+            );
+          })}
         </ol>
 
         <div id="qx-panel" role="tabpanel" className="qx-panel" key={`${mod}-${qn}`}>
@@ -113,11 +113,17 @@ export default function QuestionExplorer({ questions, modules, current }: {
           <p className="qx-how-h">How to research it</p>
           <p className="qx-how">{q.how}</p>
           <div className="qx-actions">
-            <button className="qx-mark" data-on={isDone ? "" : undefined} onClick={toggle} aria-pressed={isDone}>
-              <span className="qx-mark-tick" aria-hidden />
-              {isDone ? "Explored" : "Mark as explored"}
-            </button>
-            <a className="y-more y-more--light" href={`/youth-majlis/open/${m.surah}`}>Open {m.surahEn} in TafsirLab</a>
+            {signedIn && tab && (
+              <span className="qx-status" data-state={tab.state}>
+                <span className="qx-status-dot" aria-hidden />
+                {STATE_TEXT[tab.state]}
+                {tab.words > 0 && ` · ${tab.words} words`}
+                {tab.notes > 0 && ` · ${tab.notes} notes`}
+              </span>
+            )}
+            <a className="y-more y-more--light" href={`/youth-majlis/open/${m.surah}?point=${q.n}`}>
+              Open tab {q.n} for {m.surahEn} in TafsirLab
+            </a>
           </div>
           <div className="qx-step">
             <button onClick={() => go(qn - 1)} disabled={qn === 1} aria-label="Previous question">

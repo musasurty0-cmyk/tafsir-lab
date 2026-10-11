@@ -1,29 +1,16 @@
 /**
  * Youth Majlis — the course, as data.
  *
- * Everything the portal shows comes from here, so updating the course is an
- * edit to this file and nothing else. Two values change month to month:
+ * The curriculum itself: modules, the ten questions, the four areas, the
+ * ʿIlmī reading. It changes rarely. Everything that changes month to month
+ * (sessions, dates, prep, takeaways, research) lives in the database and is
+ * edited by organisers at /youth-majlis/organise.
  *
- *   CURRENT_MODULE  — which module the cohort is on now (1-4 in Level 1)
- *   NEXT_MAJLIS     — the next gathering, or null for "to be announced"
- *
- * Nothing here is invented to fill a screen: where a date or a reading has
- * not been set by Shaykh Omid, the portal says so rather than guessing.
+ * Nothing here is invented to fill a screen: where something has not been set
+ * by Shaykh Omid, the portal says so rather than guessing.
  */
 
 export const SHAYKH = "Shaykh Omid Azizi";
-
-/** Which Level 1 module the cohort is studying now. Al-Fātiḥah, al-Muzzammil
- *  and al-Furqān are done; al-Ṣaff is under way. */
-export const CURRENT_MODULE = 4;
-
-/** The next gathering, or null until it is set. `date` is the UK calendar
- *  date; `time` ("17:30–21:00") only once it is fixed — no time is shown until then. */
-export const NEXT_MAJLIS: { date: string; time?: string; note?: string; where?: string } | null = {
-  date: "2026-11-01",
-  time: "17:30–21:00",
-  note: "Third session on Sūrah al-Ṣaff.",
-};
 
 export const AIM =
   "To study the Noble Qur’an and seek its guidance and direction on contemporary issues and dilemmas affecting Muslim youth, the Muslim community and wider society.";
