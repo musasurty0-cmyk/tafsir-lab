@@ -35,17 +35,27 @@ export const METHOD = [
 ];
 
 /** The common set of questions every module is studied through. */
-export const QUESTIONS: { n: number; label: string; q: string }[] = [
-  { n: 1,  label: "Identity",    q: "What are the names of the Sūrah, and why?" },
-  { n: 2,  label: "Virtues",     q: "What are the merits and virtues of the Sūrah and its āyāt?" },
-  { n: 3,  label: "Revelation",  q: "When were these āyāt revealed?" },
-  { n: 4,  label: "Context",     q: "Why were these āyāt revealed? What are the Asbāb al-Nuzūl, the historical context and the circumstances of their revelation?" },
-  { n: 5,  label: "Language",    q: "What are the linguistic style, rhetorical features and eloquence of these āyāt? Why is Allah (SWT) speaking in this particular manner?" },
-  { n: 6,  label: "Structure",   q: "What is the order and structure of these āyāt within the Sūrah and the wider Qur’an? How do they relate to what comes before and after them?" },
-  { n: 7,  label: "Message",     q: "What are the core messages of these āyāt? What does Allah (SWT) want from us?" },
-  { n: 8,  label: "Rulings",     q: "What jurisprudential rulings and principles can be derived from these āyāt?" },
-  { n: 9,  label: "Reflection",  q: "What personal reflections, lessons and anecdotes can be derived from these āyāt?" },
-  { n: 10, label: "Application", q: "How can we implement these āyāt in our lives? What are their implications for our personal and communal lives?" },
+export const QUESTIONS: { n: number; label: string; q: string; how: string }[] = [
+  { n: 1,  label: "Identity",    q: "What are the names of the Sūrah, and why?",
+    how: "See how the classical tafāsīr open the sūrah — Ibn Kathīr and al-Qurṭubī gather its names and the reports behind each one. A sūrah’s names often point straight at its theme." },
+  { n: 2,  label: "Virtues",     q: "What are the merits and virtues of the Sūrah and its āyāt?",
+    how: "Collect the ḥadīth on the sūrah’s merits, and check how each is graded: tafāsīr quote weak reports alongside sound ones, so note which is which." },
+  { n: 3,  label: "Revelation",  q: "When were these āyāt revealed?",
+    how: "Makkī or Madanī, and where in the sequence of revelation. The tafāsīr state it at the start of the sūrah; where scholars differ, note both views and their reasons." },
+  { n: 4,  label: "Context",     q: "Why were these āyāt revealed? What are the Asbāb al-Nuzūl, the historical context and the circumstances of their revelation?",
+    how: "The asbāb al-nuzūl — the occasions of revelation. Al-Wāḥidī’s Asbāb al-Nuzūl is the classical collection; then read what the tafāsīr make of each report." },
+  { n: 5,  label: "Language",    q: "What are the linguistic style, rhetorical features and eloquence of these āyāt? Why is Allah (SWT) speaking in this particular manner?",
+    how: "Read the Arabic slowly in TafsirLab: word choice, word order, repetition, a shift in who is speaking or being spoken to. Ibn ʿĀshūr’s al-Taḥrīr wa al-Tanwīr is the richest on rhetoric." },
+  { n: 6,  label: "Structure",   q: "What is the order and structure of these āyāt within the Sūrah and the wider Qur’an? How do they relate to what comes before and after them?",
+    how: "Munāsabāt: how each passage connects to its neighbours, and how a sūrah’s opening and close answer one another. Al-Biqāʿī’s Naẓm al-Durar is devoted to exactly this." },
+  { n: 7,  label: "Message",     q: "What are the core messages of these āyāt? What does Allah (SWT) want from us?",
+    how: "Put it in one sentence of your own — what is being asked of the reader — then test that sentence against the tafāsīr." },
+  { n: 8,  label: "Rulings",     q: "What jurisprudential rulings and principles can be derived from these āyāt?",
+    how: "Which āyāt carry a ruling or a principle, and how is it drawn out? Al-Qurṭubī’s al-Jāmiʿ li-Aḥkām al-Qur’ān is built around this question." },
+  { n: 9,  label: "Reflection",  q: "What personal reflections, lessons and anecdotes can be derived from these āyāt?",
+    how: "What did these āyāt show you about yourself? Write it down before the Majlis — for your eyes only." },
+  { n: 10, label: "Application", q: "How can we implement these āyāt in our lives? What are their implications for our personal and communal lives?",
+    how: "One concrete change for yourself and one for the community — and how you would know you had made it." },
 ];
 
 export type Area = "faith" | "worship" | "character" | "dawah";

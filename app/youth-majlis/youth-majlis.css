@@ -317,7 +317,14 @@ a.y-tile:hover { transform: scale(1.015); }
 }
 .bk-stage[data-dragging] .bk { transition: none; }
 .bk-face { position: absolute; backface-visibility: hidden; }
-.bk-front { inset: 0; transform: translateZ(calc(var(--d) / 2)); border-radius: 2px 5px 5px 2px; overflow: hidden; }
+/* The cover hinges on the spine edge. No overflow:hidden here: it would
+   flatten the 3D context and the cover could not swing open. The rest of the
+   opening-book styles live in youth-majlis-motion.css. */
+.bk-front {
+  inset: 0; transform: translateZ(calc(var(--d) / 2)); transform-origin: left center;
+  transform-style: preserve-3d; backface-visibility: visible;
+  transition: transform 1.1s cubic-bezier(0.3, 0.7, 0.2, 1);
+}
 .bk-cover { display: block; width: 100%; height: 100%; }
 .bk-back {
   inset: 0; transform: rotateY(180deg) translateZ(calc(var(--d) / 2));

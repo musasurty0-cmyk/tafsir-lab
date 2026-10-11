@@ -9,41 +9,57 @@
  *
  * Built from the cover's design rather than a photograph so it stays sharp at
  * any size and in either theme.
+ *
+ * A tap (a press that does not travel) opens the cover on its spine to the
+ * first page; another closes it. While open it turns to face you, so the
+ * page can be read.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
 const REST = { x: -6, y: -28 };
+const OPEN = { x: -4, y: -8 };
 
 export default function Book3D({ compact = false }: { compact?: boolean }) {
   const [rot, setRot] = useState(REST);
   const [dragging, setDragging] = useState(false);
-  const start = useRef<{ px: number; py: number; x: number; y: number } | null>(null);
+  const [open, setOpen] = useState(false);
+  const start = useRef<{ px: number; py: number; x: number; y: number; moved: boolean } | null>(null);
   const settle = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const openRef = useRef(false);
 
   const scheduleSettle = useCallback(() => {
     if (settle.current) clearTimeout(settle.current);
-    settle.current = setTimeout(() => setRot(REST), 2600);
+    settle.current = setTimeout(() => setRot(openRef.current ? OPEN : REST), 2600);
   }, []);
+  function setOpenTo(v: boolean) {
+    openRef.current = v;
+    setOpen(v);
+    setRot(v ? OPEN : REST);
+  }
   useEffect(() => () => { if (settle.current) clearTimeout(settle.current); }, []);
 
   function onDown(e: React.PointerEvent) {
     (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
-    start.current = { px: e.clientX, py: e.clientY, x: rot.x, y: rot.y };
+    start.current = { px: e.clientX, py: e.clientY, x: rot.x, y: rot.y, moved: false };
     setDragging(true);
     if (settle.current) clearTimeout(settle.current);
   }
   function onMove(e: React.PointerEvent) {
     const s = start.current;
     if (!s) return;
+    if (!s.moved && Math.hypot(e.clientX - s.px, e.clientY - s.py) < 5) return;
+    s.moved = true;
     setRot({
       x: Math.max(-40, Math.min(40, s.x - (e.clientY - s.py) * 0.35)),
       y: s.y + (e.clientX - s.px) * 0.45,
     });
   }
   function onUp() {
+    const s = start.current;
     start.current = null;
     setDragging(false);
+    if (s && !s.moved) { setOpenTo(!openRef.current); return; }
     scheduleSettle();
   }
   function onKey(e: React.KeyboardEvent) {
@@ -52,6 +68,7 @@ export default function Book3D({ compact = false }: { compact?: boolean }) {
     else if (e.key === "ArrowRight") setRot((r) => ({ ...r, y: r.y + step }));
     else if (e.key === "ArrowUp")    setRot((r) => ({ ...r, x: Math.min(40, r.x + step) }));
     else if (e.key === "ArrowDown")  setRot((r) => ({ ...r, x: Math.max(-40, r.x - step) }));
+    else if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOpenTo(!openRef.current); return; }
     else return;
     e.preventDefault();
     scheduleSettle();
@@ -60,8 +77,9 @@ export default function Book3D({ compact = false }: { compact?: boolean }) {
   return (
     <div
       className={`bk-stage${compact ? " bk-stage--compact" : ""}`}
-      role="img"
-      aria-label="Principles of Islamic Jurisprudence by Mohammad Hashim Kamali. Drag or use the arrow keys to turn the book."
+      role="button"
+      aria-pressed={open}
+      aria-label={`Principles of Islamic Jurisprudence by Mohammad Hashim Kamali. ${open ? "Open at the first page" : "Closed"}. Tap to ${open ? "close" : "open"} it; drag or use the arrow keys to turn it.`}
       tabIndex={0}
       onPointerDown={onDown}
       onPointerMove={onMove}
@@ -69,13 +87,26 @@ export default function Book3D({ compact = false }: { compact?: boolean }) {
       onPointerCancel={onUp}
       onKeyDown={onKey}
       data-dragging={dragging ? "true" : undefined}
+      data-open={open ? "" : undefined}
     >
       <div className="bk-float">
         <div
           className="bk"
           style={{ transform: `rotateX(${rot.x}deg) rotateY(${rot.y}deg)` }}
         >
-          <div className="bk-face bk-front"><Cover /></div>
+          {/* The first page, under the cover. */}
+          <div className="bk-face bk-firstpage" aria-hidden>
+            <span className="bk-fp-bism" lang="ar" dir="rtl">بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ</span>
+            <span className="bk-fp-ch">Chapter One</span>
+            <span className="bk-fp-title">Introduction to Uṣūl al-Fiqh</span>
+            <span className="bk-fp-rule" />
+            <span className="bk-fp-note">Read before the first session</span>
+          </div>
+          {/* The cover hinges on the spine: outside and endpaper back to back. */}
+          <div className="bk-face bk-front">
+            <div className="bk-cover-out"><Cover /></div>
+            <div className="bk-cover-in" />
+          </div>
           <div className="bk-face bk-back"><span className="bk-back-mark">ʿIlmī · Youth Majlis</span></div>
           <div className="bk-face bk-spine">
             <span className="bk-spine-title">PRINCIPLES OF ISLAMIC JURISPRUDENCE</span>

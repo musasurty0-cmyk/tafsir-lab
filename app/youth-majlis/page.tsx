@@ -8,8 +8,9 @@
  *   TafsirLab    = where I study the Qur’an.
  *   Youth Majlis = where Shaykh Omid guides my journey through it.
  *
- * Laid out as a product page: full-bleed bands, one idea per band, large type
- * carrying the structure instead of boxes and outlines.
+ * Laid out as a product page — full-bleed bands, one idea each — and built to
+ * be used, not just read: the ten questions are worked through and ticked off,
+ * exercises are answered in place, and progress shows on the journey.
  */
 
 export const dynamic = "force-dynamic";
@@ -18,6 +19,10 @@ import Link from "next/link";
 import Gate from "@/components/youth-majlis/Gate";
 import LeaveButton from "@/components/youth-majlis/LeaveButton";
 import Book3D from "@/components/youth-majlis/Book3D";
+import Motion from "@/components/youth-majlis/Motion";
+import JourneyRail from "@/components/youth-majlis/JourneyRail";
+import QuestionExplorer from "@/components/youth-majlis/QuestionExplorer";
+import Exercises from "@/components/youth-majlis/Exercises";
 import { hasAccess } from "@/lib/youth-majlis/gate";
 import {
   AIM, AIM_DETAIL, AREAS, COHORT, CURRENT_MODULE, LEVELS, METHOD, MODULES,
@@ -39,6 +44,20 @@ function nextMajlis(): { when: string; detail: string } {
   return { when: `${when}.`, detail: [away, `With ${SHAYKH}.`, NEXT_MAJLIS.where].filter(Boolean).join(" ") };
 }
 
+/** A heading whose words rise in one after another as it scrolls into view. */
+function Words({ text, className, id, as: Tag = "h2" }: {
+  text: string; className: string; id?: string; as?: "h1" | "h2";
+}) {
+  return (
+    <Tag id={id} className={className} data-reveal data-words aria-label={text}>
+      {text.split(/(\n| )/).map((w, i) =>
+        w === "\n" ? <br key={i} /> : w === " " ? " " : (
+          <span key={i} className="y-w" aria-hidden style={{ "--wi": i / 2 } as React.CSSProperties}>{w}</span>
+        ))}
+    </Tag>
+  );
+}
+
 export default async function YouthMajlisPage() {
   if (!(await hasAccess("majlis"))) {
     return (
@@ -53,9 +72,11 @@ export default async function YouthMajlisPage() {
 
   const current = MODULES.find((m) => m.n === CURRENT_MODULE) ?? MODULES[0];
   const next = nextMajlis();
+  const slim = MODULES.map(({ n, surah, surahEn, surahAr, title }) => ({ n, surah, surahEn, surahAr, title }));
 
   return (
     <div className="y-page">
+      <Motion />
       <header className="y-nav">
         <div className="y-nav-in">
           <Link href="/home" className="y-nav-brand" title="Open TafsirLab">
@@ -70,52 +91,36 @@ export default async function YouthMajlisPage() {
           </nav>
           <LeaveButton />
         </div>
+        <span className="y-progress" aria-hidden />
       </header>
 
       <main>
-        {/* ── Hero ── */}
-        <section className="y-band y-hero" aria-labelledby="y-hero-h">
-          <p className="y-basmala" lang="ar" dir="rtl">بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ</p>
-          <p className="y-kicker">{LEVELS[0].name} · Module {current.n}</p>
-          <p className="y-hero-ar" lang="ar" dir="rtl">{current.titleAr ?? current.surahAr}</p>
-          <h1 id="y-hero-h" className="y-display">{current.surahEn}.</h1>
-          <p className="y-hero-sub">{current.title}.</p>
-          <div className="y-cta">
-            <a className="y-btn" href={openHref(current)}>Open in TafsirLab</a>
-            <a className="y-more" href={`#module-${current.n}`}>Prepare for the Majlis</a>
+        {/* ── Hero: the Arabic inks in right to left, the rest follows ── */}
+        <section className="y-band y-hero" aria-labelledby="y-hero-h" data-parallax>
+          <div className="y-hero-in">
+            <p className="y-basmala y-in" style={{ "--d": "0ms" } as React.CSSProperties} lang="ar" dir="rtl">بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ</p>
+            <p className="y-kicker y-in" style={{ "--d": "250ms" } as React.CSSProperties}>{LEVELS[0].name} · Module {current.n}</p>
+            <p className="y-hero-ar y-ink" lang="ar" dir="rtl">{current.titleAr ?? current.surahAr}</p>
+            <h1 id="y-hero-h" className="y-display y-in" style={{ "--d": "1100ms" } as React.CSSProperties}>{current.surahEn}.</h1>
+            <p className="y-hero-sub y-in" style={{ "--d": "1250ms" } as React.CSSProperties}>{current.title}.</p>
+            <div className="y-cta y-in" style={{ "--d": "1450ms" } as React.CSSProperties}>
+              <a className="y-btn" href={openHref(current)}>Open in TafsirLab</a>
+              <a className="y-more" href={`#module-${current.n}`}>Prepare for the Majlis</a>
+            </div>
+            <p className="y-next y-in" style={{ "--d": "1650ms" } as React.CSSProperties}><strong>Next Majlis.</strong> {next.when} <span>{next.detail}</span></p>
           </div>
-          <p className="y-next"><strong>Next Majlis.</strong> {next.when} <span>{next.detail}</span></p>
+          <a href="#journey" className="y-scroll-cue y-in" style={{ "--d": "2200ms" } as React.CSSProperties} aria-label="Scroll to the journey">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M6 9l6 6 6-6" /></svg>
+          </a>
         </section>
 
         {/* ── Journey ── */}
         <section id="journey" className="y-band y-band--alt" aria-labelledby="y-j-h">
           <div className="y-wrap">
-            <h2 id="y-j-h" className="y-h2">The journey.</h2>
-            <p className="y-h2-sub">Three levels, each built upon the one before.</p>
+            <Words id="y-j-h" className="y-h2" text="The journey." />
+            <p className="y-h2-sub" data-reveal>Three levels, each built upon the one before.</p>
           </div>
-          <div className="y-rail" role="list">
-            {MODULES.map((m) => {
-              const state = m.n < CURRENT_MODULE ? "Completed" : m.n === CURRENT_MODULE ? "Now studying" : "Coming up";
-              return (
-                <a key={m.n} href={`#module-${m.n}`} className="y-tile" role="listitem" data-current={m.n === CURRENT_MODULE ? "" : undefined}>
-                  <span className="y-tile-state">{state}</span>
-                  <span className="y-tile-ar" lang="ar" dir="rtl">{m.surahAr}</span>
-                  <span className="y-tile-name">{m.surahEn}</span>
-                  <span className="y-tile-title">{m.title}</span>
-                  <span className="y-tile-n">Level 1 · Module {m.n}</span>
-                </a>
-              );
-            })}
-            {LEVELS.slice(1).map((lv) => (
-              <div key={lv.n} className="y-tile y-tile--locked" role="listitem">
-                <span className="y-tile-state">Later</span>
-                <span className="y-tile-level">{lv.n}</span>
-                <span className="y-tile-name">{lv.name}</span>
-                <span className="y-tile-title">Opens after {LEVELS[lv.n - 2].name}.</span>
-                <span className="y-tile-n">Level {lv.n}</span>
-              </div>
-            ))}
-          </div>
+          <JourneyRail modules={slim} levels={LEVELS} current={CURRENT_MODULE} total={QUESTIONS.length} />
         </section>
 
         {/* ── Modules, one band each ── */}
@@ -129,62 +134,55 @@ export default async function YouthMajlisPage() {
             >
               <div className="y-wrap y-module-grid">
                 <div className="y-module-text">
-                  <p className="y-kicker">Module {m.n}{m.n === CURRENT_MODULE ? " · Now studying" : ""}</p>
-                  <h2 id={`y-m${m.n}`} className="y-h2">{m.surahEn}.</h2>
-                  <p className="y-h2-sub">{m.title}.</p>
-                  <ul className="y-themes">{m.themes.map((t) => <li key={t}>{t}</li>)}</ul>
-                  <div className="y-cta y-cta--left">
+                  <p className="y-kicker" data-reveal>Module {m.n}{m.n === CURRENT_MODULE ? " · Now studying" : ""}</p>
+                  <Words id={`y-m${m.n}`} className="y-h2" text={`${m.surahEn}.`} />
+                  <p className="y-h2-sub" data-reveal>{m.title}.</p>
+                  <ul className="y-themes">
+                    {m.themes.map((t, ti) => <li key={t} data-reveal data-reveal-i={ti}>{t}</li>)}
+                  </ul>
+                  <div className="y-cta y-cta--left" data-reveal>
                     <a className="y-btn" href={openHref(m)}>Open in TafsirLab</a>
-                    <a className="y-more" href="#method">Study it through the ten questions</a>
+                    <a className="y-more" href="#method">Work through the ten questions</a>
                   </div>
                 </div>
                 <div className="y-module-side">
-                  <p className="y-module-ar" lang="ar" dir="rtl">{m.titleAr ?? m.surahAr}</p>
-                  <p className="y-module-range">
+                  <p className="y-module-ar y-ink-scroll" lang="ar" dir="rtl" data-reveal>{m.titleAr ?? m.surahAr}</p>
+                  <p className="y-module-range" data-reveal>
                     {m.passage ? `Āyāt ${m.passage.from}–${m.passage.to}` : `${m.ayat} āyāt`} · Sūrah {m.surah}
                   </p>
-                  {m.exercises.length > 0 && (
-                    <div className="y-exercise">
-                      <p className="y-exercise-h">Exercises</p>
-                      {m.exercises.map((x) => <p key={x} className="y-exercise-q">{x}</p>)}
-                    </div>
-                  )}
+                  {m.exercises.length > 0 && <Exercises moduleN={m.n} exercises={m.exercises} />}
                 </div>
               </div>
             </section>
           ))}
         </div>
 
-        {/* ── Method ── */}
+        {/* ── Method: the explorer ── */}
         <section id="method" className="y-band y-band--dark" aria-labelledby="y-q-h">
           <div className="y-wrap">
-            <h2 id="y-q-h" className="y-h2">Ten questions.<br />Every sūrah.</h2>
-            <p className="y-h2-sub">The same questions guide every module. Bring them to TafsirLab, where the tafāsīr, the Arabic and your notes are, and bring what you find to the Majlis.</p>
-            <ol className="y-questions">
-              {QUESTIONS.map((q) => (
-                <li key={q.n}>
-                  <span className="y-q-n">{q.n}</span>
-                  <span className="y-q-label">{q.label}</span>
-                  <span className="y-q-text">{q.q}</span>
-                </li>
-              ))}
-            </ol>
-            <p className="y-method">{METHOD.join("  ·  ")}</p>
+            <Words id="y-q-h" className="y-h2" text={"Ten questions.\nEvery sūrah."} />
+            <p className="y-h2-sub" data-reveal>Choose a module and work through them one by one. Your progress fills the journey.</p>
+            <div data-reveal>
+              <QuestionExplorer questions={QUESTIONS} modules={slim} current={CURRENT_MODULE} />
+            </div>
+            <p className="y-method" data-reveal>{METHOD.join("  ·  ")}</p>
           </div>
         </section>
 
         {/* ── Areas ── */}
         <section className="y-band" aria-labelledby="y-a-h">
           <div className="y-wrap">
-            <h2 id="y-a-h" className="y-h2">Four areas of growth.</h2>
-            <p className="y-h2-sub">Where each module takes us. A map of the course — never a measure of anyone’s īmān or character.</p>
+            <Words id="y-a-h" className="y-h2" text="Four areas of growth." />
+            <p className="y-h2-sub" data-reveal>Where each module takes us. A map of the course — never a measure of anyone’s īmān or character.</p>
             <div className="y-areas">
-              {AREAS.map((a) => (
-                <div key={a.id} className="y-area">
+              {AREAS.map((a, ai) => (
+                <div key={a.id} className="y-area" data-reveal data-reveal-i={ai}>
                   <span className="y-area-ar" lang="ar" dir="rtl">{a.ar}</span>
                   <span className="y-area-en">{a.en}</span>
                   <span className="y-area-mods">
-                    {MODULES.filter((m) => m.areas.includes(a.id)).map((m) => m.surahEn).join(" · ")}
+                    {MODULES.filter((m) => m.areas.includes(a.id)).map((m) => (
+                      <a key={m.n} href={`#module-${m.n}`} className="y-area-link">{m.surahEn}</a>
+                    ))}
                   </span>
                 </div>
               ))}
@@ -195,28 +193,35 @@ export default async function YouthMajlisPage() {
         {/* ── Aim ── */}
         <section className="y-band y-band--alt" aria-labelledby="y-aim-h">
           <div className="y-wrap y-statement">
-            <h2 id="y-aim-h" className="y-statement-h">{AIM}</h2>
-            <p className="y-statement-p">{AIM_DETAIL}</p>
+            <h2 id="y-aim-h" className="y-statement-h" data-reveal>{AIM}</h2>
+            <p className="y-statement-p" data-reveal>{AIM_DETAIL}</p>
           </div>
         </section>
 
         {/* ── Cohort ── */}
         <section className="y-band" aria-labelledby="y-c-h">
           <div className="y-wrap">
-            <h2 id="y-c-h" className="y-h2">The cohort.</h2>
-            <p className="y-names">{COHORT.join("   ")}</p>
+            <Words id="y-c-h" className="y-h2" text="The cohort." />
+            <ul className="y-names">
+              {COHORT.map((n, i) => (
+                <li key={n} className="y-name" data-reveal data-reveal-i={i}>{n}</li>
+              ))}
+            </ul>
           </div>
         </section>
 
         {/* ── ʿIlmī ── */}
         <section className="y-band y-band--dark y-promo" aria-labelledby="y-i-h">
           <div className="y-wrap y-promo-grid">
-            <div className="y-promo-book"><Book3D compact /></div>
+            <div className="y-promo-book" data-reveal>
+              <Book3D compact />
+              <p className="bk-hint">Tap to open · drag to turn</p>
+            </div>
             <div>
-              <p className="y-kicker y-kicker--light">ʿIlmī</p>
-              <h2 id="y-i-h" className="y-h2">Uṣūl al-Fiqh.</h2>
-              <p className="y-h2-sub">An intensive with {SHAYKH}, for {list(ILMI_COHORT)}. On its own password.</p>
-              <div className="y-cta y-cta--left">
+              <p className="y-kicker y-kicker--light" data-reveal>ʿIlmī</p>
+              <Words id="y-i-h" className="y-h2" text="Uṣūl al-Fiqh." />
+              <p className="y-h2-sub" data-reveal>An intensive with {SHAYKH}, for {list(ILMI_COHORT)}. On its own password.</p>
+              <div className="y-cta y-cta--left" data-reveal>
                 <Link className="y-btn y-btn--light" href="/youth-majlis/ilmi">Enter ʿIlmī</Link>
               </div>
             </div>

@@ -1,0 +1,304 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Youth Majlis — motion and interaction.
+
+   Reveals as you scroll, words that rise one by one, Arabic that inks in
+   right to left, the hero drifting away, and the styles for everything you
+   can press: the question explorer, the journey arrows, the reflection
+   spaces, the flashcards, the reading checklist and the opening book.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.y { --y-ease: cubic-bezier(0.22, 0.61, 0.24, 1); --y-spring: cubic-bezier(0.34, 1.32, 0.5, 1); --y-mint: oklch(0.78 0.09 160); }
+
+/* ── Scroll reveals. Hidden only once the page is known to be scripted
+   (y-js, set inline before paint); if hydration stalls, a failsafe lets
+   them in after four seconds rather than leaving the page blank. ── */
+.y [data-reveal] {
+  transition: opacity 0.9s var(--y-ease), transform 1s var(--y-ease);
+  transition-delay: calc(var(--ri, 0) * 90ms);
+}
+.y-js .y [data-reveal]:not([data-shown]) { opacity: 0; transform: translateY(32px); }
+.y-js:not(.y-ready) .y [data-reveal]:not([data-shown]) { animation: y-failsafe 0.6s ease 4s forwards; }
+@keyframes y-failsafe { to { opacity: 1; transform: none; } }
+.y [data-reveal-i="1"] { --ri: 1; }   .y [data-reveal-i="2"] { --ri: 2; }
+.y [data-reveal-i="3"] { --ri: 3; }   .y [data-reveal-i="4"] { --ri: 4; }
+.y [data-reveal-i="5"] { --ri: 5; }   .y [data-reveal-i="6"] { --ri: 6; }
+.y [data-reveal-i="7"] { --ri: 7; }   .y [data-reveal-i="8"] { --ri: 8; }
+.y [data-reveal-i="9"] { --ri: 9; }   .y [data-reveal-i="10"] { --ri: 10; }
+.y [data-reveal-i="11"] { --ri: 11; } .y [data-reveal-i="12"] { --ri: 12; }
+
+/* Headings: the words rise one after another, not the block. */
+.y-js .y [data-words]:not([data-shown]) { opacity: 1; transform: none; }
+.y [data-words] .y-w {
+  display: inline-block;
+  transition: opacity 0.8s var(--y-ease), transform 1s var(--y-ease);
+  transition-delay: calc(var(--wi, 0) * 70ms);
+}
+.y-js .y [data-words]:not([data-shown]) .y-w { opacity: 0; transform: translateY(0.45em); }
+
+/* Arabic inks in from the right, the way it is written. */
+@keyframes y-ink { from { clip-path: inset(-25% 0 -25% 100%); } to { clip-path: inset(-25% 0 -25% 0); } }
+.y-ink { animation: y-ink 1.5s cubic-bezier(0.55, 0, 0.25, 1) 0.45s both; }
+.y .y-ink-scroll { transition: clip-path 1.5s cubic-bezier(0.55, 0, 0.25, 1); }
+.y-js .y .y-ink-scroll:not([data-shown]) { opacity: 1; transform: none; clip-path: inset(-25% 0 -25% 100%); }
+.y-js .y .y-ink-scroll[data-shown] { clip-path: inset(-25% 0 -25% 0); }
+
+/* The opening sequence. */
+@keyframes y-in { from { opacity: 0; transform: translateY(26px); } }
+.y-in { animation: y-in 1s var(--y-ease) both; animation-delay: var(--d, 0ms); }
+.y-in--book { animation-duration: 1.4s; }
+
+/* ── The hero drifts back and fades as you scroll away from it ── */
+.y-hero { position: relative; overflow: hidden; }
+.y-hero-in {
+  display: flex; flex-direction: column; align-items: center;
+  transform: translateY(calc(var(--drift, 0) * 140px)) scale(calc(1 - var(--drift, 0) * 0.08));
+  opacity: calc(1 - var(--drift, 0) * 1.15);
+}
+.y-scroll-cue {
+  position: absolute; left: 50%; bottom: 28px; translate: -50% 0;
+  width: 44px; height: 44px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--ink-3); background: var(--panel);
+  transition: background 200ms ease, color 200ms ease;
+}
+.y-scroll-cue svg { animation: y-bob 2.2s ease-in-out infinite; }
+.y-scroll-cue:hover { color: var(--ink); background: var(--panel-2); }
+@keyframes y-bob { 0%, 100% { transform: translateY(-2px); } 50% { transform: translateY(3px); } }
+
+/* ── Nav: a progress hairline, and the section you are in ── */
+.y-progress {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 2px;
+  background: var(--accent); transform: scaleX(0); transform-origin: left center;
+}
+.y-nav-links a { position: relative; }
+.y-nav-links a[aria-current] { color: var(--ink); }
+.y-nav--dark .y-nav-links a[aria-current] { color: var(--y-on-night); }
+.y-nav-links a::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: -15px; height: 2px; border-radius: 2px;
+  background: currentColor; transform: scaleX(0); transition: transform 300ms var(--y-ease);
+}
+.y-nav-links a[aria-current]::after { transform: scaleX(1); }
+
+/* ── Things that are pressed feel pressed ── */
+.y-more { display: inline-block; transition: transform 160ms ease; }
+.y-more:active { transform: scale(0.97); }
+.y-more--light { color: var(--y-mint); }
+
+/* ── Progress ring ── */
+.y-ring { position: relative; display: inline-flex; align-items: center; justify-content: center; flex: none; }
+.y-ring svg { position: absolute; inset: 0; }
+.y-ring-track { fill: none; stroke: currentColor; opacity: 0.14; }
+.y-ring-fill { fill: none; stroke: var(--accent); stroke-linecap: round; transition: stroke-dashoffset 0.9s var(--y-spring); }
+.y-ring-n { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.y-band--dark .y-ring-fill, .y-tile[data-current] .y-ring-fill { stroke: var(--y-mint); }
+
+/* ── Journey rail: progress on each tile, arrows beneath ── */
+.y-tile-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.y-tile-top .y-ring-n { font-size: 11px; }
+.y-rail-ctl { display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px; }
+.y-rail-ctl button {
+  width: 40px; height: 40px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: color-mix(in oklch, var(--ink) 9%, transparent); color: var(--ink-2);
+  transition: background 200ms ease, opacity 200ms ease, transform 120ms ease;
+}
+.y-rail-ctl button:hover:not(:disabled) { background: color-mix(in oklch, var(--ink) 15%, transparent); }
+.y-rail-ctl button:active:not(:disabled) { transform: scale(0.92); }
+.y-rail-ctl button:disabled { opacity: 0.35; cursor: default; }
+.y .y-tile { transition: transform 450ms var(--y-spring), box-shadow 450ms var(--y-ease), opacity 0.9s var(--y-ease); }
+.y a.y-tile:hover { transform: translateY(-6px); box-shadow: 0 24px 48px oklch(0.22 0.012 80 / 0.12); }
+.y-tile .y-tile-ar { transition: transform 600ms var(--y-spring); transform-origin: left bottom; }
+a.y-tile:hover .y-tile-ar { transform: scale(1.06); }
+
+/* ── Exercises, each with a private writing space ── */
+.y-ex + .y-ex { margin-top: 26px; }
+.y-ex-toggle { margin-top: 10px; font-size: 15px; font-weight: 600; color: var(--accent-ink); transition: transform 160ms ease; }
+.y-ex-toggle::after { content: " ›"; font-weight: 400; display: inline-block; margin-left: 4px; transition: transform 300ms var(--y-ease); }
+.y-ex[data-open] .y-ex-toggle::after { transform: rotate(90deg); }
+.y-ex-toggle:active { transform: scale(0.97); }
+.y-ex-space { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.5s var(--y-ease); }
+.y-ex[data-open] .y-ex-space { grid-template-rows: 1fr; }
+.y-ex-space > div { overflow: hidden; }
+.y-ex-space textarea {
+  display: block; width: 100%; margin-top: 14px; resize: vertical; min-height: 120px;
+  padding: 16px 18px; border: 0; border-radius: 16px; outline: none;
+  background: var(--bg); font-size: 17px; line-height: 1.5; letter-spacing: -0.01em; color: var(--ink);
+  transition: box-shadow 200ms ease;
+}
+.y-band--alt .y-ex-space textarea { background: var(--panel); }
+.y-ex-space textarea:focus { box-shadow: 0 0 0 4px var(--accent-soft); }
+.y-ex-meta { display: flex; justify-content: space-between; gap: 12px; margin-top: 8px; font-size: 13px; color: var(--ink-3); }
+
+/* ── Areas react to the pointer ── */
+.y .y-area { transition: transform 450ms var(--y-spring), opacity 0.9s var(--y-ease); }
+.y .y-area:hover { transform: translateY(-6px); }
+.y-area-ar { transition: transform 600ms var(--y-spring); transform-origin: left bottom; }
+.y-area:hover .y-area-ar { transform: scale(1.08); }
+.y-area-mods { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.y-area-link { color: var(--accent-ink); font-weight: 500; }
+.y-area-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+/* ── Names cascade in ── */
+.y .y-names { display: flex; flex-wrap: wrap; gap: 4px 24px; white-space: normal; word-spacing: normal; max-width: none; }
+.y-name { display: inline-block; }
+
+/* ═══ The question explorer (on black) ═════════════════════════════════════ */
+.qx { margin-top: 64px; }
+.qx-top { display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap; }
+.qx-seg {
+  position: relative; display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr));
+  padding: 4px; border-radius: 14px; background: oklch(1 0 0 / 0.08);
+  min-width: min(560px, 100%);
+}
+.qx-seg-thumb {
+  position: absolute; top: 4px; bottom: 4px; left: 4px;
+  width: calc((100% - 8px) / var(--n)); border-radius: 10px;
+  background: oklch(1 0 0 / 0.16); box-shadow: 0 2px 10px oklch(0 0 0 / 0.25);
+  transform: translateX(calc(var(--i) * 100%)); transition: transform 0.5s var(--y-spring);
+}
+.qx-seg button {
+  position: relative; padding: 10px 12px; font-size: 14px; font-weight: 600; letter-spacing: -0.01em;
+  color: color-mix(in oklch, var(--y-on-night) 62%, transparent); transition: color 250ms ease; white-space: nowrap;
+}
+.qx-seg button[aria-checked="true"] { color: var(--y-on-night); }
+.qx-progress { display: flex; align-items: center; gap: 14px; font-size: 14px; line-height: 1.3; color: color-mix(in oklch, var(--y-on-night) 62%, transparent); }
+.qx-progress strong { color: var(--y-on-night); }
+.qx-body { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 40px; margin-top: 40px; align-items: start; }
+.qx-list { display: flex; flex-direction: column; gap: 2px; }
+.qx-list button {
+  width: 100%; display: grid; grid-template-columns: 30px 1fr 10px; align-items: center; gap: 8px;
+  padding: 11px 14px; border-radius: 12px; text-align: left;
+  color: color-mix(in oklch, var(--y-on-night) 58%, transparent);
+  transition: background 250ms ease, color 250ms ease;
+}
+.qx-list button:hover { background: oklch(1 0 0 / 0.05); color: var(--y-on-night); }
+.qx-list button[aria-selected="true"] { background: oklch(1 0 0 / 0.11); color: var(--y-on-night); }
+.qx-li-n { font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--y-mint); }
+.qx-li-l { font-size: 16px; font-weight: 600; letter-spacing: -0.012em; }
+.qx-li-done { width: 8px; height: 8px; border-radius: 50%; background: transparent; transform: scale(0.4); transition: background 300ms ease, transform 400ms var(--y-spring); }
+.qx-li-done[data-on] { background: var(--y-mint); transform: scale(1); }
+.qx-panel {
+  position: relative; min-height: 440px;
+  padding: clamp(28px, 4vw, 48px); border-radius: 28px; background: var(--y-night-2);
+  animation: qx-in 0.55s var(--y-ease) both;
+}
+@keyframes qx-in { from { opacity: 0; transform: translateY(14px); } }
+.qx-n { display: block; font-family: var(--y-display); font-weight: 700; font-size: clamp(72px, 9vw, 112px); line-height: 0.9; letter-spacing: -0.06em; color: var(--y-mint); }
+.qx-label { font-family: var(--y-display); font-weight: 700; font-size: clamp(28px, 3.2vw, 38px); letter-spacing: -0.03em; margin-top: 18px; }
+.qx-q { font-family: var(--y-display); font-weight: 600; font-size: clamp(19px, 2vw, 24px); line-height: 1.3; letter-spacing: -0.02em; margin-top: 10px; max-width: 36ch; }
+.qx-how-h { margin-top: 32px; font-size: 14px; font-weight: 600; color: var(--y-mint); }
+.qx-how { margin-top: 6px; font-size: 17px; line-height: 1.5; max-width: 52ch; color: color-mix(in oklch, var(--y-on-night) 70%, transparent); }
+.qx-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 14px 28px; margin-top: 36px; }
+.qx-mark {
+  display: inline-flex; align-items: center; gap: 10px;
+  min-height: 46px; padding: 0 20px 0 14px; border-radius: 12px;
+  background: oklch(1 0 0 / 0.1); color: var(--y-on-night);
+  font-size: 16px; font-weight: 600; letter-spacing: -0.012em;
+  transition: background 300ms ease, transform 140ms ease;
+}
+.qx-mark:hover { background: oklch(1 0 0 / 0.16); }
+.qx-mark:active { transform: scale(0.97); }
+.qx-mark[data-on] { background: var(--accent); }
+.qx-mark-tick {
+  width: 22px; height: 22px; border-radius: 50%; position: relative;
+  box-shadow: inset 0 0 0 2px oklch(1 0 0 / 0.5); transition: box-shadow 300ms ease, background 300ms ease;
+}
+.qx-mark[data-on] .qx-mark-tick { background: #fff; box-shadow: none; }
+.qx-mark[data-on] .qx-mark-tick::after {
+  content: ""; position: absolute; left: 7.5px; top: 4px; width: 6px; height: 11px;
+  border: solid var(--accent); border-width: 0 2.5px 2.5px 0; transform: rotate(45deg);
+  animation: qx-tick 0.35s var(--y-spring) both;
+}
+@keyframes qx-tick { from { transform: rotate(45deg) scale(0); } }
+.qx-step { position: absolute; right: 24px; top: 24px; display: flex; gap: 8px; }
+.qx-step button {
+  width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  background: oklch(1 0 0 / 0.08); color: var(--y-on-night); transition: background 200ms ease, opacity 200ms ease, transform 120ms ease;
+}
+.qx-step button:hover:not(:disabled) { background: oklch(1 0 0 / 0.16); }
+.qx-step button:active:not(:disabled) { transform: scale(0.92); }
+.qx-step button:disabled { opacity: 0.3; cursor: default; }
+
+/* ═══ ʿIlmī: the reading checklist ═════════════════════════════════════════ */
+.y-read-progress { display: flex; align-items: center; gap: 14px; margin-top: 44px; font-size: 16px; color: var(--ink-3); }
+.y-read-progress strong { color: var(--ink); }
+.y .y-reads li { grid-template-columns: 44px minmax(0, 1fr) minmax(0, 1.15fr); column-gap: 0; }
+.y .y-reads .y-check { grid-column: 1; grid-row: 1 / span 2; }
+.y .y-reads .y-read-title, .y .y-reads .y-read-author { grid-column: 2; padding-right: 48px; }
+.y .y-reads .y-read-why { grid-column: 3; grid-row: 1 / span 2; }
+.y-reads li[data-done] .y-read-title { color: var(--ink-3); }
+.y-check {
+  width: 28px; height: 28px; border-radius: 50%; margin-top: 1px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--panel); color: transparent;
+  transition: background 300ms ease, color 300ms ease, transform 140ms ease;
+}
+.y-check:hover { background: var(--panel-2); }
+.y-check:active { transform: scale(0.9); }
+.y-check[aria-pressed="true"] { background: var(--accent); color: #fff; }
+.y-check[aria-pressed="true"] svg { animation: qx-pop 0.4s var(--y-spring) both; }
+@keyframes qx-pop { from { transform: scale(0); } }
+
+/* ═══ ʿIlmī: flashcards ════════════════════════════════════════════════════ */
+.y-deck-ctl { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 28px; margin-top: 40px; font-size: 15px; color: var(--ink-3); }
+.y-deck-ctl span { margin-right: auto; }
+.y-deck-ctl .y-more { font-size: 17px; }
+.y .y-terms { margin-top: 28px; }
+.y-card { display: block; width: 100%; height: 230px; perspective: 1200px; text-align: left; }
+.y-card-in { position: relative; display: block; width: 100%; height: 100%; transform-style: preserve-3d; transition: transform 0.8s var(--y-spring); }
+.y-card[data-flipped] .y-card-in { transform: rotateY(180deg); }
+.y-card:active .y-card-in { scale: 0.98; }
+.y-card-face {
+  position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden;
+  display: flex; flex-direction: column; padding: 28px; border-radius: 28px; background: var(--bg);
+}
+.y-card-ar { font-size: 56px; margin-bottom: auto; text-align: left; }
+.y-card-tr { font-family: var(--y-display); font-weight: 700; font-size: 22px; letter-spacing: -0.022em; }
+.y-card-hint { margin-top: 4px; font-size: 13px; color: var(--ink-3); }
+.y-card-back { transform: rotateY(180deg); background: var(--y-night); color: var(--y-on-night); justify-content: space-between; }
+.y-card-back .y-card-tr { color: var(--y-mint); }
+.y-card-en { font-size: 18px; line-height: 1.45; letter-spacing: -0.012em; }
+
+/* ═══ The opening book ═════════════════════════════════════════════════════ */
+.bk-stage[data-open] .bk-front { transform: translateZ(calc(var(--d) / 2)) rotateY(-158deg); }
+.bk-cover-out { position: absolute; inset: 0; border-radius: 2px 5px 5px 2px; overflow: hidden; backface-visibility: hidden; }
+.bk-cover-in {
+  position: absolute; inset: 0; transform: rotateY(180deg); backface-visibility: hidden;
+  border-radius: 5px 2px 2px 5px;
+  background: radial-gradient(circle at 30% 30%, #e3d7b6, #cfc19c);
+  box-shadow: inset 0 0 0 10px #d9ccaa;
+}
+.bk-firstpage {
+  inset: 3px 4px 3px 2px; transform: translateZ(calc(var(--d) / 2 - 1px));
+  background: #fbf8f0; color: #1f1b17;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+  gap: 10px; padding: 28px;
+  box-shadow: inset 6px 0 14px rgba(0, 0, 0, 0.08);
+}
+.bk-fp-bism { font-family: var(--y-arabic); font-size: 20px; color: #3b352d; }
+.bk-fp-ch { font-family: "Source Serif 4", Georgia, serif; font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase; color: #6b6253; margin-top: 18px; }
+.bk-fp-title { font-family: "Source Serif 4", Georgia, serif; font-size: 22px; line-height: 1.2; font-weight: 600; }
+.bk-fp-rule { width: 40px; height: 1px; background: #a99f8c; margin: 6px 0; }
+.bk-fp-note { font-family: var(--y-text); font-size: 11px; color: #6b6253; }
+.bk-stage--compact .bk-fp-title { font-size: 16px; }
+.bk-stage--compact .bk-fp-bism { font-size: 15px; }
+.bk-stage:focus-visible { outline: none; }
+.bk-stage:focus-visible .bk-shadow { background: radial-gradient(ellipse at center, var(--accent), transparent 70%); }
+.bk-hint { margin-top: 4px; font-size: 13px; color: color-mix(in oklch, var(--y-on-night) 50%, transparent); text-align: center; }
+
+@media (max-width: 860px) {
+  .qx-body { grid-template-columns: 1fr; }
+  .qx-list { flex-direction: row; overflow-x: auto; scrollbar-width: none; gap: 6px; }
+  .qx-list::-webkit-scrollbar { display: none; }
+  .qx-list button { grid-template-columns: auto auto 8px; white-space: nowrap; }
+  .qx-seg { min-width: 0; width: 100%; }
+  .qx-seg button { font-size: 12.5px; padding: 10px 4px; }
+  .qx-step { position: static; margin-top: 28px; }
+  .qx-panel { min-height: 0; }
+}
+@media (max-width: 720px) {
+  .y .y-reads li { grid-template-columns: 44px minmax(0, 1fr); }
+  .y .y-reads .y-read-title, .y .y-reads .y-read-author { padding-right: 0; }
+  .y .y-reads .y-read-why { grid-column: 2; grid-row: auto; margin-top: 8px; }
+  .y-scroll-cue { display: none; }
+}
