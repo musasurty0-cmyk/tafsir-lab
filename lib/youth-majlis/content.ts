@@ -13,11 +13,17 @@
 
 export const SHAYKH = "Shaykh Omid Azizi";
 
-/** Which Level 1 module the cohort is studying now. */
-export const CURRENT_MODULE = 1;
+/** Which Level 1 module the cohort is studying now. Al-Fātiḥah, al-Muzzammil
+ *  and al-Furqān are done; al-Ṣaff is under way. */
+export const CURRENT_MODULE = 4;
 
-/** The next gathering. ISO date-time in UK time, or null until it is set. */
-export const NEXT_MAJLIS: { when: string; where?: string } | null = null;
+/** The next gathering, or null until it is set. `date` is the UK calendar
+ *  date; `time` ("17:30–21:00") only once it is fixed — no time is shown until then. */
+export const NEXT_MAJLIS: { date: string; time?: string; note?: string; where?: string } | null = {
+  date: "2026-11-01",
+  time: "17:30–21:00",
+  note: "Third session on Sūrah al-Ṣaff.",
+};
 
 export const AIM =
   "To study the Noble Qur’an and seek its guidance and direction on contemporary issues and dilemmas affecting Muslim youth, the Muslim community and wider society.";

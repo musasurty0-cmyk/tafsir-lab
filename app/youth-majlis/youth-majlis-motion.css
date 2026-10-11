@@ -95,6 +95,7 @@
 /* ── Journey rail: progress on each tile, arrows beneath ── */
 .y-tile-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .y-tile-top .y-ring-n { font-size: 11px; }
+.y-tile-done { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--accent); color: #fff; }
 .y-rail-ctl { display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px; }
 .y-rail-ctl button {
   width: 40px; height: 40px; border-radius: 50%;

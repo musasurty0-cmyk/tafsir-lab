@@ -20,7 +20,12 @@ function Tile({ m, current, total }: { m: M; current: number; total: number }) {
     <a href={`#module-${m.n}`} className="y-tile" role="listitem" data-current={m.n === current ? "" : undefined} data-reveal data-reveal-i={m.n - 1}>
       <span className="y-tile-top">
         <span className="y-tile-state">{state}</span>
-        <Ring value={explored.length} max={total} size={34} stroke={3.5} label={`${explored.length} of ${total} questions explored`} />
+        {/* A module the cohort has finished gets a tick, not an empty ring:
+            the ring tracks your own question-by-question work, and "0" on a
+            completed module reads as though nothing was done. */}
+        {m.n < current
+          ? <span className="y-tile-done" aria-label="Completed"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></span>
+          : <Ring value={explored.length} max={total} size={34} stroke={3.5} label={`${explored.length} of ${total} questions explored`} />}
       </span>
       <span className="y-tile-ar" lang="ar" dir="rtl">{m.surahAr}</span>
       <span className="y-tile-name">{m.surahEn}</span>
@@ -43,6 +48,12 @@ export default function JourneyRail({ modules, levels, current, total }: {
       start: el.scrollLeft < 8,
       end:   el.scrollLeft + el.clientWidth > el.scrollWidth - 8,
     });
+    /* Open on the module being studied, not on the first one: by al-Ṣaff the
+       current tile is off the right edge of the screen. */
+    const cur = el.querySelector<HTMLElement>(".y-tile[data-current]");
+    if (cur && cur.offsetLeft + cur.offsetWidth > el.clientWidth) {
+      el.scrollLeft = cur.offsetLeft - parseFloat(getComputedStyle(el).paddingLeft || "0");
+    }
     update();
     el.addEventListener("scroll", update, { passive: true });
     addEventListener("resize", update);

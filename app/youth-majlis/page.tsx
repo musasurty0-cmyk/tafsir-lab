@@ -34,14 +34,17 @@ const list = (xs: string[]) => xs.join(", ").replace(/, ([^,]*)$/, " and $1");
 
 function nextMajlis(): { when: string; detail: string } {
   if (!NEXT_MAJLIS) return { when: "Date to be announced.", detail: `With ${SHAYKH}.` };
-  const d = new Date(NEXT_MAJLIS.when);
+  const { date, time, note, where } = NEXT_MAJLIS;
+  // Midday UTC keeps the calendar date the same in London whatever the season.
+  const day = new Date(`${date}T12:00:00Z`);
   const when = new Intl.DateTimeFormat("en-GB", {
-    weekday: "long", day: "numeric", month: "long", hour: "numeric", minute: "2-digit",
-    timeZone: "Europe/London",
-  }).format(d);
-  const days = Math.ceil((d.getTime() - Date.now()) / 86_400_000);
+    weekday: "long", day: "numeric", month: "long", timeZone: "Europe/London",
+  }).format(day) + (time ? `, ${time}` : "");
+  // Whole days between today's London date and the Majlis.
+  const todayLondon = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London" }).format(new Date());
+  const days = Math.round((Date.parse(date) - Date.parse(todayLondon)) / 86_400_000);
   const away = days > 1 ? `In ${days} days.` : days === 1 ? "Tomorrow." : days === 0 ? "Today." : "";
-  return { when: `${when}.`, detail: [away, `With ${SHAYKH}.`, NEXT_MAJLIS.where].filter(Boolean).join(" ") };
+  return { when: `${when}.`, detail: [note, away, `With ${SHAYKH}.`, where].filter(Boolean).join(" ") };
 }
 
 /** A heading whose words rise in one after another as it scrolls into view. */
