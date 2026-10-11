@@ -85,6 +85,8 @@ export async function POST(req: NextRequest) {
         const data = {
           date: date(b.date), startTime: time(b.startTime), endTime: time(b.endTime), venue: str(b.venue, 120),
           ayahFrom: int(b.ayahFrom, 1, 286), ayahTo: int(b.ayahTo, 1, 286),
+          studyBy: b.studyBy === "points" ? "points" : "ayat",
+          pointFrom: int(b.pointFrom, 1, 10), pointTo: int(b.pointTo, 1, 10),
           prep: lines(b.prep, 30, 400).map((text) => ({ text })) as Prisma.InputJsonValue,
           prepDue: date(b.prepDue),
           takeaways: lines(b.takeaways, 12, 600) as Prisma.InputJsonValue,
@@ -94,6 +96,8 @@ export async function POST(req: NextRequest) {
             return { time: time(o.time) ?? "", item: str(o.item, 200) ?? "" };
           }).filter((x) => x.item) as Prisma.InputJsonValue,
         };
+        if (data.pointFrom && data.pointTo && data.pointTo < data.pointFrom) throw new Bad("The last point comes before the first.");
+        if (data.ayahFrom && data.ayahTo && data.ayahTo < data.ayahFrom) throw new Bad("The last āyah comes before the first.");
         if (b.id) {
           const s = await db.youthMajlisSession.update({ where: { id: uuid(b.id) }, data, select: { id: true } });
           return NextResponse.json({ ok: true, id: s.id });

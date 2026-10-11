@@ -36,6 +36,8 @@ export interface SessionView {
   id: string; moduleN: number; seq: number; surah: number; surahEn: string;
   date: string | null; startTime: string | null; endTime: string | null; venue: string | null;
   ayahFrom: number | null; ayahTo: number | null;
+  /** 'ayat': āyah by āyah. 'points': through the notes, point by point. */
+  studyBy: "ayat" | "points"; pointFrom: number | null; pointTo: number | null;
   prep: PrepItem[]; prepDue: string | null; takeaways: string[];
   recordingUrl: string | null; followUp: string | null; agenda: AgendaItem[];
   assignments: AssignmentView[];
@@ -67,6 +69,7 @@ export async function getSessions(): Promise<SessionView[]> {
       id: r.id, moduleN: r.moduleN, seq: r.seq, surah: m?.surah ?? 0, surahEn: m?.surahEn ?? "",
       date: ymd(r.date), startTime: r.startTime, endTime: r.endTime, venue: r.venue,
       ayahFrom: r.ayahFrom, ayahTo: r.ayahTo,
+      studyBy: r.studyBy === "points" ? "points" : "ayat", pointFrom: r.pointFrom, pointTo: r.pointTo,
       prep: arr(r.prep, isPrep), prepDue: ymd(r.prepDue), takeaways: arr(r.takeaways, isStr),
       recordingUrl: r.recordingUrl, followUp: r.followUp, agenda: arr(r.agenda, isAgenda),
       assignments: r.assignments.map((a) => ({
@@ -76,6 +79,25 @@ export async function getSessions(): Promise<SessionView[]> {
       })),
     };
   });
+}
+
+/** What a session goes through, in words: "Āyāt 1–4", "Points 1–5", or null. */
+export function sessionScope(s: Pick<SessionView, "studyBy" | "ayahFrom" | "ayahTo" | "pointFrom" | "pointTo">): string | null {
+  if (s.studyBy === "points") {
+    if (!s.pointFrom) return "Through the ten points";
+    const to = s.pointTo && s.pointTo !== s.pointFrom ? s.pointTo : null;
+    return to ? `Points ${s.pointFrom}–${to}` : `Point ${s.pointFrom}`;
+  }
+  if (!s.ayahFrom) return null;
+  const to = s.ayahTo && s.ayahTo !== s.ayahFrom ? s.ayahTo : null;
+  return to ? `Āyāt ${s.ayahFrom}–${to}` : `Āyah ${s.ayahFrom}`;
+}
+
+/** The points a session covers, when it goes through the notes. */
+export function sessionPoints(s: Pick<SessionView, "studyBy" | "pointFrom" | "pointTo">): Set<number> {
+  if (s.studyBy !== "points") return new Set();
+  const from = s.pointFrom ?? 1, to = s.pointTo ?? (s.pointFrom ? s.pointFrom : 10);
+  return new Set(Array.from({ length: Math.max(0, to - from + 1) }, (_, i) => from + i));
 }
 
 /** The next gathering: the first dated session from today on. */

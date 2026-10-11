@@ -46,6 +46,7 @@ model User {
   friendshipsRecvd Friendship[]           @relation("FriendAddressee")
   youthMajlis      YouthMajlisProgress?
   youthAssignments YouthMajlisAssignee[]
+  demoPresence     DemoPresence?
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -602,6 +603,10 @@ model YouthMajlisSession {
   venue        String?
   ayahFrom     Int?
   ayahTo       Int?
+  /// 'ayat' — āyah by āyah; 'points' — through the notes, point by point (prisma/sql/009)
+  studyBy      String    @default("ayat")
+  pointFrom    Int?
+  pointTo      Int?
   /// [{ text: string }]
   prep         Json      @default("[]")
   prepDue      DateTime? @db.Date
@@ -652,4 +657,13 @@ model YouthMajlisSettings {
   id        String   @id
   data      Json     @default("{}")
   updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+}
+
+/// An open demo checks in; closing it stamps closedAt (prisma/sql/009).
+model DemoPresence {
+  userId   String    @id @db.Uuid
+  seenAt   DateTime  @default(now()) @db.Timestamptz(6)
+  closedAt DateTime? @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

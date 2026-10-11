@@ -6,7 +6,8 @@
  *
  * The account, its seeded Tutorial Workspace and the browser-session cookie
  * are all created by provisionDemoSession(), shared with the public tour entry
- * at /api/beta/start. Demo data is discarded after 24 hours.
+ * at /api/beta/start. The account is deleted once its tab is closed (see
+ * /api/auth/demo/presence), and never lasts more than 24 hours.
  */
 
 import { NextRequest, NextResponse } from "next/server";

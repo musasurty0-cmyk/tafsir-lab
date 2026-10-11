@@ -110,6 +110,12 @@
 .qx-status[data-state="written"] { color: var(--y-on-night); }
 .qx-status[data-state="written"] .qx-status-dot { background: var(--y-mint); }
 
+/* ── What the next session goes through ── */
+.y-when-scope { margin-top: 10px; font-size: 16px; font-weight: 600; color: var(--accent-ink); }
+.y-points-list a[data-focus] { background: var(--accent-soft); }
+.y-points-list a[data-focus]:hover { background: color-mix(in oklch, var(--accent) 16%, transparent); }
+.y-pt-focus { margin-left: 10px; font-size: 12px; font-weight: 700; color: var(--accent-ink); white-space: nowrap; }
+
 @media (max-width: 900px) {
   .y-sess-list { grid-template-columns: 1fr 1fr; }
 }

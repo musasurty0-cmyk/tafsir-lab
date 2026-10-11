@@ -103,6 +103,12 @@
 }
 .og-pick[aria-pressed="true"] { background: var(--accent); color: #fff; }
 
+/* ── Āyah by āyah / point by point ── */
+.og-by { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.og-by-label { font-size: 13px; font-weight: 600; color: var(--ink-2); margin-right: 6px; }
+.og-by button { padding: 8px 14px; border-radius: 10px; background: var(--bg); font-size: 14px; font-weight: 500; transition: background 200ms ease, color 200ms ease; }
+.og-by button[aria-checked="true"] { background: var(--accent); color: #fff; }
+
 /* ── Assignments ── */
 .og-assign { margin-top: 16px; display: flex; flex-direction: column; gap: 8px; }
 .og-assign > li:not(.og-empty) {

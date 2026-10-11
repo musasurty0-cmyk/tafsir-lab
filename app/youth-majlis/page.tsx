@@ -26,7 +26,7 @@ import { hasAccess } from "@/lib/youth-majlis/gate";
 import { getSessionOrNull } from "@/lib/session";
 import {
   currentModule, daysUntil, getSessions, getSettings, joinCohort, londonToday, longDate,
-  moduleDone, nextSession, tabStats, writtenCount, type SessionView, type TabStat,
+  moduleDone, nextSession, sessionPoints, sessionScope, tabStats, writtenCount, type SessionView, type TabStat,
 } from "@/lib/youth-majlis/data";
 import {
   AIM, AIM_DETAIL, AREAS, COHORT, LEVELS, METHOD, MODULES, QUESTIONS, SHAYKH, TAB_TITLES,
@@ -39,6 +39,14 @@ const away = (date: string) => {
 };
 const ayat = (s: { ayahFrom: number | null; ayahTo: number | null }) =>
   s.ayahFrom ? `Āyāt ${s.ayahFrom}${s.ayahTo && s.ayahTo !== s.ayahFrom ? `–${s.ayahTo}` : ""}` : null;
+/** "Points 1–5: Names of The Surah to Language and Style." */
+function pointsLine(s: SessionView): string | null {
+  if (s.studyBy !== "points") return null;
+  const pts = [...sessionPoints(s)];
+  if (!pts.length) return null;
+  const name = (n: number) => TAB_TITLES[n - 1].replace(/^\d+\.\s*/, "");
+  return pts.length === 1 ? `${sessionScope(s)}: ${name(pts[0])}` : `${sessionScope(s)}: ${name(pts[0])} to ${name(pts[pts.length - 1])}`;
+}
 const pointName = (n: number) => TAB_TITLES[n - 1];
 
 /** A heading whose words rise in one after another as it scrolls into view. */
@@ -90,6 +98,7 @@ export default async function YouthMajlisPage() {
     counts[m.n] = sessions.filter((s) => s.moduleN === m.n).length;
   }
   const written = me ? Object.fromEntries(MODULES.map((m) => [m.n, writtenCount(stats[m.n])])) : null;
+  const inScope = next ? sessionPoints(next) : new Set<number>();
   const myAssignments = next && account
     ? next.assignments.filter((a) => a.assignees.some((x) => x.userId === account.userId)) : [];
   const slim = MODULES.map(({ n, surah, surahEn, surahAr, title }) => ({ n, surah, surahEn, surahAr, title }));
@@ -142,6 +151,7 @@ export default async function YouthMajlisPage() {
                   {next.venue && <a href={mapHref(next.venue)} target="_blank" rel="noreferrer">{next.venue}</a>}
                   {!tonight && <span>{away(next.date!)}</span>}
                 </p>
+                {sessionScope(next) && <p className="y-when-scope">{pointsLine(next) ?? sessionScope(next)}</p>}
                 <div className="y-cta">
                   <a className="y-btn" href={`/youth-majlis/open/${current.surah}`}>Open {current.surahEn} in TafsirLab</a>
                   <a className="y-more" href={`/youth-majlis/calendar/${next.id}`}>Add to calendar</a>
@@ -236,9 +246,9 @@ export default async function YouthMajlisPage() {
                 <ol className="y-points-list">
                   {stats[modN].map((t) => (
                     <li key={t.n}>
-                      <a href={`/youth-majlis/open/${current.surah}?point=${t.n}`} data-state={t.state}>
+                      <a href={`/youth-majlis/open/${current.surah}?point=${t.n}`} data-state={t.state} data-focus={inScope.has(t.n) ? "" : undefined}>
                         <span className="y-pt-dot" aria-hidden />
-                        <span className="y-pt-title">{t.title}</span>
+                        <span className="y-pt-title">{t.title}{inScope.has(t.n) && <span className="y-pt-focus">This session</span>}</span>
                         <span className="y-pt-meta">{t.state === "empty" ? "Not started" : `${t.words} words${t.notes ? `, ${t.notes} notes` : ""}`}</span>
                       </a>
                     </li>
@@ -394,7 +404,7 @@ function SessionCard({ s, isNext }: { s: SessionView; isNext: boolean }) {
         <span className="y-sess-n">Session {s.seq}</span>
         <span className="y-sess-date">{s.date ? longDate(s.date, false) : "Date not recorded"}</span>
         {isNext && <span className="y-sess-tag">Next</span>}
-        {ayat(s) && <span className="y-sess-ayat">{ayat(s)}</span>}
+        {sessionScope(s) && <span className="y-sess-ayat">{sessionScope(s)}</span>}
       </div>
       {s.takeaways.length > 0 && (
         <ol className="y-sess-takeaways" aria-label="Shaykh’s takeaways">

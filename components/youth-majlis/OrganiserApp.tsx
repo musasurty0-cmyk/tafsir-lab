@@ -11,7 +11,24 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { MemberView, SessionView, AssignmentView, Settings } from "@/lib/youth-majlis/data";
 
+/** The same words the portal uses, without importing server code. */
+function scopeText(s: SessionView): string | null {
+  if (s.studyBy === "points") {
+    if (!s.pointFrom) return "The ten points";
+    return s.pointTo && s.pointTo !== s.pointFrom ? `Points ${s.pointFrom}–${s.pointTo}` : `Point ${s.pointFrom}`;
+  }
+  if (!s.ayahFrom) return null;
+  return s.ayahTo && s.ayahTo !== s.ayahFrom ? `Āyāt ${s.ayahFrom}–${s.ayahTo}` : `Āyah ${s.ayahFrom}`;
+}
+
 type Mod = { n: number; surahEn: string; surah: number };
+
+/** The ten points, as the cohort titles its tabs. */
+const POINTS = [
+  "1. Names of The Surah", "2. Merits and Virtues", "3. Time of Revelation", "4. Reason for Revelation",
+  "5. Language and Style", "6. Structure and Order", "7. Core Message", "8. Jurisprudential Rulings",
+  "9. Personal Reflections", "10. Actions Plan",
+];
 
 /** The running order from the cohort's own plan for the evening. */
 const STANDARD_AGENDA = [
@@ -181,6 +198,7 @@ function SessionRow({ s, isNext, run }: { s: SessionView; isNext: boolean; run: 
         <span className="og-row-date">{fmt(s.date)}</span>
         <span className="og-row-meta">
           {isNext && <span className="og-chip og-chip--accent">Next</span>}
+          {scopeText(s) && <span className="og-chip">{scopeText(s)}</span>}
           {s.takeaways.length > 0 && <span className="og-chip">{s.takeaways.length} takeaways</span>}
           {s.recordingUrl && <span className="og-chip">Recording</span>}
           {s.prep.length > 0 && <span className="og-chip">Prep pack</span>}
@@ -207,12 +225,13 @@ function SessionForm({ s, moduleN, run, onDone }: {
   const [f, setF] = useState({
     date: s?.date ?? "", startTime: s?.startTime ?? "17:30", endTime: s?.endTime ?? "21:00", venue: s?.venue ?? "",
     ayahFrom: s?.ayahFrom?.toString() ?? "", ayahTo: s?.ayahTo?.toString() ?? "",
+    studyBy: s?.studyBy ?? "ayat", pointFrom: s?.pointFrom?.toString() ?? "1", pointTo: s?.pointTo?.toString() ?? "10",
     prep: (s?.prep ?? []).map((p) => p.text).join("\n"), prepDue: s?.prepDue ?? "",
     takeaways: (s?.takeaways ?? []).join("\n"), recordingUrl: s?.recordingUrl ?? "", followUp: s?.followUp ?? "",
     agenda: (s?.agenda ?? []).map((a) => `${a.time} ${a.item}`.trim()).join("\n"),
   });
   const [busy, setBusy] = useState(false);
-  const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setF({ ...f, [k]: e.target.value });
+  const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => setF({ ...f, [k]: e.target.value });
   const split = (t: string) => t.split("\n").map((x) => x.trim()).filter(Boolean);
 
   async function save(e: React.FormEvent) {
@@ -221,7 +240,11 @@ function SessionForm({ s, moduleN, run, onDone }: {
     const ok = await run({
       action: "session.save", id: s?.id, moduleN: s?.moduleN ?? moduleN,
       date: f.date || null, startTime: f.startTime || null, endTime: f.endTime || null, venue: f.venue,
-      ayahFrom: f.ayahFrom || null, ayahTo: f.ayahTo || null,
+      ayahFrom: f.studyBy === "ayat" ? f.ayahFrom || null : null,
+      ayahTo: f.studyBy === "ayat" ? f.ayahTo || null : null,
+      studyBy: f.studyBy,
+      pointFrom: f.studyBy === "points" ? f.pointFrom || null : null,
+      pointTo: f.studyBy === "points" ? f.pointTo || null : null,
       prep: split(f.prep), prepDue: f.prepDue || null, takeaways: split(f.takeaways),
       recordingUrl: f.recordingUrl, followUp: f.followUp,
       agenda: split(f.agenda).map((l) => { const m = /^(\d{1,2}:\d{2})\s+(.*)$/.exec(l); return m ? { time: m[1].padStart(5, "0"), item: m[2] } : { time: "", item: l }; }),
@@ -238,9 +261,31 @@ function SessionForm({ s, moduleN, run, onDone }: {
         <label>Ends<input type="time" value={f.endTime} onChange={set("endTime")} /></label>
         <label>Venue<input value={f.venue} onChange={set("venue")} placeholder="Postcode or place" /></label>
       </div>
+      <div className="og-by" role="radiogroup" aria-label="How this session goes through the sūrah">
+        <span className="og-by-label">Go through it</span>
+        <button type="button" role="radio" aria-checked={f.studyBy === "ayat"} onClick={() => setF({ ...f, studyBy: "ayat" })}>Āyah by āyah</button>
+        <button type="button" role="radio" aria-checked={f.studyBy === "points"} onClick={() => setF({ ...f, studyBy: "points" })}>Point by point (1–10)</button>
+      </div>
       <div className="og-fields og-fields--4">
-        <label>From āyah<input inputMode="numeric" value={f.ayahFrom} onChange={set("ayahFrom")} /></label>
-        <label>To āyah<input inputMode="numeric" value={f.ayahTo} onChange={set("ayahTo")} /></label>
+        {f.studyBy === "ayat" ? (
+          <>
+            <label>From āyah<input inputMode="numeric" value={f.ayahFrom} onChange={set("ayahFrom")} /></label>
+            <label>To āyah<input inputMode="numeric" value={f.ayahTo} onChange={set("ayahTo")} /></label>
+          </>
+        ) : (
+          <>
+            <label>From point
+              <select value={f.pointFrom} onChange={set("pointFrom")}>
+                {POINTS.map((t, i) => <option key={t} value={i + 1}>{t}</option>)}
+              </select>
+            </label>
+            <label>To point
+              <select value={f.pointTo} onChange={set("pointTo")}>
+                {POINTS.map((t, i) => <option key={t} value={i + 1}>{t}</option>)}
+              </select>
+            </label>
+          </>
+        )}
         <label className="og-span2">Prep due by<input type="date" value={f.prepDue} onChange={set("prepDue")} /></label>
       </div>
       <label>Prep pack <span>One item per line: what to read, listen to or bring.</span>

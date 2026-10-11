@@ -14,6 +14,7 @@
  */
 
 import { randomUUID } from "crypto";
+import { cookies } from "next/headers";
 import { db } from "@/lib/db";
 import { createSession } from "@/lib/session";
 import * as WorkspacesService from "@/lib/services/workspaces.service";
@@ -43,26 +44,82 @@ export class DemoBusyError extends Error {
   }
 }
 
+/** A readable, non-secret flag telling the browser this is a demo, so it can
+ *  check in and say goodbye. The session itself stays in the httpOnly cookie. */
+export const DEMO_FLAG = "tl-demo";
+
+export const isDemoEmail = (email: string) => email.endsWith(`@${DEMO_DOMAIN}`);
+
 /**
- * Discard demo accounts older than 24h. Best-effort and deliberately quiet:
- * a demo user who wrote a note inside somebody else's workspace cannot be
- * deleted (StructuredNote.author has no cascade), and that is correct — the
- * note outranks the cleanup.
+ * Delete a demo account and everything it made.
+ *
+ * Several relations to User do not cascade (logs, templates, the page/note/
+ * drawing author, segments, connections, group progress), so a bare
+ * user.delete fails — which is why demo accounts used to linger. They are
+ * removed explicitly, inside the account's own workspaces, in one
+ * transaction. If the demo ever wrote into SOMEONE ELSE's workspace it is
+ * left alone: that writing outranks the cleanup.
+ *
+ * Refuses anything that is not a demo account, whatever it is passed.
  */
-async function discardStaleDemos(): Promise<void> {
-  const stale = await db.user.findMany({
+export async function deleteDemoUser(userId: string): Promise<boolean> {
+  const user = await db.user.findUnique({ where: { id: userId }, select: { email: true } });
+  if (!user || !isDemoEmail(user.email)) return false;
+
+  const own = (await db.workspace.findMany({ where: { ownerId: userId }, select: { id: true } })).map((w) => w.id);
+  const outside = { workspaceSurah: { workspaceId: { notIn: own } } };
+  const foreign =
+    (await db.structuredNote.count({ where: { authorId: userId, page: outside } })) +
+    (await db.canvasDrawing.count({ where: { authorId: userId, page: outside } })) +
+    (await db.page.count({ where: { createdById: userId, ...outside } })) +
+    (await db.quranSegment.count({ where: { createdById: userId, workspaceId: { notIn: own } } })) +
+    (await db.quranConnection.count({ where: { createdById: userId, workspaceId: { notIn: own } } }));
+  if (foreign > 0) return false;
+
+  try {
+    await db.$transaction([
+      db.activityLog.deleteMany({ where: { userId } }),
+      db.groupAyahProgress.deleteMany({ where: { lastChangedBy: userId } }),
+      db.pageTemplate.deleteMany({ where: { createdById: userId } }),
+      db.workspace.deleteMany({ where: { ownerId: userId } }),   // pages, notes, ink, segments… go with them
+      db.user.delete({ where: { id: userId } }),
+    ]);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** A demo whose tab was closed and not reopened within this long is gone. */
+const CLOSED_GRACE_MS = 60 * 1000;
+/** An open demo checks in every 15s; silent for this long, it is gone. */
+const SILENT_MS = 10 * 60 * 1000;
+
+/**
+ * Discard finished demos: closed and not reopened, silent for ten minutes,
+ * never checked in at all after fifteen, or simply older than a day.
+ * Best-effort and quiet; runs whenever any demo starts, checks in or closes,
+ * so a closed demo does not wait for a cron.
+ */
+export async function purgeDemos(except?: string): Promise<number> {
+  const now = Date.now();
+  const finished = await db.user.findMany({
     where: {
-      email:     { endsWith: `@${DEMO_DOMAIN}` },
-      createdAt: { lt: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+      email: { endsWith: `@${DEMO_DOMAIN}` },
+      ...(except ? { id: { not: except } } : {}),
+      OR: [
+        { demoPresence: { closedAt: { lt: new Date(now - CLOSED_GRACE_MS) } } },
+        { demoPresence: { seenAt: { lt: new Date(now - SILENT_MS) } } },
+        { demoPresence: null, createdAt: { lt: new Date(now - 15 * 60 * 1000) } },
+        { createdAt: { lt: new Date(now - 24 * 60 * 60 * 1000) } },
+      ],
     },
     select: { id: true },
+    take: 50,
   });
-  for (const u of stale) {
-    try {
-      await db.workspace.deleteMany({ where: { ownerId: u.id } });
-      await db.user.delete({ where: { id: u.id } });
-    } catch { /* has data outside their own workspaces — leave them */ }
-  }
+  let n = 0;
+  for (const u of finished) if (await deleteDemoUser(u.id)) n++;
+  return n;
 }
 
 export async function provisionDemoSession(): Promise<DemoSession> {
@@ -74,11 +131,12 @@ export async function provisionDemoSession(): Promise<DemoSession> {
   });
   if (recent >= MAX_NEW_DEMOS_PER_MINUTE) throw new DemoBusyError();
 
-  await discardStaleDemos();
+  await purgeDemos();
 
   const user = await db.user.create({
     data: { email: `demo-${randomUUID()}@${DEMO_DOMAIN}`, name: "Demo Guest" },
   });
+  await db.demoPresence.create({ data: { userId: user.id } });
 
   const ws = await WorkspacesService.createWorkspace(
     user.id, "Tutorial Workspace", "private", "study",
@@ -106,6 +164,8 @@ export async function provisionDemoSession(): Promise<DemoSession> {
 
   // Browser-session cookie: the demo ends when the browser closes.
   await createSession(user.id, { ephemeral: true });
+  // The flag the page reads to check in, and to say goodbye when it closes.
+  (await cookies()).set(DEMO_FLAG, "1", { path: "/", sameSite: "lax" });
 
   return { userId: user.id, workspaceId: ws.id, pageId };
 }
