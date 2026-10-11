@@ -78,7 +78,6 @@ export default async function YouthMajlisPage() {
   const [sessions, settings, account] = await Promise.all([getSessions(), getSettings(), getSessionOrNull()]);
   const me = account ? await joinCohort(account.userId) : null;
   const organiser = me?.role === "organiser";
-  const ilmiOpen = await hasAccess("ilmi");
 
   const next = nextSession(sessions);
   const modN = currentModule(sessions);
@@ -381,7 +380,7 @@ export default async function YouthMajlisPage() {
               <p className="y-kicker y-kicker--light" data-reveal>ʿIlmī</p>
               <Words id="y-i-h" className="y-h2" text="Uṣūl al-Fiqh." />
               <div className="y-cta y-cta--left" data-reveal>
-                <IlmiEnter unlocked={ilmiOpen} />
+                <IlmiEnter />
               </div>
             </div>
           </div>

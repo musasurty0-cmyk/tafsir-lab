@@ -71,7 +71,8 @@ export async function unlock(area: GateArea, typed: string): Promise<boolean> {
     secure:   process.env.NODE_ENV === "production",
     sameSite: "lax",
     path:     "/",
-    maxAge:   MAX_AGE,
+    // The portal is remembered for a term; ʿIlmī only until the browser closes.
+    ...(area === "majlis" ? { maxAge: MAX_AGE } : {}),
   });
   return true;
 }

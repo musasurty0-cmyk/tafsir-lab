@@ -1,16 +1,16 @@
 "use client";
 
 /**
- * "Enter ʿIlmī". If this device has already given the ʿIlmī password it simply
- * goes in; otherwise a sheet rises asking for it, on the page you are already
- * on, and on the right password carries straight through. Escape, the close
+ * "Enter ʿIlmī". A sheet rises asking for the ʿIlmī password every time, on
+ * the page you are already on, and on the right password carries straight
+ * through. Escape, the close
  * button or a tap outside put it away.
  */
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
-export default function IlmiEnter({ unlocked }: { unlocked: boolean }) {
+export default function IlmiEnter() {
   const router = useRouter();
   const [open, setOpen]   = useState(false);
   const [value, setValue] = useState("");
@@ -27,7 +27,6 @@ export default function IlmiEnter({ unlocked }: { unlocked: boolean }) {
   }, [open]);
 
   function enter() {
-    if (unlocked) { router.push("/youth-majlis/ilmi"); return; }
     setValue(""); setError(null); setOpen(true);
   }
 
