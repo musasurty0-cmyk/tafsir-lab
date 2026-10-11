@@ -28,7 +28,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const surah = a ? MODULES.find((m) => m.n === a.session.moduleN)?.surah : undefined;
   if (!a || !surah) return to("/youth-majlis");
 
-  await joinCohort(session.userId);   // also adds them to the cohort workspace
+  // Also adds them to the cohort workspace. Null: the account is gone.
+  if (!(await joinCohort(session.userId))) return to("/login");
   const { cohortWorkspaceId } = await getSettings();
   const member = cohortWorkspaceId
     ? await db.workspaceMember.findUnique({

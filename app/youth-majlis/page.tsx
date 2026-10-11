@@ -23,6 +23,7 @@ import JourneyRail, { type TileState } from "@/components/youth-majlis/JourneyRa
 import QuestionExplorer from "@/components/youth-majlis/QuestionExplorer";
 import IlmiEnter from "@/components/youth-majlis/IlmiEnter";
 import { hasAccess } from "@/lib/youth-majlis/gate";
+import { modulesWithNotes } from "@/lib/youth-majlis/notes";
 import { getSessionOrNull } from "@/lib/session";
 import {
   currentModule, daysUntil, getSessions, getSettings, joinCohort, londonToday, longDate,
@@ -75,8 +76,10 @@ export default async function YouthMajlisPage() {
   }
 
   // ── What the page knows ──
-  const [sessions, settings, account] = await Promise.all([getSessions(), getSettings(), getSessionOrNull()]);
-  const me = account ? await joinCohort(account.userId) : null;
+  const [sessions, settings, session, withNotes] = await Promise.all([getSessions(), getSettings(), getSessionOrNull(), modulesWithNotes()]);
+  const me = session ? await joinCohort(session.userId) : null;
+  // A session whose account is gone (a closed demo) counts as signed out.
+  const account = me ? session : null;
   const organiser = me?.role === "organiser";
 
   const next = nextSession(sessions);
@@ -274,7 +277,10 @@ export default async function YouthMajlisPage() {
             <p className="y-h2-sub" data-reveal>What was covered, and what Shaykh Omid wanted us to keep.</p>
             {[...MODULES].reverse().filter((m) => counts[m.n]).map((m) => (
               <div key={m.n} className="y-sess-mod" data-reveal>
-                <h3 className="y-sess-mod-h"><span lang="ar" dir="rtl">{m.surahAr}</span> Sūrah {m.surahEn}</h3>
+                <h3 className="y-sess-mod-h">
+                  <span lang="ar" dir="rtl">{m.surahAr}</span> Sūrah {m.surahEn}
+                  {withNotes.has(m.n) && <Link className="y-more y-notes-link" href={`/youth-majlis/notes/${m.n}`}>Class notes</Link>}
+                </h3>
                 <ol className="y-sess-list">
                   {sessions.filter((s) => s.moduleN === m.n).map((s) => <SessionCard key={s.id} s={s} isNext={s.id === next?.id} />)}
                 </ol>
@@ -297,7 +303,9 @@ export default async function YouthMajlisPage() {
                   </ul>
                   <div className="y-cta y-cta--left" data-reveal>
                     <a className="y-btn" href={`/youth-majlis/open/${m.surah}`}>Open in TafsirLab</a>
-                    <a className="y-more" href="#method">The ten questions</a>
+                    {withNotes.has(m.n)
+                      ? <Link className="y-more" href={`/youth-majlis/notes/${m.n}`}>Read the class notes</Link>
+                      : <a className="y-more" href="#method">The ten questions</a>}
                   </div>
                 </div>
                 <div className="y-module-side">

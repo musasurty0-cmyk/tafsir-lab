@@ -30,7 +30,7 @@ export async function GET(
   const session = await getSessionOrNull();
   if (!session) return to("/login");
 
-  await joinCohort(session.userId);
+  if (!(await joinCohort(session.userId))) return to("/login");   // the account is gone
   const workspaceId = await personalWorkspace(session.userId);
   const tabs = await surahWithTabs(workspaceId, surah, session.userId);
   const pageId = tabs.get(point) ?? tabs.get(1);

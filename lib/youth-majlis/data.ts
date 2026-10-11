@@ -145,12 +145,20 @@ export async function saveSettings(patch: Settings): Promise<void> {
 
 export type Role = "student" | "organiser" | "left";
 
-/** A signed-in visitor through the gate is in the cohort. Never demotes. */
-export async function joinCohort(userId: string): Promise<{ role: Role; workspaceId: string | null }> {
+/**
+ * A signed-in visitor through the gate is in the cohort. Never demotes.
+ * Null when the account behind the session no longer exists (a closed demo
+ * whose cookie outlived it): such a visitor is treated as signed out.
+ */
+export async function joinCohort(userId: string): Promise<{ role: Role; workspaceId: string | null } | null> {
   const row = await db.youthMajlisProgress.upsert({
     where: { userId }, create: { userId }, update: {},
     select: { role: true, workspaceId: true },
+  }).catch((e: { code?: string }) => {
+    if (e?.code === "P2003") return null;   // no such user
+    throw e;
   });
+  if (!row) return null;
   // Belong to the shared cohort workspace too, once there is one.
   const { cohortWorkspaceId } = await getSettings();
   if (cohortWorkspaceId && row.role !== "left") {

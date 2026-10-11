@@ -659,6 +659,13 @@ model YouthMajlisSettings {
   updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz(6)
 }
 
+/// The compiled class notes, one row per module; 0 holds the sources (prisma/sql/010).
+model YouthMajlisNote {
+  moduleN   Int      @id
+  data      Json     @default("{}")
+  updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+}
+
 /// An open demo checks in; closing it stamps closedAt (prisma/sql/009).
 model DemoPresence {
   userId   String    @id @db.Uuid
