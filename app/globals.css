@@ -13898,3 +13898,77 @@ body:has(.lab) .mode-b-zoom-controls {
   background: var(--bg-elev); color: var(--ink); font-weight: 500;
   box-shadow: var(--shadow-sm);
 }
+
+/* ═══ Rail and sidebar, refined ══════════════════════════════════════════
+   Larger, calmer tiles in the rail (44px, filled, no outlines or dashes);
+   in the sidebar the workspace name in the serif, a search with its
+   shortcut, a document icon on every page, taller rows, and the open page
+   tinted with a bar of the accent on its leading edge. */
+@media (min-width: 721px) {
+  :root { --rail: 76px; }
+}
+.rail { padding: 16px 0; gap: 10px; }
+.rail-logo { width: 44px; height: 44px; border-radius: 12px; font-size: 20px; margin-bottom: 4px; }
+.rail-btn { width: 44px; height: 44px; border-radius: 12px; }
+.rail-btn[data-active="true"]::before { left: -16px; top: 12px; bottom: 12px; width: 3px; }
+.rail-ws {
+  width: 44px; height: 44px; border-radius: 12px;
+  border: 0; background: var(--panel); color: var(--ink-2);
+  font-size: 14px; font-weight: 600;
+}
+.rail-ws:hover { transform: none; box-shadow: none; background: var(--active); color: var(--ink); }
+.rail-ws[data-active="true"] {
+  background: color-mix(in oklch, var(--ws-tone, var(--accent)) 26%, var(--bg));
+  color: color-mix(in oklch, var(--ws-tone, var(--accent)) 55%, var(--ink));
+  box-shadow: none;
+}
+.rail-btn--add { border: 0; background: var(--panel); color: var(--ink-2); border-radius: 12px; margin-top: 0; }
+.rail-btn--add:hover { background: var(--accent-soft); color: var(--accent-ink); }
+
+.sidebar-head { padding: 18px 12px 16px 20px; min-height: 76px; gap: 4px; }
+.ws-switcher { padding: 6px 8px 6px 4px; gap: 8px; border-radius: 8px; }
+.ws-switcher-name { font-family: var(--font-serif); font-size: 19px; font-weight: 700; letter-spacing: -0.012em; }
+.sidebar-head-btn { width: 34px; height: 34px; border-radius: 9px; flex-shrink: 0; }
+
+.sidebar-search {
+  margin: 12px 12px 4px; height: 44px; padding: 0 10px 0 12px; gap: 10px;
+  border: 0; border-radius: 10px; background: transparent;
+  transition: background var(--dur-fast) ease;
+}
+.sidebar-search:focus-within { background: var(--hover); }
+.sidebar-search input { font-size: 15px; }
+.sidebar-search input::placeholder { color: var(--ink-3); }
+.sidebar-search-kbd {
+  flex-shrink: 0; padding: 2px 7px; border-radius: 6px;
+  border: 1px solid var(--line-strong);
+  font-family: var(--font-sans); font-size: 12px; line-height: 1.4; color: var(--ink-3);
+}
+
+.sidebar-section {
+  padding: 16px 20px 10px 22px;
+  font-size: 13px; font-weight: 500; letter-spacing: 0.02em; text-transform: uppercase;
+  color: var(--ink-2);
+}
+.sidebar-section-title { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.sidebar-section-title svg { color: var(--ink-3); flex-shrink: 0; }
+.sidebar-section-ar { font-family: var(--font-arabic); font-size: 16px; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--ink-2); }
+.sidebar-section-count { font-size: 13px; font-weight: 500; color: var(--ink-3); }
+
+.tree { padding: 2px 10px 20px; }
+.tree-row { border-radius: 9px; font-size: 14.5px; color: var(--ink-2); }
+.tree-row + .tree-row { margin-top: 2px; }
+.tree-row-link { gap: 12px; min-height: 42px; padding: 0 8px 0 14px; }
+.tree-row--pending { min-height: 42px; gap: 12px; padding: 0 14px; }
+.tree-row-icon { flex-shrink: 0; color: var(--ink-3); transition: color var(--dur-fast) ease; }
+.tree-row:hover .tree-row-icon { color: var(--ink-2); }
+.tree-row[data-active="true"] {
+  background: color-mix(in oklch, var(--accent) 15%, var(--bg));
+  box-shadow: inset 3px 0 0 var(--accent);
+  color: var(--ink); font-weight: 500;
+}
+.tree-row[data-active="true"] .tree-row-icon { color: var(--ink); }
+
+.sidebar-footer { padding: 12px 12px 16px; display: flex; flex-direction: column; gap: 2px; }
+.sidebar-footer-link { font-size: 14.5px; color: var(--ink-2); gap: 12px; padding: 9px 10px; border-radius: 9px; }
+.sidebar-footer-link svg { color: var(--ink-3); flex-shrink: 0; }
+.sidebar-footer-link:hover svg { color: var(--ink); }

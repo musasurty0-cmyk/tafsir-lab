@@ -10,10 +10,9 @@
  */
 
 import { useT } from "@/lib/i18n/LocaleProvider";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { workspaceInitials } from "@/lib/workspace-icon";
-import { ChevronRight, ChevronLeft, Search, X, Plus, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { ChevronRight, ChevronLeft, Search, X, Plus, Pencil, Trash2, FileText, Home, Database } from "lucide-react";
 import type { Chapter } from "@/lib/types";
 import type { ProgressStatus } from "@/lib/services/progress.service";
 import type { MemberRole } from "@/lib/services/workspaces.service";
@@ -21,7 +20,7 @@ import Link from "next/link";
 
 // ── Icons ──────────────────────────────────────────────────────────────────
 
-const BookIcon = ({ size = 13 }: { size?: number }) => (
+const BookIcon = ({ size = 15 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
     stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
     <path d="M4 4h10a3 3 0 0 1 3 3v13H7a3 3 0 0 1-3-3z"/>
@@ -184,6 +183,7 @@ function PageRow({
   if (page.pending) {
     return (
       <div className="tree-row tree-row--pending" aria-busy="true">
+        <FileText size={16} strokeWidth={1.6} className="tree-row-icon" aria-hidden />
         <span className="tree-label">{page.title}</span>
         <span className="tree-row-pending-dot" aria-label="Creating…" />
       </div>
@@ -193,6 +193,7 @@ function PageRow({
   return (
     <div className="tree-row tree-row--with-actions" data-active={isActive ? "true" : "false"}>
       <Link href={href} prefetch className="tree-row-link">
+        <FileText size={16} strokeWidth={1.6} className="tree-row-icon" aria-hidden />
         <span className="tree-label">{page.title}</span>
         {Object.keys(groupProgress).length > 0 && (
           <GroupProgressDot progress={groupProgress} />
@@ -238,7 +239,7 @@ function PageRow({
 export default function WorkspaceSidebar({
   workspaceId,
   workspaceName,
-  workspaceIcon,
+  workspaceIcon: _workspaceIcon,
   chapter,
   pages,
   activePageId,
@@ -263,6 +264,22 @@ export default function WorkspaceSidebar({
   const [saving,       setSaving]       = useState(false);
   const [createError,  setCreateError]  = useState<string | null>(null);
   const newTitleRef = useRef<HTMLInputElement>(null);
+  const searchRef   = useRef<HTMLInputElement>(null);
+
+  /* Ctrl K (⌘K on a Mac) jumps to the page search, as the badge says. */
+  const [modKey, setModKey] = useState("Ctrl ");
+  useEffect(() => {
+    if (/Mac|iPhone|iPad/.test(navigator.platform)) setModKey("⌘");
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        searchRef.current?.focus();
+        searchRef.current?.select();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   const filtered = query
     ? pages.filter((p) => p.title.toLowerCase().includes(query.toLowerCase()))
@@ -347,44 +364,40 @@ export default function WorkspaceSidebar({
           onClick={() => router.push(`/workspaces/${workspaceId}`)}
           title="Back to surah grid"
         >
-          {/* Same mark as the rail: a naive slice(0,2) gave "YO" for
-              "Youth Majlis" and cut multi-byte names through a surrogate. */}
-          <div className="ws-switcher-avatar">
-            {workspaceIcon || workspaceInitials(workspaceName)}
-          </div>
+          {/* The name alone: the rail beside it already carries the
+              workspace's mark, so a second copy here only crowded it. */}
           <div className="ws-switcher-name">{workspaceName}</div>
-          <ChevronRight size={12} style={{ color: "var(--ink-4)", transform: "rotate(90deg)" }} />
+          <ChevronRight size={14} style={{ color: "var(--ink-3)", transform: "rotate(90deg)", flexShrink: 0 }} />
         </button>
 
         {canManagePages && (
           <button
-            className="rail-btn"
-            style={{ width: 28, height: 28 }}
+            className="rail-btn sidebar-head-btn"
             title="New page"
             onClick={openNewPage}
             disabled={saving}
           >
-            <Plus size={14} />
+            <Plus size={17} />
           </button>
         )}
 
         {onToggleCollapse && (
           <button
-            className="rail-btn sidebar-collapse-btn"
-            style={{ width: 28, height: 28 }}
+            className="rail-btn sidebar-head-btn sidebar-collapse-btn"
             title="Collapse sidebar"
             onClick={onToggleCollapse}
           >
-            <ChevronLeft size={14} />
+            <ChevronLeft size={17} />
           </button>
         )}
       </div>
 
       {/* ── Search ── */}
       <div className="sidebar-search">
-        <Search size={12} style={{ color: "var(--ink-4)", flexShrink: 0 }} />
+        <Search size={16} style={{ color: "var(--ink-3)", flexShrink: 0 }} />
         <input
-          placeholder="Search…"
+          ref={searchRef}
+          placeholder="Search notes…"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
@@ -394,21 +407,20 @@ export default function WorkspaceSidebar({
             onClick={() => setQuery("")}
             title="Clear"
           >
-            <X size={11} />
+            <X size={13} />
           </button>
         )}
+        {!query && <kbd className="sidebar-search-kbd" aria-hidden>{modKey}K</kbd>}
       </div>
 
       {/* ── Surah section header ── */}
       <div className="sidebar-section">
-        <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+        <span className="sidebar-section-title">
           <BookIcon />
           {chapter.name_simple}
-          <span style={{ fontFamily: "var(--font-arabic)", fontSize: 13, color: "var(--ink-3)" }}>
-            {chapter.name_arabic}
-          </span>
+          <span className="sidebar-section-ar" lang="ar" dir="rtl">{chapter.name_arabic}</span>
         </span>
-        <span>{pages.length}</span>
+        <span className="sidebar-section-count">{pages.length}</span>
       </div>
 
       {/* ── Inline new-page form ── */}
@@ -477,9 +489,11 @@ export default function WorkspaceSidebar({
       {/* ── Footer ── */}
       <div className="sidebar-footer">
         <Link href={`/workspaces/${workspaceId}`} className="sidebar-footer-link">
-          ← {t("sidebar.workspaceHome")}
+          <Home size={17} strokeWidth={1.6} aria-hidden />
+          {t("sidebar.workspaceHome")}
         </Link>
         <Link href={`/workspaces/${workspaceId}/notes`} className="sidebar-footer-link">
+          <Database size={17} strokeWidth={1.6} aria-hidden />
           {t("sidebar.allNotes")}
         </Link>
       </div>
