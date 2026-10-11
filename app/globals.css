@@ -13925,7 +13925,11 @@ body:has(.lab) .mode-b-zoom-controls {
 .rail-btn--add { border: 0; background: var(--panel); color: var(--ink-2); border-radius: 9px; margin-top: 0; }
 .rail-btn--add:hover { background: var(--accent-soft); color: var(--accent-ink); }
 
-.sidebar-head { padding: 13px 9px 12px 15px; min-height: 58px; gap: 3px; }
+.sidebar-head { padding: 0 9px 0 15px; height: var(--bar-h); min-height: var(--bar-h); flex-shrink: 0; gap: 3px; }
+/* The top bar and the sidebar header share one height, so the line under
+   each runs straight across as one rule. */
+:root { --bar-h: 52px; }
+.topbar { min-height: var(--bar-h); padding-top: 0; padding-bottom: 0; }
 .ws-switcher { padding: 4px 6px 4px 3px; gap: 6px; border-radius: 7px; }
 .ws-switcher-name { font-family: var(--font-serif); font-size: 15px; font-weight: 700; letter-spacing: -0.01em; }
 .sidebar-head-btn { width: 26px; height: 26px; border-radius: 7px; flex-shrink: 0; }
