@@ -13900,21 +13900,21 @@ body:has(.lab) .mode-b-zoom-controls {
 }
 
 /* ═══ Rail and sidebar, refined ══════════════════════════════════════════
-   Larger, calmer tiles in the rail (44px, filled, no outlines or dashes);
-   in the sidebar the workspace name in the serif, a search with its
-   shortcut, a document icon on every page, taller rows, and the open page
-   tinted with a bar of the accent on its leading edge. */
+   Calm, filled tiles in the rail (no outlines or dashes); in the sidebar the
+   workspace name in the serif, a search with its shortcut, a document icon
+   on every page, and the open page tinted with a bar of the accent on its
+   leading edge. */
 @media (min-width: 721px) {
-  :root { --rail: 76px; }
+  :root { --rail: 58px; }
 }
-.rail { padding: 16px 0; gap: 10px; }
-.rail-logo { width: 44px; height: 44px; border-radius: 12px; font-size: 20px; margin-bottom: 4px; }
-.rail-btn { width: 44px; height: 44px; border-radius: 12px; }
-.rail-btn[data-active="true"]::before { left: -16px; top: 12px; bottom: 12px; width: 3px; }
+.rail { padding: 12px 0; gap: 8px; }
+.rail-logo { width: 34px; height: 34px; border-radius: 9px; font-size: 16px; margin-bottom: 3px; }
+.rail-btn { width: 34px; height: 34px; border-radius: 9px; }
+.rail-btn[data-active="true"]::before { left: -12px; top: 9px; bottom: 9px; width: 2px; }
 .rail-ws {
-  width: 44px; height: 44px; border-radius: 12px;
+  width: 34px; height: 34px; border-radius: 9px;
   border: 0; background: var(--panel); color: var(--ink-2);
-  font-size: 14px; font-weight: 600;
+  font-size: 11.5px; font-weight: 600;
 }
 .rail-ws:hover { transform: none; box-shadow: none; background: var(--active); color: var(--ink); }
 .rail-ws[data-active="true"] {
@@ -13922,53 +13922,53 @@ body:has(.lab) .mode-b-zoom-controls {
   color: color-mix(in oklch, var(--ws-tone, var(--accent)) 55%, var(--ink));
   box-shadow: none;
 }
-.rail-btn--add { border: 0; background: var(--panel); color: var(--ink-2); border-radius: 12px; margin-top: 0; }
+.rail-btn--add { border: 0; background: var(--panel); color: var(--ink-2); border-radius: 9px; margin-top: 0; }
 .rail-btn--add:hover { background: var(--accent-soft); color: var(--accent-ink); }
 
-.sidebar-head { padding: 18px 12px 16px 20px; min-height: 76px; gap: 4px; }
-.ws-switcher { padding: 6px 8px 6px 4px; gap: 8px; border-radius: 8px; }
-.ws-switcher-name { font-family: var(--font-serif); font-size: 19px; font-weight: 700; letter-spacing: -0.012em; }
-.sidebar-head-btn { width: 34px; height: 34px; border-radius: 9px; flex-shrink: 0; }
+.sidebar-head { padding: 13px 9px 12px 15px; min-height: 58px; gap: 3px; }
+.ws-switcher { padding: 4px 6px 4px 3px; gap: 6px; border-radius: 7px; }
+.ws-switcher-name { font-family: var(--font-serif); font-size: 15px; font-weight: 700; letter-spacing: -0.01em; }
+.sidebar-head-btn { width: 26px; height: 26px; border-radius: 7px; flex-shrink: 0; }
 
 .sidebar-search {
-  margin: 12px 12px 4px; height: 44px; padding: 0 10px 0 12px; gap: 10px;
-  border: 0; border-radius: 10px; background: transparent;
+  margin: 9px 9px 3px; height: 34px; padding: 0 8px 0 9px; gap: 8px;
+  border: 0; border-radius: 8px; background: transparent;
   transition: background var(--dur-fast) ease;
 }
 .sidebar-search:focus-within { background: var(--hover); }
-.sidebar-search input { font-size: 15px; }
+.sidebar-search input { font-size: 13px; }
 .sidebar-search input::placeholder { color: var(--ink-3); }
 .sidebar-search-kbd {
-  flex-shrink: 0; padding: 2px 7px; border-radius: 6px;
+  flex-shrink: 0; padding: 1px 5px; border-radius: 5px;
   border: 1px solid var(--line-strong);
-  font-family: var(--font-sans); font-size: 12px; line-height: 1.4; color: var(--ink-3);
+  font-family: var(--font-sans); font-size: 10px; line-height: 1.4; color: var(--ink-3);
 }
 
 .sidebar-section {
-  padding: 16px 20px 10px 22px;
-  font-size: 13px; font-weight: 500; letter-spacing: 0.02em; text-transform: uppercase;
+  padding: 12px 15px 7px 17px;
+  font-size: 10.5px; font-weight: 500; letter-spacing: 0.03em; text-transform: uppercase;
   color: var(--ink-2);
 }
-.sidebar-section-title { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.sidebar-section-title { display: flex; align-items: center; gap: 7px; min-width: 0; }
 .sidebar-section-title svg { color: var(--ink-3); flex-shrink: 0; }
-.sidebar-section-ar { font-family: var(--font-arabic); font-size: 16px; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--ink-2); }
-.sidebar-section-count { font-size: 13px; font-weight: 500; color: var(--ink-3); }
+.sidebar-section-ar { font-family: var(--font-arabic); font-size: 13px; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--ink-2); }
+.sidebar-section-count { font-size: 10.5px; font-weight: 500; color: var(--ink-3); }
 
-.tree { padding: 2px 10px 20px; }
-.tree-row { border-radius: 9px; font-size: 14.5px; color: var(--ink-2); }
-.tree-row + .tree-row { margin-top: 2px; }
-.tree-row-link { gap: 12px; min-height: 42px; padding: 0 8px 0 14px; }
-.tree-row--pending { min-height: 42px; gap: 12px; padding: 0 14px; }
+.tree { padding: 2px 8px 16px; }
+.tree-row { border-radius: 7px; font-size: 13px; color: var(--ink-2); }
+.tree-row + .tree-row { margin-top: 1px; }
+.tree-row-link { gap: 9px; min-height: 32px; padding: 0 6px 0 11px; }
+.tree-row--pending { min-height: 32px; gap: 9px; padding: 0 11px; }
 .tree-row-icon { flex-shrink: 0; color: var(--ink-3); transition: color var(--dur-fast) ease; }
 .tree-row:hover .tree-row-icon { color: var(--ink-2); }
 .tree-row[data-active="true"] {
   background: color-mix(in oklch, var(--accent) 15%, var(--bg));
-  box-shadow: inset 3px 0 0 var(--accent);
+  box-shadow: inset 2px 0 0 var(--accent);
   color: var(--ink); font-weight: 500;
 }
 .tree-row[data-active="true"] .tree-row-icon { color: var(--ink); }
 
-.sidebar-footer { padding: 12px 12px 16px; display: flex; flex-direction: column; gap: 2px; }
-.sidebar-footer-link { font-size: 14.5px; color: var(--ink-2); gap: 12px; padding: 9px 10px; border-radius: 9px; }
+.sidebar-footer { padding: 9px 9px 12px; display: flex; flex-direction: column; gap: 1px; }
+.sidebar-footer-link { font-size: 12.5px; color: var(--ink-2); gap: 9px; padding: 7px 8px; border-radius: 7px; }
 .sidebar-footer-link svg { color: var(--ink-3); flex-shrink: 0; }
 .sidebar-footer-link:hover svg { color: var(--ink); }

@@ -20,7 +20,7 @@ import Link from "next/link";
 
 // ── Icons ──────────────────────────────────────────────────────────────────
 
-const BookIcon = ({ size = 15 }: { size?: number }) => (
+const BookIcon = ({ size = 12 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
     stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
     <path d="M4 4h10a3 3 0 0 1 3 3v13H7a3 3 0 0 1-3-3z"/>
@@ -183,7 +183,7 @@ function PageRow({
   if (page.pending) {
     return (
       <div className="tree-row tree-row--pending" aria-busy="true">
-        <FileText size={16} strokeWidth={1.6} className="tree-row-icon" aria-hidden />
+        <FileText size={13} strokeWidth={1.6} className="tree-row-icon" aria-hidden />
         <span className="tree-label">{page.title}</span>
         <span className="tree-row-pending-dot" aria-label="Creating…" />
       </div>
@@ -193,7 +193,7 @@ function PageRow({
   return (
     <div className="tree-row tree-row--with-actions" data-active={isActive ? "true" : "false"}>
       <Link href={href} prefetch className="tree-row-link">
-        <FileText size={16} strokeWidth={1.6} className="tree-row-icon" aria-hidden />
+        <FileText size={13} strokeWidth={1.6} className="tree-row-icon" aria-hidden />
         <span className="tree-label">{page.title}</span>
         {Object.keys(groupProgress).length > 0 && (
           <GroupProgressDot progress={groupProgress} />
@@ -367,7 +367,7 @@ export default function WorkspaceSidebar({
           {/* The name alone: the rail beside it already carries the
               workspace's mark, so a second copy here only crowded it. */}
           <div className="ws-switcher-name">{workspaceName}</div>
-          <ChevronRight size={14} style={{ color: "var(--ink-3)", transform: "rotate(90deg)", flexShrink: 0 }} />
+          <ChevronRight size={12} style={{ color: "var(--ink-3)", transform: "rotate(90deg)", flexShrink: 0 }} />
         </button>
 
         {canManagePages && (
@@ -377,7 +377,7 @@ export default function WorkspaceSidebar({
             onClick={openNewPage}
             disabled={saving}
           >
-            <Plus size={17} />
+            <Plus size={14} />
           </button>
         )}
 
@@ -387,14 +387,14 @@ export default function WorkspaceSidebar({
             title="Collapse sidebar"
             onClick={onToggleCollapse}
           >
-            <ChevronLeft size={17} />
+            <ChevronLeft size={14} />
           </button>
         )}
       </div>
 
       {/* ── Search ── */}
       <div className="sidebar-search">
-        <Search size={16} style={{ color: "var(--ink-3)", flexShrink: 0 }} />
+        <Search size={13} style={{ color: "var(--ink-3)", flexShrink: 0 }} />
         <input
           ref={searchRef}
           placeholder="Search notes…"
@@ -407,7 +407,7 @@ export default function WorkspaceSidebar({
             onClick={() => setQuery("")}
             title="Clear"
           >
-            <X size={13} />
+            <X size={11} />
           </button>
         )}
         {!query && <kbd className="sidebar-search-kbd" aria-hidden>{modKey}K</kbd>}
@@ -489,11 +489,11 @@ export default function WorkspaceSidebar({
       {/* ── Footer ── */}
       <div className="sidebar-footer">
         <Link href={`/workspaces/${workspaceId}`} className="sidebar-footer-link">
-          <Home size={17} strokeWidth={1.6} aria-hidden />
+          <Home size={13} strokeWidth={1.6} aria-hidden />
           {t("sidebar.workspaceHome")}
         </Link>
         <Link href={`/workspaces/${workspaceId}/notes`} className="sidebar-footer-link">
-          <Database size={17} strokeWidth={1.6} aria-hidden />
+          <Database size={13} strokeWidth={1.6} aria-hidden />
           {t("sidebar.allNotes")}
         </Link>
       </div>
