@@ -1,7 +1,8 @@
 "use client";
 
 /**
- * HadithHome — the forty-two, as the home screen of a Nawawi workspace.
+ * HadithHome — the forty-two, as the home screen of a Nawawi workspace,
+ * laid out as a shelf you move along (HadithLibrary).
  *
  * The same idea as the sūrah grid and deliberately the same furniture (rail,
  * header, cards, started/unstarted state), because a reader who has studied a
@@ -19,7 +20,8 @@ import { pushWithSplash } from "@/lib/nav-splash";
 import { useLayoutEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { MemberRole } from "@/lib/services/workspaces.service";
-import { HADITHS, HADITH_COUNT, COLLECTION_ARABIC, preview } from "@/lib/hadith";
+import { HADITHS, HADITH_COUNT, COLLECTION_ARABIC } from "@/lib/hadith";
+import HadithLibrary from "./HadithLibrary";
 import WorkspaceSettings from "./WorkspaceSettings";
 import Rail from "./Rail";
 import NewWorkspaceModal from "@/components/NewWorkspaceModal";
@@ -125,7 +127,7 @@ export default function HadithHome({ workspaceId, currentUserId, workspace, role
                 title={role === "owner" ? "Click to rename" : undefined}
                 style={{ cursor: role === "owner" ? "text" : "default" }}
               >
-                {wsName} <span className="ws-home-kind-badge">{COLLECTION_ARABIC}</span>
+                {wsName} <span className="hl-collection-ar" lang="ar" dir="rtl">{COLLECTION_ARABIC}</span>
               </h1>
             )}
             <p className="ws-home-sub">
@@ -142,38 +144,13 @@ export default function HadithHome({ workspaceId, currentUserId, workspace, role
           </div>
         </div>
 
-        <div className="hd-grid">
-          {HADITHS.map((h) => {
-            const s = started.get(h.number);
-            const isOpening = opening === h.number;
-            return (
-              <button
-                key={h.number}
-                type="button"
-                className="hd-card"
-                data-started={s && s.pageCount > 0 ? "true" : "false"}
-                data-busy={isOpening ? "true" : "false"}
-                disabled={opening !== null}
-                onClick={() => open(h.number)}
-              >
-                <span className="hd-num">{h.number}</span>
-                <span className="hd-body">
-                  <span className="hd-title">{h.title}</span>
-                  {/* The opening words, in English only — a truncated Arabic
-                      narration reads as a misquotation. */}
-                  <span className="hd-preview">{preview(h, 96)}</span>
-                </span>
-                <span className="hd-meta">
-                  {isOpening
-                    ? "Opening…"
-                    : s && s.pageCount > 0
-                      ? `${s.pageCount} page${s.pageCount === 1 ? "" : "s"}`
-                      : h.reference ?? ""}
-                </span>
-              </button>
-            );
-          })}
-        </div>
+        <HadithLibrary
+          hadiths={HADITHS}
+          started={started}
+          opening={opening}
+          onOpen={open}
+          storageKey={`tl-hadith-shelf:${workspaceId}`}
+        />
       </div>
 
       {settingsOpen && (

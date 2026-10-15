@@ -54,10 +54,22 @@ const doc = raw as unknown as HadithDoc;
    be handed a shape it will try to render. */
 for (const h of doc.hadiths) {
   if (typeof h.reference !== "string" || !h.reference.trim()) h.reference = null;
+  /* The source edition leaves its own line-break markup in ten narrations
+     (a literal "<br>" in the text) and two bidi embedding marks. They are
+     formatting, not words: dropped here so no screen prints them. */
+  h.arabic = clean(h.arabic);
+  h.english = clean(h.english);
 }
 
-/** Arabic name of the collection, for headings. */
-export const COLLECTION_ARABIC = doc.collection;
+function clean(s: string): string {
+  return s.replace(/\s*<br\s*\/?>\s*/gi, " ").replace(/[\u202A-\u202E]/g, "").replace(/ {2,}/g, " ").trim();
+}
+
+/** Arabic name of the collection, for headings. The data file's
+ *  `collection` field is a transliteration, so the Arabic is written here. */
+export const COLLECTION_ARABIC = "ٱلْأَرْبَعُونَ ٱلنَّوَوِيَّة";
+/** The transliterated name, from the source. */
+export const COLLECTION_TRANSLIT = doc.collection;
 /** English name, for everywhere a Latin script reads better. */
 export const COLLECTION_ENGLISH = doc.collectionEnglish;
 /** 42. Use this rather than writing 40 anywhere. */

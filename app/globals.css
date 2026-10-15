@@ -13254,65 +13254,6 @@ body:has(.lab) .mode-b-zoom-controls {
    the same tokens as the surah grid so the two read as one app; what differs
    is that a hadith card has to carry WORDS, where a surah card carries a
    name — so the card is wider and has a body, not just a title. */
-.hd-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
-  gap: 12px;
-  padding: 4px 0 40px;
-}
-.hd-card {
-  display: grid;
-  grid-template-columns: 44px 1fr;
-  grid-template-areas: "num body" "num meta";
-  gap: 2px 14px;
-  padding: 16px 18px;
-  text-align: left;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  background: var(--bg-elev);
-  cursor: pointer;
-  transition: border-color var(--dur-fast) var(--ease-soft),
-              box-shadow var(--dur-fast) var(--ease-soft),
-              transform var(--dur-fast) var(--ease-soft);
-}
-.hd-card:hover:not(:disabled) {
-  border-color: var(--line-strong);
-  box-shadow: var(--shadow-sm);
-  transform: translateY(-1px);
-}
-.hd-card:disabled { cursor: default; }
-.hd-card[data-busy="true"] { opacity: .7; }
-/* Studied hadith carry the accent the surah cards use, so progress reads the
-   same way in both collections. */
-.hd-card[data-started="true"] { border-color: var(--line-strong); }
-.hd-card[data-started="true"] .hd-num { background: var(--ink); color: var(--bg); }
-.hd-num {
-  grid-area: num;
-  align-self: start;
-  display: flex; align-items: center; justify-content: center;
-  width: 44px; height: 44px; border-radius: 50%;
-  background: color-mix(in oklab, var(--ink) 6%, transparent);
-  color: var(--ink-2);
-  font-size: 15px; font-weight: 650; font-variant-numeric: tabular-nums;
-}
-.hd-body { grid-area: body; min-width: 0; }
-.hd-title {
-  display: block;
-  font-size: 15.5px; font-weight: 600; color: var(--ink);
-  line-height: 1.3;
-}
-.hd-preview {
-  display: block; margin-top: 5px;
-  font-size: 13px; line-height: 1.5; color: var(--ink-3);
-  /* Two lines, then stop: the card is a way in, not the hadith itself. */
-  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-.hd-meta {
-  grid-area: meta; margin-top: 8px;
-  font-size: 12px; color: var(--ink-4);
-}
-
 /* ── The sheet ──────────────────────────────────────────────────────────
    Sits in the canvas world space, behind the ink. Sized generously: this is
    a page you draw on, so it must not feel like a card in a list. */
@@ -13336,8 +13277,8 @@ body:has(.lab) .mode-b-zoom-controls {
 }
 .hd-sheet-title { font-size: 19px; font-weight: 600; color: var(--ink); }
 .hd-sheet-arabic {
-  font-family: var(--font-arabic, "Amiri", "Scheherazade New", serif);
-  font-size: 30px; line-height: 2.05; color: var(--ink);
+  font-family: var(--font-kfgqpc);
+  font-size: 31px; line-height: 2.1; color: var(--ink);
   text-align: right;
 }
 .hd-sheet-rule {
@@ -13382,6 +13323,7 @@ body:has(.lab) .mode-b-zoom-controls {
   border: 1px solid var(--line-strong);
   box-shadow: var(--shadow-lg);
 }
+.hd-pop-word:lang(ar) { font-family: var(--font-kfgqpc); font-weight: 400; font-size: 26px; }
 .hd-pop-word {
   display: block;
   font-size: 22px; color: var(--ink); font-weight: 600;
@@ -14067,3 +14009,138 @@ body:has(.lab) .mode-b-zoom-controls {
   color: var(--ink-2); font-variant-numeric: tabular-nums;
 }
 .mode-b-zoom-reset, .doc-zoom-reset { margin-left: 6px; }
+
+/* ═══ The King Fahd Complex's Uthmanic Hafs face, app-wide ════════════════
+   Loaded once here so every hadith (the shelf, the study sheet, the word
+   popover) is set in it. The Youth Majlis portal declares the same face. */
+@font-face {
+  font-family: "TL Uthmanic Hafs";
+  src: url("/fonts/UthmanicHafs1Ver18.woff2") format("woff2");
+  font-display: swap;
+  /* Arabic letters and marks only. The face draws punctuation, Latin and
+     Arabic alike (. : ! ، ؛ ؟), as Qur'anic ornaments, which would put
+     verse-like rings inside a hadith; those fall to a plain face. Excluded:
+     U+060C ، U+061B ؛ U+061F ؟ U+066A-066D ٪٫٬٭ U+06D4 ۔ */
+  unicode-range: U+0600-060B, U+060D-061A, U+061C-061E, U+0620-0669, U+066E-06D3, U+06D5-06FF,
+                 U+0750-077F, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF, U+200C-200F;
+}
+:root { --font-kfgqpc: "TL Uthmanic Hafs", "Scheherazade New", "Amiri", serif; }
+
+/* ═══ al-Arbaʿūn an-Nawawiyya: the shelf ═════════════════════════════════
+   The forty-two side by side. The card in focus sits at the centre at full
+   size; its neighbours recede by distance (--d, written by HadithLibrary on
+   every scroll frame) and turn slightly away by side (--o). Native snapping
+   settles it, so the motion is the reader's own gesture. */
+.hl-collection-ar {
+  font-family: var(--font-kfgqpc); font-weight: 400;
+  font-size: 30px; line-height: 1; color: var(--ink-3);
+  margin-left: 14px; vertical-align: -2px;
+}
+.hl { --card-w: min(460px, 84vw); margin: 8px -56px 0; }
+.hl-stage { position: relative; }
+.hl-track {
+  display: flex; gap: 28px;
+  overflow-x: auto; overflow-y: visible;
+  scroll-snap-type: x mandatory;
+  padding: 28px calc(50% - var(--card-w) / 2) 34px;
+  scrollbar-width: none;
+  perspective: 1600px;
+  outline: none;
+}
+.hl-track::-webkit-scrollbar { display: none; }
+.hl-card {
+  --d: 1; --o: 0;
+  flex: none; width: var(--card-w);
+  height: min(560px, calc(100dvh - 330px)); min-height: 420px;
+  scroll-snap-align: center;
+  display: flex; flex-direction: column;
+  padding: 26px 28px 22px;
+  border-radius: 24px;
+  background: var(--bg-elev);
+  border: 1px solid var(--line);
+  box-shadow: 0 1px 2px rgba(0,0,0,.04), 0 calc(28px - min(var(--d), 1) * 22px) calc(60px - min(var(--d), 1) * 44px) -30px rgba(0,0,0,.35);
+  transform-origin: center;
+  transform:
+    translateY(calc(min(var(--d), 1.5) * 14px))
+    scale(calc(1 - min(var(--d), 1.5) * 0.085))
+    rotateY(calc(var(--o) * -7deg));
+  opacity: calc(1 - min(var(--d), 2) * 0.32);
+  cursor: pointer;
+  user-select: none;
+}
+.hl-card[data-current="true"] { cursor: default; border-color: var(--line-strong); }
+.hl-card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.hl-no {
+  font-size: 44px; font-weight: 700; letter-spacing: -0.04em; line-height: 1;
+  color: var(--ink); font-variant-numeric: tabular-nums;
+}
+.hl-card[data-studied="true"] .hl-no { color: var(--accent-ink); }
+.hl-state { font-size: 13px; font-weight: 500; color: var(--ink-4); }
+.hl-card[data-studied="true"] .hl-state { color: var(--accent-ink); }
+.hl-title {
+  margin: 14px 0 0;
+  font-size: 21px; font-weight: 650; line-height: 1.25; letter-spacing: -0.015em;
+  color: var(--ink); text-wrap: balance;
+}
+.hl-ar {
+  flex: 1; min-height: 0; overflow: hidden;
+  margin: 16px 0 0;
+  font-family: var(--font-kfgqpc);
+  font-size: 23px; line-height: 2.05; color: var(--ink);
+  text-align: right;
+  /* No ellipsis: the narration fades out at the foot of the card. */
+  -webkit-mask-image: linear-gradient(to bottom, #000 72%, transparent);
+          mask-image: linear-gradient(to bottom, #000 72%, transparent);
+}
+.hl-foot {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding-top: 14px; margin-top: 4px;
+  border-top: 1px solid var(--line);
+}
+.hl-ref { font-size: 12.5px; color: var(--ink-4); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hl-open {
+  display: inline-flex; align-items: center; gap: 7px; flex: none;
+  height: 36px; padding: 0 16px; border-radius: 10px;
+  background: var(--ink); color: var(--bg);
+  font-size: 14px; font-weight: 600;
+  opacity: calc(1 - min(var(--d), 1));
+  transition: transform var(--dur-fast) var(--ease-soft);
+}
+.hl-open:active { transform: scale(0.97); }
+.hl-open:disabled { opacity: .55; }
+
+.hl-arrow {
+  position: absolute; top: 50%; z-index: 2;
+  width: 46px; height: 46px; margin-top: -23px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--bg-elev); color: var(--ink);
+  border: 1px solid var(--line); box-shadow: var(--shadow-md);
+  transition: opacity var(--dur-fast) ease, transform var(--dur-fast) var(--ease-soft);
+}
+.hl-arrow:hover { transform: scale(1.06); }
+.hl-arrow:active { transform: scale(0.96); }
+.hl-arrow--prev { left: calc(50% - var(--card-w) / 2 - 78px); }
+.hl-arrow--next { right: calc(50% - var(--card-w) / 2 - 78px); }
+.hl-arrow[data-off="true"] { opacity: 0; pointer-events: none; }
+
+.hl-index { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 2px; }
+.hl-ticks { display: flex; align-items: flex-end; gap: 4px; height: 22px; }
+.hl-tick {
+  width: 5px; height: 10px; border-radius: 3px; padding: 0;
+  background: color-mix(in oklab, var(--ink) 16%, transparent);
+  transition: height 260ms var(--ease-soft), background 200ms ease;
+}
+.hl-tick:hover { height: 16px; background: color-mix(in oklab, var(--ink) 40%, transparent); }
+.hl-tick[data-studied="true"] { background: color-mix(in oklab, var(--accent) 60%, transparent); }
+.hl-tick[data-current="true"] { height: 22px; background: var(--ink); }
+.hl-where { margin: 0; font-size: 13px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.hl-where-n { font-weight: 650; color: var(--ink); }
+
+@media (max-width: 720px) {
+  .hl { margin: 0 -56px; }
+  .hl-arrow { display: none; }
+  .hl-card { padding: 22px 22px 18px; }
+  .hl-ar { font-size: 21px; }
+  .hl-ticks { gap: 3px; }
+  .hl-tick { width: 4px; }
+}
