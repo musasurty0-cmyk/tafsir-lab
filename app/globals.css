@@ -9538,10 +9538,7 @@ input, textarea { font: inherit; color: inherit; }
    drawer is open. `:has(.lab)` rather than a state class because the panel's
    presence in the DOM IS the condition, and it is rendered from three
    different hosts. */
-body:has(.lab) .doc-zoom,
-body:has(.lab) .mode-b-zoom-controls {
-  right: calc(min(420px, 38vw) + 20px);
-}
+
 
 .whiteboard-shell-bar {
   display: flex;
@@ -14144,3 +14141,11 @@ body:has(.lab) .mode-b-zoom-controls {
   .hl-ticks { gap: 3px; }
   .hl-tick { width: 4px; }
 }
+
+/* Zoom lives in the bottom-left corner of its board or editor pane, at the
+   owner's request (it was bottom-right). Anchored to the pane, not the
+   window, so it never sits over the rail or sidebar. The sidebar's re-open
+   button, which also lives bottom-left, steps up above it. */
+.mode-b-zoom-controls { left: 20px; right: auto; bottom: 20px; }
+.doc-zoom { position: absolute; left: 20px; right: auto; bottom: 20px; z-index: 8; }
+.sidebar-expand-btn { bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }

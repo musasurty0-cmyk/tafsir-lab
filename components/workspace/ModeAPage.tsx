@@ -185,15 +185,16 @@ export default function ModeAPage({
 
   return (
     <EditorContextProvider value={editorContextValue}>
+      {/* Zoom HUD — mirrors the canvas control so the gesture and the
+          readout are the same wherever you are. Outside the scrolling
+          document, so it stays in the editor pane's bottom-left corner. */}
+      <div className="doc-zoom" role="group" aria-label="Zoom">
+        <button onClick={() => applyZoom(docZoom / 1.15)} title="Zoom out" aria-label="Zoom out"><Minus size={15} /></button>
+        <span className="doc-zoom-label">{Math.round(docZoom * 100)}%</span>
+        <button onClick={() => applyZoom(docZoom * 1.15)} title="Zoom in" aria-label="Zoom in"><Plus size={15} /></button>
+        <button className="doc-zoom-reset" onClick={() => applyZoom(1)} title="Reset zoom" aria-label="Reset zoom"><RotateCw size={14} /></button>
+      </div>
       <div className="doc-wrap" ref={wrapRef}>
-        {/* Zoom HUD — mirrors the canvas control so the gesture and the
-            readout are the same wherever you are. */}
-        <div className="doc-zoom" role="group" aria-label="Zoom">
-          <button onClick={() => applyZoom(docZoom / 1.15)} title="Zoom out" aria-label="Zoom out"><Minus size={15} /></button>
-          <span className="doc-zoom-label">{Math.round(docZoom * 100)}%</span>
-          <button onClick={() => applyZoom(docZoom * 1.15)} title="Zoom in" aria-label="Zoom in"><Plus size={15} /></button>
-          <button className="doc-zoom-reset" onClick={() => applyZoom(1)} title="Reset zoom" aria-label="Reset zoom"><RotateCw size={14} /></button>
-        </div>
         <div className="doc" style={{ zoom: docZoom }}>
 
           {/* ── Cover ──────────────────────────────────────────────── */}
