@@ -14024,121 +14024,97 @@ input, textarea { font: inherit; color: inherit; }
 :root { --font-kfgqpc: "TL Uthmanic Hafs", "Scheherazade New", "Amiri", serif; }
 
 /* ═══ al-Arbaʿūn an-Nawawiyya: the shelf ═════════════════════════════════
-   The forty-two side by side. The card in focus sits at the centre at full
-   size; its neighbours recede by distance (--d, written by HadithLibrary on
-   every scroll frame) and turn slightly away by side (--o). Native snapping
-   settles it, so the motion is the reader's own gesture. */
+   A bookshelf, not a carousel: cards of one size, flat, side by side, the
+   next always peeking in from the edge. They do not tilt, shrink or fade as
+   the shelf moves; the shelf just slides, with native snapping. A card is a
+   solid tile (no outline, no shadow), the narration its body. */
 .hl-collection-ar {
   font-family: var(--font-kfgqpc); font-weight: 400;
   font-size: 30px; line-height: 1; color: var(--ink-3);
   margin-left: 14px; vertical-align: -2px;
 }
-.hl { --card-w: min(460px, 84vw); margin: 8px -56px 0; }
-.hl-stage { position: relative; }
+.hl { margin: 4px -56px 0; }
+.hl-bar {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 0 56px 14px;
+}
+.hl-range { margin: 0; font-size: 14px; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
+.hl-range span { font-weight: 400; color: var(--ink-3); }
+.hl-arrows { display: flex; gap: 8px; }
+.hl-arrow {
+  width: 38px; height: 38px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--panel); color: var(--ink);
+  transition: background var(--dur-fast) ease, opacity var(--dur-fast) ease;
+}
+.hl-arrow:hover:not(:disabled) { background: var(--active); }
+.hl-arrow:disabled { opacity: .35; cursor: default; }
+
 .hl-track {
-  display: flex; gap: 28px;
-  overflow-x: auto; overflow-y: visible;
+  display: flex; gap: 16px;
+  overflow-x: auto; overflow-y: hidden;
   scroll-snap-type: x mandatory;
-  padding: 28px calc(50% - var(--card-w) / 2) 34px;
+  scroll-padding-inline: 56px;
+  padding: 2px 56px 6px;
   scrollbar-width: none;
-  perspective: 1600px;
-  outline: none;
 }
 .hl-track::-webkit-scrollbar { display: none; }
 .hl-card {
-  --d: 1; --o: 0;
-  flex: none; width: var(--card-w);
-  height: min(560px, calc(100dvh - 330px)); min-height: 420px;
-  scroll-snap-align: center;
-  display: flex; flex-direction: column;
-  padding: 26px 28px 22px;
-  border-radius: 24px;
-  background: var(--bg-elev);
-  border: 1px solid var(--line);
-  box-shadow: 0 1px 2px rgba(0,0,0,.04), 0 calc(28px - min(var(--d), 1) * 22px) calc(60px - min(var(--d), 1) * 44px) -30px rgba(0,0,0,.35);
-  transform-origin: center;
-  transform:
-    translateY(calc(min(var(--d), 1.5) * 14px))
-    scale(calc(1 - min(var(--d), 1.5) * 0.085))
-    rotateY(calc(var(--o) * -7deg));
-  opacity: calc(1 - min(var(--d), 2) * 0.32);
-  cursor: pointer;
-  user-select: none;
+  flex: none; width: 300px; height: 430px;
+  scroll-snap-align: start;
+  display: flex; flex-direction: column; text-align: left;
+  padding: 22px 22px 18px;
+  border-radius: 18px;
+  background: var(--panel);
+  transition: background var(--dur-fast) ease, transform 160ms var(--ease-soft);
 }
-.hl-card[data-current="true"] { cursor: default; border-color: var(--line-strong); }
-.hl-card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.hl-card:hover:not(:disabled) { background: color-mix(in oklab, var(--panel), var(--ink) 4%); }
+.hl-card:active:not(:disabled) { transform: scale(0.985); }
+.hl-card:disabled { cursor: default; }
+.hl-card[data-busy="true"] { background: color-mix(in oklab, var(--panel), var(--accent) 10%); }
+.hl-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.hl-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
 .hl-no {
-  font-size: 44px; font-weight: 700; letter-spacing: -0.04em; line-height: 1;
-  color: var(--ink); font-variant-numeric: tabular-nums;
+  font-family: var(--font-serif); font-weight: 600;
+  font-size: 40px; line-height: 1; letter-spacing: -0.02em;
+  color: var(--ink); font-variant-numeric: lining-nums;
 }
 .hl-card[data-studied="true"] .hl-no { color: var(--accent-ink); }
-.hl-state { font-size: 13px; font-weight: 500; color: var(--ink-4); }
-.hl-card[data-studied="true"] .hl-state { color: var(--accent-ink); }
-.hl-title {
-  margin: 14px 0 0;
-  font-size: 21px; font-weight: 650; line-height: 1.25; letter-spacing: -0.015em;
-  color: var(--ink); text-wrap: balance;
-}
+.hl-state { font-size: 12.5px; font-weight: 600; color: var(--accent-ink); }
 .hl-ar {
-  flex: 1; min-height: 0; overflow: hidden;
-  margin: 16px 0 0;
+  flex: 1; min-height: 0; overflow: hidden; display: block;
+  margin-top: 14px;
   font-family: var(--font-kfgqpc);
-  font-size: 23px; line-height: 2.05; color: var(--ink);
+  font-size: 21px; line-height: 2; color: var(--ink);
   text-align: right;
-  /* No ellipsis: the narration fades out at the foot of the card. */
-  -webkit-mask-image: linear-gradient(to bottom, #000 72%, transparent);
-          mask-image: linear-gradient(to bottom, #000 72%, transparent);
+  -webkit-mask-image: linear-gradient(to bottom, #000 70%, transparent);
+          mask-image: linear-gradient(to bottom, #000 70%, transparent);
 }
-.hl-foot {
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  padding-top: 14px; margin-top: 4px;
-  border-top: 1px solid var(--line);
+.hl-foot { display: flex; flex-direction: column; gap: 3px; padding-top: 10px; }
+.hl-title {
+  font-size: 15.5px; font-weight: 650; line-height: 1.3; letter-spacing: -0.01em; color: var(--ink);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
-.hl-ref { font-size: 12.5px; color: var(--ink-4); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.hl-open {
-  display: inline-flex; align-items: center; gap: 7px; flex: none;
-  height: 36px; padding: 0 16px; border-radius: 10px;
-  background: var(--ink); color: var(--bg);
-  font-size: 14px; font-weight: 600;
-  opacity: calc(1 - min(var(--d), 1));
-  transition: transform var(--dur-fast) var(--ease-soft);
-}
-.hl-open:active { transform: scale(0.97); }
-.hl-open:disabled { opacity: .55; }
+.hl-ref { font-size: 12.5px; color: var(--ink-3); }
 
-.hl-arrow {
-  position: absolute; top: 50%; z-index: 2;
-  width: 46px; height: 46px; margin-top: -23px; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  background: var(--bg-elev); color: var(--ink);
-  border: 1px solid var(--line); box-shadow: var(--shadow-md);
-  transition: opacity var(--dur-fast) ease, transform var(--dur-fast) var(--ease-soft);
+.hl-index {
+  display: flex; justify-content: center; align-items: flex-end; gap: 4px;
+  height: 18px; margin-top: 16px;
 }
-.hl-arrow:hover { transform: scale(1.06); }
-.hl-arrow:active { transform: scale(0.96); }
-.hl-arrow--prev { left: calc(50% - var(--card-w) / 2 - 78px); }
-.hl-arrow--next { right: calc(50% - var(--card-w) / 2 - 78px); }
-.hl-arrow[data-off="true"] { opacity: 0; pointer-events: none; }
-
-.hl-index { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 2px; }
-.hl-ticks { display: flex; align-items: flex-end; gap: 4px; height: 22px; }
 .hl-tick {
-  width: 5px; height: 10px; border-radius: 3px; padding: 0;
-  background: color-mix(in oklab, var(--ink) 16%, transparent);
-  transition: height 260ms var(--ease-soft), background 200ms ease;
+  width: 5px; height: 8px; border-radius: 3px; padding: 0;
+  background: color-mix(in oklab, var(--ink) 15%, transparent);
+  transition: height 220ms var(--ease-soft), background 200ms ease;
 }
-.hl-tick:hover { height: 16px; background: color-mix(in oklab, var(--ink) 40%, transparent); }
-.hl-tick[data-studied="true"] { background: color-mix(in oklab, var(--accent) 60%, transparent); }
-.hl-tick[data-current="true"] { height: 22px; background: var(--ink); }
-.hl-where { margin: 0; font-size: 13px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
-.hl-where-n { font-weight: 650; color: var(--ink); }
+.hl-tick:hover { height: 14px; background: color-mix(in oklab, var(--ink) 40%, transparent); }
+.hl-tick[data-studied="true"] { background: color-mix(in oklab, var(--accent) 65%, transparent); }
+.hl-tick[data-in-view="true"] { height: 18px; background: var(--ink); }
+.hl-tick[data-in-view="true"][data-studied="true"] { background: var(--accent-ink); }
 
 @media (max-width: 720px) {
-  .hl { margin: 0 -56px; }
-  .hl-arrow { display: none; }
-  .hl-card { padding: 22px 22px 18px; }
-  .hl-ar { font-size: 21px; }
-  .hl-ticks { gap: 3px; }
+  .hl-card { width: min(78vw, 300px); height: 400px; }
+  .hl-ar { font-size: 20px; }
+  .hl-index { gap: 3px; }
   .hl-tick { width: 4px; }
 }
 
