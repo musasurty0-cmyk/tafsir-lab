@@ -677,6 +677,15 @@ model YouthMajlisFile {
   updatedAt   DateTime @default(now()) @updatedAt @db.Timestamptz(6)
 }
 
+/// The private timetable at /productivity (prisma/sql/013). One row per plan.
+model ProductivityPlan {
+  id           String   @id
+  passwordHash String
+  draft        Json
+  state        Json?
+  updatedAt    DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+}
+
 /// An open demo checks in; closing it stamps closedAt (prisma/sql/009).
 model DemoPresence {
   userId   String    @id @db.Uuid
