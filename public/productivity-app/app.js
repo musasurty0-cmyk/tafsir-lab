@@ -371,82 +371,96 @@
     toastTimer = setTimeout(() => { t.hidden = true; }, ms);
   }
 
-  /* ── sidebar ── */
+  /* ── sidebar: the fortnight as a calendar, what's coming up, and the rings ── */
   const dayTasks = (d) => d.blocks.filter((b) => TRACKED.includes(b.cat));
-  function renderSide() {
-    const today = todayIso();
-    let html = "";
-    state.days.forEach((d, i) => {
-      if (i % 7 === 0) html += `<div class="week-label">Week ${i / 7 + 1}</div>`;
-      const dt = dateObj(d.date);
-      const tasks = dayTasks(d), done = tasks.filter((b) => b.done).length;
-      const frac = tasks.length ? done / tasks.length : 0;
-      const C = 2 * Math.PI * 7;
-      const meta = d.blocks
-        .filter((b) => b.cat === "gym" || b.cat === "fixed")
-        .map((b) => b.title.split(" · ")[0].replace(/ \(.*\)$/, "") + (b.tentative ? "?" : ""));
-      const metaText = [...new Set(meta)].join(" · ") || "Study day";
-      html += `<button type="button" class="day" data-day="${i}" aria-current="${i === ui.day}" data-today="${d.date === today}">
-        <span class="day-num">${dt.getDate()}</span>
-        <span class="day-name">${esc(d.weekday)}</span>
-        <span class="day-meta">${esc(metaText)}</span>
-        <svg class="day-prog" viewBox="0 0 18 18" aria-label="${done} of ${tasks.length} done"><circle class="track" cx="9" cy="9" r="7"/><circle class="fill" cx="9" cy="9" r="7" stroke-dasharray="${(frac * C).toFixed(2)} ${C.toFixed(2)}"/></svg>
-      </button>`;
-    });
-    $("#days").innerHTML = html;
-
-    const first = state.days[0].date, last = state.days[state.days.length - 1].date;
-    const td = $("#term-dates"); if (td) td.textContent = `${shortDate(first)} to ${shortDate(last)}`;
-    const st = $("#term-status");
+  function termStatus() {
+    const today = todayIso(), first = state.days[0].date, last = state.days[state.days.length - 1].date;
     if (today < first) {
       const n = Math.round((dateObj(first) - dateObj(today)) / 864e5);
-      st.textContent = n === 1 ? "Starts tomorrow" : `Starts in ${n} days`;
-    } else if (today > last) st.textContent = "Finished";
-    else st.textContent = `Day ${state.days.findIndex((d) => d.date === today) + 1} of ${state.days.length}`;
+      return n === 1 ? "Starts tomorrow" : `Starts in ${n} days`;
+    }
+    if (today > last) return "Finished";
+    return `Day ${state.days.findIndex((d) => d.date === today) + 1} of ${state.days.length}`;
+  }
+  function ring(r, frac, cls) {
+    const C = 2 * Math.PI * r, f = Math.max(0, Math.min(1, frac));
+    return `<circle class="rt ${cls}" cx="50" cy="50" r="${r}"/><circle class="rf ${cls}" cx="50" cy="50" r="${r}" stroke-dasharray="${(f * C).toFixed(2)} ${C.toFixed(2)}"/>`;
+  }
+  function renderSide() {
+    const today = todayIso();
+    const first = state.days[0].date, last = state.days[state.days.length - 1].date;
+    const lead = (dateObj(first).getDay() + 6) % 7;      // weeks start on Monday
+    let cal = `<div class="cal-head"><b>${MONTH(first)}${MONTH(last) !== MONTH(first) ? ` – ${MONTH(last)}` : ""}</b><span>${termStatus()}</span></div>
+      <div class="cal-grid">${["M", "T", "W", "T", "F", "S", "S"].map((x) => `<span class="dow">${x}</span>`).join("")}${"<span></span>".repeat(lead)}`;
+    state.days.forEach((d, i) => {
+      const tasks = dayTasks(d), done = tasks.filter((b) => b.done).length;
+      const st = tasks.length && done === tasks.length ? "all" : done ? "some" : "none";
+      cal += `<button type="button" class="cd" data-day="${i}" aria-current="${i === ui.day}" data-today="${d.date === today}" data-state="${st}" aria-label="${d.weekday} ${shortDate(d.date)}, ${done} of ${tasks.length} done"><span>${dateObj(d.date).getDate()}</span><i></i></button>`;
+    });
+    $("#days").innerHTML = cal + `</div>`;
+
+    // Coming up: the fixed things still ahead.
+    const nowKey = `${today} ${raw(nowMin())}`;
+    const ups = [];
+    for (const d of state.days) for (const b of d.blocks) if (b.cat === "fixed" && `${d.date} ${b.end}` > nowKey) ups.push({ d, b });
+    ups.sort((x, y) => (`${x.d.date} ${x.b.start}` < `${y.d.date} ${y.b.start}` ? -1 : 1));
 
     const A = state.arabic || { total: 60, doneBefore: 10 };
-    let arDone = 0, arPlanned = 0;
+    let arDone = 0, arPlanned = 0, prDone = 0, prAll = 0, stPlan = 0, stDone = 0;
     const hours = Object.fromEntries(TRACKED.map((c) => [c, { plan: 0, done: 0 }]));
     for (const d of state.days) for (const b of d.blocks) {
       if (b.cat === "arabic" && /lesson/i.test(b.title)) { arPlanned++; if (b.done) arDone++; }
+      if (b.cat === "prayer") { prAll++; if (b.done) prDone++; }
       if (hours[b.cat]) { const m = workMinutes(b, d); hours[b.cat].plan += m; if (b.done) hours[b.cat].done += m; }
+      if (STUDY.includes(b.cat)) { const m = workMinutes(b, d); stPlan += m; if (b.done) stDone += m; }
     }
-    const pct = (n) => (100 * n / A.total).toFixed(2) + "%";
     const now = A.doneBefore + arDone;
     const target = Math.min(A.total, A.doneBefore + arPlanned);
     $("#progress").innerHTML = `
-      <div class="ar">
-        <div class="ar-head"><span>Arabic course</span><b>${now}<small> of ${A.total}</small></b></div>
-        <div class="bar" role="img" aria-label="${now} of ${A.total} lessons">
-          <i class="b-plan" style="width:${pct(target)}"></i>
-          <i class="b-before" style="width:${pct(A.doneBefore)}"></i>
-          <i class="b-done" style="left:${pct(A.doneBefore)};width:${pct(arDone)}"></i>
+      ${ups.length ? `<section class="side-sec">
+        <h4>Coming up</h4>
+        ${ups.slice(0, 4).map(({ d, b }) => `<button type="button" class="up" data-goto="${b.id}">
+          <span class="up-day"><small>${dateObj(d.date).toLocaleDateString("en-GB", { weekday: "short" })}</small><b>${dateObj(d.date).getDate()}</b></span>
+          <span class="up-t"><b>${esc(b.title.replace(/ \((maybe|set the time)\)$/, ""))}</b><small>${b.tentative ? "Time to confirm" : `${clock(toMin(b.start))}–${clock(toMin(b.end))}`}</small></span>
+        </button>`).join("")}
+      </section>` : ""}
+      <section class="side-sec rings-sec">
+        <h4>Half term</h4>
+        <div class="rings">
+          <svg viewBox="0 0 100 100" class="ring-svg" aria-hidden="true">${ring(42, now / A.total, "r-ar")}${ring(30, stPlan ? stDone / stPlan : 0, "r-st")}${ring(18, prAll ? prDone / prAll : 0, "r-pr")}</svg>
+          <dl class="ring-key">
+            <div class="k-ar"><dt>Arabic</dt><dd>${now}<small> of ${A.total}</small></dd></div>
+            <div class="k-st"><dt>Study</dt><dd>${fmtHours(stDone)}<small> of ${fmtHours(stPlan)}</small></dd></div>
+            <div class="k-pr"><dt>Prayers</dt><dd>${prDone}<small> of ${prAll}</small></dd></div>
+          </dl>
         </div>
-        <p class="ar-note">Lesson ${target} by the end, if you keep to the plan</p>
-      </div>
-      <div class="hours">
-        ${TRACKED.map((c) => `
+        <p class="ring-note">The plan reaches Arabic lesson ${target}.</p>
+      </section>
+      <section class="side-sec">
+        <h4>Hours</h4>
+        <div class="hours">${TRACKED.map((c) => `
           <span class="h-name" data-cat="${c}"><i class="h-dot"></i>${CAT_LABEL[c]}</span>
-          <span class="h-val"><b>${fmtHours(hours[c].done)}</b> of ${fmtHours(hours[c].plan)}</span>`).join("")}
-      </div>`;
+          <span class="h-val">${fmtHours(hours[c].done)}<small> / ${fmtHours(hours[c].plan)}</small></span>`).join("")}
+        </div>
+      </section>`;
   }
 
-  /* ── top bar ── */
+  /* ── title ── */
   function renderTop() {
     const d = day();
     const dt = dateObj(d.date);
     if (ui.view === "week") {
       const w0 = Math.floor(ui.day / 7) * 7;
       const a = state.days[w0], b = state.days[Math.min(state.days.length - 1, w0 + 6)];
-      $("#day-title").textContent = `Week ${w0 / 7 + 1}`;
-      $("#day-sub").textContent = `${shortDate(a.date)} to ${shortDate(b.date)}`;
+      $("#day-title").innerHTML = `<b>Week ${w0 / 7 + 1}</b> <span>${shortDate(a.date)} – ${shortDate(b.date)}</span>`;
+      $("#day-sub").textContent = termStatus();
     } else {
-      $("#day-title").textContent = `${d.weekday} ${dt.getDate()} ${MONTH(d.date)}`;
+      $("#day-title").innerHTML = `<b>${d.date === todayIso() ? "Today" : esc(d.weekday)}</b> <span>${d.date === todayIso() ? `${esc(d.weekday)} ` : ""}${dt.getDate()} ${MONTH(d.date)}</span>`;
       const p = d.prayers || {};
       const names = ["Fajr", d.weekday === "Friday" ? "Jumuʿah" : "Dhuhr", "Asr", "Maghrib", "Isha"];
       $("#day-sub").innerHTML = names.map((n) => {
         const t = p[n === "Jumuʿah" ? "Dhuhr" : n];
-        return t ? `<span class="pt"><b>${n}</b> ${t}</span>` : "";
+        return t ? `<span class="pt">${n} <b>${t}</b></span>` : "";
       }).join("");
     }
     document.querySelectorAll(".seg button").forEach((b) => b.setAttribute("aria-selected", b.dataset.view === ui.view));
@@ -457,7 +471,6 @@
     $("#next").setAttribute("aria-label", ui.view === "week" ? "Next week" : "Next day");
     const inTerm = state.days.some((x) => x.date === todayIso());
     $("#today").disabled = !inTerm;
-    $("#today").title = inTerm ? "" : `Half term runs ${shortDate(state.days[0].date)} to ${shortDate(state.days[state.days.length - 1].date)}`;
     document.title = ui.view === "week" ? "Productivity" : `${d.weekday} ${dt.getDate()} · Productivity`;
   }
 
@@ -527,8 +540,8 @@
     const d = day();
     const H = (T1 - T0) * PPM;
     const hidden = absorbed(d);
-    let html = `<div class="timeline" style="height:${H}px">`;
-    for (let t = T0; t <= T1; t += 60) html += `<div class="hour" style="top:${(t - T0) * PPM}px"><span>${clock(t)}</span></div>`;
+    let html = `<div class="chrome-space"></div><div class="timeline" style="height:${H}px">`;
+    for (let t = T0; t <= T1; t += 60) html += `<div class="hour" style="top:${(t - T0) * PPM}px"><span>${t === 720 ? "Noon" : clock(t)}</span></div>`;
     html += `<div class="lane">`;
     const boxes = d.blocks.filter((b) => !isBand(b));
     const pos = layoutColumns(boxes);
@@ -541,7 +554,7 @@
     html += `</div>`;
     if (d.date === todayIso()) {
       const m = nowMin();
-      if (m >= T0 && m <= T1) html += `<div class="now" style="top:${(m - T0) * PPM}px"></div>`;
+      if (m >= T0 && m <= T1) html += `<div class="now" style="top:${(m - T0) * PPM}px"><span>${clock(m)}</span></div>`;
     }
     html += `</div>`;
     $("#view").innerHTML = html;
@@ -552,10 +565,10 @@
     const w0 = Math.floor(ui.day / 7) * 7;
     const days = state.days.slice(w0, w0 + 7);
     const H = (T1 - T0) * PPM_W;
-    let html = `<div class="week"><div class="wh-gap"></div>`;
+    let html = `<div class="chrome-space"></div><div class="week"><div class="wh-gap"></div>`;
     days.forEach((d, k) => {
       const dt = dateObj(d.date);
-      html += `<button type="button" class="wh" data-day="${w0 + k}" data-sel="${w0 + k === ui.day}" data-today="${d.date === todayIso()}"><b>${dt.getDate()}</b><span>${d.weekday.slice(0, 3)}</span></button>`;
+      html += `<button type="button" class="wh" data-day="${w0 + k}" data-sel="${w0 + k === ui.day}" data-today="${d.date === todayIso()}"><span>${d.weekday.slice(0, 3)}</span><b>${dt.getDate()}</b></button>`;
     });
     html += `<div class="wgut" style="height:${H}px">`;
     for (let t = T0 + 60; t < T1; t += 120) html += `<span style="top:${(t - T0) * PPM_W}px">${clock(t)}</span>`;
@@ -569,10 +582,12 @@
           if (!hidden.has(b.id)) html += `<div class="wband" style="top:${(toMin(b.start) - T0) * PPM_W}px;height:${Math.max(3, dur(b) * PPM_W - 1)}px" title="${esc(b.title)} ${b.start}"></div>`;
           continue;
         }
-        for (const [s, e] of pieces(b, d, hidden)) {
+        const ps = pieces(b, d, hidden);
+        const tallest = ps.reduce((best, [s, e], k) => (e - s > ps[best][1] - ps[best][0] ? k : best), 0);
+        for (const [k, [s, e]] of ps.entries()) {
           const top = (s - T0) * PPM_W, h = Math.max(8, (e - s) * PPM_W - 2);
           const label = b.cat === "tafsir" && b.surah ? `Tafsīr · ${surahName(b.surah)}` : b.title;
-          html += `<button type="button" class="wblk${b.done ? " done" : ""}${b.tentative ? " tentative" : ""}" data-id="${b.id}" data-cat="${esc(b.cat)}" style="top:${top}px;height:${h}px" title="${esc(label)} · ${clock(toMin(b.start))}–${clock(toMin(b.end))}">${h >= 13 && s === toMin(b.start) ? esc(label) : ""}</button>`;
+          html += `<button type="button" class="wblk${b.done ? " done" : ""}${b.tentative ? " tentative" : ""}" data-id="${b.id}" data-cat="${esc(b.cat)}" style="top:${top}px;height:${h}px" title="${esc(label)} · ${clock(toMin(b.start))}–${clock(toMin(b.end))}">${h >= 11 && k === tallest ? esc(label) : ""}</button>`;
         }
       }
       html += `</div>`;
@@ -581,8 +596,8 @@
     $("#view").innerHTML = html;
   }
 
-  /* ── inspector ── */
-  const CLOSE = `<button type="button" class="icon-btn" data-act="close" aria-label="Close details"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>`;
+  /* ── inspector: grouped, the way Settings is ── */
+  const CLOSE = `<button type="button" class="icon-btn" data-act="close" aria-label="Close details"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>`;
   function renderInspector() {
     const el = $("#inspector");
     const hit = ui.sel && findBlock(ui.sel);
@@ -594,35 +609,41 @@
     const band = isBand(b);
     const ws = WEB ? BOOT.workspaces || [] : [];
     el.innerHTML = `
-      <header class="ins-bar"><span class="kind" data-cat="${esc(b.cat)}"><i></i>${CAT_LABEL[b.cat] || "Other"}${b.tentative ? " · maybe" : ""}</span>${CLOSE}</header>
+      <header class="ins-bar"><span class="kind" data-cat="${esc(b.cat)}"><i></i>${CAT_LABEL[b.cat] || "Other"}${b.tentative ? " · to confirm" : ""}</span>${CLOSE}</header>
       <div class="ins-body">
-      <label class="field field-title"><span>Title</span><input type="text" data-f="title" value="${esc(b.title)}"></label>
-      ${b.cat === "tafsir" ? `
-        <div class="surah-pick">
-          <label class="field"><span>Sūrah</span>
-            <select data-f="surah"><option value="">Choose a sūrah</option>${SURAHS.map(([n], i) => `<option value="${i + 1}"${b.surah === i + 1 ? " selected" : ""}>${i + 1}. ${esc(n)}</option>`).join("")}</select>
-          </label>
-          ${b.surah ? `<p class="surah-ar" lang="ar" dir="rtl">${esc(SURAHS[b.surah - 1][1])}</p>` : ""}
-          ${ws.length > 1 ? `<label class="field"><span>Workspace</span><select data-f="ws">${ws.map((w) => `<option value="${esc(w.id)}"${state.tafsirWorkspace === w.id ? " selected" : ""}>${esc(w.name)}</option>`).join("")}</select></label>` : ""}
-          <button type="button" class="btn btn-accent btn-wide" data-act="open" ${b.surah ? "" : "disabled"}>Open in TafsirLab ${ARROW}</button>
-          ${WEB && !BOOT.signedIn ? `<p class="hint">You’ll be asked to sign in to TafsirLab first.</p>` : ""}
-        </div>` : ""}
-      <div class="toggle-row"><span>${band ? "Prayed" : "Done"}</span><button type="button" class="switch" role="switch" aria-checked="${!!b.done}" data-act="done" aria-label="${band ? "Prayed" : "Done"}"></button></div>
-      <div class="row2">
-        <label class="field"><span>Starts</span><input type="time" step="300" data-f="start" value="${clock(s)}"></label>
-        <label class="field"><span>Ends</span><input type="time" step="300" data-f="end" value="${clock(e)}"></label>
-      </div>
-      <p class="dur-note">${fmtDur(e - s)}${inside.length && STUDY.includes(b.cat) ? `, ${fmtDur(workMinutes(b, d))} of it work, with ${inside.map((p) => p.title).join(" and ")}` : ""}</p>
-      ${band ? "" : `<div class="field"><span>Kind</span><div class="cats">${CATS.filter(([c]) => c !== "prayer").map(([c, l]) =>
-        `<button type="button" class="cat-opt" data-cat="${c}" data-setcat="${c}" aria-pressed="${b.cat === c}"><i></i>${l}</button>`).join("")}</div></div>`}
-      <label class="field"><span>Notes</span><textarea data-f="note" rows="3" placeholder="Anything to remember">${esc(b.note || "")}</textarea></label>
-      ${band ? `<p class="hint">Prayer times are set for the day. Change the time here if you pray it later.</p>` : ""}
-      <label class="field"><span>Day</span><select data-f="day">${state.days.map((x, i) => `<option value="${i}"${x === d ? " selected" : ""}>${x.weekday} ${shortDate(x.date)}</option>`).join("")}</select></label>
-      <div class="ins-actions">
-        ${band ? "" : `<button type="button" class="btn" data-act="dup">Duplicate</button>`}
-        ${b.tentative ? `<button type="button" class="btn" data-act="confirm">Confirm it</button>` : ""}
-        <button type="button" class="btn btn-danger" data-act="delete">Delete</button>
-      </div>
+        <div class="ins-head">
+          <input class="ins-name" type="text" data-f="title" value="${esc(b.title)}" aria-label="Title">
+          <p class="ins-when">${esc(d.weekday)} ${shortDate(d.date)}, ${clock(s)} to ${clock(e)}</p>
+        </div>
+        ${b.cat === "tafsir" ? `
+        <div class="group">
+          <label class="row"><span>Sūrah</span><select data-f="surah"><option value="">Choose</option>${SURAHS.map(([n], i) => `<option value="${i + 1}"${b.surah === i + 1 ? " selected" : ""}>${i + 1}. ${esc(n)}</option>`).join("")}</select></label>
+          ${b.surah ? `<div class="row row-ar"><span class="surah-ar" lang="ar" dir="rtl">${esc(SURAHS[b.surah - 1][1])}</span></div>` : ""}
+          ${ws.length > 1 ? `<label class="row"><span>Workspace</span><select data-f="ws">${ws.map((w) => `<option value="${esc(w.id)}"${state.tafsirWorkspace === w.id ? " selected" : ""}>${esc(w.name)}</option>`).join("")}</select></label>` : ""}
+        </div>
+        <button type="button" class="btn-fill" data-act="open" ${b.surah ? "" : "disabled"}>Open in TafsirLab ${ARROW}</button>
+        ${WEB && !BOOT.signedIn ? `<p class="foot">You’ll be asked to sign in to TafsirLab first.</p>` : ""}` : ""}
+        <div class="group">
+          <label class="row"><span>Starts</span><input type="time" step="300" data-f="start" value="${clock(s)}"></label>
+          <label class="row"><span>Ends</span><input type="time" step="300" data-f="end" value="${clock(e)}"></label>
+          <div class="row"><span>Length</span><span class="row-v">${fmtDur(e - s)}${inside.length && STUDY.includes(b.cat) ? `, ${fmtDur(workMinutes(b, d))} of work` : ""}</span></div>
+        </div>
+        ${inside.length && STUDY.includes(b.cat) ? `<p class="foot">${inside.map((p) => p.title).join(" and ")} falls inside it, so the time around ${inside.length > 1 ? "them" : "it"} is what counts.</p>` : ""}
+        <div class="group">
+          <div class="row"><span>${band ? "Prayed" : "Done"}</span><button type="button" class="switch" role="switch" aria-checked="${!!b.done}" data-act="done" aria-label="${band ? "Prayed" : "Done"}"></button></div>
+          <label class="row"><span>Day</span><select data-f="day">${state.days.map((x, i) => `<option value="${i}"${x === d ? " selected" : ""}>${x.weekday} ${shortDate(x.date)}</option>`).join("")}</select></label>
+        </div>
+        ${band ? `<p class="foot">Prayer times are set for the day. Change the time here if you pray it later.</p>` : `
+        <h4 class="group-label">Kind</h4>
+        <div class="cats">${CATS.filter(([c]) => c !== "prayer").map(([c, l]) =>
+          `<button type="button" class="cat-opt" data-cat="${c}" data-setcat="${c}" aria-pressed="${b.cat === c}"><i></i>${l}</button>`).join("")}</div>`}
+        <h4 class="group-label">Notes</h4>
+        <div class="group"><textarea data-f="note" rows="3" placeholder="Anything to remember">${esc(b.note || "")}</textarea></div>
+        <div class="group">
+          ${b.tentative ? `<button type="button" class="row row-btn" data-act="confirm">Confirm it</button>` : ""}
+          ${band ? "" : `<button type="button" class="row row-btn" data-act="dup">Duplicate</button>`}
+          <button type="button" class="row row-btn danger" data-act="delete">Delete</button>
+        </div>
       </div>`;
   }
 
@@ -632,22 +653,20 @@
     for (const b of d.blocks) if (TRACKED.includes(b.cat)) totals[b.cat] = (totals[b.cat] || 0) + workMinutes(b, d);
     const tasks = dayTasks(d), done = tasks.filter((b) => b.done).length;
     const study = STUDY.reduce((a, c) => a + (totals[c] || 0), 0);
+    const kinds = TRACKED.filter((c) => totals[c]);
     return `
-      <header class="ins-bar"><span class="ins-title">${esc(d.weekday)}</span><span class="ins-meta">${done} of ${tasks.length} done</span></header>
+      <header class="ins-bar"><span class="ins-title">${d.date === todayIso() ? "Today" : esc(d.weekday)}</span><span class="ins-meta">${tasks.length ? `${done} of ${tasks.length} done` : "Free"}</span></header>
       <div class="ins-body">
-      <section class="glance">
-        <h3>Prayers</h3>
-        ${prayers.map((p) => `<button type="button" class="prayer-row${p.done ? " done" : ""}" data-pray="${p.id}">
-          <span class="pr-box">${TICK}</span>
-          <span class="pr-name">${esc(p.title)}</span><span class="pr-time">${clock(toMin(p.start))}</span></button>`).join("")}
-      </section>
-      <section class="glance">
-        <h3>Study</h3>
-        <div class="totals">${TRACKED.filter((c) => totals[c]).map((c) => `<span class="h-name" data-cat="${c}"><i class="h-dot"></i>${CAT_LABEL[c]}</span><span class="t-v">${fmtDur(totals[c])}</span>`).join("") || `<span class="hint">Nothing planned</span><span></span>`}
-        ${study ? `<span class="t-sum">In all</span><span class="t-v t-sum">${fmtDur(study)}</span>` : ""}</div>
-      </section>
-      <label class="field"><span>Notes for the day</span><textarea data-daynote rows="4" placeholder="Homework due, what to bring, how it went">${esc(d.note || "")}</textarea></label>
-      <p class="hint">Drag a block to move it, or its lower edge to resize it; whatever it lands on moves later. Double-click an empty time to add one. <kbd>←</kbd> <kbd>→</kbd> change day, <kbd>Ctrl</kbd> <kbd>Z</kbd> undoes.</p>
+        <h4 class="group-label">Prayers</h4>
+        <div class="group">${prayers.map((p) => `<button type="button" class="row prayer-row${p.done ? " done" : ""}" data-pray="${p.id}">
+          <span class="pr-box">${TICK}</span><span class="pr-name">${esc(p.title)}</span><span class="row-v">${clock(toMin(p.start))}</span></button>`).join("")}</div>
+        <h4 class="group-label">Study</h4>
+        <div class="group">${kinds.length ? kinds.map((c) => `<div class="row"><span class="h-name" data-cat="${c}"><i class="h-dot"></i>${CAT_LABEL[c]}</span><span class="row-v">${fmtDur(totals[c])}</span></div>`).join("")
+          + (study ? `<div class="row row-total"><span>In all</span><span class="row-v">${fmtDur(study)}</span></div>` : "")
+          : `<div class="row"><span class="muted">Nothing planned</span></div>`}</div>
+        <h4 class="group-label">Notes</h4>
+        <div class="group"><textarea data-daynote rows="4" placeholder="Homework due, what to bring, how it went">${esc(d.note || "")}</textarea></div>
+        <p class="foot">Drag a block to move it, or its lower edge to resize it; whatever it lands on moves later. Double-click an empty time to add one. <kbd>←</kbd> <kbd>→</kbd> change day, <kbd>Ctrl</kbd> <kbd>Z</kbd> undoes.</p>
       </div>`;
   }
 
@@ -665,6 +684,7 @@
     if (d.date === todayIso()) m = nowMin() - 90;
     else { const wake = d.blocks.find((b) => /^Wake/.test(b.title)); m = (wake ? toMin(wake.start) : 9 * 60) - 30; }
     $("#view").scrollTop = Math.max(0, (m - T0) * PPM);
+    main.classList.toggle("scrolled", $("#view").scrollTop > 4);
   }
 
   function goDay(i, keepSel) {
@@ -764,9 +784,16 @@
   $("#days").addEventListener("click", (e) => {
     const b = e.target.closest("[data-day]"); if (b) goDay(+b.dataset.day);
   });
+  $("#progress").addEventListener("click", (e) => {
+    const g = e.target.closest("[data-goto]"); if (!g) return;
+    const hit = findBlock(g.dataset.goto); if (!hit) return;
+    ui.view = "day"; ui.day = hit.di; ui.sel = hit.b.id; saveUi(); render(); scrollToStart();
+  });
 
   /* ── events: the view ── */
   const view = $("#view");
+  const main = $("#main");
+  view.addEventListener("scroll", () => main.classList.toggle("scrolled", view.scrollTop > 4), { passive: true });
   let drag = null, hold = 0;
 
   view.addEventListener("click", (e) => {

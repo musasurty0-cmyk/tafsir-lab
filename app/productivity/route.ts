@@ -34,7 +34,7 @@ const GATE = `${head("Productivity · TafsirLab")}
 <main class="pd-gate">
   <span class="mark mark-lg" aria-hidden="true">T</span>
   <h1>Productivity.</h1>
-  <p class="pd-gate-sub">Private to its owner.</p>
+  <p class="pd-gate-sub">Your half term, planned.</p>
   <form class="pd-field" id="gate">
     <label for="pw" class="sr">Password</label>
     <input id="pw" type="password" autocomplete="current-password" autocapitalize="none" placeholder="Password" autofocus>
@@ -43,7 +43,7 @@ const GATE = `${head("Productivity · TafsirLab")}
     </button>
   </form>
   <p class="pd-gate-err" id="err" role="alert"></p>
-  <p class="pd-gate-foot">TafsirLab</p>
+  <p class="pd-gate-foot">Tafsir Lab</p>
 </main>
 <script>
 (() => {
@@ -73,43 +73,37 @@ const APP = (boot: string) => `${head("Productivity")}
       <span class="mark" aria-hidden="true">T</span>
       <span class="brand-text"><b>Productivity</b><small>Tafsir Lab</small></span>
     </header>
-    <div class="term">
-      <span class="term-name">Half term</span>
-      <span class="term-dates" id="term-dates"></span>
-      <span class="term-status" id="term-status"></span>
-    </div>
-    <nav class="days" id="days" aria-label="Days"></nav>
-    <section class="progress" id="progress" aria-label="Progress"></section>
+    <nav class="cal" id="days" aria-label="Days"></nav>
+    <div id="progress"></div>
   </aside>
-  <main class="main">
-    <header class="top">
-      <div class="top-title">
-        <h1 id="day-title"></h1>
-        <p id="day-sub"></p>
-      </div>
-      <div class="top-actions">
+  <main class="main" id="main">
+    <header class="chrome">
+      <div class="toolbar">
+        <div class="tb-left">
+          <button type="button" class="icon-btn" id="prev" aria-label="Previous day"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+          <button type="button" class="icon-btn" id="next" aria-label="Next day"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
+          <button type="button" class="btn" id="today">Today</button>
+        </div>
         <div class="seg" role="tablist" aria-label="View">
           <button type="button" role="tab" data-view="day">Day</button>
           <button type="button" role="tab" data-view="week">Week</button>
         </div>
-        <div class="nav-pair">
-          <button type="button" class="icon-btn" id="prev" aria-label="Previous day"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
-          <button type="button" class="icon-btn" id="next" aria-label="Next day"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
-        </div>
-        <button type="button" class="btn" id="today">Today</button>
-        <button type="button" class="btn btn-primary" id="add"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Add</button>
-        <div class="menu-wrap">
-          <button type="button" class="icon-btn" id="menu-btn" aria-label="More" aria-haspopup="menu" aria-expanded="false"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></button>
-          <div class="menu" id="menu" role="menu" hidden>
-            <button type="button" role="menuitem" data-act="print">Print this day</button>
-            <button type="button" role="menuitem" data-act="export">Save a copy (JSON)</button>
-            <button type="button" role="menuitem" data-act="import">Open a copy…</button>
-            <hr>
-            <button type="button" role="menuitem" data-act="reset" class="danger">Reset to the draft</button>
-            <button type="button" role="menuitem" data-act="lock">Lock on this device</button>
+        <div class="tb-right">
+          <button type="button" class="btn btn-primary" id="add"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span>New</span></button>
+          <div class="menu-wrap">
+            <button type="button" class="icon-btn" id="menu-btn" aria-label="More" aria-haspopup="menu" aria-expanded="false"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg></button>
+            <div class="menu" id="menu" role="menu" hidden>
+              <button type="button" role="menuitem" data-act="print">Print This Day</button>
+              <button type="button" role="menuitem" data-act="export">Save a Copy</button>
+              <button type="button" role="menuitem" data-act="import">Open a Copy…</button>
+              <hr>
+              <button type="button" role="menuitem" data-act="lock">Lock on This Device</button>
+              <button type="button" role="menuitem" data-act="reset" class="danger">Reset to the Draft…</button>
+            </div>
           </div>
         </div>
       </div>
+      <div class="titlebar"><h1 id="day-title"></h1><p id="day-sub"></p></div>
     </header>
     <div class="view" id="view"></div>
   </main>
