@@ -179,7 +179,9 @@
   let seq = 0;
   const newId = () => "u" + Date.now().toString(36) + (seq++).toString(36);
   const dateObj = (iso) => { const [y, m, d] = iso.split("-").map(Number); return new Date(y, m - 1, d); };
-  const todayIso = () => { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(n.getDate()).padStart(2, "0")}`; };
+  // The planner's day runs 05:00 to 05:00, as the timeline does: at half past
+  // midnight you are still in last night, not the start of tomorrow.
+  const todayIso = () => { const n = new Date(Date.now() - 5 * 3600e3); return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(n.getDate()).padStart(2, "0")}`; };
   const nowMin = () => { const n = new Date(); return n.getHours() * 60 + n.getMinutes() + (n.getHours() < 5 ? 1440 : 0); };
   /** The same, to the second, so the line can glide rather than jump a minute at a time. */
   const nowExact = () => { const n = new Date(); return nowMin() + n.getSeconds() / 60; };
@@ -404,7 +406,10 @@
     // Coming up: the fixed things still ahead.
     const nowKey = `${today} ${raw(nowMin())}`;
     const ups = [];
-    for (const d of state.days) for (const b of d.blocks) if (b.cat === "fixed" && `${d.date} ${b.end}` > nowKey) ups.push({ d, b });
+    // One-offs only: a weekly fixture (the mosque, Junayd's lesson) isn't news.
+    const seen = {};
+    for (const d of state.days) for (const b of d.blocks) if (b.cat === "fixed") seen[b.title] = (seen[b.title] || 0) + 1;
+    for (const d of state.days) for (const b of d.blocks) if (b.cat === "fixed" && seen[b.title] === 1 && `${d.date} ${b.end}` > nowKey) ups.push({ d, b });
     ups.sort((x, y) => (`${x.d.date} ${x.b.start}` < `${y.d.date} ${y.b.start}` ? -1 : 1));
 
     const A = state.arabic || { total: 60, doneBefore: 10 };
@@ -437,13 +442,6 @@
           </dl>
         </div>
         <p class="ring-note">The plan reaches Arabic lesson ${target}.</p>
-      </section>
-      <section class="side-sec">
-        <h4>Hours</h4>
-        <div class="hours">${TRACKED.map((c) => `
-          <span class="h-name" data-cat="${c}"><i class="h-dot"></i>${CAT_LABEL[c]}</span>
-          <span class="h-val">${fmtHours(hours[c].done)}<small> / ${fmtHours(hours[c].plan)}</small></span>`).join("")}
-        </div>
       </section>`;
   }
 
@@ -458,12 +456,8 @@
       $("#day-sub").textContent = termStatus();
     } else {
       $("#day-title").innerHTML = `<b>${d.date === todayIso() ? "Today" : esc(d.weekday)}</b> <span>${d.date === todayIso() ? `${esc(d.weekday)} ` : ""}${dt.getDate()} ${MONTH(d.date)}</span>`;
-      const p = d.prayers || {};
-      const names = ["Fajr", d.weekday === "Friday" ? "Jumuʿah" : "Dhuhr", "Asr", "Maghrib", "Isha"];
-      $("#day-sub").innerHTML = names.map((n) => {
-        const t = p[n === "Jumuʿah" ? "Dhuhr" : n];
-        return t ? `<span class="pt">${n} <b>${t}</b></span>` : "";
-      }).join("");
+      const tasks = dayTasks(d), done = tasks.filter((b) => b.done).length;
+      $("#day-sub").textContent = `Half term, day ${ui.day + 1} of ${state.days.length}` + (tasks.length ? ` · ${done} of ${tasks.length} done` : " · A free day");
     }
     document.querySelectorAll(".seg button").forEach((b) => b.setAttribute("aria-selected", b.dataset.view === ui.view));
     const w0 = Math.floor(ui.day / 7) * 7;
@@ -508,15 +502,12 @@
     const segs = pieces(b, d, hidden);
     const inside = prayersInside(b, d);
     const work = workMinutes(b, d);
-    let meta = `${clock(toMin(b.start))}–${clock(toMin(b.end))}`;
-    if (STUDY.includes(b.cat) && inside.length) meta += ` · ${fmtDur(work)} with ${inside.map((p) => p.title).join(", ")}`;
-    else if (STUDY.includes(b.cat)) meta += ` · ${fmtDur(work)}`;
-    const prayedHere = isWall(b) && inside.length
-      ? `<div class="blk-p">${inside.map((p) => `${esc(p.title)} ${clock(toMin(p.start))}`).join(" · ")}${b.praysThere || inside.every((p) => /^Prayed/.test(p.note || "")) ? ", prayed there" : ""}</div>` : "";
+    const meta = `${clock(toMin(b.start))} – ${clock(toMin(b.end))}`;
+    void inside; void work;
     const w = 100 / pos.cols;
-    const base = ["blk", b.done && "done", b.tentative && "tentative", isWall(b) && b.locked && "locked"].filter(Boolean);
+    const base = ["blk", b.done && "done", b.tentative && "tentative", isWall(b) && b.locked && "locked", b.cat === "routine" && "quiet"].filter(Boolean);
     const open = b.cat === "tafsir"
-      ? `<button type="button" class="blk-open" data-open="${b.id}">${b.surah ? `Open ${esc(surahName(b.surah))} ${ARROW}` : "Choose a sūrah"}</button>` : "";
+      ? `<button type="button" class="blk-open" data-open="${b.id}">${b.surah ? `${esc(surahName(b.surah))} ${ARROW}` : "Choose sūrah"}</button>` : "";
     return segs.map(([s, e], k) => {
       const top = (s - T0) * PPM, h = Math.max(14, (e - s) * PPM - 2);
       const first = k === 0, lastSeg = k === segs.length - 1;
@@ -526,10 +517,8 @@
         ? `<button type="button" class="tick" aria-label="${b.done ? "Mark not done" : "Mark done"}">${TICK}</button>
            <div class="blk-t">${esc(b.title)}${b.tentative ? ` <span class="maybe">maybe</span>` : ""}</div>
            <div class="blk-m">${meta}</div>
-           ${prayedHere}
-           ${!short || b.cat === "tafsir" ? open : ""}
-           ${b.note && h > 76 && !open ? `<div class="blk-n">${esc(b.note)}</div>` : ""}`
-        : `<div class="blk-t">${esc(b.title)}</div>${!short ? `<div class="blk-m">continued, until ${clock(toMin(b.end))}</div>` : ""}`;
+           ${open}`
+        : `<div class="blk-t">${esc(b.title)}</div>`;
       return `<div class="${cls}" data-id="${b.id}" data-seg="${k}" data-s="${s}" data-e="${e}" data-cat="${esc(b.cat)}" aria-selected="${ui.sel === b.id}" ${first ? 'tabindex="0"' : ""}
         style="top:${top}px;height:${h}px;left:calc(${w * pos.col}% + ${pos.col ? 3 : 0}px);width:calc(${w}% - ${pos.cols > 1 ? 3 : 0}px)">
         ${body}
@@ -551,7 +540,7 @@
     for (const b of d.blocks.filter((x) => isBand(x) && !hidden.has(x.id))) {
       const top = (toMin(b.start) - T0) * PPM, h = Math.max(13, dur(b) * PPM - 2);
       html += `<div class="band${b.done ? " done" : ""}" data-id="${b.id}" aria-selected="${ui.sel === b.id}" tabindex="0" style="top:${top}px;height:${h}px" title="${esc(b.note || "")}">
-        <b>${esc(b.title)}</b><span>${clock(toMin(b.start))}</span>${b.note ? `<em>${esc(b.note)}</em>` : ""}</div>`;
+        <b>${esc(b.title)}</b><span>${clock(toMin(b.start))}</span></div>`;
     }
     html += `</div>`;
     if (d.date === todayIso()) {
@@ -617,6 +606,7 @@
         <div class="ins-head">
           <input class="ins-name" type="text" data-f="title" value="${esc(b.title)}" aria-label="Title">
           <p class="ins-when">${esc(d.weekday)} ${shortDate(d.date)}, ${clock(s)} to ${clock(e)}</p>
+          ${inside.length && isWall(b) ? `<p class="ins-aside">${inside.map((p) => `${esc(p.title)} ${clock(toMin(p.start))}`).join(", ")} ${b.praysThere ? "is prayed there" : "falls during this"}.</p>` : ""}
         </div>
         ${b.cat === "tafsir" ? `
         <div class="group">
@@ -634,12 +624,10 @@
         ${inside.length && STUDY.includes(b.cat) ? `<p class="foot">${inside.map((p) => p.title).join(" and ")} falls inside it, so the time around ${inside.length > 1 ? "them" : "it"} is what counts.</p>` : ""}
         <div class="group">
           <div class="row"><span>${band ? "Prayed" : "Done"}</span><button type="button" class="switch" role="switch" aria-checked="${!!b.done}" data-act="done" aria-label="${band ? "Prayed" : "Done"}"></button></div>
+          ${band ? "" : `<label class="row"><span>Kind</span><span class="kind-pick" data-cat="${esc(b.cat)}"><i></i><select data-f="cat">${CATS.filter(([c]) => c !== "prayer").map(([c, l]) => `<option value="${c}"${b.cat === c ? " selected" : ""}>${l}</option>`).join("")}</select></span></label>`}
           <label class="row"><span>Day</span><select data-f="day">${state.days.map((x, i) => `<option value="${i}"${x === d ? " selected" : ""}>${x.weekday} ${shortDate(x.date)}</option>`).join("")}</select></label>
         </div>
-        ${band ? `<p class="foot">Prayer times are set for the day. Change the time here if you pray it later.</p>` : `
-        <h4 class="group-label">Kind</h4>
-        <div class="cats">${CATS.filter(([c]) => c !== "prayer").map(([c, l]) =>
-          `<button type="button" class="cat-opt" data-cat="${c}" data-setcat="${c}" aria-pressed="${b.cat === c}"><i></i>${l}</button>`).join("")}</div>`}
+        ${band ? `<p class="foot">Prayer times are set for the day. Change the time here if you pray it later.</p>` : ""}
         <h4 class="group-label">Notes</h4>
         <div class="group"><textarea data-f="note" rows="3" placeholder="Anything to remember">${esc(b.note || "")}</textarea></div>
         <div class="group">
@@ -665,13 +653,12 @@
         <h4 class="group-label">Prayers</h4>
         <div class="group">${prayers.map((p) => `<button type="button" class="row prayer-row${p.done ? " done" : ""}" data-pray="${p.id}">
           <span class="pr-box">${TICK}</span><span class="pr-name">${esc(p.title)}</span><span class="row-v">${clock(toMin(p.start))}</span></button>`).join("")}</div>
-        <h4 class="group-label">Study</h4>
+        <h4 class="group-label">Plan</h4>
         <div class="group">${kinds.length ? kinds.map((c) => `<div class="row"><span class="h-name" data-cat="${c}"><i class="h-dot"></i>${CAT_LABEL[c]}</span><span class="row-v">${fmtDur(totals[c])}</span></div>`).join("")
           + (study ? `<div class="row row-total"><span>In all</span><span class="row-v">${fmtDur(study)}</span></div>` : "")
           : `<div class="row"><span class="muted">Nothing planned</span></div>`}</div>
         <h4 class="group-label">Notes</h4>
         <div class="group"><textarea data-daynote rows="4" placeholder="Homework due, what to bring, how it went">${esc(d.note || "")}</textarea></div>
-        <p class="foot">Drag a block to move it, or its lower edge to resize it; whatever it lands on moves later. Double-click an empty time to add one. <kbd>←</kbd> <kbd>→</kbd> change day, <kbd>Ctrl</kbd> <kbd>Z</kbd> undoes.</p>
       </div>`;
   }
 
@@ -949,6 +936,7 @@
       if (n && "Notification" in window && Notification.permission === "default") Notification.requestPermission().catch(() => {});
     }
     if (t.dataset.f === "ws") mutate(() => { state.tafsirWorkspace = t.value; });
+    if (t.dataset.f === "cat") { const n = mutate(() => { b.cat = t.value; return settle(d, b.id); }); madeRoom(n); }
     if (t.dataset.f === "start" || t.dataset.f === "end") {
       if (!t.value) return;
       let m = toMin(t.value); if (m < T0) m += 1440;      // after midnight

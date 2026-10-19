@@ -93,7 +93,7 @@
   :root:not([data-theme="light"]) .pd [data-cat="routine"]   { --c: #98989d; }
 }
 .pd [data-cat] {
-  --f: color-mix(in srgb, var(--c) 15%, var(--bg));
+  --f: color-mix(in srgb, var(--c) 13%, var(--bg));
   --k: color-mix(in srgb, var(--c), var(--mix) var(--mix-amt));
 }
 
@@ -221,7 +221,7 @@ html:has(> body.pd), body.pd { overflow: hidden; overscroll-behavior: none; }
 .titlebar { height: 68px; padding: 2px 24px 0; display: flex; flex-direction: column; justify-content: center; }
 .titlebar h1 { margin: 0; font: 700 26px/1.1 var(--display); letter-spacing: -0.025em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .titlebar h1 span { font-weight: 400; color: var(--ink-3); }
-.titlebar p { margin: 5px 0 0; font-size: 12px; color: var(--ink-3); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.titlebar p { margin: 4px 0 0; font-size: 12.5px; color: var(--ink-3); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .titlebar .pt { margin-right: 14px; }
 .titlebar .pt b { font-weight: 600; color: var(--ink-2); }
 
@@ -233,6 +233,7 @@ html:has(> body.pd), body.pd { overflow: hidden; overscroll-behavior: none; }
 .icon-btn:hover { background: var(--fill); }
 .icon-btn:active { transform: scale(0.94); }
 .icon-btn:disabled { opacity: 0.3; background: none; transform: none; }
+.icon-tint { color: var(--tint); }
 .btn { height: 28px; padding: 0 12px; border-radius: 7px; font-size: 12.5px; font-weight: 500; background: var(--fill); display: inline-flex; align-items: center; justify-content: center; gap: 5px; transition: background 160ms ease, transform 100ms ease-out, opacity 160ms; }
 .btn:hover { background: var(--fill-2); }
 .btn:active { transform: scale(0.97); }
@@ -292,9 +293,14 @@ html:has(> body.pd), body.pd { overflow: hidden; overscroll-behavior: none; }
 .blk.done { opacity: 0.45; }
 .blk.done .blk-t { text-decoration: line-through; text-decoration-thickness: 1px; }
 .blk.tentative { background: repeating-linear-gradient(135deg, var(--f) 0 6px, color-mix(in srgb, var(--f), var(--c) 14%) 6px 8px); }
+/* Meals, waking, sleep: there, but not asking for attention. */
+.blk.quiet { background: color-mix(in srgb, var(--ink) 4%, var(--bg)); color: var(--ink-3); }
+.blk.quiet::before { display: none; }
+.blk.quiet .blk-t { font-weight: 500; }
 /* Selected: solid, as Calendar does it. */
 .blk[aria-selected="true"] { background: var(--c); color: #fff; z-index: 4; box-shadow: var(--shadow); }
 .blk[data-cat="prayer"][aria-selected="true"] { color: #1d1d1f; }
+.blk.quiet[aria-selected="true"] { background: var(--ink-3); color: var(--bg); }
 .blk.dragging, .blk.lifted { z-index: 6; box-shadow: var(--shadow-lg); transform: scale(1.01); }
 .tick {
   position: absolute; right: 7px; top: 5px;
@@ -306,7 +312,9 @@ html:has(> body.pd), body.pd { overflow: hidden; overscroll-behavior: none; }
   transition: opacity 160ms ease, background 160ms ease, transform 120ms ease-out;
 }
 .tick svg { opacity: 0; }
-.tick:hover { opacity: 1; }
+.tick { opacity: 0; }
+.blk:hover .tick, .blk[aria-selected="true"] .tick, .blk:focus-visible .tick { opacity: 0.55; }
+.tick:hover, .blk:hover .tick:hover { opacity: 1; }
 .tick:active { transform: scale(0.85); }
 .blk.done .tick { background: var(--c); box-shadow: none; color: #fff; opacity: 1; }
 .blk.done .tick svg { opacity: 1; }
@@ -315,7 +323,7 @@ html:has(> body.pd), body.pd { overflow: hidden; overscroll-behavior: none; }
 .grip { position: absolute; left: 0; right: 0; bottom: 0; height: 7px; cursor: ns-resize; }
 .blk-open {
   position: absolute; right: 30px; top: 4px;
-  height: 20px; padding: 0 9px; border-radius: 10px;
+  height: 19px; padding: 0 8px; border-radius: 10px;
   display: inline-flex; align-items: center; gap: 4px;
   background: var(--c); color: #fff;
   font-size: 11.5px; font-weight: 600; cursor: pointer;
@@ -330,14 +338,14 @@ html:has(> body.pd), body.pd { overflow: hidden; overscroll-behavior: none; }
 .band {
   position: absolute; left: 0; right: 0;
   --c: #e0a800;
-  background: color-mix(in srgb, var(--c) 18%, var(--bg)); color: color-mix(in srgb, var(--c), #000 45%);
-  border-radius: 5px;
-  display: flex; align-items: center; gap: 7px;
-  padding: 0 10px 0 11px;
-  font-size: 11px;
+  background: color-mix(in srgb, var(--c) 11%, var(--bg)); color: color-mix(in srgb, var(--c), #000 48%);
+  border-radius: 4px;
+  display: flex; align-items: center; gap: 6px;
+  padding: 0 10px;
+  font-size: 10.5px;
   cursor: default; overflow: hidden; white-space: nowrap;
 }
-.band::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3.5px; background: var(--c); }
+.band::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: var(--c); flex: none; }
 .band b { font-weight: 600; }
 .band span { font-variant-numeric: tabular-nums; opacity: 0.85; }
 .band em { font-style: normal; opacity: 0.7; margin-left: auto; overflow: hidden; text-overflow: ellipsis; }
@@ -367,7 +375,9 @@ html:has(> body.pd), body.pd { overflow: hidden; overscroll-behavior: none; }
   pointer-events: none; transition: height 15s linear;
 }
 .blk[aria-selected="true"].is-now::after { background: rgba(255, 255, 255, 0.16); }
-.blk.is-past:not(.done):not([aria-selected="true"]) { opacity: 0.62; }
+/* Behind you: the colour softens toward the page rather than turning see-through. */
+.blk.is-past:not(.done):not([aria-selected="true"]) { background: color-mix(in srgb, var(--f), var(--bg) 45%); color: color-mix(in srgb, var(--k), var(--bg) 40%); }
+.blk.is-past:not(.done):not([aria-selected="true"])::before { opacity: 0.45; }
 
 /* ── The week ────────────────────────────────────────── */
 .week { display: grid; grid-template-columns: 56px repeat(7, minmax(92px, 1fr)); margin: 0 16px 40px 0; min-width: 760px; }
@@ -429,6 +439,11 @@ html:has(> body.pd), body.pd { overflow: hidden; overscroll-behavior: none; }
 }
 .row select option { color: initial; }
 .row input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
+.kind-pick { display: inline-flex; align-items: center; gap: 7px; min-width: 0; }
+.kind-pick i { width: 9px; height: 9px; border-radius: 50%; background: var(--c); flex: none; }
+.kind-pick select { max-width: none; }
+.row select { field-sizing: content; }
+.ins-aside { margin: 6px 0 0; font-size: 12px; color: var(--ink-3); }
 .row-btn { cursor: pointer; color: var(--tint); font-weight: 500; transition: background 140ms ease; }
 .row-btn:hover { background: var(--hover); }
 .row-btn.danger { color: var(--red); }

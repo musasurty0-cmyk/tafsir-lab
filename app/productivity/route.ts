@@ -89,7 +89,7 @@ const APP = (boot: string) => `${head("Productivity")}
           <button type="button" role="tab" data-view="week">Week</button>
         </div>
         <div class="tb-right">
-          <button type="button" class="btn btn-primary" id="add"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span>New</span></button>
+          <button type="button" class="icon-btn icon-tint" id="add" aria-label="New block" title="New block"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
           <div class="menu-wrap">
             <button type="button" class="icon-btn" id="menu-btn" aria-label="More" aria-haspopup="menu" aria-expanded="false"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg></button>
             <div class="menu" id="menu" role="menu" hidden>
