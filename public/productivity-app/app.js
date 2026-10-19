@@ -181,6 +181,8 @@
   const dateObj = (iso) => { const [y, m, d] = iso.split("-").map(Number); return new Date(y, m - 1, d); };
   const todayIso = () => { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(n.getDate()).padStart(2, "0")}`; };
   const nowMin = () => { const n = new Date(); return n.getHours() * 60 + n.getMinutes() + (n.getHours() < 5 ? 1440 : 0); };
+  /** The same, to the second, so the line can glide rather than jump a minute at a time. */
+  const nowExact = () => { const n = new Date(); return nowMin() + n.getSeconds() / 60; };
   const MONTH = (iso) => dateObj(iso).toLocaleDateString("en-GB", { month: "long" });
   const shortDate = (iso) => `${dateObj(iso).getDate()} ${MONTH(iso).slice(0, 3)}`;
 
@@ -528,7 +530,7 @@
            ${!short || b.cat === "tafsir" ? open : ""}
            ${b.note && h > 76 && !open ? `<div class="blk-n">${esc(b.note)}</div>` : ""}`
         : `<div class="blk-t">${esc(b.title)}</div>${!short ? `<div class="blk-m">continued, until ${clock(toMin(b.end))}</div>` : ""}`;
-      return `<div class="${cls}" data-id="${b.id}" data-seg="${k}" data-cat="${esc(b.cat)}" aria-selected="${ui.sel === b.id}" ${first ? 'tabindex="0"' : ""}
+      return `<div class="${cls}" data-id="${b.id}" data-seg="${k}" data-s="${s}" data-e="${e}" data-cat="${esc(b.cat)}" aria-selected="${ui.sel === b.id}" ${first ? 'tabindex="0"' : ""}
         style="top:${top}px;height:${h}px;left:calc(${w * pos.col}% + ${pos.col ? 3 : 0}px);width:calc(${w}% - ${pos.cols > 1 ? 3 : 0}px)">
         ${body}
         ${lastSeg && !(isWall(b) && b.locked) ? `<span class="grip" aria-hidden="true"></span>` : ""}
@@ -554,7 +556,7 @@
     html += `</div>`;
     if (d.date === todayIso()) {
       const m = nowMin();
-      if (m >= T0 && m <= T1) html += `<div class="now" style="top:${(m - T0) * PPM}px"><span>${clock(m)}</span></div>`;
+      if (m >= T0 && m <= T1) html += `<div class="now" id="now-line" style="top:${(nowExact() - T0) * PPM}px"><span>${clock(m)}</span></div>`;
     }
     html += `</div>`;
     $("#view").innerHTML = html;
@@ -576,6 +578,7 @@
     days.forEach((d) => {
       const hidden = absorbed(d);
       html += `<div class="wcol" style="height:${H + 8}px">`;
+      if (d.date === todayIso() && nowMin() >= T0 && nowMin() <= T1) html += `<div class="wnow" id="wnow" style="top:${(nowExact() - T0) * PPM_W}px"></div>`;
       for (let t = T0 + 60; t < T1; t += 120) html += `<div class="wline" style="top:${(t - T0) * PPM_W}px"></div>`;
       for (const b of d.blocks) {
         if (isBand(b)) {
@@ -654,9 +657,11 @@
     const tasks = dayTasks(d), done = tasks.filter((b) => b.done).length;
     const study = STUDY.reduce((a, c) => a + (totals[c] || 0), 0);
     const kinds = TRACKED.filter((c) => totals[c]);
+    const ns = d.date === todayIso() ? nowState() : null;
     return `
       <header class="ins-bar"><span class="ins-title">${d.date === todayIso() ? "Today" : esc(d.weekday)}</span><span class="ins-meta">${tasks.length ? `${done} of ${tasks.length} done` : "Free"}</span></header>
       <div class="ins-body">
+        ${ns ? nowCardHTML(ns) : ""}
         <h4 class="group-label">Prayers</h4>
         <div class="group">${prayers.map((p) => `<button type="button" class="row prayer-row${p.done ? " done" : ""}" data-pray="${p.id}">
           <span class="pr-box">${TICK}</span><span class="pr-name">${esc(p.title)}</span><span class="row-v">${clock(toMin(p.start))}</span></button>`).join("")}</div>
@@ -670,11 +675,55 @@
       </div>`;
   }
 
+  /* ── where you are in the day ── */
+  function nowState() {
+    const d = state.days.find((x) => x.date === todayIso());
+    if (!d) return null;
+    const m = nowExact();
+    const items = d.blocks.filter((b) => !isBand(b) && b.title !== "Sleep").sort((a, b) => toMin(a.start) - toMin(b.start));
+    const cur = items.find((b) => toMin(b.start) <= m && m < toMin(b.end));
+    const next = items.find((b) => toMin(b.start) > m);
+    const prayer = d.blocks.find((b) => isBand(b) && toMin(b.start) <= m && m < toMin(b.end));
+    return { d, m, cur: prayer || cur, next };
+  }
+  function nowCardHTML({ m, cur, next }) {
+    const left = cur ? Math.max(1, Math.ceil(toMin(cur.end) - m)) : 0;
+    const p = cur ? (m - toMin(cur.start)) / dur(cur) : 0;
+    return `<button type="button" class="now-card" data-act="to-now"${cur ? ` data-cat="${esc(cur.cat)}"` : ""}>
+      <span class="nc-top"><span class="nc-label">Now</span><span class="nc-time">${clock(Math.floor(m))}</span></span>
+      <span class="nc-title">${cur ? esc(cur.title) : "Free time"}</span>
+      ${cur ? `<span class="nc-bar"><i style="width:${(p * 100).toFixed(1)}%"></i></span><span class="nc-left">${fmtDur(left)} left, until ${clock(toMin(cur.end))}</span>` : ""}
+      ${next ? `<span class="nc-next">Next: <b>${esc(next.title)}</b> at ${clock(toMin(next.start))}</span>` : ""}
+    </button>`;
+  }
+  /** Move the line, fill the block you're in, and keep the Now card current, without redrawing the day. */
+  function tickNow() {
+    if (drag) return;
+    const m = nowExact(), isToday = day().date === todayIso();
+    const line = document.getElementById("now-line");
+    if (line) { line.style.top = `${(m - T0) * PPM}px`; line.querySelector("span").textContent = clock(Math.floor(m)); }
+    const w = document.getElementById("wnow");
+    if (w) w.style.top = `${(m - T0) * PPM_W}px`;
+    view.querySelectorAll(".blk[data-s]").forEach((el) => {
+      const s = +el.dataset.s, e = +el.dataset.e;
+      const on = isToday && s <= m && m < e;
+      el.classList.toggle("is-now", on);
+      el.classList.toggle("is-past", isToday && e <= m);
+      if (on) el.style.setProperty("--p", ((m - s) / (e - s)).toFixed(4)); else el.style.removeProperty("--p");
+    });
+    const ins = $("#inspector");
+    if (!ui.sel && !ins.contains(document.activeElement)) {
+      const card = ins.querySelector(".now-card"), ns = isToday ? nowState() : null;
+      if (card && ns) card.outerHTML = nowCardHTML(ns);
+    }
+  }
+
   function render() {
     renderSide();
     renderTop();
     if (ui.view === "week") renderWeek(); else renderDay();
     renderInspector();
+    tickNow();
   }
 
   function scrollToStart() {
@@ -931,6 +980,7 @@
     if (setcat && hit) { const n = mutate(() => { hit.b.cat = setcat.dataset.setcat; return settle(hit.d, hit.b.id); }); madeRoom(n); return; }
     const act = e.target.closest("[data-act]")?.dataset.act; if (!act) return;
     if (act === "close") { ui.sel = null; render(); return; }
+    if (act === "to-now") { const i = state.days.findIndex((x) => x.date === todayIso()); if (i >= 0) { ui.view = "day"; goDay(i); } return; }
     if (!hit) return;
     const { b, d } = hit;
     if (act === "open") openSurah(b);
@@ -993,10 +1043,10 @@
   /* Keep the now-line honest, roll over at midnight, and watch the clock. */
   let lastDate = todayIso();
   setInterval(() => {
-    if (todayIso() !== lastDate) { lastDate = todayIso(); renderSide(); renderTop(); }
-    if (ui.view === "day" && day().date === todayIso() && !drag && !document.activeElement?.matches?.("#view *")) renderDay();
+    if (todayIso() !== lastDate) { lastDate = todayIso(); render(); return; }
+    tickNow();
     remind();
-  }, 30_000);
+  }, 15_000);
 
   render();
   scrollToStart();
