@@ -225,10 +225,13 @@ html:has(> body.pd), body.pd { overflow: hidden; overscroll-behavior: none; }
 .titlebar .pt { margin-right: 14px; }
 .titlebar .pt b { font-weight: 600; color: var(--ink-2); }
 
-.seg { display: flex; background: var(--fill); border-radius: 8px; padding: 2px; }
-.seg button { height: 24px; min-width: 64px; padding: 0 14px; border-radius: 6px; font-size: 12.5px; font-weight: 500; color: var(--ink-2); transition: background 220ms var(--spring), box-shadow 220ms var(--spring); }
-.seg button[aria-selected="true"] { background: var(--bg); color: var(--ink); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 0 0 0.5px rgba(0, 0, 0, 0.04); }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .pd .seg button[aria-selected="true"] { background: #636366; } }
+.seg { position: relative; display: flex; background: var(--fill); border-radius: 8px; padding: 2px; }
+/* The thumb slides between the two; the buttons sit on top of it. */
+.seg-thumb { position: absolute; top: 2px; bottom: 2px; left: 2px; border-radius: 6px; background: var(--bg); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 0 0 0.5px rgba(0, 0, 0, 0.04); pointer-events: none; }
+.seg.ready .seg-thumb { transition: transform 380ms var(--spring), width 380ms var(--spring); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .pd .seg-thumb { background: #636366; } }
+.seg button { position: relative; z-index: 1; height: 24px; min-width: 64px; padding: 0 14px; border-radius: 6px; font-size: 12.5px; font-weight: 500; color: var(--ink-3); cursor: pointer; transition: color 240ms var(--spring); }
+.seg button[aria-selected="true"] { color: var(--ink); }
 .icon-btn { width: 28px; height: 28px; border-radius: 7px; display: grid; place-items: center; color: var(--ink-2); transition: background 160ms ease, transform 100ms ease-out; }
 .icon-btn:hover { background: var(--fill); }
 .icon-btn:active { transform: scale(0.94); }
@@ -297,10 +300,10 @@ html:has(> body.pd), body.pd { overflow: hidden; overscroll-behavior: none; }
 .blk.quiet { background: color-mix(in srgb, var(--ink) 4%, var(--bg)); color: var(--ink-3); }
 .blk.quiet::before { display: none; }
 .blk.quiet .blk-t { font-weight: 500; }
-/* Selected: solid, as Calendar does it. */
-.blk[aria-selected="true"] { background: var(--c); color: #fff; z-index: 4; box-shadow: var(--shadow); }
-.blk[data-cat="prayer"][aria-selected="true"] { color: #1d1d1f; }
-.blk.quiet[aria-selected="true"] { background: var(--ink-3); color: var(--bg); }
+/* Selected: the tint deepens and a fine edge of its colour comes up. */
+.blk[aria-selected="true"] { background: color-mix(in srgb, var(--c) 24%, var(--bg)); z-index: 4; box-shadow: 0 0 0 1.5px var(--c), var(--shadow); }
+.blk.quiet[aria-selected="true"] { background: color-mix(in srgb, var(--ink) 9%, var(--bg)); box-shadow: 0 0 0 1.5px var(--ink-4); }
+.blk:active:not(.dragging) { transform: scale(0.995); }
 .blk.dragging, .blk.lifted { z-index: 6; box-shadow: var(--shadow-lg); transform: scale(1.01); }
 .tick {
   position: absolute; right: 7px; top: 5px;
@@ -318,7 +321,7 @@ html:has(> body.pd), body.pd { overflow: hidden; overscroll-behavior: none; }
 .tick:active { transform: scale(0.85); }
 .blk.done .tick { background: var(--c); box-shadow: none; color: #fff; opacity: 1; }
 .blk.done .tick svg { opacity: 1; }
-.blk[aria-selected="true"] .tick { color: #fff; }
+.blk[aria-selected="true"] .tick { color: var(--k); }
 .blk.short .tick { top: 50%; margin-top: -8px; }
 .grip { position: absolute; left: 0; right: 0; bottom: 0; height: 7px; cursor: ns-resize; }
 .blk-open {
@@ -331,7 +334,7 @@ html:has(> body.pd), body.pd { overflow: hidden; overscroll-behavior: none; }
 }
 .blk-open:hover { filter: brightness(1.08); }
 .blk-open:active { transform: scale(0.95); }
-.blk[aria-selected="true"] .blk-open { background: #fff; color: var(--c); }
+
 .blk.short .blk-open { top: 50%; margin-top: -10px; }
 
 /* A prayer sits in its own gap in the day; nothing is drawn under it. */
@@ -374,7 +377,7 @@ html:has(> body.pd), body.pd { overflow: hidden; overscroll-behavior: none; }
   background: color-mix(in srgb, var(--c) 16%, transparent);
   pointer-events: none; transition: height 15s linear;
 }
-.blk[aria-selected="true"].is-now::after { background: rgba(255, 255, 255, 0.16); }
+
 /* Behind you: the colour softens toward the page rather than turning see-through. */
 .blk.is-past:not(.done):not([aria-selected="true"]) { background: color-mix(in srgb, var(--f), var(--bg) 45%); color: color-mix(in srgb, var(--k), var(--bg) 40%); }
 .blk.is-past:not(.done):not([aria-selected="true"])::before { opacity: 0.45; }

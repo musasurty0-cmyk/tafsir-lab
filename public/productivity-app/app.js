@@ -372,7 +372,51 @@
     t.hidden = false;
     if (action) t.querySelector("button").onclick = () => { t.hidden = true; action.run(); };
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => { t.hidden = true; }, ms);
+    toastTimer = setTimeout(() => {
+      const a = anim(t, [{ opacity: 1, transform: "translate(-50%, 0)" }, { opacity: 0, transform: "translate(-50%, 10px)" }], { duration: 220, easing: "ease-in" });
+      if (a) a.onfinish = () => { t.hidden = true; }; else t.hidden = true;
+    }, ms);
+  }
+
+
+  /* ── motion ──
+     Only where it explains something: paging slides from the side you're
+     heading to, an edit glides blocks to where they now belong, a switch of
+     view crossfades, and small confirmations pop. One curve throughout, a
+     critically damped spring's shape; nothing loops, nothing waits. */
+  const EASE = "cubic-bezier(0.2, 0.9, 0.25, 1)";
+  const shown = { day: null, view: null, ins: null, cal: null };
+  let ringsIn = false;
+  const anim = (el, frames, opts) => el && el.animate && el.animate(frames, { duration: 360, easing: EASE, ...opts });
+  function paintView(html) {
+    const v = $("#view");
+    const first = shown.view === null;
+    const mode = shown.view !== ui.view ? "fade" : shown.day !== ui.day ? "slide" : "flip";
+    const dir = Math.sign(ui.day - (shown.day ?? ui.day));
+    const key = (el) => `${el.dataset.id}:${el.dataset.seg || 0}`;
+    const before = new Map();
+    if (mode === "flip") v.querySelectorAll(".blk[data-id], .band[data-id]").forEach((el) => before.set(key(el), el.offsetTop));
+    v.innerHTML = html;
+    shown.view = ui.view; shown.day = ui.day;
+    if (first) return;
+    if (mode === "flip") {
+      v.querySelectorAll(".blk[data-id], .band[data-id]").forEach((el) => {
+        const was = before.get(key(el));
+        if (was === undefined) { anim(el, [{ opacity: 0, transform: "scale(0.96)" }, { opacity: 1, transform: "none" }], { duration: 280 }); return; }
+        const dy = was - el.offsetTop;
+        if (Math.abs(dy) > 1) anim(el, [{ transform: `translateY(${dy}px)` }, { transform: "none" }], { duration: 440 });
+      });
+      return;
+    }
+    const from = mode === "slide" && dir ? `translateX(${dir * 28}px)` : "translateY(8px)";
+    anim(v.querySelector(".timeline, .week"), [{ opacity: 0, transform: from }, { opacity: 1, transform: "none" }], { duration: 380 });
+    const tfrom = mode === "slide" && dir ? `translateX(${dir * 14}px)` : "translateY(4px)";
+    for (const el of [$("#day-title"), $("#day-sub")]) anim(el, [{ opacity: 0, transform: tfrom }, { opacity: 1, transform: "none" }], { duration: 320 });
+  }
+  function pop(el) { anim(el, [{ transform: "scale(0.55)" }, { transform: "scale(1.14)", offset: 0.6 }, { transform: "scale(1)" }], { duration: 380 }); }
+  function slideSwitch(sw, on) {
+    if (!sw) return;
+    try { anim(sw, [{ transform: `translateX(${on ? 0 : 15}px)` }, { transform: `translateX(${on ? 15 : 0}px)` }], { duration: 320, pseudoElement: "::after" }); } catch { /* no pseudo-element animation here */ }
   }
 
   /* ── sidebar: the fortnight as a calendar, what's coming up, and the rings ── */
@@ -402,6 +446,8 @@
       cal += `<button type="button" class="cd" data-day="${i}" aria-current="${i === ui.day}" data-today="${d.date === today}" data-state="${st}" aria-label="${d.weekday} ${shortDate(d.date)}, ${done} of ${tasks.length} done"><span>${dateObj(d.date).getDate()}</span><i></i></button>`;
     });
     $("#days").innerHTML = cal + `</div>`;
+    if (shown.cal !== null && shown.cal !== ui.day) pop($("#days .cd[aria-current='true'] span"));
+    shown.cal = ui.day;
 
     // Coming up: the fixed things still ahead.
     const nowKey = `${today} ${raw(nowMin())}`;
@@ -445,6 +491,13 @@
       </section>`;
   }
 
+  function fillRings() {
+    if (ringsIn) return;
+    ringsIn = true;
+    document.querySelectorAll("#progress .rf").forEach((c, i) =>
+      anim(c, [{ strokeDasharray: `0 ${c.getAttribute("stroke-dasharray").split(" ")[1]}` }, { strokeDasharray: c.getAttribute("stroke-dasharray") }], { duration: 1200, delay: 150 + i * 120, fill: "backwards" }));
+  }
+
   /* ── title ── */
   function renderTop() {
     const d = day();
@@ -460,6 +513,7 @@
       $("#day-sub").textContent = `Half term, day ${ui.day + 1} of ${state.days.length}` + (tasks.length ? ` · ${done} of ${tasks.length} done` : " · A free day");
     }
     document.querySelectorAll(".seg button").forEach((b) => b.setAttribute("aria-selected", b.dataset.view === ui.view));
+    placeThumb();
     const w0 = Math.floor(ui.day / 7) * 7;
     $("#prev").disabled = ui.view === "day" ? ui.day === 0 : w0 === 0;
     $("#next").disabled = ui.view === "day" ? ui.day === state.days.length - 1 : w0 + 7 >= state.days.length;
@@ -548,7 +602,7 @@
       if (m >= T0 && m <= T1) html += `<div class="now" id="now-line" style="top:${(nowExact() - T0) * PPM}px"><span>${clock(m)}</span></div>`;
     }
     html += `</div>`;
-    $("#view").innerHTML = html;
+    paintView(html);
   }
 
   /* ── week view ── */
@@ -585,12 +639,21 @@
       html += `</div>`;
     });
     html += `</div>`;
-    $("#view").innerHTML = html;
+    paintView(html);
   }
 
   /* ── inspector: grouped, the way Settings is ── */
   const CLOSE = `<button type="button" class="icon-btn" data-act="close" aria-label="Close details"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>`;
   function renderInspector() {
+    paintInspector();
+    const key = ui.sel ? `b:${ui.sel}` : `g:${ui.day}`;
+    if (shown.ins !== null && shown.ins !== key) {
+      anim($("#inspector .ins-body"), [{ opacity: 0, transform: "translateY(8px)" }, { opacity: 1, transform: "none" }], { duration: 300 });
+      anim($("#inspector .ins-bar"), [{ opacity: 0 }, { opacity: 1 }], { duration: 240 });
+    }
+    shown.ins = key;
+  }
+  function paintInspector() {
     const el = $("#inspector");
     const hit = ui.sel && findBlock(ui.sel);
     el.classList.toggle("is-open", !!hit);
@@ -705,22 +768,34 @@
     }
   }
 
+  const seg = $(".seg"), thumb = document.createElement("span");
+  thumb.className = "seg-thumb"; seg.prepend(thumb);
+  function placeThumb() {
+    const b = seg.querySelector('[aria-selected="true"]'); if (!b) return;
+    thumb.style.width = `${b.offsetWidth}px`;
+    thumb.style.transform = `translateX(${b.offsetLeft - 2}px)`;
+  }
+  requestAnimationFrame(() => requestAnimationFrame(() => seg.classList.add("ready")));
+  window.addEventListener("resize", placeThumb);
+
   function render() {
     renderSide();
     renderTop();
     if (ui.view === "week") renderWeek(); else renderDay();
     renderInspector();
     tickNow();
+    fillRings();
   }
 
-  function scrollToStart() {
+  function scrollToStart(smooth = false) {
     if (ui.view !== "day") { $("#view").scrollTop = 0; return; }
     const d = day();
     let m;
     if (d.date === todayIso()) m = nowMin() - 90;
     else { const wake = d.blocks.find((b) => /^Wake/.test(b.title)); m = (wake ? toMin(wake.start) : 9 * 60) - 30; }
-    $("#view").scrollTop = Math.max(0, (m - T0) * PPM);
-    main.classList.toggle("scrolled", $("#view").scrollTop > 4);
+    const top = Math.max(0, (m - T0) * PPM);
+    if (smooth) $("#view").scrollTo({ top, behavior: "smooth" }); else $("#view").scrollTop = top;
+    main.classList.toggle("scrolled", top > 4);
   }
 
   function goDay(i, keepSel) {
@@ -754,7 +829,11 @@
   }));
   $("#prev").addEventListener("click", () => goDay(ui.view === "week" ? Math.floor(ui.day / 7) * 7 - 7 : ui.day - 1));
   $("#next").addEventListener("click", () => goDay(ui.view === "week" ? Math.floor(ui.day / 7) * 7 + 7 : ui.day + 1));
-  $("#today").addEventListener("click", () => { const i = state.days.findIndex((d) => d.date === todayIso()); if (i >= 0) { ui.view = "day"; goDay(i); } });
+  $("#today").addEventListener("click", () => {
+    const i = state.days.findIndex((d) => d.date === todayIso()); if (i < 0) return;
+    if (ui.view === "day" && ui.day === i) { scrollToStart(true); return; }
+    ui.view = "day"; goDay(i);
+  });
   $("#add").addEventListener("click", () => {
     if (ui.view === "week") { ui.view = "day"; render(); }
     const d = day();
@@ -841,7 +920,12 @@
       return;
     }
     const tick = e.target.closest(".tick");
-    if (tick) { const hit = findBlock(tick.closest(".blk").dataset.id); mutate(() => { hit.b.done = !hit.b.done; }); return; }
+    if (tick) {
+      const hit = findBlock(tick.closest(".blk").dataset.id);
+      mutate(() => { hit.b.done = !hit.b.done; });
+      if (hit.b.done) pop(view.querySelector(`.blk[data-id="${hit.b.id}"][data-seg="0"] .tick`));
+      return;
+    }
     const wh = e.target.closest(".wh");
     if (wh) { ui.view = "day"; goDay(+wh.dataset.day); return; }
     const wb = e.target.closest(".wblk");
@@ -962,17 +1046,22 @@
   });
   ins.addEventListener("click", (e) => {
     const pray = e.target.closest("[data-pray]");
-    if (pray) { const hit = findBlock(pray.dataset.pray); mutate(() => { hit.b.done = !hit.b.done; }); return; }
+    if (pray) {
+      const hit = findBlock(pray.dataset.pray);
+      mutate(() => { hit.b.done = !hit.b.done; });
+      if (hit.b.done) pop($(`#inspector [data-pray="${hit.b.id}"] .pr-box`));
+      return;
+    }
     const hit = ui.sel && findBlock(ui.sel);
     const setcat = e.target.closest("[data-setcat]");
     if (setcat && hit) { const n = mutate(() => { hit.b.cat = setcat.dataset.setcat; return settle(hit.d, hit.b.id); }); madeRoom(n); return; }
     const act = e.target.closest("[data-act]")?.dataset.act; if (!act) return;
     if (act === "close") { ui.sel = null; render(); return; }
-    if (act === "to-now") { const i = state.days.findIndex((x) => x.date === todayIso()); if (i >= 0) { ui.view = "day"; goDay(i); } return; }
+    if (act === "to-now") { $("#today").click(); return; }
     if (!hit) return;
     const { b, d } = hit;
     if (act === "open") openSurah(b);
-    if (act === "done") mutate(() => { b.done = !b.done; });
+    if (act === "done") { mutate(() => { b.done = !b.done; }); slideSwitch($('#inspector .switch[data-act="done"]'), b.done); }
     if (act === "confirm") mutate(() => { delete b.tentative; b.title = b.title.replace(/ \((maybe|set the time)\)$/, ""); });
     if (act === "delete") deleteBlock(b.id);
     if (act === "dup") {
