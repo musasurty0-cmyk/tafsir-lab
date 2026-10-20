@@ -81,6 +81,7 @@
 [data-cat="fixed"]       { --c: #ff9500; }
 [data-cat="routine"]     { --c: #8e8e93; }
 [data-cat="prayer"]      { --c: #e0a800; }
+[data-cat="islamic"]     { --c: #a2845e; }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .pd [data-cat="arabic"]    { --c: #7d7aff; }
   :root:not([data-theme="light"]) .pd [data-cat="maths"]     { --c: #0a84ff; }
@@ -91,6 +92,7 @@
   :root:not([data-theme="light"]) .pd [data-cat="fixed"]     { --c: #ff9f0a; }
   :root:not([data-theme="light"]) .pd [data-cat="prayer"]    { --c: #ffd60a; }
   :root:not([data-theme="light"]) .pd [data-cat="routine"]   { --c: #98989d; }
+  :root:not([data-theme="light"]) .pd [data-cat="islamic"]   { --c: #c4a47c; }
 }
 .pd [data-cat] {
   --f: color-mix(in srgb, var(--c) 13%, var(--bg));
@@ -146,9 +148,11 @@ html:has(> body.pd), body.pd { overflow: hidden; overscroll-behavior: none; }
 .brand-text small { color: var(--ink-4); font-size: 11px; }
 
 .cal { padding: 10px 2px 4px; }
-.cal-head { display: flex; flex-direction: column; gap: 1px; padding: 0 6px 10px; }
+.cal-head { display: flex; align-items: center; justify-content: space-between; padding: 0 0 0 6px; }
 .cal-head b { font: 700 15px var(--display); letter-spacing: -0.015em; }
-.cal-head span { font-size: 11.5px; color: var(--tint); font-weight: 600; }
+.cal-nav { display: flex; }
+.cal-nav .icon-btn { width: 24px; height: 24px; border-radius: 6px; color: var(--ink-3); }
+.cal-status { margin: 1px 0 10px 6px; font-size: 11.5px; color: var(--tint); font-weight: 600; }
 .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); row-gap: 2px; }
 .dow { text-align: center; font-size: 10.5px; font-weight: 600; color: var(--ink-4); padding-bottom: 4px; }
 .cd { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 2px 0 3px; border-radius: 8px; cursor: pointer; }
@@ -166,6 +170,10 @@ html:has(> body.pd), body.pd { overflow: hidden; overscroll-behavior: none; }
 .cd i { width: 4px; height: 4px; border-radius: 50%; background: var(--ink-4); opacity: 0.45; }
 .cd[data-state="some"] i { background: var(--tint); opacity: 0.6; }
 .cd[data-state="all"] i { background: var(--tint); opacity: 1; }
+.cd.off { cursor: default; }
+.cd.off span { color: var(--ink-4); opacity: 0.45; }
+.cd.off:hover span { background: none; }
+.cd.off i { opacity: 0; }
 
 .side-sec { padding: 18px 6px 0; }
 .side-sec h4 { margin: 0 0 8px; font: 600 11.5px var(--text); color: var(--ink-4); letter-spacing: 0; }
@@ -408,6 +416,9 @@ html:has(> body.pd), body.pd { overflow: hidden; overscroll-behavior: none; }
 .wgut { position: relative; }
 .wgut span { position: absolute; right: 8px; transform: translateY(-50%); color: var(--ink-4); font-size: 10.5px; font-weight: 500; font-variant-numeric: tabular-nums; }
 .wline { position: absolute; left: 0; right: 0; border-top: 0.5px solid var(--sep); }
+.wblk.quiet { background: color-mix(in srgb, var(--ink) 4%, var(--bg)); color: var(--ink-3); }
+.wblk.quiet::before { display: none; }
+.wh:disabled { opacity: 0.35; cursor: default; }
 .wblk {
   position: absolute; left: 2px; right: 3px;
   border-radius: 4px; padding: 1px 5px 1px 7px;
@@ -506,6 +517,11 @@ html:has(> body.pd), body.pd { overflow: hidden; overscroll-behavior: none; }
 .nc-label { font-size: 11px; font-weight: 700; color: var(--red); }
 .nc-time { font-size: 11.5px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
 .nc-title { font: 700 17px/1.25 var(--display); letter-spacing: -0.02em; }
+/* A programme session: how far through its course. */
+.row-progress { gap: 14px; }
+.row-progress .nc-bar { flex: 1; margin: 0; }
+.row-progress .nc-bar i { background: var(--c, var(--tint)); transition: none; }
+.group:has(.row-progress) { --c: #a2845e; }
 .nc-bar { height: 4px; border-radius: 2px; background: var(--fill); overflow: hidden; margin: 6px 0 2px; }
 .nc-bar i { display: block; height: 100%; border-radius: 2px; background: var(--c, var(--tint)); transition: width 15s linear; }
 .nc-left { font-size: 12px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
