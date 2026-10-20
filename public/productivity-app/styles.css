@@ -276,7 +276,7 @@ html:has(> body.pd), body.pd { overflow: hidden; overscroll-behavior: none; }
   position: absolute;
   background: var(--f); color: var(--k);
   border-radius: 6px;
-  padding: 4px 30px 4px 11px;
+  padding: 5px 30px 5px 12px;
   overflow: hidden;
   cursor: default;
   user-select: none; -webkit-user-select: none;
@@ -284,7 +284,7 @@ html:has(> body.pd), body.pd { overflow: hidden; overscroll-behavior: none; }
   transition: background 180ms var(--spring), color 180ms var(--spring), box-shadow 180ms var(--spring), opacity 200ms ease;
 }
 .blk::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3.5px; background: var(--c); }
-.blk-t { font-weight: 600; font-size: 12.5px; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.blk-t { font-weight: 600; font-size: 13px; line-height: 1.3; letter-spacing: -0.006em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .blk-m, .blk-p { font-size: 11.5px; opacity: 0.85; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .blk-p { opacity: 0.7; }
 .blk-n { font-size: 11.5px; opacity: 0.72; margin-top: 3px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
@@ -303,6 +303,8 @@ html:has(> body.pd), body.pd { overflow: hidden; overscroll-behavior: none; }
 /* Selected: the tint deepens and a fine edge of its colour comes up. */
 .blk[aria-selected="true"] { background: color-mix(in srgb, var(--c) 24%, var(--bg)); z-index: 4; box-shadow: 0 0 0 1.5px var(--c), var(--shadow); }
 .blk.quiet[aria-selected="true"] { background: color-mix(in srgb, var(--ink) 9%, var(--bg)); box-shadow: 0 0 0 1.5px var(--ink-4); }
+.blk:not([aria-selected="true"]):not(.quiet):hover { background: color-mix(in srgb, var(--c) 18%, var(--bg)); }
+.blk.quiet:not([aria-selected="true"]):hover { background: color-mix(in srgb, var(--ink) 6.5%, var(--bg)); }
 .blk:active:not(.dragging) { transform: scale(0.995); }
 .blk.dragging, .blk.lifted { z-index: 6; box-shadow: var(--shadow-lg); transform: scale(1.01); }
 .tick {
@@ -328,34 +330,45 @@ html:has(> body.pd), body.pd { overflow: hidden; overscroll-behavior: none; }
   position: absolute; right: 30px; top: 4px;
   height: 19px; padding: 0 8px; border-radius: 10px;
   display: inline-flex; align-items: center; gap: 4px;
-  background: var(--c); color: #fff;
+  background: color-mix(in srgb, var(--c) 18%, transparent); color: var(--k);
   font-size: 11.5px; font-weight: 600; cursor: pointer;
-  transition: transform 100ms ease-out, filter 160ms ease;
+  transition: transform 100ms ease-out, background 160ms ease;
 }
-.blk-open:hover { filter: brightness(1.08); }
+.blk-open:hover { background: color-mix(in srgb, var(--c) 28%, transparent); }
 .blk-open:active { transform: scale(0.95); }
 
 .blk.short .blk-open { top: 50%; margin-top: -10px; }
 
-/* A prayer sits in its own gap in the day; nothing is drawn under it. */
+/* A prayer is a moment, not a box: a fine gold line through the gap it
+   keeps free, and its name beside it on the page colour. */
 .band {
   position: absolute; left: 0; right: 0;
-  --c: #e0a800;
-  background: color-mix(in srgb, var(--c) 11%, var(--bg)); color: color-mix(in srgb, var(--c), #000 48%);
-  border-radius: 4px;
-  display: flex; align-items: center; gap: 6px;
-  padding: 0 10px;
+  --c: #d19b00;
+  color: color-mix(in srgb, var(--c), #000 40%);
+  display: flex; align-items: center;
   font-size: 10.5px;
-  cursor: default; overflow: hidden; white-space: nowrap;
+  cursor: pointer; white-space: nowrap;
 }
-.band::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: var(--c); flex: none; }
+.band::before {
+  content: ""; position: absolute; left: 0; right: 0; top: 50%;
+  border-top: 1px solid color-mix(in srgb, var(--c) 55%, transparent);
+}
+.band-tag {
+  position: relative; display: inline-flex; align-items: center; gap: 5px;
+  padding: 1px 8px 1px 6px; margin-left: -2px; border-radius: 9px;
+  background: var(--bg);
+  transition: background 160ms ease;
+}
+.band-tag i { width: 6px; height: 6px; border-radius: 50%; background: var(--c); flex: none; }
 .band b { font-weight: 600; }
-.band span { font-variant-numeric: tabular-nums; opacity: 0.85; }
-.band em { font-style: normal; opacity: 0.7; margin-left: auto; overflow: hidden; text-overflow: ellipsis; }
-.band[aria-selected="true"] { background: var(--c); color: #1d1d1f; }
-.band.done b::after { content: " ✓"; }
+.band .band-t { font-variant-numeric: tabular-nums; opacity: 0.8; }
+.band:hover .band-tag { background: color-mix(in srgb, var(--c) 10%, var(--bg)); }
+.band[aria-selected="true"] .band-tag { background: var(--c); color: #1d1d1f; box-shadow: none; }
+.band.done::before { border-top-style: dashed; opacity: 0.6; }
+.band.done .band-tag i { background: transparent; box-shadow: inset 0 0 0 1.5px var(--c); width: 7px; height: 7px; }
+.band.done b::after { content: " ✓"; font-weight: 700; }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .pd .band { --c: #ffd60a; color: color-mix(in srgb, var(--c), #fff 25%); background: color-mix(in srgb, var(--c) 16%, var(--bg)); }
+  :root:not([data-theme="light"]) .pd .band { --c: #ffd60a; color: color-mix(in srgb, var(--c), #fff 20%); }
 }
 
 /* Where you are: a red line that glides down the day (it is moved every
@@ -370,7 +383,7 @@ html:has(> body.pd), body.pd { overflow: hidden; overscroll-behavior: none; }
   padding: 1px 5px; border-radius: 5px;
 }
 
-.blk.is-now { box-shadow: 0 0 0 1.5px var(--c), var(--shadow); }
+.blk.is-now:not([aria-selected="true"]) { box-shadow: var(--shadow); }
 .blk.is-now::after {
   content: ""; position: absolute; left: 0; right: 0; top: 0;
   height: calc(var(--p, 0) * 100%);

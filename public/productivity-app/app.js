@@ -594,7 +594,7 @@
     for (const b of d.blocks.filter((x) => isBand(x) && !hidden.has(x.id))) {
       const top = (toMin(b.start) - T0) * PPM, h = Math.max(13, dur(b) * PPM - 2);
       html += `<div class="band${b.done ? " done" : ""}" data-id="${b.id}" aria-selected="${ui.sel === b.id}" tabindex="0" style="top:${top}px;height:${h}px" title="${esc(b.note || "")}">
-        <b>${esc(b.title)}</b><span>${clock(toMin(b.start))}</span></div>`;
+        <span class="band-tag"><i></i><b>${esc(b.title)}</b><span class="band-t">${clock(toMin(b.start))}</span></span></div>`;
     }
     html += `</div>`;
     if (d.date === todayIso()) {
