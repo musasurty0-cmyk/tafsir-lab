@@ -25,6 +25,10 @@ export type WorkspaceSurahSummary = {
   pageCount: number;
   publishedCount: number;
   firstPageId: string | null;
+  /** Something has actually been written here: a note, ink, or text in the
+      page document. Opening a sūrah creates its session, but that alone is
+      not studying it. */
+  hasWork: boolean;
 };
 
 export default async function WorkspaceHomePage({
@@ -90,7 +94,7 @@ export default async function WorkspaceHomePage({
   }
 
   const { workspace, role } = gate;
-  const [chapters, rawSurahs] = await Promise.all([
+  const [chapters, rawSurahs, workRows] = await Promise.all([
     fetchChapters(),
     db.workspaceSurah.findMany({
       where: { workspaceId, surahNumber: { gte: 1 } }, // exclude the whiteboard sentinel (0)
@@ -105,7 +109,20 @@ export default async function WorkspaceHomePage({
         },
       },
     }),
+    /* Which sūrahs have real work in them: any note, any ink, or any written
+       text in a page document. One query, cheap EXISTS checks; the ink is
+       never read, only whether its array is non-empty. */
+    db.$queryRaw<{ id: string; hasWork: boolean }[]>`
+      SELECT ws.id,
+        (EXISTS (SELECT 1 FROM "StructuredNote" sn JOIN "Page" p ON p.id = sn."pageId" WHERE p."workspaceSurahId" = ws.id)
+         OR EXISTS (SELECT 1 FROM "CanvasDrawing" c JOIN "Page" p ON p.id = c."pageId"
+                    WHERE p."workspaceSurahId" = ws.id AND jsonb_typeof(c.strokes) = 'array' AND jsonb_array_length(c.strokes) > 0)
+         OR EXISTS (SELECT 1 FROM "Page" p WHERE p."workspaceSurahId" = ws.id
+                    AND p."tiptapContent"::text ~ '"text":"[^"]*[^[:space:]"]')) AS "hasWork"
+      FROM "WorkspaceSurah" ws
+      WHERE ws."workspaceId" = ${workspaceId}::uuid AND ws."surahNumber" >= 1`,
   ]);
+  const worked = new Set(workRows.filter((r) => r.hasWork).map((r) => r.id));
 
   const workspaceSurahs: WorkspaceSurahSummary[] = rawSurahs.map((s) => ({
     id: s.id,
@@ -114,6 +131,7 @@ export default async function WorkspaceHomePage({
     pageCount: s._count.pages,
     publishedCount: s.pages.filter((p) => p.status === "published").length,
     firstPageId: s.pages[0]?.id ?? null,
+    hasWork: worked.has(s.id),
   }));
 
   return (

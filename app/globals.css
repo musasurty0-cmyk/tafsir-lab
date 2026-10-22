@@ -13964,6 +13964,31 @@ input, textarea { font: inherit; color: inherit; }
 .qcf-bar-basmala { flex: none; }
 .qcf-rule--solo { max-width: 240px; }
 
+/* The basmala sits on the page's own centre line. As a flex row the middle
+   was centred in whatever the two ends left over, and they are never the
+   same width (an Arabic plate on one side; a book mark, a Latin name and a
+   switcher on the other), so it drifted toward the shorter side.
+
+   Five columns: plate, rule, basmala, rule, Latin. The two ends share the
+   space equally (never less than their own content) and the rules are short
+   ornaments, so the ends can stay equal in a narrow column and the basmala
+   lands dead centre. Al-Fatihah, with no basmala, keeps one rule between. */
+.qcf-surah-bar,
+.qcf-surah-bar:not(:has(.qcf-bar-basmala)) {
+  display: grid;
+  grid-template-columns: minmax(max-content, 1fr) auto minmax(max-content, 1fr);
+  align-items: center;
+  gap: 6px;
+}
+.qcf-surah-bar:has(.qcf-bar-basmala) {
+  grid-template-columns: minmax(max-content, 1fr) minmax(6px, 18px) auto minmax(6px, 18px) minmax(max-content, 1fr);
+}
+.qcf-surah-bar:has(.qcf-bar-basmala) .qcf-bar-mid { display: contents; }
+.qcf-surah-bar > .qcf-plate { justify-self: start; }
+.qcf-surah-bar > .qcf-bar-en { justify-self: end; }
+.qcf-bar-mid .qcf-rule { flex: none; width: 100%; max-width: none; }
+.qcf-bar-mid .qcf-rule--solo { width: clamp(60px, 18vw, 240px); }
+
 .qcf-bar-en {
   flex: none; gap: 0; height: 36px;
   font-size: 14px; font-weight: 500; letter-spacing: 0;
@@ -14125,3 +14150,80 @@ input, textarea { font: inherit; color: inherit; }
 .mode-b-zoom-controls { left: 20px; right: auto; bottom: 20px; }
 .doc-zoom { position: absolute; left: 20px; right: auto; bottom: 20px; z-index: 8; }
 .sidebar-expand-btn { bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
+
+
+/* ═══ The sūrah grid ══════════════════════════════════════════════════════
+   One view of all 114, found by typing rather than scrolling. Filled tiles
+   rather than outlined cards; the Arabic name in the King Fahd face; a
+   sūrah reads as "studying" only once there is work in it (a note, ink or
+   written text), so opening one by mistake leaves no mark. */
+/* The search floats at the top as the grid scrolls under it. */
+.sfind {
+  position: sticky; top: 12px; z-index: 6;
+  display: flex; align-items: center; gap: 9px;
+  width: min(440px, 100%); height: 38px; margin: 2px 0 18px; padding: 0 12px;
+  border-radius: 11px; color: var(--ink-3);
+  background: color-mix(in srgb, var(--panel) 82%, transparent);
+  -webkit-backdrop-filter: saturate(180%) blur(18px); backdrop-filter: saturate(180%) blur(18px);
+  box-shadow: 0 0 0 0.5px var(--line), 0 6px 18px rgba(0, 0, 0, 0.06);
+  transition: background var(--dur-hover) var(--ease-soft), box-shadow var(--dur-hover) var(--ease-soft);
+}
+.sfind:focus-within { background: var(--bg-elev); box-shadow: 0 0 0 3px var(--accent-soft), 0 0 0 1px var(--accent); }
+.sfind input {
+  flex: 1; min-width: 0; height: 100%; border: 0; outline: none; background: transparent;
+  font: inherit; font-size: 14px; color: var(--ink);
+}
+.sfind input::placeholder { color: var(--ink-4); }
+.sfind input::-webkit-search-cancel-button { display: none; }
+.sfind-clear {
+  display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%;
+  background: color-mix(in srgb, var(--ink) 18%, transparent); color: var(--bg);
+}
+.sfind-clear:hover { background: color-mix(in srgb, var(--ink) 30%, transparent); }
+
+.sgrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(196px, 1fr));
+  gap: 10px;
+  padding-bottom: 40px;
+}
+.sgrid[data-anim-direction="left"]  { animation: slideFromRight 260ms cubic-bezier(.2,.9,.2,1); }
+.sgrid[data-anim-direction="right"] { animation: slideFromLeft 260ms cubic-bezier(.2,.9,.2,1); }
+.sgrid-empty { margin: 30px 0; color: var(--ink-3); font-size: 14px; }
+
+.scard {
+  display: flex; flex-direction: column; align-items: stretch; gap: 1px;
+  min-height: 148px; padding: 12px 14px 12px;
+  border: 0; border-radius: 14px;
+  background: var(--panel);
+  text-align: left; color: var(--ink); cursor: pointer;
+  transition: background var(--dur-hover) var(--ease-soft), transform 120ms ease-out, box-shadow var(--dur-hover) var(--ease-soft);
+}
+.scard:hover { background: var(--panel-2); }
+.scard:active:not(:disabled) { transform: scale(0.985); }
+.scard:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--accent-soft), 0 0 0 1px var(--accent); }
+.scard[data-studying="true"] { background: color-mix(in oklch, var(--accent) 11%, var(--bg-elev)); }
+.scard[data-studying="true"]:hover { background: color-mix(in oklch, var(--accent) 17%, var(--bg-elev)); }
+.scard[data-loading="true"] { cursor: wait; }
+.scard[data-locked="true"] { cursor: not-allowed; opacity: 0.5; }
+
+.scard-top { display: flex; align-items: center; justify-content: space-between; min-height: 18px; }
+.scard-num { font-size: 12px; font-weight: 600; color: var(--ink-4); font-variant-numeric: tabular-nums; }
+.scard[data-studying="true"] .scard-num { color: var(--accent-ink); }
+.scard-state { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 600; color: var(--accent-ink); }
+.scard-state i { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+.scard-state--busy, .scard-state--muted { color: var(--ink-4); font-weight: 500; }
+.scard-ar {
+  margin: 4px 0 6px; text-align: right;
+  font-family: var(--font-kfgqpc); font-size: 25px; line-height: 1.55; color: var(--ink);
+}
+.scard-en { font-size: 14px; font-weight: 600; letter-spacing: -0.005em; line-height: 1.3; }
+.scard-sub { font-size: 12.5px; color: var(--ink-3); line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.scard-meta { margin-top: auto; padding-top: 6px; font-size: 11.5px; color: var(--ink-4); font-variant-numeric: tabular-nums; }
+.scard[data-studying="true"] .scard-meta { color: color-mix(in oklch, var(--accent-ink) 70%, var(--ink-4)); }
+
+@media (max-width: 720px) {
+  .sgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .scard { min-height: 118px; padding: 11px 12px; }
+  .scard-ar { font-size: 22px; }
+}

@@ -510,6 +510,34 @@ export default function PageEditor({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editor, provider]);
 
+  // ── Flush on close ───────────────────────────────────────────────────
+  // The DB snapshot trails the live document by the save debounce. When the
+  // tab is hidden or closed inside that window, send what is waiting instead
+  // of dropping it. Only once the document has synced: before that the
+  // editor may hold a partial doc, which must never overwrite the snapshot.
+  useEffect(() => {
+    if (!editor) return;
+    const flush = () => {
+      if (!saveTimer.current || !seededRef.current || editor.isDestroyed) return;
+      clearTimeout(saveTimer.current);
+      saveTimer.current = null;
+      const body = JSON.stringify({ tiptapContent: editor.getJSON() });
+      fetch(`/api/pages/${pageId}/content`, {
+        method:  "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body,
+        keepalive: body.length < 60_000,
+      }).catch(() => {});
+    };
+    const onHide = () => { if (document.visibilityState === "hidden") flush(); };
+    window.addEventListener("pagehide", flush);
+    document.addEventListener("visibilitychange", onHide);
+    return () => {
+      window.removeEventListener("pagehide", flush);
+      document.removeEventListener("visibilitychange", onHide);
+    };
+  }, [editor, pageId]);
+
   // ── Expose editor to parent ────────────────────────────────────────────
 
   const onEditorReadyRef = useRef(onEditorReady);

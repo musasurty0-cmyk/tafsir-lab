@@ -1,12 +1,13 @@
 "use client";
 
 /**
- * WorkspaceHome — workspace-aware surah grid.
+ * WorkspaceHome — the 114 sūrahs as one grid, with a search field.
  *
- * Shows all 114 surahs. Started surahs have a distinct card state
- * with page count badge and click → navigate to their pages.
- * Not-started surahs show "Start studying" on hover, which POSTs
- * to startSurah then navigates to the created page list.
+ * "Studying" means there is real work in a sūrah: a note, ink, or written
+ * text (hasWork, from the server). Opening one only creates its session, so
+ * a sūrah opened by mistake stays plain; nothing needs undoing. Opening a
+ * sūrah that already has a session goes straight to it; one that doesn't is
+ * started first (admins only in a group workspace).
  *
  * Rail is rendered here (fetches workspaces itself).
  */
@@ -18,8 +19,7 @@ import { useRouter } from "next/navigation";
 import type { Chapter } from "@/lib/types";
 import type { MemberRole } from "@/lib/services/workspaces.service";
 import { isAdmin } from "@/lib/services/workspaces.service";
-import { Lock, ScanLine } from "lucide-react";
-import SurahSpotlight from "./SurahSpotlight";
+import { Lock, Search, X } from "lucide-react";
 import type { WorkspaceSurahSummary } from "@/app/workspaces/[workspaceId]/page";
 import Rail from "./Rail";
 import NewWorkspaceModal from "@/components/NewWorkspaceModal";
@@ -27,6 +27,14 @@ import WorkspaceSettings from "./WorkspaceSettings";
 import TourBubble from "@/components/TourBubble";
 
 const PLACE: Record<string, string> = { makkah: "Makki", madinah: "Madani" };
+
+/** "Al-Baqarah", "al baqara", "Baqarah" all match: no accents, hyphens or spaces. */
+const normLatin = (s: string) =>
+  s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
+/** Arabic without its marks, tatweel or alef forms, so "البقرة" finds "ٱلْبَقَرَة". */
+const normArabic = (s: string) =>
+  s.replace(/[\u064B-\u065F\u0670\u06D6-\u06ED\u0640]/g, "").replace(/[\u0622\u0623\u0625\u0671]/g, "\u0627")
+    .replace(/\u0629/g, "\u0647").replace(/\u0649/g, "\u064A").replace(/[^\u0621-\u064A]/g, "");
 
 interface Props {
   workspaceId: string;
@@ -55,13 +63,7 @@ export default function WorkspaceHome({
   const [starting,   setStarting]   = useState<number | null>(null);
   const [navigating, setNavigating] = useState<number | null>(null);
   const [filter,     setFilter]     = useState<"all" | "started" | "not-started">("all");
-  /* The picker always opens on the spotlight: one sūrah at a time is how you
-     move through the Qur'an, and the grid is the reference view you step out to
-     when you want the whole of it at once. Deliberately NOT remembered — a
-     preference stored from one visit meant landing on the grid with no
-     explanation, which is exactly what this default exists to avoid. */
-  const [surahView, setSurahView] = useState<"spotlight" | "grid">("spotlight");
-  const chooseView = useCallback((v: "spotlight" | "grid") => setSurahView(v), []);
+  const [query,      setQuery]      = useState("");
   const [prevFilter, setPrevFilter] = useState(filter);
   const tabsRef = useRef<Record<string, HTMLButtonElement | null>>({ all: null, started: null, "not-started": null });
   const tabsContainerRef = useRef<HTMLDivElement | null>(null);
@@ -112,10 +114,13 @@ export default function WorkspaceHome({
     setRenaming(false);
   };
 
-  // Build lookup for O(1) checks
+  // Build lookup for O(1) checks. A session is what opening creates; only
+  // one with work in it counts as studying.
   const startedMap = new Map<number, WorkspaceSurahSummary>(
     workspaceSurahs.map((s) => [s.surahNumber, s])
   );
+  const isStudying = (n: number) => !!startedMap.get(n)?.hasWork;
+  const studyingCount = workspaceSurahs.filter((s) => s.hasWork).length;
 
   const canManageBoards = isAdmin(role);
 
@@ -159,10 +164,15 @@ export default function WorkspaceHome({
     [startedMap, workspaceId, router, role]
   );
 
+  const q = normLatin(query);
+  const qa = normArabic(query);
   const visible = chapters.filter((ch) => {
-    if (filter === "started") return startedMap.has(ch.id);
-    if (filter === "not-started") return !startedMap.has(ch.id);
-    return true;
+    if (filter === "started" && !isStudying(ch.id)) return false;
+    if (filter === "not-started" && isStudying(ch.id)) return false;
+    if (!q && !qa) return true;
+    if (/^\d+$/.test(query.trim())) return String(ch.id).startsWith(query.trim());
+    return (q && (normLatin(ch.name_simple).includes(q) || normLatin(ch.translated_name.name).includes(q)))
+      || (qa && normArabic(ch.name_arabic).includes(qa));
   });
 
   // Update sliding indicator position when filter changes or on resize.
@@ -232,7 +242,7 @@ export default function WorkspaceHome({
               </span>
             </div>
             <p className="ws-home-sub">
-              {t("ws.surahsInProgress", { n: workspaceSurahs.length })}
+              {t("ws.surahsInProgress", { n: studyingCount })}
             </p>
           </div>
 
@@ -288,7 +298,7 @@ export default function WorkspaceHome({
             <div className="ws-filter-indicator" aria-hidden />
             {(["all", "started", "not-started"] as const).map((f) => {
               const label = f === "all" ? t("ws.filter.all") : f === "started" ? t("ws.filter.started") : t("ws.filter.notStarted");
-              const count = f === "all" ? 114 : f === "started" ? workspaceSurahs.length : 114 - workspaceSurahs.length;
+              const count = f === "all" ? 114 : f === "started" ? studyingCount : 114 - studyingCount;
               return (
                 <button
                   key={f}
@@ -302,30 +312,36 @@ export default function WorkspaceHome({
                 </button>
               );
             })}
-            <button
-              type="button"
-              className="ws-view-btn"
-              onClick={() => chooseView("spotlight")}
-              title="Scroll the Qur'an one sūrah at a time"
-            >
-              <ScanLine size={14} aria-hidden /> Scroll
-            </button>
           </div>
         </div>
 
-        {surahView === "spotlight" && (
-          <SurahSpotlight
-            chapters={chapters}
-            initialId={visible[0]?.id}
-            closeLabel="Grid view"
-            onPick={handleCardClick}
-            onClose={() => chooseView("grid")}
+        {/* Find a sūrah by name, meaning or number, in English or Arabic. */}
+        <label className="sfind">
+          <Search size={15} aria-hidden />
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") setQuery("");
+              if (e.key === "Enter" && visible.length === 1) handleCardClick(visible[0]);
+            }}
+            placeholder="Find a sūrah: name, meaning or number"
+            aria-label="Find a sūrah"
+            spellCheck={false}
           />
-        )}
+          {query && (
+            <button type="button" className="sfind-clear" onClick={() => setQuery("")} aria-label="Clear search">
+              <X size={13} aria-hidden />
+            </button>
+          )}
+        </label>
 
-        {/* Grid — the reference view, shown when it is the one chosen. */}
-        {surahView === "grid" && <div
-          className="ws-surah-grid"
+        {visible.length === 0 ? (
+          <p className="sgrid-empty">No sūrah matches “{query.trim()}”.</p>
+        ) : (
+        <div
+          className="sgrid"
           data-anim-direction={(() => {
             const order = ["all", "started", "not-started"];
             const prev = order.indexOf(prevFilter);
@@ -334,69 +350,46 @@ export default function WorkspaceHome({
             return cur > prev ? "left" : "right";
           })()}
         >
-          {visible.map((ch, index) => {
+          {visible.map((ch) => {
             const session     = startedMap.get(ch.id);
+            const studying    = !!session?.hasWork;
             const isStarting  = starting   === ch.id;
             const isOpening   = navigating === ch.id;
             const isBusy      = isStarting || isOpening;
-            // Members can open started boards but can't create new ones.
+            // Members can open existing boards but can't create new ones.
             const memberLocked = !session && !canManageBoards;
 
             return (
               <button
                 key={ch.id}
-                className="ws-surah-card ws-surah-card--animate"
-                style={{ animationDelay: `${Math.min(index * 15, 300)}ms` }}
-                data-started={session ? "true" : "false"}
+                type="button"
+                className="scard"
+                data-studying={studying ? "true" : "false"}
                 data-loading={isBusy ? "true" : "false"}
                 data-locked={memberLocked ? "true" : "false"}
                 onClick={() => handleCardClick(ch)}
-                title={
-                  isBusy ? "Opening…"
-                  : session ? `Open — ${session.pageCount} page${session.pageCount !== 1 ? "s" : ""}`
-                  : memberLocked ? "Only admins can start a new surah board"
-                  : "Start studying"
-                }
+                title={memberLocked ? "Only admins can start a new sūrah" : undefined}
                 disabled={isBusy || memberLocked}
               >
-                {/* Number badge */}
-                <div className="ws-card-num">{ch.id}</div>
-
-                {/* Names */}
-                <div className="ws-card-arabic">{ch.name_arabic}</div>
-                <div className="ws-card-name">{ch.name_simple}</div>
-                <div className="ws-card-meta">
-                  {ch.translated_name.name}
-                </div>
-
-                {/* Footer */}
-                <div className="ws-card-footer">
-                  <span className="ws-card-tag">
-                    {PLACE[ch.revelation_place] ?? ch.revelation_place} · {ch.verses_count}v
-                  </span>
-
-                  {isOpening ? (
-                    <span className="ws-card-badge ws-card-badge--loading">
-                      <span className="ws-card-spinner" />Opening…
-                    </span>
-                  ) : session ? (
-                    <span className="ws-card-badge">
-                      {session.pageCount > 0
-                        ? `${session.publishedCount}/${session.pageCount} pages`
-                        : "Started"}
-                    </span>
-                  ) : isStarting ? (
-                    <span className="ws-card-badge ws-card-badge--loading">Starting…</span>
+                <span className="scard-top">
+                  <span className="scard-num">{ch.id}</span>
+                  {isBusy ? (
+                    <span className="scard-state scard-state--busy"><span className="ws-card-spinner" />{isStarting ? "Starting" : "Opening"}</span>
+                  ) : studying ? (
+                    <span className="scard-state"><i aria-hidden />Studying</span>
                   ) : memberLocked ? (
-                    <span className="ws-card-locked-hint"><Lock size={10} /> Admin only</span>
-                  ) : (
-                    <span className="ws-card-start-hint">Start →</span>
-                  )}
-                </div>
+                    <span className="scard-state scard-state--muted"><Lock size={10} aria-hidden /> Admin</span>
+                  ) : null}
+                </span>
+                <span className="scard-ar" lang="ar" dir="rtl">{ch.name_arabic}</span>
+                <span className="scard-en">{ch.name_simple}</span>
+                <span className="scard-sub">{ch.translated_name.name}</span>
+                <span className="scard-meta">{PLACE[ch.revelation_place] ?? ch.revelation_place} · {ch.verses_count} āyāt</span>
               </button>
             );
           })}
-        </div>}
+        </div>
+        )}
       </div>
     </div>
 

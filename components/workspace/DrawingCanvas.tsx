@@ -45,6 +45,7 @@ import {
   useRef, useState,
 } from "react";
 import type { CanvasViewport } from "./ModeBPage";
+import { inkOutboxKey, readInkOutbox } from "@/lib/ink-outbox";
 import {
   type Pt, type InkStroke,
   normPts, hitTest, drawSmooth, drawArrow, paintStroke, strokeSurface,
@@ -308,6 +309,28 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
      been confirmed yet. */
   const deleteSeqRef      = useRef(0);
   const savedDeleteSeqRef = useRef(0);
+
+  /* ── Local outbox ─────────────────────────────────────────────────────
+     Everything the server has not yet confirmed is also kept in this
+     browser's storage, rewritten the moment it changes. Ink drawn in a tab
+     that closes (or crashes, or goes offline) before its save lands is not
+     lost: reopening the page shows it at once and sends it.
+
+     Without this, the last strokes lived only in memory and in a keepalive
+     request fired as the tab closed. A page reopened straight away read the
+     server before that request had arrived, so the ink seemed to be gone and
+     came back only after a reload or two. */
+  const pageIdRef = useRef(pageId);
+  useEffect(() => { pageIdRef.current = pageId; }, [pageId]);
+  const writeOutbox = useCallback(() => {
+    try {
+      const key = inkOutboxKey(pageIdRef.current, "canvas");
+      const strokes = allMyStrokesRef.current.filter((st) => dirtyRef.current.has(st.id));
+      const deleted = deleteSeqRef.current !== savedDeleteSeqRef.current ? [...tombstonesRef.current] : [];
+      if (!strokes.length && !deleted.length) localStorage.removeItem(key);
+      else localStorage.setItem(key, JSON.stringify({ at: Date.now(), strokes, deleted }));
+    } catch { /* storage full or unavailable: the network save still runs */ }
+  }, []);
 
   const onSaveStateRef = useRef(onSaveStateChange);
   useEffect(() => { onSaveStateRef.current = onSaveStateChange; }, [onSaveStateChange]);
@@ -679,6 +702,20 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     setSaveState("saved");
     setMyStrokes([]);
 
+    // Unsaved ink left by an earlier visit (a tab closed before its save
+    // landed): show it now, before the server answers, and send it again.
+    const outbox = readInkOutbox<Stroke>(pageId, "canvas");
+    if (outbox) {
+      for (const id of outbox.deleted) tombstonesRef.current.add(id);
+      if (outbox.deleted.length) deleteSeqRef.current++;
+      allMyStrokesRef.current = outbox.strokes.filter((st) => !tombstonesRef.current.has(st.id));
+      markDirty(allMyStrokesRef.current.map((st) => st.id));
+      const shown = filterForPage(allMyStrokesRef.current, mushafPageRef.current);
+      myStrokesRef.current = shown;
+      setMyStrokes(shown);
+      setSaveState("unsaved");
+    }
+
     function load() {
       fetch(`/api/pages/${pageId}/drawings`)
         .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
@@ -705,8 +742,13 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
             // would silently discard those strokes from local state.
             const serverIds = new Set(migrated.map((s) => s.id));
             const localOnly = allMyStrokesRef.current.filter((s) => !serverIds.has(s.id));
+            /* A stroke still waiting to be saved keeps its local copy: the
+               server's may be from before it was moved. */
+            const pendingCopy = new Map(
+              allMyStrokesRef.current.filter((s) => dirtyRef.current.has(s.id)).map((s) => [s.id, s]),
+            );
             allMyStrokesRef.current = [
-              ...migrated.filter((s) => !tombstonesRef.current.has(s.id)),
+              ...migrated.filter((s) => !tombstonesRef.current.has(s.id)).map((s) => pendingCopy.get(s.id) ?? s),
               ...localOnly,
             ];
             const filtered = filterForPage(allMyStrokesRef.current, curPage);
@@ -727,6 +769,8 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
           }
 
           if (d.otherLayers) setOtherLayers(d.otherLayers);
+          // Anything restored from the outbox goes to the server now.
+          if (dirtyRef.current.size || deleteSeqRef.current !== savedDeleteSeqRef.current) scheduleSave();
         })
         .catch(() => {
           // A failed initial load must NOT be silent — without the server
@@ -897,6 +941,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     const delSeq     = deleteSeqRef.current;
     if (!strokes.length && !deletedIds.length) {
       setSaveState("saved");
+      writeOutbox();
       return Promise.resolve(null);
     }
 
@@ -920,6 +965,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
         savedAtRef.current.set(id, t);
       }
       savedDeleteSeqRef.current = Math.max(savedDeleteSeqRef.current, delSeq);
+      writeOutbox();
       // Edits made while this was in flight are still waiting on their own save.
       setSaveState(hasUnsaved() ? "unsaved" : "saved");
       return r;
@@ -929,9 +975,10 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
       setSaveState("failed");
       throw err;
     });
-  }, [pageId, setSaveState, hasUnsaved]);
+  }, [pageId, setSaveState, hasUnsaved, writeOutbox]);
 
   const scheduleSave = useCallback(() => {
+    writeOutbox();
     setSaveState("unsaved");
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     if (retryTimerRef.current) { clearTimeout(retryTimerRef.current); retryTimerRef.current = null; }
@@ -950,7 +997,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
       };
       attempt(0);
     }, SAVE_DEBOUNCE);
-  }, [putStrokes, setSaveState]);
+  }, [putStrokes, setSaveState, writeOutbox]);
 
   // Flush pending saves before the tab suspends; refresh peers on refocus.
   useEffect(() => {

@@ -23,6 +23,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { readInkOutbox, writeInkOutbox } from "@/lib/ink-outbox";
 import { PenLine, Highlighter, Eraser, Undo2, X } from "lucide-react";
 import {
   type Pt, type InkStroke,
@@ -71,6 +72,13 @@ export default function EditorInkLayer({ pageId }: Props) {
   const activePtsRef  = useRef<Pt[]>([]);
   const activeToolRef = useRef<"pen" | "highlight">("pen");
   const saveTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /* What the server hasn't confirmed: strokes drawn since the last save, and
+     strokes erased or undone. The server keeps any stroke it isn't told to
+     delete, so an erase that never named its strokes came back on reload;
+     and a poll that replaced the list wholesale could swallow a stroke drawn
+     a moment before, while its save was still waiting. */
+  const pendingRef    = useRef<Set<string>>(new Set());
+  const deletedRef    = useRef<Set<string>>(new Set());
 
   // ── Render ─────────────────────────────────────────────────────────────
 
@@ -141,16 +149,36 @@ export default function EditorInkLayer({ pageId }: Props) {
 
   // ── Persistence ────────────────────────────────────────────────────────
 
+  /** Mirror what's unsaved into this browser's storage (see lib/ink-outbox). */
+  const writeOutbox = useCallback(() => {
+    writeInkOutbox(
+      pageId, "editor",
+      strokesRef.current.filter((st) => pendingRef.current.has(st.id)),
+      [...deletedRef.current],
+    );
+  }, [pageId]);
+
   const putStrokes = useCallback((keepalive = false) => {
+    const strokes = strokesRef.current.filter((st) => pendingRef.current.has(st.id));
+    const deletedIds = [...deletedRef.current];
+    if (!strokes.length && !deletedIds.length) { writeOutbox(); return Promise.resolve(null); }
+    const body = JSON.stringify({ strokes, surface: "editor", deletedIds });
     return fetch(`/api/pages/${pageId}/drawings`, {
       method:  "PUT",
       headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({ strokes: strokesRef.current, surface: "editor" }),
-      keepalive,
+      body,
+      keepalive: keepalive && body.length < 60_000,
+    }).then((r) => {
+      if (!r.ok) throw new Error("save failed: " + r.status);
+      for (const st of strokes) pendingRef.current.delete(st.id);
+      for (const id of deletedIds) deletedRef.current.delete(id);
+      writeOutbox();
+      return r;
     });
-  }, [pageId]);
+  }, [pageId, writeOutbox]);
 
   const scheduleSave = useCallback(() => {
+    writeOutbox();
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => {
       saveTimerRef.current = null;
@@ -158,17 +186,44 @@ export default function EditorInkLayer({ pageId }: Props) {
         setTimeout(() => { putStrokes().catch(() => {}); }, 3000);
       });
     }, SAVE_DEBOUNCE);
-  }, [putStrokes]);
+  }, [putStrokes, writeOutbox]);
 
   useEffect(() => {
     let cancelled = false;
+    let first = true;
+    pendingRef.current = new Set();
+    deletedRef.current = new Set();
+    strokesRef.current = [];
+
+    // Unsaved ink from an earlier visit: shown now, sent again once loaded.
+    const outbox = readInkOutbox<InkStroke>(pageId, "editor");
+    if (outbox) {
+      for (const id of outbox.deleted) deletedRef.current.add(id);
+      strokesRef.current = outbox.strokes.filter((st) => !deletedRef.current.has(st.id));
+      for (const st of strokesRef.current) pendingRef.current.add(st.id);
+      setCanUndo(strokesRef.current.length > 0);
+      scheduleRender();
+    }
 
     function load() {
       fetch(`/api/pages/${pageId}/drawings`)
         .then((r) => (r.ok ? r.json() : null))
         .then((d: { myStrokes?: InkStroke[]; otherLayers?: OtherInkLayer[] } | null) => {
           if (!d || cancelled) return;
-          strokesRef.current = (d.myStrokes ?? []).filter((s) => strokeSurface(s) === "editor");
+          // Merge, never replace: the server's strokes, less any erased here,
+          // plus anything drawn here that hasn't been saved yet.
+          const server = (d.myStrokes ?? []).filter((s) => strokeSurface(s) === "editor" && !deletedRef.current.has(s.id));
+          const serverIds = new Set(server.map((s) => s.id));
+          const pendingLocal = strokesRef.current.filter((s) => pendingRef.current.has(s.id));
+          const localCopy = new Map(pendingLocal.map((s) => [s.id, s]));
+          strokesRef.current = [
+            ...server.map((s) => localCopy.get(s.id) ?? s),
+            ...pendingLocal.filter((s) => !serverIds.has(s.id)),
+          ];
+          if (first) {
+            first = false;
+            if (pendingRef.current.size || deletedRef.current.size) scheduleSave();
+          }
           othersRef.current  = (d.otherLayers ?? []).map((l) => ({
             authorId: l.authorId,
             strokes:  l.strokes.filter((s) => strokeSurface(s) === "editor"),
@@ -185,9 +240,8 @@ export default function EditorInkLayer({ pageId }: Props) {
     }, OTHERS_POLL_MS);
 
     function flush() {
-      if (!saveTimerRef.current) return;
-      clearTimeout(saveTimerRef.current);
-      saveTimerRef.current = null;
+      if (!saveTimerRef.current && !pendingRef.current.size && !deletedRef.current.size) return;
+      if (saveTimerRef.current) { clearTimeout(saveTimerRef.current); saveTimerRef.current = null; }
       putStrokes(true).catch(() => {});
     }
     const onHide = () => { if (document.visibilityState === "hidden") flush(); };
@@ -200,6 +254,7 @@ export default function EditorInkLayer({ pageId }: Props) {
       document.removeEventListener("visibilitychange", onHide);
       window.removeEventListener("pagehide", flush);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pageId, putStrokes, scheduleRender]);
 
   // ── Stylus input — native capture-phase listeners on the editor ────────
@@ -219,6 +274,8 @@ export default function EditorInkLayer({ pageId }: Props) {
       const prev = strokesRef.current;
       const next = prev.filter((s) => !hitTest(normPts(s.points as unknown[]), x, y, ERASER_RADIUS));
       if (next.length !== prev.length) {
+        const kept = new Set(next.map((s) => s.id));
+        for (const s of prev) if (!kept.has(s.id)) { deletedRef.current.add(s.id); pendingRef.current.delete(s.id); }
         strokesRef.current = next;
         setCanUndo(next.length > 0);
         scheduleSave();
@@ -277,8 +334,10 @@ export default function EditorInkLayer({ pageId }: Props) {
 
       if (pts.length >= 1) {
         const t = activeToolRef.current;
+        const id = crypto.randomUUID();
+        pendingRef.current.add(id);
         strokesRef.current = [...strokesRef.current, {
-          id:      crypto.randomUUID(),
+          id,
           tool:    t,
           points:  pts,
           color:   colorRef.current,
@@ -331,6 +390,9 @@ export default function EditorInkLayer({ pageId }: Props) {
 
   const undo = useCallback(() => {
     if (!strokesRef.current.length) return;
+    const last = strokesRef.current[strokesRef.current.length - 1];
+    deletedRef.current.add(last.id);
+    pendingRef.current.delete(last.id);
     strokesRef.current = strokesRef.current.slice(0, -1);
     setCanUndo(strokesRef.current.length > 0);
     scheduleSave();
