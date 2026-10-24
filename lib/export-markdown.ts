@@ -68,7 +68,9 @@ function block(node: TNode, depth = 0): string {
       const verseKey = String(a.verseKey ?? "");
       const arabic   = String(a.arabicText ?? "").trim();
       const trans    = String(a.translationText ?? "").trim();
-      let out = `> **Ayah ${verseKey}**\n`;
+      // A selection carries its last āyah; its text is already the whole run.
+      const end      = Number(a.endAyah) > Number(a.ayahNumber) ? `–${a.endAyah}` : "";
+      let out = end ? `> **Āyāt ${verseKey}${end}**\n` : `> **Ayah ${verseKey}**\n`;
       if (arabic) out += `> ${arabic}\n`;
       if (trans)  out += `> ${trans}\n`;
       return out + "\n";

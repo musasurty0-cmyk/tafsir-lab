@@ -13,6 +13,7 @@
 import { Extension } from "@tiptap/core";
 import Suggestion, { type SuggestionOptions } from "@tiptap/suggestion";
 import type { Editor } from "@tiptap/core";
+import { parseRange } from "@/lib/quran-search";
 
 // ── Command descriptor ────────────────────────────────────────────────────
 
@@ -91,6 +92,25 @@ function insertTafsirBlock(
     .run();
 }
 
+/** The ayahBlock node for one āyah, or for a selection when `to` passes `from`.
+ *  The one place the block's attributes are spelled out, so the typed command
+ *  and the search panel cannot insert two different shapes of the same thing. */
+export function ayahBlockNode(surahNumber: number, ayahNumber: number, to?: number | null) {
+  const endAyah = to != null && to > ayahNumber ? to : null;
+  return {
+    type: "ayahBlock",
+    attrs: {
+      verseKey: `${surahNumber}:${ayahNumber}`,
+      surahNumber,
+      ayahNumber,
+      endAyah,
+      arabicText:      "",   // fetched lazily by AyahBlockView
+      translationText: "",
+      showTranslation: true,
+    },
+  };
+}
+
 // ── Available commands ────────────────────────────────────────────────────
 
 export function buildCommands(): SlashCommandItem[] {
@@ -149,18 +169,22 @@ export function buildCommands(): SlashCommandItem[] {
     {
       id:          "ayah",
       title:       "Ayah block",
-      description: "Embed a Qur'anic verse (e.g. /ayah 2:255)",
+      description: "Embed a verse or a selection — /a 2:255 or /a 2:1-5",
       icon:        "📖",
-      aliases:     ["verse", "quran", "ayat"],
+      /* "a" is the short form, and exact, so it can never lose to a command
+         that merely starts with an a. */
+      aliases:     ["a", "verse", "quran", "ayat", "selection", "passage"],
       execute(editor, range, query) {
-        // Parse verse key from query: "ayah 2:255" → "2:255"
-        const parts    = query.trim().split(/\s+/);
-        const rawKey   = parts.slice(1).join("").trim(); // "2:255"
-        const verseKey = rawKey || "1:1";
-
-        const [surahStr, ayahStr] = verseKey.split(":");
-        const surahNumber = parseInt(surahStr, 10) || 1;
-        const ayahNumber  = parseInt(ayahStr,  10) || 1;
+        // "a 2:1-5" → everything after the command word
+        const arg = query.trim().split(/\s+/).slice(1).join(" ");
+        let block;
+        const run = parseRange(arg);
+        if (run) {
+          block = ayahBlockNode(run.surah, run.from, run.to);
+        } else {
+          const [surahStr, ayahStr] = (arg.replace(/\s+/g, "") || "1:1").split(":");
+          block = ayahBlockNode(parseInt(surahStr, 10) || 1, parseInt(ayahStr, 10) || 1);
+        }
 
         // Insert the ayah block AND a trailing paragraph in one transaction.
         // The trailing paragraph gives the editor a text-selection target after
@@ -170,17 +194,7 @@ export function buildCommands(): SlashCommandItem[] {
           .focus()
           .deleteRange(range)
           .insertContent([
-            {
-              type: "ayahBlock",
-              attrs: {
-                verseKey,
-                surahNumber,
-                ayahNumber,
-                arabicText:      "",   // fetched lazily by AyahBlockView
-                translationText: "",
-                showTranslation: true,
-              },
-            },
+            block,
             // Empty paragraph — cursor lands here after insertion.
             { type: "paragraph" },
           ])

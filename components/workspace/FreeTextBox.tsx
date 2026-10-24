@@ -38,7 +38,7 @@ import CommandList, { type CommandListHandle } from "./editor/CommandList";
 import SelectionToolbar from "./editor/SelectionToolbar";
 import TafsirVersePicker from "./editor/TafsirVersePicker";
 import QuranSearch from "./editor/QuranSearch";
-import type { SearchTarget } from "@/lib/quran-search";
+import { parseRange, type SearchTarget } from "@/lib/quran-search";
 import { useEditorCtxOptional } from "./editor/EditorContext";
 import type { NoteData } from "./NoteCard";
 import { StaticDoc, docIsEmpty } from "@/lib/prosemirror-static";
@@ -561,7 +561,10 @@ function RichBody({
       if (ayahInline && item.id === "ayah") {
         paletteOpenRef.current = false;
         setPalette(null);
-        if (keyMatch) insertAyahInline(keyMatch[0], range);
+        // A run ("/a 2:1-5") is checked first: its start would also match keyMatch.
+        const run = parseRange(q.replace(/^\S+\s*/, ""));
+        if (run) insertAyahRunInline(run.surah, run.from, run.to, range);
+        else if (keyMatch) insertAyahInline(keyMatch[0], range);
         else setAyahSearch({ range, rect: palette.rect });
         return;
       }
@@ -641,6 +644,35 @@ function RichBody({
       });
   }, [editor]);
 
+  /* A run as plain text, the same shape as one āyah: the Arabic as one
+     passage with each verse closed by its number, then the translation verse
+     by verse. One request for the surah rather than one per āyah. */
+  const insertAyahRunInline = useCallback((surah: number, from: number, to: number, range: { from: number; to: number }) => {
+    if (!editor) return;
+    const ref = `${surah}:${from}–${to}`;
+    editor.chain().focus().deleteRange(range).run();
+    const at = editor.state.selection.from;
+    editor.chain().insertContent(`⏳ ${ref}…`).run();
+    const end = editor.state.selection.from;
+
+    fetch(`/api/quran/surah/${surah}/verses`)
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then(({ verses }: { verses: { ayah: number; arabic: string; translation?: string }[] }) => {
+        const run = verses.filter((v) => v.ayah >= from && v.ayah <= to);
+        if (!run.length) throw new Error("empty");
+        const ar = run.map((v) => `${v.arabic.trim()} ﴿${surah}:${v.ayah}﴾`).join(" ");
+        const content: object[] = [{ type: "paragraph", content: [{ type: "text", text: ar }] }];
+        for (const v of run) {
+          if (v.translation) content.push({ type: "paragraph", content: [{ type: "text", text: `(${v.ayah}) ${v.translation}` }] });
+        }
+        content.push({ type: "paragraph" });
+        editor.chain().focus().insertContentAt({ from: at, to: end }, content).scrollIntoView().run();
+      })
+      .catch(() => {
+        editor.chain().focus().insertContentAt({ from: at, to: end }, `/a ${surah}:${from}-${to}`).run();
+      });
+  }, [editor]);
+
   /* Until TipTap has mounted, paint the stored document statically in the same
      typography classes the editor uses. `immediatelyRender` has to stay false
      (notes are seeded from server-rendered page data, so TipTap's own DOM would
@@ -709,10 +741,13 @@ function RichBody({
               <div style={pos}>
                 <QuranSearch
                   kinds={["ayah"]}
+                  ranges
                   onSelect={(t: SearchTarget) => {
                     const { range } = ayahSearch;
                     setAyahSearch(null);
-                    if (t.surah != null && t.ayah != null) {
+                    if (t.surah != null && t.ayah != null && t.ayahEnd != null && t.ayahEnd > t.ayah) {
+                      insertAyahRunInline(t.surah, t.ayah, t.ayahEnd, range);
+                    } else if (t.surah != null && t.ayah != null) {
                       insertAyahInline(`${t.surah}:${t.ayah}`, range);
                     }
                   }}

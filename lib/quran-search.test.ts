@@ -7,7 +7,7 @@
  * would send the assistant to the wrong place with total confidence.
  */
 import { describe, it, expect } from "vitest";
-import { findReference, parseReference } from "@/lib/quran-search";
+import { findReference, parseReference, parseRange } from "@/lib/quran-search";
 
 describe("findReference", () => {
   it("finds a reference inside a question", () => {
@@ -54,5 +54,46 @@ describe("findReference", () => {
     // A bare number still means a surah THERE, where the whole string is the
     // query — only the sentence case needed different handling.
     expect(parseReference("18")).toEqual({ surah: 18 });
+  });
+});
+
+/**
+ * parseRange — "/a 2:1-5", a selection of āyāt in one surah.
+ *
+ * A miss falls back to the search panel, which is harmless; a wrong hit
+ * embeds the wrong passage, which is not. So the negatives are pinned down as
+ * firmly as the positives — above all that a bare "2-5" keeps meaning 2:5.
+ */
+describe("parseRange", () => {
+  it("reads the common ways of writing a run", () => {
+    expect(parseRange("2:1-5")).toEqual({ surah: 2, from: 1, to: 5 });
+    expect(parseRange("2:1–5")).toEqual({ surah: 2, from: 1, to: 5 });
+    expect(parseRange("2:1 - 5")).toEqual({ surah: 2, from: 1, to: 5 });
+    expect(parseRange("2:1-2:5")).toEqual({ surah: 2, from: 1, to: 5 });
+    expect(parseRange("٢:١-٥")).toEqual({ surah: 2, from: 1, to: 5 });
+  });
+
+  it("puts a backwards run the right way round", () => {
+    expect(parseRange("18:65-60")).toEqual({ surah: 18, from: 60, to: 65 });
+  });
+
+  it("clamps an end past the last āyah, and refuses a start past it", () => {
+    expect(parseRange("1:1-10")).toEqual({ surah: 1, from: 1, to: 7 });
+    expect(parseRange("1:9-12")).toBeNull();
+  });
+
+  it("refuses a run across two surahs", () => {
+    expect(parseRange("2:285-3:2")).toBeNull();
+  });
+
+  it("leaves single references to parseReference", () => {
+    expect(parseRange("2:255")).toBeNull();
+    // "2-5" has always meant 2:5; a run needs its colon.
+    expect(parseRange("2-5")).toBeNull();
+    expect(parseReference("2-5")).toEqual({ surah: 2, ayah: 5 });
+  });
+
+  it("rejects a surah out of range", () => {
+    expect(parseRange("115:1-3")).toBeNull();
   });
 });

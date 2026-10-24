@@ -8,6 +8,7 @@
  *   arabicText      — cached Arabic text (avoids re-fetch on reload)
  *   translationText — cached translation text
  *   showTranslation — user preference per block
+ *   endAyah         — last āyah of a selection ("/a 2:1-5" → 5); null for one āyah
  *
  * The NodeView (AyahBlockView) handles rendering, lazy verse-fetching,
  * notes, and progress controls via EditorContext.
@@ -36,6 +37,19 @@ export const AyahBlockExtension = Node.create({
       arabicText:      { default: "" },
       translationText: { default: "" },
       showTranslation: { default: true },
+
+      /* A selection is the same block over a run of āyāt, so everything that
+         works on one (drag, resize, translation, Tafsīr) works on several.
+         Null is a single āyah, which is what every block written before this
+         existed already is. */
+      endAyah: {
+        default: null,
+        parseHTML: (el) => {
+          const n = parseInt(el.getAttribute("data-end") ?? "", 10);
+          return Number.isFinite(n) && n > 0 ? n : null;
+        },
+        renderHTML: (a) => (a.endAyah ? { "data-end": String(a.endAyah) } : {}),
+      },
 
       /* Size is a property of THIS placement. Both axes are stored, and both
          are null by default — null means "fit the column / fit the content",

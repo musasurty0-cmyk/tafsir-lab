@@ -5541,6 +5541,20 @@ input, textarea { font: inherit; color: inherit; }
   border-top: 1px solid var(--line);
 }
 
+/* A selection: the run reads as one passage, each āyah closed by its number,
+   and the translation follows it verse by verse. */
+.ayah-block-mark {
+  font-family: var(--font-uthmanic);
+  color: var(--ink-3);
+  margin-inline: 0.18em;
+}
+.ayah-block-translation--run p { margin: 0; }
+.ayah-block-translation--run p + p { margin-top: 5px; }
+.ayah-block-translation--run sup {
+  font-size: 10px; color: var(--ink-4);
+  margin-inline-end: 4px; font-variant-numeric: tabular-nums;
+}
+
 /* Loading skeleton */
 .ayah-block-loading {
   display: flex; align-items: center; gap: 8px;
@@ -8112,6 +8126,19 @@ input, textarea { font: inherit; color: inherit; }
 }
 .qs-back:hover { background: var(--hover); color: var(--ink); }
 .qs-stage-name { font-size: 13px; font-weight: 500; color: var(--ink); }
+/* Picking a run: a quiet switch at the end of the head, filled while on. */
+.qs-several {
+  margin-inline-start: auto;
+  border: 0; background: none; cursor: pointer;
+  font: inherit; font-size: 12px; color: var(--ink-3);
+  padding: 4px 8px; border-radius: 6px;
+  transition: background var(--dur-fast) ease, color var(--dur-fast) ease;
+}
+.qs-several:hover { background: var(--hover); color: var(--ink); }
+.qs-several[aria-pressed="true"] { background: var(--active); color: var(--accent-ink); }
+.qs-hint { padding: 6px 12px 0; font-size: 12px; color: var(--ink-3); }
+.qs-row--ayah[data-inrun="true"] { background: var(--active); }
+.qs-row--ayah[data-inrun="true"][data-active="true"] { background: var(--hover); }
 
 .qs-row--ayah { flex-direction: row; align-items: baseline; gap: 9px; }
 .qs-ayah-num {

@@ -10,9 +10,11 @@
  *   - Show/create notes for this specific ayah (from EditorContext).
  *   - Show progress controls on demand.
  *   - Delete the block.
+ *   - A selection ("/a 2:1-5", endAyah set) shows the run as one passage; the
+ *     per-āyah controls (progress, a new note) stay with single blocks.
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { qcfFamily, loadQCFFontsFor } from "@/lib/qcf-font";
 import { qcfWords } from "@/lib/qcf-words";
 import { NodeViewWrapper, type NodeViewProps } from "@tiptap/react";
@@ -51,6 +53,36 @@ const TrashIcon = () => (
   </svg>
 );
 
+// ── Selections ────────────────────────────────────────────────────────────
+
+interface RunVerse { ayah: number; ar: string; tr: string }
+
+/* One request per surah for every selection in it, shared by blocks that mount
+   together; a failure is dropped from the cache so a later mount retries. */
+const surahRows = new Map<number, Promise<{ ayah: number; arabic: string; translation?: string }[]>>();
+function loadSurahRows(surah: number) {
+  let p = surahRows.get(surah);
+  if (!p) {
+    p = fetch(`/api/quran/surah/${surah}/verses`)
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(r.statusText))))
+      .then((d) => (d.verses ?? []) as { ayah: number; arabic: string; translation?: string }[])
+      .catch((e) => { surahRows.delete(surah); throw e; });
+    surahRows.set(surah, p);
+  }
+  return p;
+}
+
+/** Past this many āyāt the muṣḥaf glyphs (a request per verse) are not worth
+ *  it; the passage stays in the Uthmani text face, which needs none. */
+const RUN_GLYPH_MAX = 40;
+
+/** Translation HTML as plain text. Footnote markers go first, whole: they are
+ *  <sup> numbers, and stripping only the tags left "Allāh1" in the sentence. */
+const plain = (html: string | undefined) =>
+  (html ?? "").replace(/<sup[^>]*>.*?<\/sup>/g, "").replace(/<[^>]+>/g, "").trim();
+
+const arabicDigits = (n: number) => String(n).replace(/\d/g, (d) => "٠١٢٣٤٥٦٧٨٩"[Number(d)]);
+
 // ── Component ─────────────────────────────────────────────────────────────
 
 /** Smaller than this and the Arabic wraps to shreds; the floor is the point
@@ -81,8 +113,70 @@ export default function AyahBlockView({
     translationText: string;
     showTranslation: boolean;
   };
+  const endAyah = (node.attrs.endAyah as number | null) ?? null;
+  const isRun   = endAyah != null && endAyah > ayahNumber;
+  const label   = isRun ? `${verseKey}–${endAyah}` : verseKey;
 
   const ctx = useEditorCtx();
+
+  /* ── A selection's verses ──────────────────────────────────────────────
+     Read whole rather than per verse: the sūrah being studied is already
+     loaded, and any other sūrah is one request for the lot. The joined text
+     is written back to the node so export and copy carry the passage. */
+  const [run, setRun]             = useState<RunVerse[] | null>(null);
+  const [runError, setRunError]   = useState(false);
+  const [runRetry, setRunRetry]   = useState(0);
+  const [runGlyphs, setRunGlyphs] = useState<{ code: string; page: number }[][] | null>(null);
+  const runKeys = useMemo(
+    () => (isRun ? Array.from({ length: endAyah! - ayahNumber + 1 }, (_, i) => `${surahNumber}:${ayahNumber + i}`) : []),
+    [isRun, surahNumber, ayahNumber, endAyah],
+  );
+
+  useEffect(() => {
+    if (!isRun) return;
+    let live = true;
+    setRunError(false);
+    const done = (verses: RunVerse[]) => {
+      if (!live) return;
+      setRun(verses);
+      if (!arabicText && verses.length) {
+        updateAttributes({
+          arabicText:      verses.map((v) => `${v.ar} ﴿${arabicDigits(v.ayah)}﴾`).join(" "),
+          translationText: verses.map((v) => `(${v.ayah}) ${v.tr}`).join(" "),
+        });
+      }
+    };
+    const pre = runKeys.map((k) => ctx.verses.find((v) => v.verse_key === k));
+    if (pre.every(Boolean)) {
+      done(pre.map((v, i) => ({
+        ayah: ayahNumber + i,
+        ar:   v!.text_uthmani.trim(),
+        tr:   plain(v!.translations?.[0]?.text),
+      })));
+    } else {
+      loadSurahRows(surahNumber)
+        .then((rows) => done(rows
+          .filter((r) => r.ayah >= ayahNumber && r.ayah <= endAyah!)
+          .map((r) => ({ ayah: r.ayah, ar: r.arabic.trim(), tr: r.translation ?? "" }))))
+        .catch(() => { if (live) setRunError(true); });
+    }
+    return () => { live = false; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isRun, runKeys, runRetry]);
+
+  useEffect(() => {
+    if (!isRun || runKeys.length > RUN_GLYPH_MAX) return;
+    let live = true;
+    Promise.all(runKeys.map((k) => qcfWords(k, ctx.verses)))
+      .then(async (all) => {
+        // All or nothing, as for one āyah: a passage half in each face is worse.
+        if (!live || all.some((w) => !w.length)) return;
+        await loadQCFFontsFor(all.flat().map((w) => w.page));
+        if (live) setRunGlyphs(all);
+      })
+      .catch(() => { /* stay with the text face */ });
+    return () => { live = false; };
+  }, [isRun, runKeys, ctx.verses]);
 
   // Local display state — updated immediately on fetch, independent of
   // TipTap's async attr propagation (which can lag by one render cycle).
@@ -111,6 +205,7 @@ export default function AyahBlockView({
      across every block in the document, so a page of āyah blocks makes one
      request per distinct verse rather than one per block. */
   useEffect(() => {
+    if (isRun) return; // a selection loads its own, verse by verse
     let live = true;
     qcfWords(verseKey, ctx.verses)
       .then(async (words) => {
@@ -122,10 +217,11 @@ export default function AyahBlockView({
          is already on screen in the fallback face. */
       .catch(() => { /* stay with displayArabic */ });
     return () => { live = false; };
-  }, [verseKey, ctx.verses]);
+  }, [verseKey, ctx.verses, isRun]);
 
   // ── Fetch verse data if not yet cached ────────────────────────────────
   useEffect(() => {
+    if (isRun) return;      // a selection reads its verses above
     if (arabicText) return; // already populated — nothing to do
     setFetching(true);
     setFetchError(null);
@@ -134,7 +230,7 @@ export default function AyahBlockView({
     const preloaded = ctx.verses.find((v) => v.verse_key === verseKey);
     if (preloaded) {
       const ar = preloaded.text_uthmani;
-      const tr = preloaded.translations?.[0]?.text?.replace(/<[^>]+>/g, "") ?? "";
+      const tr = plain(preloaded.translations?.[0]?.text);
       // Update local display state immediately (synchronous, no TipTap lag).
       setDisplayArabic(ar);
       setDisplayTranslation(tr);
@@ -158,7 +254,7 @@ export default function AyahBlockView({
       .then(({ verse }) => {
         if (!live) return;
         const ar = verse.text_uthmani as string;
-        const tr = (verse.translations?.[0]?.text as string | undefined)?.replace(/<[^>]+>/g, "") ?? "";
+        const tr = plain(verse.translations?.[0]?.text as string | undefined);
         setDisplayArabic(ar);
         setDisplayTranslation(tr);
         updateAttributes({ arabicText: ar, translationText: tr });
@@ -174,7 +270,9 @@ export default function AyahBlockView({
     (n) =>
       n.anchorType  === "ayah" &&
       n.surahNumber === surahNumber &&
-      n.ayahNumber  === ayahNumber
+      n.ayahNumber  != null &&
+      n.ayahNumber  >= ayahNumber &&
+      n.ayahNumber  <= (isRun ? endAyah! : ayahNumber)
   );
 
   const progressKey    = `${surahNumber}:${ayahNumber}`;
@@ -275,7 +373,7 @@ export default function AyahBlockView({
 
           {/* Header row */}
           <div className="ayah-block-head">
-            <span className="ayah-block-ref">{verseKey}</span>
+            <span className="ayah-block-ref">{label}</span>
             <div className="ayah-block-toolbar">
               <button
                 className="ayah-block-tool"
@@ -292,41 +390,88 @@ export default function AyahBlockView({
               >
                 <BookOpenIcon />
               </button>
-              <button
-                className="ayah-block-tool"
-                onClick={() => setShowProgress((s) => !s)}
-                title="Progress"
-                data-active={showProgress ? "true" : "false"}
-              >
-                <ProgressIcon />
-              </button>
-              <button
-                className="ayah-block-tool"
-                onClick={() => setNoteCreatorOpen((o) => !o)}
-                title="Add note"
-                data-active={noteCreatorOpen ? "true" : "false"}
-              >
-                <PlusIcon />
-              </button>
+              {/* Progress and a new note belong to ONE āyah; on a selection
+                  there is no single verse for them to mean. */}
+              {!isRun && (
+                <button
+                  className="ayah-block-tool"
+                  onClick={() => setShowProgress((s) => !s)}
+                  title="Progress"
+                  data-active={showProgress ? "true" : "false"}
+                >
+                  <ProgressIcon />
+                </button>
+              )}
+              {!isRun && (
+                <button
+                  className="ayah-block-tool"
+                  onClick={() => setNoteCreatorOpen((o) => !o)}
+                  title="Add note"
+                  data-active={noteCreatorOpen ? "true" : "false"}
+                >
+                  <PlusIcon />
+                </button>
+              )}
               <button
                 className="ayah-block-tool ayah-block-tool--danger"
                 onClick={deleteNode}
-                title="Remove this ayah block from the document"
+                title={isRun ? "Remove this selection from the document" : "Remove this ayah block from the document"}
               >
                 <TrashIcon />
               </button>
             </div>
           </div>
 
+          {/* Selection body */}
+          {isRun && !run && !runError && (
+            <div className="ayah-block-skeleton">
+              <div className="ayah-skeleton-arabic" />
+              <div className="ayah-skeleton-trans" />
+            </div>
+          )}
+          {isRun && runError && (
+            <div className="ayah-block-error">
+              <span>⚠ Could not load {label}</span>
+              <button className="ayah-block-retry" onClick={() => setRunRetry((k) => k + 1)}>
+                Retry
+              </button>
+            </div>
+          )}
+          {isRun && run && (
+            <>
+              <div className="ayah-block-arabic" dir="rtl" data-qcf={runGlyphs ? "true" : "false"}>
+                {runGlyphs
+                  ? runGlyphs.flatMap((words, v) => words.map((w, i) => (
+                      /* Each verse's own words end with its number glyph, so
+                         the passage is marked without adding anything. */
+                      <span key={`${v}-${i}`} style={{ fontFamily: qcfFamily(w.page) }}>{w.code}</span>
+                    )))
+                  : run.map((v) => (
+                      <span key={v.ayah}>
+                        {v.ar}
+                        <span className="ayah-block-mark">﴿{arabicDigits(v.ayah)}﴾</span>{" "}
+                      </span>
+                    ))}
+              </div>
+              {showTranslation && (
+                <div className="ayah-block-translation ayah-block-translation--run">
+                  {run.map((v) => (
+                    <p key={v.ayah}><sup>{v.ayah}</sup>{v.tr}</p>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+
           {/* Verse body */}
-          {fetching && (
+          {!isRun && fetching && (
             <div className="ayah-block-skeleton">
               <div className="ayah-skeleton-arabic" />
               <div className="ayah-skeleton-trans" />
             </div>
           )}
 
-          {!fetching && fetchError && (
+          {!isRun && !fetching && fetchError && (
             <div className="ayah-block-error">
               <span>⚠ Could not load {verseKey}</span>
               <span className="ayah-block-error-detail">{fetchError}</span>
@@ -339,7 +484,7 @@ export default function AyahBlockView({
             </div>
           )}
 
-          {!fetching && !fetchError && displayArabic && (
+          {!isRun && !fetching && !fetchError && displayArabic && (
             <>
               <div className="ayah-block-arabic" dir="rtl" data-qcf={glyphs ? "true" : "false"}>
                 {glyphs
@@ -358,7 +503,7 @@ export default function AyahBlockView({
           )}
 
           {/* Text not yet available — show skeleton */}
-          {!fetching && !fetchError && !displayArabic && (
+          {!isRun && !fetching && !fetchError && !displayArabic && (
             <div className="ayah-block-skeleton">
               <div className="ayah-skeleton-arabic" />
               <div className="ayah-skeleton-trans" />

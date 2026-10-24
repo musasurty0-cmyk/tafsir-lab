@@ -18,7 +18,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Chapter } from "@/lib/types";
 import {
-  parseReference, searchChapters, findMatchRange,
+  parseReference, parseRange, searchChapters, findMatchRange,
   readRecents, pushRecent, verseKey, isArabic,
   type SearchTarget, type TargetKind,
 } from "@/lib/quran-search";
@@ -46,6 +46,10 @@ interface Props {
   currentSurah?: number;
   /** Workspace Selections, for callers that accept them (/link). */
   selections?: SearchTarget[];
+  /** Accept a run of āyāt ("2:1-5", or first and last tapped in a surah) as one
+   *  answer, carried in `ayahEnd`. Only /ayah embeds a run; /link joins single
+   *  objects, so it leaves this off and never sees one. */
+  ranges?: boolean;
   onSelect: (t: SearchTarget) => void;
   onCancel: () => void;
   placeholder?: string;
@@ -53,6 +57,15 @@ interface Props {
 }
 
 interface Group { label: string; items: SearchTarget[] }
+
+/** A run of āyāt as one search answer: "Al-Baqarah 2:1–5". */
+function runTarget(surah: number, from: number, to: number, name: string): SearchTarget {
+  return {
+    kind: "ayah", id: `${verseKey(surah, from)}-${to}`,
+    surah, ayah: from, ayahEnd: to,
+    label: `${name} ${surah}:${from}–${to}`,
+  };
+}
 
 /** Render a result, marking the matched span in the original text. */
 function Marked({ text, query }: { text: string; query: string }) {
@@ -71,6 +84,7 @@ export default function QuranSearch({
   kinds = ["ayah", "surah"],
   currentSurah,
   selections = [],
+  ranges = false,
   onSelect,
   onCancel,
   placeholder = "Search the Qurʾān…",
@@ -82,6 +96,10 @@ export default function QuranSearch({
   const [stage, setStage] = useState<{ surah: number; name: string } | null>(null);
   const [rows,  setRows]  = useState<{ ayah: number; arabic: string; translation?: string }[]>([]);
   const [rowsLoading, setRowsLoading] = useState(false);
+  /* Picking several: the first tap marks where the run starts, the second
+     where it ends. Off by default, so a single tap still inserts one āyah. */
+  const [several, setSeveral]     = useState(false);
+  const [runFrom, setRunFrom]     = useState<number | null>(null);
 
   const [q, setQ]               = useState("");
   const [chapters, setChapters] = useState<Chapter[]>([]);
@@ -109,8 +127,9 @@ export default function QuranSearch({
   // ── Remote verse-text search (debounced) ─────────────────────────────────
   useEffect(() => {
     const query = q.trim();
-    // A reference is answered locally; no point spending a request on it.
-    if (query.length < 2 || parseReference(query)) { setVerses([]); setLoading(false); return; }
+    // A reference — or a run of them — is answered locally; a text search on
+    // "18:60-65" only turns up verses that happen to contain those numbers.
+    if (query.length < 2 || parseReference(query) || parseRange(query)) { setVerses([]); setLoading(false); return; }
 
     let cancelled = false;
     setLoading(true);
@@ -149,7 +168,7 @@ export default function QuranSearch({
     const out: Group[] = [];
 
     if (!query) {
-      const recents = readRecents().filter((r) => kinds.includes(r.kind));
+      const recents = readRecents().filter((r) => kinds.includes(r.kind) && (ranges || r.ayahEnd == null));
       if (recents.length) out.push({ label: "Recent", items: recents });
       return out;
     }
@@ -157,6 +176,10 @@ export default function QuranSearch({
     // Exact reference first — it is unambiguous, so it outranks everything.
     const ref = parseReference(query);
     const exact: SearchTarget[] = [];
+    const run = ranges && kinds.includes("ayah") ? parseRange(query) : null;
+    if (run) {
+      exact.push(runTarget(run.surah, run.from, run.to, nameFor(run.surah)));
+    }
     if (ref && kinds.includes("ayah") && ref.ayah != null) {
       exact.push({
         kind: "ayah", id: verseKey(ref.surah, ref.ayah),
@@ -204,7 +227,7 @@ export default function QuranSearch({
       out.push({ label: "Āyāt", items: verses });
     }
     return out;
-  }, [q, chapters, chapterById, verses, selections, kinds, nameFor]);
+  }, [q, chapters, chapterById, verses, selections, kinds, nameFor, ranges]);
 
   const flat = useMemo(() => groups.flatMap((g) => g.items), [groups]);
 
@@ -229,9 +252,20 @@ export default function QuranSearch({
   /** Stage two rows, filtered by the ayah-number box. A bare number matches by
    *  PREFIX so typing 1 in a long surah offers 1, 1x, 1xx rather than only
    *  ayah 1; anything else falls back to matching the Arabic. */
+  /* "3-7" typed in a surah's list: the run itself, Enter takes all of it. */
+  const typedRun = useMemo(() => {
+    if (!ranges || !stage) return null;
+    const m = q.trim().replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)))
+      .match(/^(\d{1,3})\s*[-–—]\s*(\d{1,3})$/);
+    if (!m) return null;
+    const r = parseRange(`${stage.surah}:${m[1]}-${m[2]}`);
+    return r && r.to > r.from ? r : null;
+  }, [q, ranges, stage]);
+
   const filteredRows = useMemo(() => {
     const query = q.trim();
     if (!query) return rows;
+    if (typedRun) return rows.filter((r) => r.ayah >= typedRun.from && r.ayah <= typedRun.to);
     const digits = query.replace(/[^0-9٠-٩]/g, "");
     if (digits) {
       const norm = digits.replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)));
@@ -240,7 +274,7 @@ export default function QuranSearch({
     const nq = query;
     return rows.filter((r) => (findMatchRange(r.arabic, nq) !== null)
                            || (r.translation ? r.translation.toLowerCase().includes(nq.toLowerCase()) : false));
-  }, [rows, q]);
+  }, [rows, q, typedRun]);
 
   const choose = useCallback((t: SearchTarget) => {
     /* Choosing a SURAH is not a final answer for /ayah — it opens that surah's
@@ -259,8 +293,20 @@ export default function QuranSearch({
     onSelect(t);
   }, [onSelect, kinds]);
 
+  const chooseRun = useCallback((from: number, to: number) => {
+    if (!stage) return;
+    const t = runTarget(stage.surah, Math.min(from, to), Math.max(from, to), stage.name);
+    pushRecent(t);
+    onSelect(t);
+  }, [stage, onSelect]);
+
   const chooseAyah = useCallback((ayah: number) => {
     if (!stage) return;
+    if (several) {
+      // First tap marks the start; the second, anywhere, closes the run.
+      if (runFrom == null) { setRunFrom(ayah); return; }
+      if (ayah !== runFrom) { chooseRun(runFrom, ayah); return; }
+    }
     const t: SearchTarget = {
       kind: "ayah", id: verseKey(stage.surah, ayah),
       surah: stage.surah, ayah,
@@ -268,9 +314,9 @@ export default function QuranSearch({
     };
     pushRecent(t);
     onSelect(t);
-  }, [stage, onSelect]);
+  }, [stage, onSelect, several, runFrom, chooseRun]);
 
-  const back = useCallback(() => { setStage(null); setQ(""); setActive(0);
+  const back = useCallback(() => { setStage(null); setQ(""); setActive(0); setSeveral(false); setRunFrom(null);
     requestAnimationFrame(() => inputRef.current?.focus()); }, []);
 
   /* Against the list ACTUALLY on screen. This clamped to flat.length only,
@@ -291,7 +337,8 @@ export default function QuranSearch({
     else if (e.key === "ArrowUp")   { e.preventDefault(); byKeyboard.current = true; setActive((i) => Math.max(i - 1, 0)); }
     else if (e.key === "Enter") {
       e.preventDefault();
-      if (stage) { const r = filteredRows[active]; if (r) chooseAyah(r.ayah); }
+      if (stage && typedRun) chooseRun(typedRun.from, typedRun.to);
+      else if (stage) { const r = filteredRows[active]; if (r) chooseAyah(r.ayah); }
       else       { const t = flat[active];         if (t) choose(t); }
     }
     else if (e.key === "Escape") {
@@ -355,14 +402,31 @@ export default function QuranSearch({
             ‹
           </button>
           <span className="qs-stage-name">{stage.name}</span>
+          {ranges && (
+            <button
+              type="button"
+              className="qs-several"
+              aria-pressed={several}
+              onClick={() => { setSeveral((v) => !v); setRunFrom(null);
+                requestAnimationFrame(() => inputRef.current?.focus()); }}
+              title="Choose a run of āyāt: tap the first, then the last"
+            >
+              Several āyāt
+            </button>
+          )}
         </div>
+        {several && (
+          <div className="qs-hint">
+            {runFrom == null ? "Tap the first āyah" : `From ${runFrom}. Now tap the last āyah`}
+          </div>
+        )}
         <input
           ref={inputRef}
           className="qs-input"
           value={q}
           onChange={(e) => setQ(e.target.value)}
           onKeyDown={onKeyDown}
-          placeholder="Search āyah number…"
+          placeholder={ranges ? "Āyah number, or a run like 1-5" : "Search āyah number…"}
           inputMode="numeric"
           dir="auto"
           aria-label="Search āyah number"
@@ -372,13 +436,22 @@ export default function QuranSearch({
           {!rowsLoading && filteredRows.length === 0 && (
             <div className="qs-empty">No āyah matches</div>
           )}
-          {filteredRows.map((r, i) => (
+          {filteredRows.map((r, i) => {
+            /* The run so far: from the marked start to the row under the
+               pointer, or the whole typed run. */
+            const hovered = filteredRows[active]?.ayah;
+            const inRun = typedRun
+              ? true
+              : runFrom != null && hovered != null
+                && r.ayah >= Math.min(runFrom, hovered) && r.ayah <= Math.max(runFrom, hovered);
+            return (
             <button
               key={r.ayah}
               type="button"
               data-idx={i}
               className="qs-row qs-row--ayah"
               data-active={i === active ? "true" : "false"}
+              data-inrun={inRun ? "true" : "false"}
               onMouseEnter={() => setActive(i)}
               onClick={() => chooseAyah(r.ayah)}
             >
@@ -388,7 +461,8 @@ export default function QuranSearch({
                 {r.translation && <span className="qs-row-preview">{r.translation}</span>}
               </span>
             </button>
-          ))}
+            );
+          })}
         </div>
       </div>
     );

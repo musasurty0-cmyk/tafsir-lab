@@ -43,7 +43,8 @@ export async function GET(
     }) => ({
       ayah: v.verse_number,
       arabic: v.text_uthmani ?? "",
-      translation: v.translations?.[0]?.text?.replace(/<[^>]+>/g, "").trim(),
+      // Footnote markers are <sup> numbers; drop them whole, not just their tags.
+      translation: v.translations?.[0]?.text?.replace(/<sup[^>]*>.*?<\/sup>/g, "").replace(/<[^>]+>/g, "").trim(),
     }));
     return NextResponse.json({ verses });
   } catch (e) {

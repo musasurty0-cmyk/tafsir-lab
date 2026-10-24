@@ -94,6 +94,29 @@ export function parseReference(raw: string): ParsedRef | null {
   return null;
 }
 
+export interface ParsedRange { surah: number; from: number; to: number }
+
+/**
+ * Parse a run of āyāt in one surah: "2:1-5", "2:1–5", "2:1 - 2:5", "٢:١-٥".
+ * The start must carry its colon, so a bare "2-5" stays what parseReference
+ * has always read it as (2:5). An end past the last āyah is clamped to it, so
+ * "1:1-10" is al-Fātiḥah rather than nothing; a start past it is no range.
+ * Either order is accepted and returned low to high.
+ */
+export function parseRange(raw: string): ParsedRange | null {
+  const q = normalizeDigits(raw).trim();
+  const m = q.match(/^(\d{1,3})\s*:\s*(\d{1,3})\s*[-–—]\s*(?:(\d{1,3})\s*:\s*)?(\d{1,3})$/);
+  if (!m) return null;
+  const surah = Number(m[1]);
+  if (m[3] != null && Number(m[3]) !== surah) return null; // one surah per run
+  const count = ayahCount(surah);
+  if (!count) return null;
+  let from = Number(m[2]), to = Number(m[4]);
+  if (from > to) [from, to] = [to, from];
+  if (from < 1 || from > count) return null;
+  return { surah, from, to: Math.min(to, count) };
+}
+
 // ── Chapter matching ────────────────────────────────────────────────────────
 
 export interface ChapterHit { chapter: Chapter; score: number }
@@ -153,6 +176,8 @@ export interface SearchTarget {
   id:        string;
   surah?:    number;
   ayah?:     number;
+  /** Last āyah of a run ("2:1-5" → 5). Only offered to callers that accept runs. */
+  ayahEnd?:  number;
   /** Primary line: "Al-Baqarah 2:255" or a segment title. */
   label:     string;
   /** Arabic text where there is one. */

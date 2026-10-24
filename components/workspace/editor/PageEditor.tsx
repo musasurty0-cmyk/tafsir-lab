@@ -46,6 +46,7 @@ import {
   SlashCommandExtension,
   buildCommands,
   filterCommands,
+  ayahBlockNode,
   type SlashCommandItem,
 } from "./SlashCommand";
 import CommandList, { type CommandListHandle } from "./CommandList";
@@ -55,7 +56,7 @@ import SlashHelp from "./SlashHelp";
 import { useEditorCtxOptional } from "./EditorContext";
 import TafsirVersePicker from "./TafsirVersePicker";
 import QuranSearch from "./QuranSearch";
-import { parseReference, type SearchTarget } from "@/lib/quran-search";
+import { parseReference, parseRange, type SearchTarget } from "@/lib/quran-search";
 import { getCollabToken } from "@/lib/collab/collab-token";
 
 // ── Constants ──────────────────────────────────────────────────────────────
@@ -617,8 +618,9 @@ export default function PageEditor({
         return;
       }
 
-      // /ayah with no usable reference → search instead of guessing 1:1.
-      if (item.id === "ayah" && !parseReference(q.replace(/^\S+\s*/, ""))) {
+      // /ayah with no usable reference or run → search instead of guessing 1:1.
+      const arg = q.replace(/^\S+\s*/, "");
+      if (item.id === "ayah" && !parseReference(arg) && !parseRange(arg)) {
         const range = (palette.props as unknown as { range: { from: number; to: number } }).range;
         setAyahSearch({ range, rect: palette.rect });
         setPalette(null);
@@ -632,12 +634,10 @@ export default function PageEditor({
     [palette],
   );
 
-  /** Insert the chosen verse using the EXISTING ayah block — the search
-   *  changes how a verse is found, never how it is embedded. */
+  /** Insert the chosen verse — or run of verses — using the EXISTING ayah
+   *  block: the search changes how a verse is found, never how it is embedded. */
   const insertAyahTarget = useCallback((t: SearchTarget) => {
     if (!editor || !ayahSearch) return;
-    const surahNumber = t.surah ?? 1;
-    const ayahNumber  = t.ayah ?? 1;
     // Close FIRST, so the panel cannot outlive the transaction if inserting
     // throws, and unmount before focus moves back into the document.
     setAyahSearch(null);
@@ -646,10 +646,7 @@ export default function PageEditor({
       // into; without it the slash text stays behind the inserted block.
       .deleteRange(ayahSearch.range)
       .insertContent([
-        {
-          type: "ayahBlock",
-          attrs: { verseKey: `${surahNumber}:${ayahNumber}`, surahNumber, ayahNumber },
-        },
+        ayahBlockNode(t.surah ?? 1, t.ayah ?? 1, t.ayahEnd),
         // Trailing paragraph gives the caret somewhere to land after an atom
         // block, so focus returns to editable text rather than being trapped.
         { type: "paragraph" },
@@ -857,6 +854,7 @@ export default function PageEditor({
               <div style={pos}>
                 <QuranSearch
                   currentSurah={studySurah}
+                  ranges
                   onSelect={insertAyahTarget}
                   onCancel={() => setAyahSearch(null)}
                 />
