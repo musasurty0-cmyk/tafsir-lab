@@ -71,3 +71,6 @@ tafsir-ingest.log
 # Local embedding run log
 ml/embed.log
 ml/dataset.jsonl
+
+# scripts/audit-mushaf — fetched pages and fonts
+/.cache

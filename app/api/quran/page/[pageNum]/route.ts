@@ -5,8 +5,9 @@
  * never hits an external host directly (avoids any CORS issues) and the
  * response is cached server-side for 24 hours.
  *
- * Returns the raw API payload:
- *   { verses: QCFVerse[], meta: { ... } }
+ * Returns { verses: QCFVerse[] } holding exactly the words of v2 page N —
+ * assembled from the upstream responses for N-1, N and N+1, because upstream
+ * page boundaries are not the v2 font's (see lib/mushaf-page.ts).
  *
  * Word fields requested: code_v2, text_qpc_hafs, v2_page, line_number
  * These are the minimum needed for QCF page-font rendering.
@@ -14,6 +15,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { unstable_cache } from "next/cache";
+import { assembleMushafPage } from "@/lib/mushaf-page";
 
 const QF_BASE = "https://api.quran.com/api/v4";
 
@@ -58,8 +60,11 @@ export async function GET(
   }
 
   try {
-    const data = await fetchQCFPageCached(pageNum);
-    return NextResponse.json(data, {
+    const around = [pageNum - 1, pageNum, pageNum + 1].filter((p) => p >= 1 && p <= 604);
+    const responses = await Promise.all(around.map((p) => fetchQCFPageCached(p)));
+    const verses = assembleMushafPage(pageNum, responses);
+    if (!verses.length) throw new Error(`page ${pageNum} assembled empty`);
+    return NextResponse.json({ verses }, {
       headers: {
         // Allow the browser to cache this response for 1 hour
         "Cache-Control": "public, max-age=3600, stale-while-revalidate=86400",

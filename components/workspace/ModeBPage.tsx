@@ -611,7 +611,10 @@ export default function ModeBPage({
     setQcfLoading(true);
     setQcfVerses([]);
 
-    fetch(`/api/quran/page/${currentMushafahPage}`)
+    /* ?v=2: pages assembled from their own words (lib/mushaf-page). Browsers
+       hold the old, mis-assembled responses for up to a day, so the URL moves
+       rather than waiting them out. */
+    fetch(`/api/quran/page/${currentMushafahPage}?v=2`)
       .then((r) => {
         if (!r.ok) throw new Error(`${r.status}`);
         return r.json();
