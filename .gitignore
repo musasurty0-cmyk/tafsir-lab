@@ -74,3 +74,6 @@ ml/dataset.jsonl
 
 # scripts/audit-mushaf — fetched pages and fonts
 /.cache
+# wrangler dev secrets and local state (party/)
+.dev.vars
+.wrangler/

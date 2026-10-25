@@ -1,0 +1,19 @@
+// The realtime server: a Cloudflare Worker, one Durable Object per page room.
+//   npm run party:dev     → localhost:1999 (the app's dev default)
+//   npm run party:deploy  → <name>.<account>.workers.dev
+// The secret it verifies tokens with is set once, outside this file:
+//   npx wrangler secret put COLLAB_SECRET --config party/wrangler.jsonc
+// (the same value the Vercel app signs with: COLLAB_SECRET, else SESSION_SECRET).
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "tafsir-lab-realtime",
+  "main": "server.ts",
+  "compatibility_date": "2026-09-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "durable_objects": {
+    // Binding "Main" → URL segment "main": /parties/main/<pageId>, as before.
+    "bindings": [{ "name": "Main", "class_name": "TafsirRoom" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["TafsirRoom"] }],
+  "observability": { "enabled": true }
+}

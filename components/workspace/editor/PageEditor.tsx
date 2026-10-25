@@ -6,7 +6,7 @@
  * Extensions:
  *   StarterKit, Placeholder, Underline, Highlight, Color, TextStyle
  *   AyahBlockExtension, TafsirBlockExtension, SlashCommandExtension
- *   Collaboration       — Yjs CRDT, synced via YPartyKitProvider
+ *   Collaboration       — Yjs CRDT, synced via y-partyserver's YProvider
  *   CollaborationCursor — live named cursors for each peer
  *
  * Content persistence:
@@ -33,7 +33,7 @@ import TableHeader from "@tiptap/extension-table-header";
 import Collaboration from "@tiptap/extension-collaboration";
 import CollaborationCursor from "@tiptap/extension-collaboration-cursor";
 import * as Y from "yjs";
-import YPartyKitProvider from "y-partykit/provider";
+import YProvider from "y-partyserver/provider";
 import type { SuggestionProps, SuggestionKeyDownProps } from "@tiptap/suggestion";
 
 import { PARTYKIT_HOST } from "@/lib/collab/config";
@@ -264,7 +264,7 @@ export default function PageEditor({
   // configuration time (an effect would run too late).  The component is
   // keyed by pageId in ModeAPage, so one instance = one room for its
   // whole lifetime.
-  const collabRef  = useRef<{ ydoc: Y.Doc; provider: YPartyKitProvider } | null>(null);
+  const collabRef  = useRef<{ ydoc: Y.Doc; provider: YProvider } | null>(null);
   /* False until Yjs holds the real document. Until then the stored snapshot is
      painted underneath, so the page is never blank while the socket connects. */
   const [collabSynced, setCollabSynced] = useState(false);
@@ -274,10 +274,10 @@ export default function PageEditor({
     const ydoc = new Y.Doc();
     collabRef.current = {
       ydoc,
-      provider: new YPartyKitProvider(PARTYKIT_HOST, pageId, ydoc, {
+      provider: new YProvider(PARTYKIT_HOST, pageId, ydoc, {
         connect: true,
         /* The realtime server rejects any socket without a valid, page-scoped
-           token (party/index.ts onBeforeConnect). params is called on every
+           token (party/server.ts gate). params is called on every
            (re)connect, so we mint a fresh 2-minute token each time from the
            membership-gated endpoint, via the shared per-page cache so the
            editor and the room socket do not each mint their own. On failure

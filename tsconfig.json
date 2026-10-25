@@ -38,6 +38,8 @@
   "exclude": [
     "node_modules",
     "trailer",
+    "party/server.ts",
+    "party/worker-configuration.d.ts",
     "remotion",
     "remotion.config.ts"
   ]

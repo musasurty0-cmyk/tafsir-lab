@@ -11,7 +11,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type PartySocket from "partysocket";
-import type { PresenceData } from "@/party/index";
+import type { PresenceData } from "@/party/types";
 
 export type { PresenceData };
 

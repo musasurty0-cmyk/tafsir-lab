@@ -1,0 +1,16 @@
+{
+  // The realtime worker is checked on its own, against Cloudflare's runtime
+  // types (worker-configuration.d.ts, from `wrangler types`), not the DOM.
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "isolatedModules": true,
+    "types": []
+  },
+  "include": ["server.ts", "types.ts", "worker-configuration.d.ts"]
+}

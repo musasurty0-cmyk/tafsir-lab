@@ -2,7 +2,7 @@
  * GET /api/pages/[pageId]/collab-token
  *
  * Mints a short-lived, page-scoped token that authorises a PartyKit realtime
- * connection to this page's room. The realtime server (party/index.ts) has no
+ * connection to this page's room. The realtime server (party/server.ts) has no
  * other way to know who is connecting — cookies are not sent cross-origin to
  * the party host — so without this, anyone who knew a pageId could open a Yjs
  * socket and read or write the live document.

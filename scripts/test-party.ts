@@ -1,22 +1,34 @@
 /**
- * test-party.ts — end-to-end verification of the deployed PartyKit server.
+ * test-party.ts — end-to-end verification of the realtime server (party/server.ts).
  *
- * Usage:  npx tsx scripts/test-party.ts [host]
- *         (host defaults to the production deployment)
+ * Usage:  COLLAB_SECRET=… npx tsx scripts/test-party.ts [host]
+ *         host defaults to localhost:1999 (npm run party:dev); COLLAB_SECRET is
+ *         the secret the server verifies tokens with, so this can mint its own.
  *
- * Verifies, against a throwaway room:
+ * Verifies, against throwaway rooms:
+ *   0. the gate: no token, a token for another room, a wrong secret — refused
  *   1. presence-update → presence-sync broadcast between two app sockets
  *   2. stroke-segment relay (tagged with sender connectionId)
  *   3. presence-leave on disconnect
- *   4. Yjs document sync between two YPartyKitProvider clients
+ *   4. Yjs document sync between two YProvider clients
  */
 
 import * as Y from "yjs";
-import YPartyKitProvider from "y-partykit/provider";
+import YProvider from "y-partyserver/provider";
+import { SignJWT } from "jose";
 
-const HOST = process.argv[2] ?? "tafsir-lab.musasurty0-cmyk.partykit.dev";
+const HOST = process.argv[2] ?? "localhost:1999";
 const SECURE = !HOST.startsWith("localhost");
 const WS_BASE = `${SECURE ? "wss" : "ws"}://${HOST}/parties/main`;
+const SECRET = process.env.COLLAB_SECRET ?? "";
+if (!SECRET) { console.error("Set COLLAB_SECRET to the server's secret."); process.exit(2); }
+
+/** A token exactly like /api/pages/[pageId]/collab-token mints. */
+function token(room: string, secret = SECRET) {
+  return new SignJWT({ room, uid: "e2e", role: "owner" })
+    .setProtectedHeader({ alg: "HS256" }).setIssuedAt().setExpirationTime("2m")
+    .sign(new TextEncoder().encode(secret));
+}
 
 const results: { name: string; pass: boolean; detail?: string }[] = [];
 
@@ -29,9 +41,10 @@ function wait(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-function connect(room: string, id: string): Promise<WebSocket> {
+async function connect(room: string, id: string, tok?: string): Promise<WebSocket> {
+  const tk = tok ?? await token(room);
   return new Promise((resolve, reject) => {
-    const ws = new WebSocket(`${WS_BASE}/${room}?_pk=${id}`);
+    const ws = new WebSocket(`${WS_BASE}/${room}?_pk=${id}&token=${encodeURIComponent(tk)}`);
     ws.binaryType = "arraybuffer";
     const t = setTimeout(() => reject(new Error("connect timeout")), 8000);
     ws.addEventListener("open",  () => { clearTimeout(t); resolve(ws); });
@@ -47,6 +60,19 @@ function collectJson(ws: WebSocket): { messages: Record<string, unknown>[] } {
     try { box.messages.push(JSON.parse(evt.data)); } catch { /* ignore */ }
   });
   return box;
+}
+
+async function testGate() {
+  const room = `e2e-gate-${Date.now()}`;
+  const refused = async (label: string, tok: string) => {
+    try { const ws = await connect(room, "gate", tok); ws.close(); report(`gate: ${label} refused`, false, "it connected"); }
+    catch { report(`gate: ${label} refused`, true); }
+  };
+  await refused("no token", "");
+  await refused("token for another room", await token(`${room}-other`));
+  await refused("token signed with the wrong secret", await token(room, "not-the-secret"));
+  try { const ws = await connect(room, "gate-ok"); ws.close(); report("gate: valid token accepted", true); }
+  catch (e) { report("gate: valid token accepted", false, String(e)); }
 }
 
 async function testPresenceAndStrokes() {
@@ -113,10 +139,11 @@ async function testYjsSync() {
 
   const docA = new Y.Doc();
   const docB = new Y.Doc();
-  const provA = new YPartyKitProvider(HOST, room, docA);
-  const provB = new YPartyKitProvider(HOST, room, docB);
+  const params = async () => ({ token: await token(room) });
+  const provA = new YProvider(HOST, room, docA, { params });
+  const provB = new YProvider(HOST, room, docB, { params });
 
-  const synced = (p: YPartyKitProvider) =>
+  const synced = (p: YProvider) =>
     new Promise<void>((resolve, reject) => {
       const t = setTimeout(() => reject(new Error("yjs sync timeout")), 10000);
       if (p.synced) { clearTimeout(t); resolve(); return; }
@@ -142,8 +169,9 @@ async function testYjsSync() {
 }
 
 (async () => {
-  console.log(`Testing PartyKit server at ${HOST}\n`);
+  console.log(`Testing the realtime server at ${HOST}\n`);
   try {
+    await testGate();
     await testPresenceAndStrokes();
     await testYjsSync();
   } catch (err) {
