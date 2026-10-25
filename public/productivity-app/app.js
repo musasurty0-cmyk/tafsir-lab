@@ -449,14 +449,23 @@
   let frontier = null; const prefix = new Map();
   function resetProgress() { frontier = null; prefix.clear(); }
   const isLesson = (b) => b.cat === "arabic" && /^Arabic · Lesson/.test(b.title);
+  /* A lesson that is over and was not ticked was missed: it does not use up a
+     number, so the next lesson is always the one actually due. Numbering used
+     to count every scheduled lesson, so a busy week left the plan ten lessons
+     ahead of the course. Ticking a missed one later counts it again. */
+  let progressNow = "";
+  const missed = (b, iso) => isLesson(b) && !b.done && `${iso} ${b.end}` <= progressNow;
   function before(iso) {
+    // The totals depend on the time now, so they are rebuilt as it moves on.
+    const nk = `${todayIso()} ${raw(nowMin())}`;
+    if (nk !== progressNow) { progressNow = nk; resetProgress(); }
     if (iso <= START) return { lessons: 0, usul: 0, precision: 0, amar: 0, lessonsDone: 0 };
     if (prefix.has(iso)) return prefix.get(iso);
     if (!frontier || frontier.iso > iso) frontier = { iso: START, acc: { lessons: 0, usul: 0, precision: 0, amar: 0, lessonsDone: 0 } };
     while (frontier.iso < iso) {
       const d = getDay(frontier.iso), acc = { ...frontier.acc };
       for (const b of d.blocks) {
-        if (isLesson(b)) { acc.lessons++; if (b.done) acc.lessonsDone++; }
+        if (isLesson(b) && !missed(b, frontier.iso)) { acc.lessons++; if (b.done) acc.lessonsDone++; }
         if (b.track && acc[b.track] !== undefined) acc[b.track] += dur(b);
       }
       frontier = { iso: addDays(frontier.iso, 1), acc };
@@ -474,8 +483,10 @@
   /** What a block is called on screen: lessons numbered, programme sessions named by their course. */
   function displayTitle(b, d) {
     if (isLesson(b)) {
-      const k = d.blocks.filter((x) => isLesson(x) && toMin(x.start) < toMin(b.start)).length;
-      const n = DONE_BEFORE() + before(d.date).lessons + k + 1;
+      const pre = before(d.date).lessons; // first: it brings "now" up to date
+      if (missed(b, d.date)) return "Arabic · Missed lesson";
+      const k = d.blocks.filter((x) => isLesson(x) && !missed(x, d.date) && toMin(x.start) < toMin(b.start)).length;
+      const n = DONE_BEFORE() + pre + k + 1;
       return n <= COURSE_LEN() ? `Arabic · Lesson ${n}` : "Arabic · Review";
     }
     if (b.track && TRACKS[b.track] && b.title === TRACKS[b.track].name) {
@@ -778,7 +789,8 @@
   /** When the plan, kept to, reaches the last Arabic lesson. */
   let finishMemo = null;
   function courseFinish() {
-    const key = `${state.savedAt}|${Object.keys(prayerStore).length}`;
+    before(START); // refresh "now" first: a lesson that just went by changes the answer
+    const key = `${state.savedAt}|${Object.keys(prayerStore).length}|${progressNow}`;
     if (finishMemo && finishMemo.key === key) return finishMemo.text;
     const need = COURSE_LEN() - DONE_BEFORE();
     let iso = START, text = "";
