@@ -14361,3 +14361,45 @@ input, textarea { font: inherit; color: inherit; }
 .ws-filter-tabs { border: 0; }
 .ws-filter-indicator { border: 0; }
 [data-theme="dark"] .ws-filter-indicator { background: var(--panel-2); box-shadow: none; }
+
+/* Mushaf page turner: bottom centre of the canvas, in the floating material
+   the zoom control uses. The top-bar navigator remains the seeker. */
+.mode-b-pager {
+  position: absolute; left: 50%; bottom: 20px; z-index: 9;
+  transform: translateX(-50%);
+  display: inline-flex; align-items: center; gap: 2px;
+  padding: 4px;
+  background: var(--float-bg);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
+  border-radius: 13px;
+  box-shadow: var(--float-shadow);
+  user-select: none;
+}
+.mode-b-pager-btn {
+  width: 34px; height: 34px; display: grid; place-items: center;
+  border-radius: 9px; color: var(--ink-2);
+  transition: background var(--dur-hover, 120ms) ease, color var(--dur-hover, 120ms) ease;
+}
+.mode-b-pager-btn:hover:not(:disabled) { background: var(--hover); color: var(--ink); }
+.mode-b-pager-btn:active:not(:disabled) { transform: scale(0.94); }
+.mode-b-pager-btn:disabled { color: var(--ink-4); opacity: 0.45; cursor: default; }
+.mode-b-pager-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.mode-b-pager-label {
+  min-width: 112px; padding: 0 6px;
+  display: inline-flex; align-items: baseline; justify-content: center; gap: 7px;
+  font-size: 13px; font-weight: 600; color: var(--ink);
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.mode-b-pager-of { font-size: 12px; font-weight: 500; color: var(--ink-3); }
+/* The word-tap hint shared this spot; it now sits just above the turner. */
+.mode-b-word-hint { bottom: 70px; }
+@media (max-width: 720px) {
+  /* No room side by side: zoom steps up above the turner, and the turner
+     drops its "n of N" to stay compact. */
+  .mode-b-zoom-controls { bottom: calc(74px + env(safe-area-inset-bottom, 0px)); }
+  .mode-b-pager { bottom: calc(20px + env(safe-area-inset-bottom, 0px)); }
+  .mode-b-pager-of { display: none; }
+  .mode-b-pager-label { min-width: 84px; }
+  .mode-b-word-hint { bottom: 124px; }
+}

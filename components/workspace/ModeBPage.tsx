@@ -18,7 +18,7 @@ import {
   useRef, useState,
 } from "react";
 import { createPortal } from "react-dom";
-import { Minus, Plus, RotateCw } from "lucide-react";
+import { ChevronLeft, ChevronRight, Minus, Plus, RotateCw } from "lucide-react";
 import { isTypingTarget } from "@/lib/is-typing";
 
 const HINT_KEY        = "tl-word-tap-hint-dismissed";
@@ -1077,6 +1077,20 @@ export default function ModeBPage({
     if (idx < availablePages.length - 1) goToPage(availablePages[idx + 1]);
   }, [availablePages, currentMushafahPage, goToPage]);
 
+  /* ← and → turn the page, like a reader. Nothing else on the canvas uses
+     them, and typing in a note or the editor keeps them for the caret. */
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
+      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+      if (isTypingTarget(e)) return;
+      e.preventDefault();
+      if (e.key === "ArrowLeft") goToPrevPage(); else goToNextPage();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [goToPrevPage, goToNextPage]);
+
   // ── Scroll to note (split-view sync) ─────────────────────────────────
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -1751,6 +1765,39 @@ export default function ModeBPage({
         <button className="mode-b-zoom-btn" title="Zoom in" aria-label="Zoom in" onClick={() => zoomByStep(ZOOM_BUTTON_STEP)}><Plus size={13} /></button>
         <button className="mode-b-zoom-btn mode-b-zoom-reset" title="Reset view" aria-label="Reset view" onClick={() => tweenTo({ x: centeredX(1), y: 40, zoom: 1 })}><RotateCw size={12} /></button>
       </div>
+
+      {/* ── Page turner, bottom centre of the canvas ──
+          The top-bar navigator stays as the seeker; this is the one within
+          reach while reading. */}
+      {availablePages.length > 1 && (() => {
+        const idx = availablePages.indexOf(currentMushafahPage);
+        return (
+          <div className="mode-b-pager" onPointerDown={(e) => e.stopPropagation()}>
+            <button
+              className="mode-b-pager-btn"
+              disabled={idx <= 0}
+              onClick={goToPrevPage}
+              title="Previous page (←)"
+              aria-label="Previous page"
+            >
+              <ChevronLeft size={16} strokeWidth={2.2} />
+            </button>
+            <span className="mode-b-pager-label" aria-live="polite">
+              Page {currentMushafahPage}
+              <span className="mode-b-pager-of">{idx + 1} of {availablePages.length}</span>
+            </span>
+            <button
+              className="mode-b-pager-btn"
+              disabled={idx >= availablePages.length - 1}
+              onClick={goToNextPage}
+              title="Next page (→)"
+              aria-label="Next page"
+            >
+              <ChevronRight size={16} strokeWidth={2.2} />
+            </button>
+          </div>
+        );
+      })()}
 
       {/* ── Mushaf page navigator — rendered into the TOP BANNER ──────────
           Portalled rather than lifted: the page state belongs to the canvas,
