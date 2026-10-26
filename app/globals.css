@@ -14403,3 +14403,234 @@ input, textarea { font: inherit; color: inherit; }
   .mode-b-pager-label { min-width: 84px; }
   .mode-b-word-hint { bottom: 124px; }
 }
+
+/* ── New workspace sheet (27 Oct 2026) ──────────────────────────────────────
+   Sized to the window with a fixed header and footer, so Create never needs
+   a scroll. Sentence-case labels, one filled field, a segmented control for
+   who can see it, and four solid tiles for what it is for. No outlines. */
+.modal-card--ws {
+  max-width: 600px; padding: 0; overflow: hidden;
+  border: 0; border-radius: 20px;
+  max-height: calc(100dvh - 32px);
+  display: flex; flex-direction: column;
+}
+.modal-backdrop:has(.modal-card--ws) { align-items: center; padding: 16px; }
+.nw-form { display: flex; flex-direction: column; min-height: 0; flex: 1; }
+.nw-title {
+  margin: 0; padding: 26px 28px 6px;
+  font-family: var(--font-serif); font-size: 24px; font-weight: 600;
+  letter-spacing: -0.02em; color: var(--ink);
+}
+.nw-body {
+  flex: 1; min-height: 0; overflow-y: auto;
+  padding: 14px 28px 8px;
+  display: flex; flex-direction: column; gap: 20px;
+}
+.nw-field { display: flex; flex-direction: column; gap: 8px; }
+.nw-label { font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.nw-hint { margin: 0; font-size: 12.5px; line-height: 1.45; color: var(--ink-3); min-height: 18px; }
+.nw-input {
+  height: 42px; padding: 0 14px; width: 100%;
+  font-size: 15px; color: var(--ink);
+  background: var(--panel); border: 0; border-radius: 11px; outline: none;
+  box-shadow: inset 0 0 0 1.5px transparent;
+  transition: box-shadow var(--dur-hover, 120ms) ease, background var(--dur-hover, 120ms) ease;
+}
+.nw-input::placeholder { color: var(--ink-4); }
+.nw-input:focus { box-shadow: inset 0 0 0 1.5px var(--accent); background: var(--bg-elev); }
+
+.nw-seg {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 3px;
+  padding: 3px; border-radius: 12px; background: var(--panel);
+}
+.nw-seg-btn {
+  height: 36px; border-radius: 9px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  font-size: 13.5px; font-weight: 500; color: var(--ink-3);
+  transition: background var(--dur-hover, 120ms) ease, color var(--dur-hover, 120ms) ease;
+}
+.nw-seg-btn:hover:not([data-active="true"]) { color: var(--ink); }
+.nw-seg-btn[data-active="true"] {
+  background: var(--bg-elev); color: var(--ink); font-weight: 600;
+  box-shadow: var(--shadow-sm);
+}
+[data-theme="dark"] .nw-seg-btn[data-active="true"] { background: var(--panel-2); box-shadow: none; }
+
+.nw-kinds { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.nw-kind {
+  position: relative;
+  display: flex; flex-direction: column; align-items: stretch; gap: 9px;
+  padding: 8px 8px 11px; border-radius: 14px;
+  background: var(--panel); text-align: left; cursor: pointer;
+  transition: background var(--dur-hover, 120ms) ease, transform 90ms var(--ease-out);
+}
+.nw-kind:hover:not(:disabled) { background: var(--panel-2); }
+.nw-kind:active:not(:disabled) { transform: scale(0.97); }
+.nw-kind[data-active="true"] { background: color-mix(in oklab, var(--accent) 16%, var(--panel)); }
+.nw-kind:disabled { opacity: .55; cursor: default; }
+.nw-kind:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.nw-kind-preview { display: block; border-radius: 9px; overflow: hidden; }
+.nw-kind-preview .kind-svg { display: block; width: 100%; height: auto; }
+.nw-kind-name { padding: 0 3px; font-size: 13px; font-weight: 600; color: var(--ink); line-height: 1.25; }
+.nw-kind-check {
+  position: absolute; top: 13px; right: 13px;
+  width: 18px; height: 18px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--accent); color: #fff;
+  opacity: 0; transform: scale(0.6);
+  transition: opacity 140ms ease, transform 180ms var(--ease-out);
+}
+.nw-kind[data-active="true"] .nw-kind-check { opacity: 1; transform: none; }
+
+.nw-foot {
+  display: flex; justify-content: flex-end; gap: 8px;
+  padding: 14px 28px 22px;
+}
+.nw-btn {
+  height: 40px; padding: 0 18px; border-radius: 11px;
+  font-size: 14px; font-weight: 600;
+  transition: background var(--dur-hover, 120ms) ease, opacity var(--dur-hover, 120ms) ease, transform 90ms var(--ease-out);
+}
+.nw-btn:active:not(:disabled) { transform: scale(0.97); }
+.nw-btn--quiet { color: var(--ink-2); font-weight: 500; }
+.nw-btn--quiet:hover:not(:disabled) { background: var(--hover); color: var(--ink); }
+.nw-btn--primary { background: var(--accent); color: #fff; }
+.nw-btn--primary:hover:not(:disabled) { background: var(--accent-ink); }
+.nw-btn--primary:disabled { opacity: 0.4; cursor: not-allowed; }
+.nw-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+@media (max-width: 560px) {
+  .nw-title { padding: 22px 20px 4px; font-size: 22px; }
+  .nw-body { padding: 12px 20px 6px; }
+  .nw-foot { padding: 12px 20px 18px; }
+  .nw-kinds { grid-template-columns: 1fr 1fr; }
+}
+
+/* The other dialogs share these: sentence-case labels, no outlined buttons. */
+.modal-label { text-transform: none; letter-spacing: 0; font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.modal-input { border: 0; border-radius: 10px; box-shadow: inset 0 0 0 1.5px transparent; transition: box-shadow 0.12s; }
+.modal-input:focus { box-shadow: inset 0 0 0 1.5px var(--accent); }
+.modal-btn-cancel { border: 0; border-radius: 10px; }
+.modal-btn-create { background: var(--accent); color: #fff; border: 0; border-radius: 10px; }
+.modal-btn-create:hover:not(:disabled) { opacity: 1; background: var(--accent-ink); }
+
+/* ── Book study home (27 Oct 2026) ─────────────────────────────────────────
+   Two shelves on the page: your books, then the library. The library used
+   to hide behind a button and a dialog, which left a new workspace looking
+   empty; now the texts themselves are the invitation. Books are solid
+   objects with a coloured spine — no outlines, no dashed empty box. */
+.bk-section { margin-top: 36px; }
+.bk-section + .bk-section { margin-top: 48px; }
+.bk-section-head {
+  display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.bk-section-title {
+  margin: 0; font-family: var(--font-serif); font-size: 21px; font-weight: 600;
+  letter-spacing: -0.015em; color: var(--ink);
+}
+.bk-section-sub { margin: 0; font-size: 13.5px; color: var(--ink-3); }
+.bk-link {
+  margin-left: auto;
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 32px; padding: 0 12px; border-radius: 9px;
+  font-size: 13px; font-weight: 600; color: var(--accent-ink);
+  transition: background var(--dur-hover, 120ms) ease;
+}
+.bk-link:hover:not(:disabled) { background: var(--accent-soft); }
+.bk-link:disabled { opacity: .5; }
+.bk-empty {
+  padding: 28px 28px 30px; border-radius: 16px; background: var(--panel);
+}
+.bk-empty-title {
+  margin: 0 0 6px; font-family: var(--font-serif); font-size: 18px; font-weight: 600; color: var(--ink);
+}
+.bk-empty-body { margin: 0; max-width: 520px; font-size: 14px; line-height: 1.6; color: var(--ink-3); }
+
+.bk-shelf {
+  max-height: none; overflow: visible; margin-top: 0; padding: 0;
+  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+  gap: 16px;
+}
+.book-obj {
+  min-height: 210px; border: 0;
+  background: var(--panel);
+  border-radius: 3px 14px 14px 3px;
+  text-decoration: none;
+}
+.book-obj:hover:not(:disabled) {
+  border-color: transparent;
+  background: var(--panel-2);
+  box-shadow: var(--float-shadow);
+  transform: translateY(-3px);
+}
+.book-obj-spine { width: 9px; box-shadow: inset -1px 0 0 oklch(1 0 0 / 0.12); }
+.book-obj-face { padding: 18px 16px 16px 14px; gap: 8px; }
+.book-obj-ar {
+  font-family: var(--font-kfgqpc); font-size: 23px; line-height: 1.55;
+}
+.book-obj-en { font-size: 13.5px; line-height: 1.35; color: var(--ink); }
+.book-obj-meta { font-size: 11.5px; gap: 2px; }
+.book-obj[data-subject="local"] { --book-tone: var(--ink-4); }
+.book-obj[data-added="true"] .book-obj-face { padding-bottom: 40px; }
+.bk-added {
+  position: absolute; left: 23px; bottom: 13px;
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11.5px; font-weight: 600; color: var(--accent-ink);
+}
+@media (max-width: 560px) {
+  .bk-shelf { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .book-obj { min-height: 180px; }
+  .book-obj-ar { font-size: 19px; }
+}
+
+/* Board tiles on the Boards home: solid, no outline, no mono date. */
+.board-card { border: 0; background: var(--panel); border-radius: 16px; }
+.board-card:hover { border-color: transparent; background: var(--panel-2); box-shadow: none; transform: none; }
+.board-card-date { font-family: var(--font-sans); letter-spacing: 0; font-size: 12.5px; color: var(--ink-3); }
+.boards-empty { border: 0; background: var(--panel); border-radius: 16px; }
+
+/* ── Sūrah banner, quieter (27 Oct 2026) ───────────────────────────────────
+   Same one-row layout and grid (the basmala still sits on the page's centre
+   line), but as a solid tile: no outline, no divider cells, no ringed rules.
+   Arabic in the King Fahd face throughout. In Reading Mode the plate carries
+   a small "Study" label, which replaces the hint line that sat under the bar. */
+.qcf-surah-bar,
+.qcf-surah-bar:not(:has(.qcf-bar-basmala)) {
+  padding: 6px; gap: 10px;
+  border: 0; border-radius: 14px;
+  background: color-mix(in srgb, var(--paper-ink) 4.5%, transparent);
+}
+.qcf-surah-bar:has(.qcf-bar-basmala) {
+  grid-template-columns: minmax(max-content, 1fr) 0 auto 0 minmax(max-content, 1fr);
+}
+.qcf-rule, .qcf-rule--solo, .qcf-bar-mid .qcf-rule--solo { visibility: hidden; width: 0; }
+.qcf-bar-basmala {
+  font-family: var(--font-kfgqpc); font-size: 23px; line-height: 38px;
+  color: var(--paper-ink);
+}
+.qcf-plate {
+  height: 38px; border-radius: 10px; gap: 0;
+  background: var(--bg-elev);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--paper-ink) 10%, transparent);
+}
+[data-theme="dark"] .qcf-plate { background: color-mix(in srgb, var(--paper-ink) 10%, transparent); box-shadow: none; }
+.qcf-plate-name { padding: 0 14px; font-size: 22px; line-height: 38px; }
+.qcf-plate--btn { transition: background var(--dur-hover, 120ms) ease, transform 90ms var(--ease-out); }
+.qcf-plate--btn:hover { background: color-mix(in srgb, var(--accent) 12%, var(--bg-elev)); }
+[data-theme="dark"] .qcf-plate--btn:hover { background: color-mix(in srgb, var(--accent) 22%, transparent); }
+.qcf-plate--btn:active { transform: scale(0.97); }
+.qcf-plate-study {
+  display: inline-flex; align-items: center; gap: 5px;
+  height: 26px; margin-inline-end: 6px; padding: 0 9px; border-radius: 7px;
+  font-family: var(--font-sans); font-size: 12px; font-weight: 600;
+  color: #fff; background: var(--accent);
+}
+.qcf-bar-en {
+  height: 38px; padding: 0 4px 0 12px;
+  font-size: 13.5px; font-weight: 500;
+  color: color-mix(in srgb, var(--paper-ink) 70%, transparent);
+}
+.qcf-bar-en .crumb-menu { margin: 0 0 0 4px; }
+.qcf-bar-en .crumb-menu-btn { width: 28px; height: 28px; border: 0; border-radius: 8px; }
+.qcf-bar-en .crumb-menu-btn:hover { border-color: transparent; background: color-mix(in srgb, var(--paper-ink) 8%, transparent); }

@@ -17,6 +17,7 @@ import WorkspaceSettings from "./WorkspaceSettings";
 import Rail from "./Rail";
 import NewWorkspaceModal from "@/components/NewWorkspaceModal";
 import { useHydrated } from "@/lib/use-hydrated";
+import { LayoutGrid } from "lucide-react";
 
 interface Board { id: string; title: string; createdAt: Date | string; }
 
@@ -121,15 +122,18 @@ export default function BoardsHome({ workspaceId, workspace, role, boards: initi
               />
             ) : (
               <h1
-                className="ws-home-name"
+                className={`ws-home-name${role === "owner" ? " ws-home-name--editable" : ""}`}
                 onClick={() => { if (role === "owner") { setRenaming(true); setTimeout(() => nameInputRef.current?.select(), 0); } }}
                 title={role === "owner" ? "Click to rename" : undefined}
-                style={{ cursor: role === "owner" ? "text" : "default" }}
               >
-                {wsName} <span className="ws-home-kind-badge">{t("boards.badge")}</span>
+                {wsName}
               </h1>
             )}
-            <p className="ws-home-sub">{t("boards.count", { n: boards.length })}</p>
+            <p className="ws-home-sub">
+              <span className="ws-home-kind"><LayoutGrid size={12} strokeWidth={2.2} aria-hidden /> {t("boards.badge")}</span>
+              <span aria-hidden> · </span>
+              {t("boards.count", { n: boards.length })}
+            </p>
           </div>
 
           <div className="ws-home-actions">

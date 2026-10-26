@@ -13,6 +13,7 @@ import { useT } from "@/lib/i18n/LocaleProvider";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useDismissable } from "@/lib/use-dismissable";
+import { Check, Lock, Users } from "lucide-react";
 
 interface Props {
   onClose: () => void;
@@ -81,10 +82,26 @@ export default function NewWorkspaceModal({ onClose, originPoint }: Props) {
     }
   }
 
+  const kinds = [
+    { id: "study",  name: t("modal.study"),  caption: t("modal.studyDesc"),  preview: <QuranPreview /> },
+    { id: "boards", name: t("modal.boards"), caption: t("modal.boardsDesc"), preview: <CanvasPreview /> },
+    { id: "books",  name: t("modal.books"),  caption: t("modal.booksDesc"),  preview: <BookPreview /> },
+    { id: "nawawi", name: t("modal.nawawi"), caption: t("modal.nawawiDesc"), preview: <NawawiPreview /> },
+  ] as const;
+  const kindCaption = kinds.find((k) => k.id === kind)?.caption;
+
+  /* One sheet, sized to the window: the header and the buttons stay put and
+     only the middle scrolls, so Create is always within reach. Each choice
+     shows its description once, under the row, for whichever option is
+     picked — four captions inside four tiles made the dialog taller than a
+     laptop screen. */
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div
-        className="modal-card"
+        className="modal-card modal-card--ws"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="nw-title"
         onClick={(e) => e.stopPropagation()}
         style={
           originPoint
@@ -96,82 +113,74 @@ export default function NewWorkspaceModal({ onClose, originPoint }: Props) {
         }
         data-from-origin={originPoint ? "true" : "false"}
       >
-        <h2 className="modal-title">{t("modal.newWorkspace")}</h2>
+        <form className="nw-form" onSubmit={handleSubmit}>
+          <h2 className="nw-title" id="nw-title">{t("modal.newWorkspace")}</h2>
 
-        <form onSubmit={handleSubmit}>
-          <label className="modal-label" htmlFor="ws-name">{t("modal.name")}</label>
-          <input
-            ref={inputRef}
-            id="ws-name"
-            className="modal-input"
-            placeholder={t("modal.namePlaceholder")}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            maxLength={80}
-            disabled={loading}
-          />
+          <div className="nw-body">
+            <label className="nw-field">
+              <span className="nw-label">{t("modal.name")}</span>
+              <input
+                ref={inputRef}
+                id="ws-name"
+                className="nw-input"
+                placeholder={t("modal.namePlaceholder")}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                maxLength={80}
+                disabled={loading}
+                autoComplete="off"
+              />
+            </label>
 
-          <label className="modal-label" style={{ marginTop: 18 }}>{t("modal.type")}</label>
-          <div className="modal-type-row">
-            <button
-              type="button"
-              className="modal-type-btn"
-              data-active={type === "private" ? "true" : "false"}
-              onClick={() => setType("private")}
-              disabled={loading}
-            >
-              <span className="modal-type-icon">🔒</span>
-              <div>
-                <div className="modal-type-name">{t("modal.private")}</div>
-                <div className="modal-type-desc">{t("modal.privateDesc")}</div>
+            <div className="nw-field">
+              <span className="nw-label" id="nw-type-label">{t("modal.type")}</span>
+              <div className="nw-seg" role="radiogroup" aria-labelledby="nw-type-label">
+                {(["private", "group"] as const).map((v) => (
+                  <button
+                    key={v}
+                    type="button"
+                    role="radio"
+                    aria-checked={type === v}
+                    className="nw-seg-btn"
+                    data-active={type === v ? "true" : "false"}
+                    onClick={() => setType(v)}
+                    disabled={loading}
+                  >
+                    {v === "private"
+                      ? <Lock size={14} strokeWidth={2.1} aria-hidden />
+                      : <Users size={15} strokeWidth={2.1} aria-hidden />}
+                    {v === "private" ? t("modal.private") : t("modal.group")}
+                  </button>
+                ))}
               </div>
-            </button>
+              <p className="nw-hint">{type === "private" ? t("modal.privateDesc") : t("modal.groupDesc")}</p>
+            </div>
 
-            <button
-              type="button"
-              className="modal-type-btn"
-              data-active={type === "group" ? "true" : "false"}
-              onClick={() => setType("group")}
-              disabled={loading}
-            >
-              <span className="modal-type-icon">👥</span>
-              <div>
-                <div className="modal-type-name">{t("modal.group")}</div>
-                <div className="modal-type-desc">{t("modal.groupDesc")}</div>
+            <div className="nw-field">
+              <span className="nw-label" id="nw-kind-label">{t("modal.whatFor")}</span>
+              <div className="nw-kinds" role="radiogroup" aria-labelledby="nw-kind-label">
+                {kinds.map((k) => (
+                  <KindCard
+                    key={k.id}
+                    active={kind === k.id}
+                    disabled={loading}
+                    onSelect={() => setKind(k.id)}
+                    name={k.name}
+                    caption={k.caption}
+                    preview={k.preview}
+                  />
+                ))}
               </div>
-            </button>
+              <p className="nw-hint">{kindCaption}</p>
+            </div>
+
+            {error && <p className="modal-error">{error}</p>}
           </div>
 
-          <label className="modal-label" style={{ marginTop: 18 }}>{t("modal.whatFor")}</label>
-          <div className="kind-row" role="radiogroup" aria-label={t("modal.whatFor")}>
-            <KindCard
-              active={kind === "study"} disabled={loading} onSelect={() => setKind("study")}
-              name={t("modal.study")} caption={t("modal.studyDesc")}
-              preview={<QuranPreview />}
-            />
-            <KindCard
-              active={kind === "boards"} disabled={loading} onSelect={() => setKind("boards")}
-              name={t("modal.boards")} caption={t("modal.boardsDesc")}
-              preview={<CanvasPreview />}
-            />
-            <KindCard
-              active={kind === "books"} disabled={loading} onSelect={() => setKind("books")}
-              name={t("modal.books")} caption={t("modal.booksDesc")}
-              preview={<BookPreview />}
-            />
-            <KindCard
-              active={kind === "nawawi"} disabled={loading} onSelect={() => setKind("nawawi")}
-              name={t("modal.nawawi")} caption={t("modal.nawawiDesc")}
-              preview={<NawawiPreview />}
-            />
-          </div>
-
-          {error && <p className="modal-error">{error}</p>}
-
-          <div className="modal-actions">
+          <div className="nw-foot">
             <button
               type="button"
-              className="modal-btn-cancel"
+              className="nw-btn nw-btn--quiet"
               onClick={onClose}
               disabled={loading}
             >
@@ -179,7 +188,7 @@ export default function NewWorkspaceModal({ onClose, originPoint }: Props) {
             </button>
             <button
               type="submit"
-              className="modal-btn-create"
+              className="nw-btn nw-btn--primary"
               disabled={loading || !name.trim()}
             >
               {loading ? t("modal.creating") : t("modal.create")}
@@ -211,14 +220,15 @@ function KindCard({
       type="button"
       role="radio"
       aria-checked={active}
-      className="kind-card"
+      title={caption}
+      className="nw-kind"
       data-active={active ? "true" : "false"}
       onClick={onSelect}
       disabled={disabled}
     >
-      <span className="kind-preview" aria-hidden>{preview}</span>
-      <span className="kind-name">{name}</span>
-      <span className="kind-caption">{caption}</span>
+      <span className="nw-kind-preview" aria-hidden>{preview}</span>
+      <span className="nw-kind-name">{name}</span>
+      <span className="nw-kind-check" aria-hidden><Check size={11} strokeWidth={3} /></span>
     </button>
   );
 }

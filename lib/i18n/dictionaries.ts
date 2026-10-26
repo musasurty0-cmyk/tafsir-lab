@@ -83,7 +83,7 @@ const en: Dict = {
   "modal.newWorkspace":    "New workspace",
   "modal.name":            "Name",
   "modal.namePlaceholder": "e.g. Al-Baqarah Study Group",
-  "modal.type":            "Type",
+  "modal.type":            "Who can see it",
   "modal.private":         "Private",
   "modal.privateDesc":     "Only visible to you",
   "modal.group":           "Group",

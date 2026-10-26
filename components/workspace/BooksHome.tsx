@@ -20,6 +20,8 @@ import WorkspaceSettings from "./WorkspaceSettings";
 import Rail from "./Rail";
 import NewWorkspaceModal from "@/components/NewWorkspaceModal";
 import Toast from "@/components/Toast";
+import { BookOpen, Check, Upload } from "lucide-react";
+import { useHydrated } from "@/lib/use-hydrated";
 
 interface Book {
   id: string; title: string; pdfUrl: string; pdfName: string | null; createdAt: Date | string;
@@ -50,6 +52,8 @@ function subjectTone(category: string): string {
 
 export default function BooksHome({ workspaceId, workspace, role, books: initialBooks }: Props) {
   const router = useRouter();
+  /* Dates are formatted in the browser's zone; the server is UTC. */
+  const hydrated = useHydrated();
 
   useLayoutEffect(() => {
     document.getElementById("tl-nav-splash")?.remove();
@@ -59,7 +63,6 @@ export default function BooksHome({ workspaceId, workspace, role, books: initial
   const [books, setBooks]               = useState<Book[]>(initialBooks);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [modalOpen, setModalOpen]       = useState(false);
-  const [libraryOpen, setLibraryOpen]   = useState(false);
   const [busy, setBusy]                 = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   /* Anything this screen needs to tell the user. Was window.alert(), which
@@ -124,6 +127,14 @@ export default function BooksHome({ workspaceId, workspace, role, books: initial
     setRenaming(false);
   }
 
+  /* A library text already on this workspace's shelf opens rather than being
+     added a second time. */
+  const addedBySlug = new Map<string, Book>();
+  for (const b of books) {
+    const lb = LIBRARY_BOOKS.find((l) => libraryBookUrl(l.slug) === b.pdfUrl);
+    if (lb && !addedBySlug.has(lb.slug)) addedBySlug.set(lb.slug, b);
+  }
+
   return (
     <div className="workspace-home">
       <Toast message={notice} onDismiss={() => setNotice(null)} />
@@ -147,15 +158,18 @@ export default function BooksHome({ workspaceId, workspace, role, books: initial
               />
             ) : (
               <h1
-                className="ws-home-name"
+                className={`ws-home-name${role === "owner" ? " ws-home-name--editable" : ""}`}
                 onClick={() => { if (role === "owner") { setRenaming(true); setTimeout(() => nameInputRef.current?.select(), 0); } }}
                 title={role === "owner" ? "Click to rename" : undefined}
-                style={{ cursor: role === "owner" ? "text" : "default" }}
               >
-                {wsName} <span className="ws-home-kind-badge">📚 Book study</span>
+                {wsName}
               </h1>
             )}
-            <p className="ws-home-sub">{books.length} {books.length === 1 ? "book" : "books"}</p>
+            <p className="ws-home-sub">
+              <span className="ws-home-kind"><BookOpen size={12} strokeWidth={2.2} aria-hidden /> Book study</span>
+              <span aria-hidden> · </span>
+              {books.length} {books.length === 1 ? "book" : "books"}
+            </p>
           </div>
 
           <div className="ws-home-actions">
@@ -165,56 +179,76 @@ export default function BooksHome({ workspaceId, workspace, role, books: initial
           </div>
         </div>
 
-        {/* Add-book actions */}
-        <div className="boards-new-row" style={{ gap: 8, display: "flex" }}>
-          <button className="ws-new-btn boards-new-btn" onClick={() => setLibraryOpen(true)} disabled={busy}>
-            ＋ Add from library
-          </button>
-          <button className="ws-new-btn ws-new-btn--ghost" onClick={() => fileRef.current?.click()} disabled={busy}>
-            ⬆ Upload a PDF
-          </button>
-          <input ref={fileRef} type="file" accept="application/pdf,.pdf" hidden onChange={onUpload} />
-        </div>
-
-        {/* Books grid */}
-        {books.length === 0 ? (
-          <div className="boards-empty">
-            <p className="boards-empty-title">No books yet</p>
-            <p className="boards-empty-body">Add a classical text from the library, or upload your own PDF — then annotate around it with the pen and note cards.</p>
+        {/* ── Your books ── */}
+        <section className="bk-section" aria-labelledby="bk-yours">
+          <div className="bk-section-head">
+            <h2 className="bk-section-title" id="bk-yours">Your books</h2>
+            <button className="bk-link" onClick={() => fileRef.current?.click()} disabled={busy}>
+              <Upload size={14} strokeWidth={2.2} aria-hidden /> Upload a PDF
+            </button>
+            <input ref={fileRef} type="file" accept="application/pdf,.pdf" hidden onChange={onUpload} />
           </div>
-        ) : (
-          <div className="boards-grid">
-            {books.map((b) => (
-              <Link key={b.id} href={`/workspaces/${workspaceId}/books/${b.id}`} className="board-card book-card-tile">
-                <span className="board-card-icon">{b.pdfUrl === "local" ? "📄" : "📚"}</span>
-                <span className="board-card-title">{b.title}</span>
-                <span className="board-card-date">{b.pdfUrl === "local" ? "Uploaded" : "Library"} · {fmt(b.createdAt)}</span>
-              </Link>
-            ))}
-          </div>
-        )}
-      </div>
 
-      {/* Library picker */}
-      {libraryOpen && (
-        <div className="modal-backdrop" onClick={() => !busy && setLibraryOpen(false)}>
-          <div className="modal-card book-library-card" onClick={(e) => e.stopPropagation()}>
-            <h2 className="modal-title">Choose a text</h2>
-            <p className="modal-label" style={{ marginTop: -4 }}>Classical mutūn — tap one to add it and start annotating.</p>
-            {/* A shelf, not a list of rectangles. Each mutn is a book object:
-                a spine, its Arabic name set as the cover title, then the
-                English title, subject and author. The tone varies by SUBJECT
-                rather than at random, so ʿAqīdah texts sit together visually —
-                there is no invented cover art, only the text's own name. */}
-            <div className="book-shelf">
-              {LIBRARY_BOOKS.map((lb) => (
+          {books.length === 0 ? (
+            <div className="bk-empty">
+              <p className="bk-empty-title">Nothing on the shelf yet.</p>
+              <p className="bk-empty-body">
+                Pick a text from the library below, or upload your own PDF. Then annotate
+                around it with the pen and note cards.
+              </p>
+            </div>
+          ) : (
+            <div className="book-shelf bk-shelf">
+              {books.map((b) => {
+                const lb = LIBRARY_BOOKS.find((l) => libraryBookUrl(l.slug) === b.pdfUrl);
+                return (
+                  <Link
+                    key={b.id}
+                    href={`/workspaces/${workspaceId}/books/${b.id}`}
+                    className="book-obj"
+                    data-subject={lb ? subjectTone(lb.category) : "local"}
+                  >
+                    <span className="book-obj-spine" aria-hidden />
+                    <span className="book-obj-face">
+                      {lb?.titleArabic && <span className="book-obj-ar" dir="rtl" lang="ar">{lb.titleArabic}</span>}
+                      <span className="book-obj-en">{b.title}</span>
+                      <span className="book-obj-meta">
+                        <span className="book-obj-subject">{lb ? lb.category : "Your PDF"}</span>
+                        <span className="book-obj-author">{hydrated ? `Added ${fmt(b.createdAt)}` : " "}</span>
+                      </span>
+                    </span>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </section>
+
+        {/* ── Library ──
+            A shelf, not a list of rectangles. Each mutn is a book object: a
+            spine, its Arabic name as the cover title, then the English title,
+            subject and author. The tone varies by SUBJECT rather than at
+            random, so ʿAqīdah texts sit together — there is no invented cover
+            art, only the text's own name. */}
+        <section className="bk-section" aria-labelledby="bk-library">
+          <div className="bk-section-head">
+            <h2 className="bk-section-title" id="bk-library">Library</h2>
+            <p className="bk-section-sub">Classical mutūn, ready to annotate. Tap one to add it.</p>
+          </div>
+          <div className="book-shelf bk-shelf">
+            {LIBRARY_BOOKS.map((lb) => {
+              const added = addedBySlug.get(lb.slug);
+              return (
                 <button
                   key={lb.slug}
                   className="book-obj"
                   data-subject={subjectTone(lb.category)}
-                  onClick={() => addLibraryBook(lb)}
+                  data-added={added ? "true" : "false"}
+                  onClick={() => added
+                    ? pushWithSplash(router, `/workspaces/${workspaceId}/books/${added.id}`)
+                    : addLibraryBook(lb)}
                   disabled={busy}
-                  title={`${lb.title}${lb.author ? " — " + lb.author : ""}`}
+                  title={`${added ? "Open" : "Add"} ${lb.title}${lb.author ? " — " + lb.author : ""}`}
                 >
                   <span className="book-obj-spine" aria-hidden />
                   <span className="book-obj-face">
@@ -227,15 +261,13 @@ export default function BooksHome({ workspaceId, workspace, role, books: initial
                       {lb.author && <span className="book-obj-author">{lb.author}</span>}
                     </span>
                   </span>
+                  {added && <span className="bk-added"><Check size={11} strokeWidth={3} aria-hidden /> On your shelf</span>}
                 </button>
-              ))}
-            </div>
-            <div className="modal-actions">
-              <button className="modal-btn-cancel" onClick={() => setLibraryOpen(false)} disabled={busy}>Close</button>
-            </div>
+              );
+            })}
           </div>
-        </div>
-      )}
+        </section>
+      </div>
 
       {settingsOpen && (
         <WorkspaceSettings

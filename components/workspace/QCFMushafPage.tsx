@@ -25,7 +25,7 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState, useLayoutEffect} from "react";
 import type { QCFVerse, Chapter } from "@/lib/types";
 import { loadQCFFont } from "@/lib/qcf-font";
-import { BookOpen, Pencil } from "lucide-react";
+import { Pencil } from "lucide-react";
 import SurahCrumbMenu from "./SurahCrumbMenu";
 
 // ── Props ───────────────────────────────────────────────────────────────────
@@ -425,10 +425,11 @@ function QCFMushafPage({
                 onClick={onEnterStudy}
                 onMouseDown={(e) => e.stopPropagation()}
                 onPointerDown={(e) => e.stopPropagation()}
-                title="Open study notes"
+                title="Study this sūrah"
+                aria-label={`Study ${chapter.name_simple}`}
               >
                 <span className="qcf-plate-name">{chapter.name_arabic}</span>
-                <span className="qcf-plate-pen" aria-hidden><Pencil size={14} /></span>
+                <span className="qcf-plate-study" dir="ltr"><Pencil size={12} strokeWidth={2.2} aria-hidden /> Study</span>
               </button>
             )}
 
@@ -459,17 +460,12 @@ function QCFMushafPage({
               onMouseDown={(e) => e.stopPropagation()}
               onPointerDown={(e) => e.stopPropagation()}
             >
-              <span className="qcf-bar-book"><BookOpen size={15} aria-hidden /></span>
               <span className="qcf-bar-name">{chapter.name_simple}</span>
               {workspaceId && <SurahCrumbMenu workspaceId={workspaceId} current={chapter.id} />}
             </span>
           </div>
-          {/* Reading Mode only: the surah name is the way in, but nothing says
-              so. Sits under the heading, never over the text, and disappears
-              the moment Study Mode opens. */}
-          {!studyMode && (
-            <div className="qcf-read-hint">Press the Surah name to start studying</div>
-          )}
+          {/* No hint line under the bar: the plate itself now says "Study"
+              in Reading Mode, which is the instruction the hint used to give. */}
       </div>
 
       {/* ── Page lines ── */}
