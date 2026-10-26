@@ -19,7 +19,7 @@ import { useRouter } from "next/navigation";
 import type { Chapter } from "@/lib/types";
 import type { MemberRole } from "@/lib/services/workspaces.service";
 import { isAdmin } from "@/lib/services/workspaces.service";
-import { Lock, Search, X } from "lucide-react";
+import { Lock, Search, Users, X } from "lucide-react";
 import type { WorkspaceSurahSummary } from "@/app/workspaces/[workspaceId]/page";
 import Rail from "./Rail";
 import NewWorkspaceModal from "@/components/NewWorkspaceModal";
@@ -237,17 +237,20 @@ export default function WorkspaceHome({
                   {wsName}
                 </h1>
               )}
-              <span className={`ws-type-badge ws-type-badge--${workspace.type}`}>
-                {workspace.type === "private" ? "🔒 Private" : "👥 Group"}
-              </span>
             </div>
             <p className="ws-home-sub">
+              <span className="ws-home-kind">
+                {workspace.type === "private"
+                  ? <><Lock size={11} strokeWidth={2.2} aria-hidden /> Private</>
+                  : <><Users size={12} strokeWidth={2.2} aria-hidden /> Group</>}
+              </span>
+              <span aria-hidden> · </span>
               {t("ws.surahsInProgress", { n: studyingCount })}
             </p>
           </div>
 
           {/* Workspace actions */}
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <div className="ws-home-actions">
             <button
               className="ws-new-btn ws-new-btn--ghost"
               title="All notes across this workspace"
@@ -269,15 +272,6 @@ export default function WorkspaceHome({
             >
               {t("ws.blankBoard")}
             </button>
-            {role === "owner" && (
-              <button
-                className="ws-new-btn ws-new-btn--ghost"
-                onClick={startRename}
-                title="Rename workspace"
-              >
-                {t("ws.rename")}
-              </button>
-            )}
             <button
               className="ws-new-btn ws-new-btn--ghost"
               title="Workspace settings and members"

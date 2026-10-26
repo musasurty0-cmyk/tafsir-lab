@@ -132,7 +132,7 @@ export default function BoardsHome({ workspaceId, workspace, role, boards: initi
             <p className="ws-home-sub">{t("boards.count", { n: boards.length })}</p>
           </div>
 
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <div className="ws-home-actions">
             <button className="ws-new-btn ws-new-btn--ghost" title="All notes across this workspace" onClick={() => pushWithSplash(router, `/workspaces/${workspaceId}/notes`)}>{t("ws.notes")}</button>
             <button className="ws-new-btn ws-new-btn--ghost" title="Every Connection recorded in this workspace" onClick={() => pushWithSplash(router, `/workspaces/${workspaceId}/connections`)}>Connections</button>
             <button className="ws-new-btn ws-new-btn--ghost" title="Workspace settings and members" onClick={() => setSettingsOpen(true)}>{t("ws.settings")}</button>

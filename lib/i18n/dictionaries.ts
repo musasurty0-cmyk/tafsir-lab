@@ -43,10 +43,10 @@ const en: Dict = {
 
   // ── Workspace home ──
   "ws.notes":              "Notes",
-  "ws.blankBoard":         "◇ Blank board",
+  "ws.blankBoard":         "Blank board",
   "ws.rename":             "Rename",
   "ws.settings":           "Settings",
-  "ws.newWorkspace":       "+ New workspace",
+  "ws.newWorkspace":       "New workspace",
   "ws.surahsInProgress":   "{n} sūrahs being studied",
   "ws.filter.all":         "All",
   "ws.filter.started":     "Studying",
@@ -57,7 +57,7 @@ const en: Dict = {
   // ── Boards home ──
   "boards.badge":          "Boards",
   "boards.count":          "{n} boards",
-  "boards.new":            "◇ New board",
+  "boards.new":            "New board",
   "boards.namePlaceholder":"Board name (e.g. this week's topic)",
   "boards.create":         "Create board →",
   "boards.creating":       "Creating…",
@@ -140,10 +140,10 @@ const ar: Dict = {
   "home.createFirst":      "أنشئ أول مساحة عمل",
 
   "ws.notes":              "الملاحظات",
-  "ws.blankBoard":         "◇ لوحة فارغة",
+  "ws.blankBoard":         "لوحة فارغة",
   "ws.rename":             "إعادة تسمية",
   "ws.settings":           "الإعدادات",
-  "ws.newWorkspace":       "+ مساحة جديدة",
+  "ws.newWorkspace":       "مساحة جديدة",
   "ws.surahsInProgress":   "{n} سورة قيد الدراسة",
   "ws.filter.all":         "الكل",
   "ws.filter.started":     "قيد الدراسة",
@@ -153,7 +153,7 @@ const ar: Dict = {
 
   "boards.badge":          "لوحات",
   "boards.count":          "{n} لوحة",
-  "boards.new":            "◇ لوحة جديدة",
+  "boards.new":            "لوحة جديدة",
   "boards.namePlaceholder":"اسم اللوحة (مثل موضوع هذا الأسبوع)",
   "boards.create":         "إنشاء لوحة ←",
   "boards.creating":       "جارٍ الإنشاء…",
@@ -230,10 +230,10 @@ const ur: Dict = {
   "home.createFirst":      "اپنا پہلا ورک اسپیس بنائیں",
 
   "ws.notes":              "نوٹس",
-  "ws.blankBoard":         "◇ خالی بورڈ",
+  "ws.blankBoard":         "خالی بورڈ",
   "ws.rename":             "نام بدلیں",
   "ws.settings":           "ترتیبات",
-  "ws.newWorkspace":       "+ نیا ورک اسپیس",
+  "ws.newWorkspace":       "نیا ورک اسپیس",
   "ws.surahsInProgress":   "{n} سورتیں زیرِ مطالعہ",
   "ws.filter.all":         "سب",
   "ws.filter.started":     "زیرِ مطالعہ",
@@ -243,7 +243,7 @@ const ur: Dict = {
 
   "boards.badge":          "بورڈز",
   "boards.count":          "{n} بورڈ",
-  "boards.new":            "◇ نیا بورڈ",
+  "boards.new":            "نیا بورڈ",
   "boards.namePlaceholder":"بورڈ کا نام (مثلاً اس ہفتے کا موضوع)",
   "boards.create":         "بورڈ بنائیں ←",
   "boards.creating":       "بن رہا ہے…",

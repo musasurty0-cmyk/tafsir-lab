@@ -158,7 +158,7 @@ export default function BooksHome({ workspaceId, workspace, role, books: initial
             <p className="ws-home-sub">{books.length} {books.length === 1 ? "book" : "books"}</p>
           </div>
 
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <div className="ws-home-actions">
             <button className="ws-new-btn ws-new-btn--ghost" onClick={() => pushWithSplash(router, `/workspaces/${workspaceId}/notes`)}>Notes</button>
             <button className="ws-new-btn ws-new-btn--ghost" onClick={() => setSettingsOpen(true)}>Settings</button>
             <button className="ws-new-btn" onClick={() => setModalOpen(true)}>New workspace</button>

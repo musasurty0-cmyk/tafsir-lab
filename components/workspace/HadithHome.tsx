@@ -137,7 +137,7 @@ export default function HadithHome({ workspaceId, currentUserId, workspace, role
             </p>
           </div>
 
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <div className="ws-home-actions">
             <button className="ws-new-btn ws-new-btn--ghost" onClick={() => pushWithSplash(router, `/workspaces/${workspaceId}/notes`)}>{t("ws.notes")}</button>
             <button className="ws-new-btn ws-new-btn--ghost" onClick={() => setSettingsOpen(true)}>{t("ws.settings")}</button>
             <button className="ws-new-btn" onClick={() => setModalOpen(true)}>{t("ws.newWorkspace")}</button>
