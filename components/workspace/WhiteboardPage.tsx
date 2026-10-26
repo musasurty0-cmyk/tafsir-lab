@@ -470,11 +470,11 @@ export default function WhiteboardPage({
       />
 
       <div className="mode-b-zoom-controls" onPointerDown={(e) => e.stopPropagation()}>
-        <button className="mode-b-zoom-btn" title="Zoom out" aria-label="Zoom out" onClick={() => zoomBy(1 / 1.2)}><Minus size={15} /></button>
+        <button className="mode-b-zoom-btn" title="Zoom out" aria-label="Zoom out" onClick={() => zoomBy(1 / 1.2)}><Minus size={13} /></button>
         <span className="mode-b-zoom-label">{Math.round(viewport.zoom * 100)}%</span>
-        <button className="mode-b-zoom-btn" title="Zoom in" aria-label="Zoom in" onClick={() => zoomBy(1.2)}><Plus size={15} /></button>
+        <button className="mode-b-zoom-btn" title="Zoom in" aria-label="Zoom in" onClick={() => zoomBy(1.2)}><Plus size={13} /></button>
         <button className="mode-b-zoom-btn mode-b-zoom-reset" title="Reset view" aria-label="Reset view"
-          onClick={() => { const next = { x: 0, y: 0, zoom: 1 }; setViewport(next); patchViewport(next); }}><RotateCw size={14} /></button>
+          onClick={() => { const next = { x: 0, y: 0, zoom: 1 }; setViewport(next); patchViewport(next); }}><RotateCw size={12} /></button>
       </div>
 
       {empty && (

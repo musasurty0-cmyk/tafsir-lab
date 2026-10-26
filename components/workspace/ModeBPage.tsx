@@ -1712,7 +1712,7 @@ export default function ModeBPage({
       {studyMode && (
         <div className="study-bar" data-visible={studyVisible ? "true" : "false"}>
           <span className="study-bar-label">
-            Study&nbsp;mode<span className="study-bar-surah"> · {chapter?.name_simple ?? ""}</span>
+            Studying <b>{chapter?.name_simple ?? ""}</b>
           </span>
           <button className="study-bar-done" onClick={exitStudy} title="Back to reading">
             Done
@@ -1746,10 +1746,10 @@ export default function ModeBPage({
 
       {/* ── Zoom HUD ── */}
       <div className="mode-b-zoom-controls">
-        <button className="mode-b-zoom-btn" title="Zoom out" aria-label="Zoom out" onClick={() => zoomByStep(1 / ZOOM_BUTTON_STEP)}><Minus size={15} /></button>
+        <button className="mode-b-zoom-btn" title="Zoom out" aria-label="Zoom out" onClick={() => zoomByStep(1 / ZOOM_BUTTON_STEP)}><Minus size={13} /></button>
         <span className="mode-b-zoom-label">{Math.round(viewport.zoom * 100)}%</span>
-        <button className="mode-b-zoom-btn" title="Zoom in" aria-label="Zoom in" onClick={() => zoomByStep(ZOOM_BUTTON_STEP)}><Plus size={15} /></button>
-        <button className="mode-b-zoom-btn mode-b-zoom-reset" title="Reset view" aria-label="Reset view" onClick={() => tweenTo({ x: centeredX(1), y: 40, zoom: 1 })}><RotateCw size={14} /></button>
+        <button className="mode-b-zoom-btn" title="Zoom in" aria-label="Zoom in" onClick={() => zoomByStep(ZOOM_BUTTON_STEP)}><Plus size={13} /></button>
+        <button className="mode-b-zoom-btn mode-b-zoom-reset" title="Reset view" aria-label="Reset view" onClick={() => tweenTo({ x: centeredX(1), y: 40, zoom: 1 })}><RotateCw size={12} /></button>
       </div>
 
       {/* ── Mushaf page navigator — rendered into the TOP BANNER ──────────
