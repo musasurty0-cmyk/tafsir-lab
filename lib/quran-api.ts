@@ -1,5 +1,5 @@
 import { unstable_cache } from "next/cache";
-import type { Chapter, Verse } from "./types";
+import type { Chapter, Verse, Word } from "./types";
 
 const BASE = "https://api.quran.com/api/v4";
 
@@ -47,12 +47,40 @@ async function _fetchVerses(surahId: number): Promise<Verse[]> {
     if (!res.ok) throw new Error(`verses fetch failed: ${res.status}`);
     const data = await res.json();
     if (!data.verses) throw new Error(`Unexpected API response: ${JSON.stringify(data).slice(0, 200)}`);
-    all.push(...data.verses);
+    all.push(...data.verses.map(slimVerse));
     totalPages = (data.pagination ?? data.meta)?.total_pages ?? 1;
     page++;
   }
 
   return all;
+}
+
+// The API returns far more than the `Verse` type declares (hizb/juz/ruku
+// numbers, a per-word text_uthmani identical to `text`, per-word page and line
+// numbers…). Unslimmed, Al-Baqarah is ~2.3 MB, over the data cache's 2 MB item
+// limit, so it was refetched on every view. Keep only what the type declares.
+function slimWord(w: Word): Word {
+  return {
+    id:              w.id,
+    position:        w.position,
+    audio_url:       w.audio_url,
+    char_type_name:  w.char_type_name,
+    text:            w.text,
+    transliteration: { text: w.transliteration?.text },
+    translation:     { text: w.translation?.text, language_name: w.translation?.language_name },
+  };
+}
+
+function slimVerse(v: Verse): Verse {
+  return {
+    id:           v.id,
+    verse_number: v.verse_number,
+    verse_key:    v.verse_key,
+    text_uthmani: v.text_uthmani,
+    page_number:  v.page_number,
+    words:        (v.words ?? []).map(slimWord),
+    translations: (v.translations ?? []).map((t) => ({ resource_id: t.resource_id, text: t.text })),
+  };
 }
 
 // ── Cached exports ─────────────────────────────────────────────────────────
