@@ -21,7 +21,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  Sparkles, ArrowUp, X, SquarePen, ChevronDown, AlertCircle,
+  ArrowUp, X, SquarePen, ChevronDown, AlertCircle,
   Search, BookOpen, FilePlus2, Check, Network, ScanLine,
 } from "lucide-react";
 import ThinkingOrb from "@/components/ThinkingOrb";
@@ -441,11 +441,15 @@ export default function AiPanel({ pageId, surahNumber, surahName, onAddToEditor,
 
   return (
     <aside className="lab" aria-label="Lab AI">
+      {/* A title and a plain line saying what it is looking at. The sūrah was
+          an outlined pill beside the name; it is context, not a control. */}
       <header className="lab-head">
-        <span className="lab-brand">Lab AI</span>
-        <span className="lab-chip" title="What Lab AI is looking at">
-          <BookOpen size={11} aria-hidden /> {surahName}
-        </span>
+        <div className="lab-head-titles">
+          <span className="lab-brand">Lab AI</span>
+          <span className="lab-context" title="What Lab AI is looking at">
+            <BookOpen size={11} aria-hidden /> Reading {surahName}
+          </span>
+        </div>
         <span className="lab-head-sp" />
         <button type="button" className="lab-icon" onClick={() => setTurns([])}
                 title="New chat" aria-label="New chat">
@@ -463,7 +467,7 @@ export default function AiPanel({ pageId, surahNumber, surahName, onAddToEditor,
                 "AI feature" the way 2018 said it; this says what the panel
                 actually does, in the same ink as everything it will draw. */}
             <ThinkingOrb state="breathing" size={64} displaySize={54} className="lab-empty-orb" aria-hidden />
-            <p className="lab-empty-title">Lab AI</p>
+            <p className="lab-empty-title">Ask about {surahName}.</p>
             <p className="lab-empty-sub">
               Ask about any verse or search your notes. Every answer is drawn from
               the tafsīr in your library and cites what it used.
@@ -471,7 +475,10 @@ export default function AiPanel({ pageId, surahNumber, surahName, onAddToEditor,
             <div className="lab-suggest">
               {SUGGESTIONS.map((sg, i) => (
                 <button type="button" key={sg} style={{ animationDelay: `${90 + i * 60}ms` }}
-                        onClick={() => ask(sg)}>{sg}</button>
+                        onClick={() => ask(sg)}>
+                  <span>{sg}</span>
+                  <ArrowUp size={14} aria-hidden className="lab-suggest-go" />
+                </button>
               ))}
             </div>
           </div>
@@ -484,8 +491,8 @@ export default function AiPanel({ pageId, surahNumber, surahName, onAddToEditor,
             </div>
 
             <div className="lab-row lab-row--ai">
-              <span className="lab-avatar" aria-hidden><Sparkles size={14} /></span>
-
+              {/* No avatar: the answer is the text on the page side of the
+                  column, and the layout already says who wrote it. */}
               {/* Announced once, when it is finished. aria-busy holds the
                   region while tokens are still arriving — without it a screen
                   reader narrates the answer a word at a time as it streams,
@@ -663,7 +670,7 @@ export default function AiPanel({ pageId, surahNumber, surahName, onAddToEditor,
           ref={inputRef}
           className="lab-input"
           rows={1}
-          placeholder="Ask about the Qur'an, or search your notes…"
+          placeholder="Ask anything, or search your notes"
           value={q}
           onChange={(e) => {
             setQ(e.target.value);
@@ -672,6 +679,8 @@ export default function AiPanel({ pageId, surahNumber, surahName, onAddToEditor,
             const el = e.target;
             el.style.height = "auto";
             el.style.height = Math.min(el.scrollHeight, 132) + "px";
+            // A scrollbar only once it has stopped growing.
+            el.style.overflowY = el.scrollHeight > 132 ? "auto" : "hidden";
           }}
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); ask(); }

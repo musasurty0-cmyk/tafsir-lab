@@ -14634,3 +14634,112 @@ input, textarea { font: inherit; color: inherit; }
 .qcf-bar-en .crumb-menu { margin: 0 0 0 4px; }
 .qcf-bar-en .crumb-menu-btn { width: 28px; height: 28px; border: 0; border-radius: 8px; }
 .qcf-bar-en .crumb-menu-btn:hover { border-color: transparent; background: color-mix(in srgb, var(--paper-ink) 8%, transparent); }
+
+/* ── Lab AI, quieter (27 Oct 2026) ─────────────────────────────────────────
+   No hairlines inside the panel: the header and composer sit on the panel
+   itself, the composer is one filled field with the send button inside it,
+   suggestions and offer cards are solid tiles, and the answer is plain
+   reading text rather than a grey bubble behind a sparkle. */
+.lab { background: var(--bg-elev); }
+.lab-head { border-bottom: 0; padding: 14px 12px 6px 18px; align-items: flex-start; }
+.lab-head-titles { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.lab-brand {
+  font-family: var(--font-serif); font-size: 18px; font-weight: 600;
+  letter-spacing: -0.01em; color: var(--ink);
+}
+.lab-context {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 12.5px; color: var(--ink-3);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.lab-context svg { flex: none; opacity: .8; }
+.lab-icon { width: 32px; height: 32px; border-radius: 9px; color: var(--ink-3); }
+.lab-icon:hover { color: var(--ink); }
+
+.lab-body { padding: 12px 18px 12px; gap: 22px; }
+.lab-turn { gap: 14px; }
+
+.lab-bubble--you {
+  background: color-mix(in oklab, var(--accent) 18%, var(--panel));
+  border-radius: 18px 18px 6px 18px;
+  padding: 9px 14px;
+  font-size: 14px;
+}
+[data-theme="dark"] .lab-bubble--you { background: color-mix(in oklab, var(--accent) 30%, var(--panel)); }
+
+.lab-row--ai .lab-said { gap: 10px; }
+.lab-answer {
+  background: none; padding: 0; border-radius: 0;
+  font-size: 14.5px; line-height: 1.68; color: var(--ink);
+}
+.lab-answer h3, .lab-answer h4, .lab-answer h5 {
+  font-family: var(--font-serif); font-size: 15px; font-weight: 600; letter-spacing: -0.005em;
+}
+.lab-thinking { background: var(--panel); border-radius: 16px; }
+
+/* Trace: a quiet line you can open, the working on a tile underneath. */
+.lab-trace { border: 0; background: none; border-radius: 0; }
+.lab-trace-head { padding: 2px 0; font-size: 12.5px; width: auto; gap: 6px; }
+.lab-trace-head span { flex: none; }
+.lab-trace-body {
+  margin-top: 6px; padding: 4px 12px 11px;
+  border-top: 0; border-radius: 12px; background: var(--panel);
+}
+.lab-trace[data-empty="true"] .lab-trace-head { padding: 2px 0; }
+
+/* Offers and the board transcript: solid tiles. */
+.lab-act, .lab-board-read { border: 0; background: var(--panel); border-radius: 14px; }
+.lab-act { padding: 13px 14px; gap: 6px; }
+.lab-act[data-done="true"] { background: color-mix(in oklab, var(--accent) 12%, var(--panel)); }
+.lab-board-read-head { border-bottom: 0; padding: 10px 14px 0; letter-spacing: 0; }
+.lab-board-read-text { padding: 8px 14px 14px; }
+.lab-act-apply { height: 32px; padding: 0 14px; border-radius: 9px; }
+.lab-act-apply:hover { filter: none; background: var(--accent-ink); }
+.lab-act-x { width: 32px; height: 32px; border: 0; border-radius: 9px; }
+.lab-act-x:hover { background: var(--hover); }
+
+/* Empty state: the orb, a headline, a line, then three solid tiles. */
+.lab-empty { gap: 8px; padding: 22px 4px; }
+.lab-empty-title {
+  font-family: var(--font-serif); font-size: 23px; font-weight: 600;
+  letter-spacing: -0.02em; line-height: 1.2; color: var(--ink);
+  text-wrap: balance;
+}
+.lab-empty-sub { font-size: 13.5px; color: var(--ink-3); max-width: 34ch; }
+.lab-suggest { gap: 8px; margin-top: 18px; }
+.lab-suggest button {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 12px 14px; border: 0; border-radius: 14px;
+  font-size: 13.5px; font-weight: 500; color: var(--ink);
+  background: var(--panel);
+}
+.lab-suggest button:hover { background: var(--panel-2); border-color: transparent; transform: none; }
+.lab-suggest button:active { transform: scale(0.98); }
+.lab-suggest-go { flex: none; color: var(--ink-4); transform: rotate(45deg); transition: color var(--dur-fast) ease; }
+.lab-suggest button:hover .lab-suggest-go { color: var(--accent-ink); }
+
+/* Composer: one filled field, send inside it. */
+.lab-composer {
+  margin: 6px 14px 14px; padding: 6px 6px 6px 16px;
+  border-top: 0; border-radius: 20px;
+  background: var(--panel);
+  align-items: flex-end;
+  box-shadow: inset 0 0 0 1.5px transparent;
+  transition: box-shadow var(--dur-fast) ease, background var(--dur-fast) ease;
+}
+.lab-composer:focus-within { box-shadow: inset 0 0 0 1.5px color-mix(in oklab, var(--accent) 60%, transparent); }
+.lab-input, .lab-input:focus {
+  padding: 7px 0; border: 0; border-radius: 0; background: transparent;
+  font-size: 14px;
+}
+.lab-send { width: 32px; height: 32px; }
+.lab-send:hover:not(:disabled) { filter: none; transform: none; background: var(--accent-ink); }
+.lab-send:disabled { opacity: 1; background: var(--panel-2); color: var(--ink-4); }
+
+@media (max-width: 720px) {
+  .lab-composer { padding-bottom: 6px; margin-bottom: max(14px, env(safe-area-inset-bottom)); }
+  .lab-head { padding-top: max(14px, env(safe-area-inset-top)); }
+}
+
+.lab-input { overflow-y: hidden; }
+.lab-input::placeholder { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
