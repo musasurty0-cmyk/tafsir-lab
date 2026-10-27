@@ -76,6 +76,10 @@ interface Props {
    *  in place rather than re-laid-out, so the ayah keeps its exact position on
    *  the page and ink written in either view lines up in the other. */
   isolateAyah?:      number | null;
+  /** Arabic study only: how well the reader knows each word, keyed
+   *  "verseKey:position". Learning words are drawn red, learnt words green;
+   *  absent (Qurʾān study) leaves the page exactly as it always was. */
+  wordStatus?:       ReadonlyMap<string, "learning" | "learnt">;
 }
 
 /** Wash for the ayah whose annotation layer is currently open. */
@@ -152,6 +156,7 @@ function QCFMushafPage({
   activeSegmentId = null,
   onSegmentClick,
   isolateAyah = null,
+  wordStatus,
 }: Props) {
 
   const [fontReady, setFontReady] = useState(false);
@@ -532,6 +537,7 @@ function QCFMushafPage({
             const wordKey = `${word.ayahNum}:${word.position}`;
             // Word-level note colour sits on top of any ayah run wash.
             const noted = isWord ? notedWordColors?.get(wordKey) : undefined;
+            const known = isWord ? wordStatus?.get(`${word.verseKey}:${word.position}`) : undefined;
             // Yellow selection highlight is ONLY for a specifically
             // selected word — a selected ayah lights up via its run wash.
             const selected =
@@ -550,6 +556,7 @@ function QCFMushafPage({
                   isEnd  ? "qcf-end"  : "",
                   noted    ? "qcf-word--noted"    : "",
                   selected ? "qcf-word--selected" : "",
+                  known ? `qcf-word--${known}` : "",
                   isolateAyah != null && word.ayahNum !== isolateAyah ? "qcf-glyph--away" : "",
                 ].join(" ").trim()}
                 data-ayah={word.ayahNum}

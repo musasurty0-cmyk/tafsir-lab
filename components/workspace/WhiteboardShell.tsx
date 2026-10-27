@@ -84,11 +84,14 @@ interface Props {
   role:            MemberRole;
   currentUserId:   string;
   currentUserName: string;
+  /** Where the back link goes. A lesson's notes go back to the lesson; a
+   *  plain board goes back to its workspace. */
+  back?:           { href: string; label: string };
 }
 
 export default function WhiteboardShell({
   workspaceId, workspaceName, pageId, boardTitle, boardContent, role,
-  currentUserId, currentUserName,
+  currentUserId, currentUserName, back,
 }: Props) {
   const [notes, setNotes] = useState<NoteData[]>([]);
   const recentCreatedRef  = useRef<Map<string, number>>(new Map());
@@ -205,8 +208,8 @@ export default function WhiteboardShell({
   return (
     <div className="whiteboard-shell">
       <header className="whiteboard-shell-bar">
-        <Link href={`/workspaces/${workspaceId}`} className="whiteboard-shell-back">
-          <ChevronLeft size={16} className="wsb-chev" /> <span className="wsb-name">{workspaceName}</span>
+        <Link href={back?.href ?? `/workspaces/${workspaceId}`} className="whiteboard-shell-back">
+          <ChevronLeft size={16} className="wsb-chev" /> <span className="wsb-name">{back?.label ?? workspaceName}</span>
         </Link>
         <span className="whiteboard-shell-title">◇ {boardTitle ?? "Whiteboard"}</span>
 

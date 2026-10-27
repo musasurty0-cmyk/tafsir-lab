@@ -8,6 +8,7 @@
 
 import { db } from "@/lib/db";
 import { getWorkspaceWithRole, isAdmin } from "@/lib/services/workspaces.service";
+import { createWorkspaceBoard } from "@/lib/services/pages.service";
 import {
   numberLessons, foldArabic, lessonKind, cleanTitle, HAS_ARABIC,
   MAX_LESSONS, MAX_CARDS, MAX_FIELD, MAX_TITLE, type ParsedLesson,
@@ -426,4 +427,45 @@ export async function lessonBoxes(workspaceId: string, userId: string, lessonId:
     select: { cardId: true, box: true },
   });
   return Object.fromEntries(rows.map((r) => [r.cardId, r.box]));
+}
+
+/**
+ * Every single-word card in the workspace with this reader's box — what the
+ * Arabic workspace's Qurʾān colours its words by, and lists under a word.
+ */
+export async function wordCards(workspaceId: string, userId: string) {
+  await gate(workspaceId, userId);
+  const cards = await db.arabicCard.findMany({
+    where:   { lesson: { workspaceId }, isSentence: false },
+    orderBy: [{ lesson: { level: "asc" } }, { lesson: { fileNo: "asc" } }, { ord: "asc" }],
+    select:  {
+      id: true, english: true, arabic: true,
+      lesson:  { select: { id: true, level: true, number: true, kind: true, title: true } },
+      reviews: { where: { userId }, select: { box: true } },
+    },
+    take: 6000,
+  });
+  return cards.map(({ reviews, ...c }) => ({ ...c, box: reviews[0]?.box ?? 0 }));
+}
+
+/**
+ * The lesson's board — notes document and canvas — made the first time it
+ * is opened, on the workspace's board container like any other board, and
+ * shared by everyone in the workspace the way boards are.
+ */
+export async function lessonBoard(workspaceId: string, userId: string, lessonId: string) {
+  await gate(workspaceId, userId);
+  const lesson = await db.arabicLesson.findFirst({
+    where:  { id: lessonId, workspaceId },
+    select: { id: true, level: true, number: true, kind: true, title: true, pageId: true },
+  });
+  if (!lesson) throw new ArabicError("Lesson not found", "NOT_FOUND");
+  if (lesson.pageId) {
+    const exists = await db.page.findUnique({ where: { id: lesson.pageId }, select: { id: true } });
+    if (exists) return exists.id;
+  }
+  const label = lesson.number != null ? `Lesson ${lesson.number}` : lesson.kind === "prep" ? "Preparation" : "Revision";
+  const page = await createWorkspaceBoard(workspaceId, userId, `Level ${lesson.level} · ${label} · ${lesson.title}`.slice(0, 80));
+  await db.arabicLesson.update({ where: { id: lesson.id }, data: { pageId: page.id } });
+  return page.id;
 }

@@ -16,7 +16,7 @@ import { pushWithSplash } from "@/lib/nav-splash";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Languages, Search, X, Check, ArrowRight, Plus } from "lucide-react";
+import { Languages, Search, X, Check, ArrowRight, Plus, BookOpen } from "lucide-react";
 import type { MemberRole } from "@/lib/services/workspaces.service";
 import { isAdmin } from "@/lib/services/workspaces.service";
 import { STAGES } from "@/lib/arabic/parse";
@@ -115,6 +115,15 @@ export default function ArabicHome({ workspaceId, workspace, role, lessons, summ
             </p>
           </div>
           <div className="ws-home-actions">
+            {lessons.length > 0 && (
+              <button
+                className="ws-new-btn ws-new-btn--ghost"
+                onClick={() => pushWithSplash(router, `/workspaces/${workspaceId}/arabic/quran`)}
+                title="Read the Qurʾān with the words you know coloured"
+              >
+                <BookOpen size={14} aria-hidden /> Qurʾān
+              </button>
+            )}
             {admin && lessons.length > 0 && (
               <button className="ws-new-btn ws-new-btn--ghost" onClick={() => setImportOpen(true)}>
                 <Plus size={14} aria-hidden /> Add lessons

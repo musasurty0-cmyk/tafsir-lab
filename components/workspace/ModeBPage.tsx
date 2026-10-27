@@ -19,7 +19,6 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { ChevronLeft, ChevronRight, Minus, Plus, RotateCw } from "lucide-react";
-import WordRootStrip from "./WordRootStrip";
 import { isTypingTarget } from "@/lib/is-typing";
 
 const HINT_KEY        = "tl-word-tap-hint-dismissed";
@@ -1575,11 +1574,6 @@ export default function ModeBPage({
         eraserRadius={eraserSize}
         onAnchorsChange={setStrokeAnchors}
       />}
-
-      {/* The opened word's root, in the corner of its note space. */}
-      {focusAnchor && focusAnchor.wordPos != null && !focusAnchor.segmentId && (
-        <WordRootStrip verseKey={focusAnchor.verseKey} wordPos={focusAnchor.wordPos} />
-      )}
 
       {/* ── Annotation session chip — the ONLY exit is Done ── */}
       {focusAnchor && (

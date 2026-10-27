@@ -15289,3 +15289,42 @@ input, textarea { font: inherit; color: inherit; }
 }
 /* In the strip the root is already on the button above it. */
 .wrs .rf-head { display: none; }
+
+/* ══ The Qurʾān in an Arabic study workspace (28 Oct 2026) ══════════════════
+   The same Mushaf page and paper as Qurʾān study. What is added is only the
+   colour of the words you know and the panel for a tapped word. */
+.qcf-word--learning { color: var(--ar-learning); }
+.qcf-word--learnt   { color: var(--ar-learnt); }
+
+.aq-shell { display: grid; grid-template-columns: auto minmax(0, 1fr); height: 100dvh; background: var(--paper, var(--bg)); }
+.aq-main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.aq-bar {
+  flex: none; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 10px 18px; background: var(--bg);
+}
+.aq-bar .ar-back { margin-left: 0; }
+.aq-surah {
+  height: 34px; padding: 0 12px; border: 0; border-radius: 10px; font: inherit; font-size: 13.5px; font-weight: 600;
+  color: var(--ink); background: var(--panel);
+}
+.aq-sp { flex: 1; }
+.aq-legend { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--ink-3); }
+.aq-dot { width: 9px; height: 9px; border-radius: 50%; margin-left: 6px; }
+.aq-dot--learning { background: var(--ar-learning); }
+.aq-dot--learnt { background: var(--ar-learnt); }
+.aq-canvas { position: relative; flex: 1 1 0; min-height: 0; touch-action: auto; user-select: auto; }
+.aq-scroll { position: absolute; inset: 0; overflow: auto; padding: 32px 24px 110px; }
+.aq-inner { margin: 0 auto; }
+.aq-glyph { margin: 6px 0 0; font-size: 58px; line-height: 1.5; color: var(--ink); text-align: right; }
+.aq-mine { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.aq-mine li { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: 10px 14px; border-radius: 12px; background: var(--panel); }
+.aq-mine-ar { grid-column: 2; grid-row: 1 / span 2; align-self: center; font-family: var(--font-kfgqpc); font-size: 22px; line-height: 1.5; color: var(--ink); }
+.aq-mine li[data-status="learning"] .aq-mine-ar { color: var(--ar-learning); }
+.aq-mine li[data-status="learnt"] .aq-mine-ar { color: var(--ar-learnt); }
+.aq-mine-en { font-size: 14px; font-weight: 600; color: var(--ink); }
+.aq-mine-where { font-size: 12px; color: var(--ink-3); }
+@media (max-width: 720px) {
+  .aq-shell { grid-template-columns: minmax(0, 1fr); }
+  .aq-scroll { padding: 16px 8px 140px; }
+  .aq-legend { display: none; }
+}

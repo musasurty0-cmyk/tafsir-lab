@@ -13,7 +13,7 @@ import { pushWithSplash } from "@/lib/nav-splash";
 import { useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, Check, MapPin, Play, Sparkles } from "lucide-react";
+import { ChevronLeft, ChevronRight, Check, MapPin, Play, Sparkles, NotebookPen } from "lucide-react";
 import { statusOf } from "@/lib/arabic/srs";
 import WordLens, { type LensCard } from "./WordLens";
 import Rail from "../Rail";
@@ -113,6 +113,22 @@ export default function ArabicLesson({ workspaceId, lesson, boxes, prev, next }:
   }
 
   const [lens, setLens] = useState<LensCard | null>(null);
+  const [opening, setOpening] = useState(false);
+  /* The lesson's notes and board: made the first time, then the same one. */
+  const openBoard = async () => {
+    if (opening) return;
+    setOpening(true);
+    try {
+      const res = await fetch(`/api/workspaces/${workspaceId}/arabic/lessons/${lesson.id}/board`, { method: "POST" });
+      const data = await res.json() as { pageId?: string };
+      if (!res.ok || !data.pageId) throw new Error();
+      pushWithSplash(router, `/workspaces/${workspaceId}/whiteboard/${data.pageId}`);
+    } catch {
+      setNoticeTone("error");
+      setNotice("Couldn’t open this lesson’s notes. Try again.");
+      setOpening(false);
+    }
+  };
   const back = () => pushWithSplash(router, `/workspaces/${workspaceId}`);
   const practise = (scope: "lesson" | "unlock") =>
     pushWithSplash(router, `/workspaces/${workspaceId}/arabic/practice?scope=${scope}&lesson=${lesson.id}`);
@@ -152,6 +168,9 @@ export default function ArabicLesson({ workspaceId, lesson, boxes, prev, next }:
             )}
             <button type="button" className={`nw-btn ${unseen > 0 ? "nw-btn--soft" : "nw-btn--primary"}`} onClick={() => practise("lesson")}>
               <Play size={14} aria-hidden /> Practise this lesson
+            </button>
+            <button type="button" className="nw-btn nw-btn--soft" onClick={openBoard} disabled={opening}>
+              <NotebookPen size={14} aria-hidden /> {opening ? "Opening…" : "Notes and board"}
             </button>
           </div>
 

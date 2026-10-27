@@ -712,6 +712,8 @@ model ArabicLesson {
   kind        String   @default("lesson")
   title       String
   cardCount   Int      @default(0)
+  /// The board (notes document + canvas) for this lesson, made on first open (sql 016).
+  pageId      String?  @db.Uuid
   createdAt   DateTime @default(now()) @db.Timestamptz(6)
 
   workspace Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)

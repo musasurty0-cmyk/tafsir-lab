@@ -27,6 +27,11 @@ export default async function BoardRoute({
 
   if (!board) notFound();
 
+  // A board that holds an Arabic lesson's notes goes back to that lesson.
+  const lesson = workspace.kind === "arabic"
+    ? await db.arabicLesson.findFirst({ where: { pageId: board.id, workspaceId }, select: { id: true, title: true } })
+    : null;
+
   return (
     <WhiteboardShell
       workspaceId={workspaceId}
@@ -37,6 +42,7 @@ export default async function BoardRoute({
       role={role}
       currentUserId={userId}
       currentUserName={currentUser?.name ?? "Anonymous"}
+      back={lesson ? { href: `/workspaces/${workspaceId}/arabic/${lesson.id}`, label: lesson.title } : undefined}
     />
   );
 }
