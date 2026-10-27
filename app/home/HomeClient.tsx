@@ -329,7 +329,9 @@ function WorkspaceCard({
   const isHadithWs  = ws.kind === "nawawi";
   const lastSurah   = !isHadithWs && ws.lastSurahNumber ? surahNames[ws.lastSurahNumber] : null;
   const lastHadith  = isHadithWs && ws.lastSurahNumber ? getHadith(ws.lastSurahNumber) : null;
-  const surahText   = isHadithWs
+  const surahText   = ws.kind === "arabic"
+    ? "Arabic study"
+    : isHadithWs
     ? (ws._count.surahs === 0
         ? `${HADITH_COUNT} hadith`
         : `${ws._count.surahs} of ${HADITH_COUNT} hadith`)

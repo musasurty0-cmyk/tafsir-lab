@@ -30,7 +30,7 @@ export default function NewWorkspaceModal({ onClose, originPoint }: Props) {
 
   const [name,    setName]    = useState("");
   const [type,    setType]    = useState<"private" | "group">("private");
-  const [kind,    setKind]    = useState<"study" | "boards" | "books" | "nawawi">("study");
+  const [kind,    setKind]    = useState<"study" | "boards" | "books" | "nawawi" | "arabic">("study");
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState<string | null>(null);
 
@@ -87,6 +87,7 @@ export default function NewWorkspaceModal({ onClose, originPoint }: Props) {
     { id: "boards", name: t("modal.boards"), caption: t("modal.boardsDesc"), preview: <CanvasPreview /> },
     { id: "books",  name: t("modal.books"),  caption: t("modal.booksDesc"),  preview: <BookPreview /> },
     { id: "nawawi", name: t("modal.nawawi"), caption: t("modal.nawawiDesc"), preview: <NawawiPreview /> },
+    { id: "arabic", name: t("modal.arabic"), caption: t("modal.arabicDesc"), preview: <ArabicPreview /> },
   ] as const;
   const kindCaption = kinds.find((k) => k.id === kind)?.caption;
 
@@ -264,6 +265,22 @@ function NawawiPreview() {
           <rect x="31" y={24 + i * 22} width="46" height="3" rx="1.5" className="kp-rule" />
         </g>
       ))}
+    </svg>
+  );
+}
+
+/* A small stack of flashcards: the one thing an Arabic course workspace is
+   made of. The top card carries a word-shaped line and a shorter gloss. */
+function ArabicPreview() {
+  return (
+    <svg viewBox="0 0 120 84" className="kind-svg">
+      <rect x="0" y="0" width="120" height="84" rx="5" className="kp-page" />
+      <rect x="34" y="14" width="62" height="42" rx="4" className="kp-note" />
+      <rect x="28" y="20" width="62" height="42" rx="4" className="kp-note kp-note--2" />
+      <rect x="22" y="26" width="62" height="42" rx="4" className="kp-page" />
+      <rect x="22" y="26" width="62" height="42" rx="4" className="kp-note" />
+      <rect x="40" y="38" width="38" height="5" rx="2.5" className="kp-mark" />
+      <rect x="50" y="50" width="28" height="3" rx="1.5" className="kp-line" />
     </svg>
   );
 }

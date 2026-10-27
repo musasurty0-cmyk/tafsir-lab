@@ -46,6 +46,7 @@ model User {
   friendshipsRecvd Friendship[]           @relation("FriendAddressee")
   youthMajlis      YouthMajlisProgress?
   youthAssignments YouthMajlisAssignee[]
+  arabicStates     ArabicLessonState[]
   demoPresence     DemoPresence?
 }
 
@@ -108,6 +109,8 @@ model Workspace {
   // 'study'  → 114-surah grid + a single blank board (default)
   // 'boards' → no surahs; several free blank boards (e.g. a weekly class)
   // 'books'  → no surahs; a library of PDFs to annotate around (book study)
+  // 'nawawi' → the forty-two hadith of al-Arbaʿūn an-Nawawiyya
+  // 'arabic' → an Arabic course's flashcard decks (prisma/sql/014)
   kind       String   @default("study")
   ownerId    String   @db.Uuid
   avatarUrl  String?
@@ -128,6 +131,7 @@ model Workspace {
   activityLog ActivityLog[]
   segments    QuranSegment[]
   connections QuranConnection[]
+  arabicLessons ArabicLesson[]
 }
 
 model WorkspaceMember {
@@ -693,4 +697,57 @@ model DemoPresence {
   closedAt DateTime? @db.Timestamptz(6)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+/// Arabic study (prisma/sql/014): one imported flashcard deck. `number` is
+/// the course's lesson number, null for revision and preparation files.
+model ArabicLesson {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId String   @db.Uuid
+  level       Int
+  fileNo      Int
+  number      Int?
+  // 'lesson' | 'revision' | 'prep'
+  kind        String   @default("lesson")
+  title       String
+  cardCount   Int      @default(0)
+  createdAt   DateTime @default(now()) @db.Timestamptz(6)
+
+  workspace Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  cards     ArabicCard[]
+  states    ArabicLessonState[]
+
+  @@unique([workspaceId, level, fileNo])
+}
+
+model ArabicCard {
+  id         String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  lessonId   String  @db.Uuid
+  ord        Int
+  grp        Int     @default(0)
+  english    String
+  arabic     String
+  translit   String?
+  // 'm' | 'f'
+  gender     String?
+  isSentence Boolean @default(false)
+  /// The Arabic without ḥarakāt or letter variants, for search.
+  folded     String
+
+  lesson ArabicLesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@index([lessonId, ord])
+}
+
+/// Where one reader is in one lesson: 'covered' | 'current'.
+model ArabicLessonState {
+  userId    String   @db.Uuid
+  lessonId  String   @db.Uuid
+  state     String
+  updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+
+  user   User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson ArabicLesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@id([userId, lessonId])
 }

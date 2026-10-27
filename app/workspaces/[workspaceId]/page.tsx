@@ -16,6 +16,8 @@ import WorkspaceHome from "@/components/workspace/WorkspaceHome";
 import BoardsHome from "@/components/workspace/BoardsHome";
 import BooksHome from "@/components/workspace/BooksHome";
 import HadithHome from "@/components/workspace/HadithHome";
+import ArabicHome from "@/components/workspace/arabic/ArabicHome";
+import * as ArabicService from "@/lib/services/arabic.service";
 import * as PagesService from "@/lib/services/pages.service";
 
 export type WorkspaceSurahSummary = {
@@ -64,6 +66,12 @@ export default async function WorkspaceHomePage({
         books={books.map((b) => ({ id: b.id, title: b.title, pdfUrl: b.pdfUrl!, pdfName: b.pdfName, createdAt: b.createdAt }))}
       />
     );
+  }
+
+  // Arabic study → the course's levels and lessons are home.
+  if (gate.workspace.kind === "arabic") {
+    const lessons = await ArabicService.listLessons(workspaceId, userId);
+    return <ArabicHome workspaceId={workspaceId} workspace={gate.workspace} role={gate.role} lessons={lessons} />;
   }
 
   /* Nawawi workspace -> the forty-two are home. The sessions that already

@@ -38,6 +38,7 @@ export async function POST(req: NextRequest) {
     const kind = body.kind === "boards" ? "boards"
                : body.kind === "books"  ? "books"
                : body.kind === "nawawi" ? "nawawi"
+               : body.kind === "arabic" ? "arabic"
                : "study";
 
     const workspace = await WorkspacesService.createWorkspace(
