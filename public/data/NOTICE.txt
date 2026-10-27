@@ -1,0 +1,7 @@
+Qur'an word data in this folder (quran-word-index.json, quran-roots.json, morph/)
+is built by scripts/build-quran-data.mts from:
+
+- Quranic Arabic Corpus v0.4 morphology, (c) Kais Dukes, corpus.quran.com,
+  GNU General Public License, via github.com/mustafa0x/quran-morphology.
+  Roots, dictionary forms and grammar tags are used unaltered.
+- api.quran.com word-by-word spelling and English meanings.

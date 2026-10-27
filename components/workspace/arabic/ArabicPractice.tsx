@@ -90,6 +90,38 @@ export default function ArabicPractice({ workspaceId, scope, lesson }: Props) {
   const [ayahs, setAyahs] = useState<Record<string, Ayah | null>>({});
   const answered = useRef(new Set<string>());
 
+  /* The cards a session would use, fetched while you choose, so the setup
+     can say up front how many of them the Qurʾān drills can actually ask —
+     and the session then uses exactly those cards. */
+  const settingsKey = `${scope}:${lesson?.id ?? ""}:${count}:${sentences ? 1 : 0}`;
+  const [preview, setPreview] = useState<{ key: string; cards: QueueCard[]; pool: DrillCard[]; quran: number } | null>(null);
+
+  const fetchQueue = useCallback(async () => {
+    const q = new URLSearchParams({
+      scope, limit: String(scope === "unlock" || count === 0 ? 500 : count), sentences: sentences ? "1" : "0",
+    });
+    if (lesson) q.set("lesson", lesson.id);
+    const res = await fetch(`/api/workspaces/${workspaceId}/arabic/review?${q}`);
+    const data = await res.json() as { cards?: QueueCard[]; pool?: DrillCard[]; error?: string };
+    if (!res.ok) throw new Error(data.error ?? "Couldn’t load the cards.");
+    return { cards: data.cards ?? [], pool: data.pool ?? [] };
+  }, [scope, count, sentences, lesson, workspaceId]);
+
+  useEffect(() => {
+    if (phase !== "setup") return;
+    let live = true;
+    const t = window.setTimeout(async () => {
+      try {
+        const [{ cards, pool }, index] = await Promise.all([fetchQueue(), loadQuranIndex()]);
+        const quran = index
+          ? cards.filter((c) => lookup(index, cardHeadword(c.arabic, c.isSentence), c.english)).length
+          : 0;
+        if (live) setPreview({ key: settingsKey, cards, pool, quran });
+      } catch { /* the setup still works; it just cannot say */ }
+    }, 150);
+    return () => { live = false; window.clearTimeout(t); };
+  }, [phase, fetchQueue, settingsKey]);
+
   const start = useCallback(async (override?: QueueCard[]) => {
     setPhase("loading");
     setError(null);
@@ -99,16 +131,10 @@ export default function ArabicPractice({ workspaceId, scope, lesson }: Props) {
       if (override) {
         cards = override;
         pool = items.map((i) => i.card);
+      } else if (preview?.key === settingsKey) {
+        ({ cards, pool } = preview);
       } else {
-        const q = new URLSearchParams({
-          scope, limit: String(scope === "unlock" || count === 0 ? 500 : count), sentences: sentences ? "1" : "0",
-        });
-        if (lesson) q.set("lesson", lesson.id);
-        const res = await fetch(`/api/workspaces/${workspaceId}/arabic/review?${q}`);
-        const data = await res.json() as { cards?: QueueCard[]; pool?: DrillCard[]; error?: string };
-        if (!res.ok) throw new Error(data.error ?? "Couldn’t load the cards.");
-        cards = data.cards ?? [];
-        pool = data.pool ?? [];
+        ({ cards, pool } = await fetchQueue());
       }
       if (cards.length === 0) {
         setError(scope === "unlock" ? "You’ve answered every card in this lesson already." : "Nothing is due. Come back later, or practise a lesson.");
@@ -152,7 +178,7 @@ export default function ArabicPractice({ workspaceId, scope, lesson }: Props) {
       setError(e instanceof Error ? e.message : "Couldn’t load the cards.");
       setPhase("setup");
     }
-  }, [scope, count, sentences, lesson, workspaceId, choice, voice, items]);
+  }, [scope, choice, voice, items, preview, settingsKey, fetchQueue]);
 
   // The unlock test needs no choices; it starts at once.
   const started = useRef(false);
@@ -247,6 +273,7 @@ export default function ArabicPractice({ workspaceId, scope, lesson }: Props) {
             count={count} setCount={setCount}
             sentences={sentences} setSentences={setSentences}
             voice={voice} error={error}
+            preview={preview?.key === settingsKey ? { total: preview.cards.length, quran: preview.quran } : null}
             onStart={() => void start()}
           />
         )}
@@ -292,43 +319,81 @@ function Setup(p: {
   count: number; setCount: (n: number) => void;
   sentences: boolean; setSentences: (b: boolean) => void;
   voice: boolean; error: string | null; onStart: () => void;
+  preview: { total: number; quran: number } | null;
 }) {
   const drills = DRILLS.filter((d) => d.id !== "listen" || p.voice);
+  const quranOnly = p.choice === "context" || p.choice === "cloze";
+  const usesQuran = quranOnly || p.choice === "mixed";
+  const pv = p.preview;
+
+  /* Said before you start, not discovered halfway: the Qurʾān drills can
+     only ask words that occur in the Qurʾān with the card's meaning. */
+  let availability: { text: string; tone: "info" | "warn" } | null = null;
+  if (pv && pv.total === 0) {
+    availability = { text: "There’s nothing to practise here yet.", tone: "warn" };
+  } else if (pv && usesQuran) {
+    const other = p.voice ? "meaning, recall or listening" : "meaning or recall";
+    if (pv.quran === 0) {
+      availability = quranOnly
+        ? { text: `None of these ${pv.total} cards appear in the Qurʾān with the same meaning. Try Meaning or Recall.`, tone: "warn" }
+        : { text: `None of these cards appear in the Qurʾān with the same meaning, so they’ll be asked by ${other}.`, tone: "info" };
+    } else if (pv.quran < pv.total) {
+      availability = quranOnly
+        ? { text: `Only ${pv.quran} of these ${pv.total} cards appear in the Qurʾān with the same meaning, so this session has ${pv.quran}.`, tone: "warn" }
+        : { text: `${pv.quran} of ${pv.total} cards can be asked from the Qurʾān; the rest are asked by ${other}.`, tone: "info" };
+    } else {
+      availability = { text: `All ${pv.total} cards appear in the Qurʾān with the same meaning.`, tone: "info" };
+    }
+  }
+  const startCount = pv ? (quranOnly ? pv.quran : pv.total) : null;
+
   return (
     <section className="ap-setup">
       <h1 className="ap-title">{p.title}</h1>
       <p className="ap-sub">{drills.find((d) => d.id === p.choice)?.hint}</p>
 
-      <p className="ap-label">How to be asked</p>
-      <div className="ap-drills" role="radiogroup" aria-label="How to be asked">
-        {drills.map((d) => (
-          <button key={d.id} type="button" role="radio" aria-checked={p.choice === d.id}
-                  className="ap-drill" data-active={p.choice === d.id ? "true" : "false"}
-                  onClick={() => p.setChoice(d.id)}>
-            {d.name}
-          </button>
-        ))}
+      <div className="ap-field">
+        <p className="ap-label">How to be asked</p>
+        <div className="ap-drills" role="radiogroup" aria-label="How to be asked">
+          {drills.map((d) => (
+            <button key={d.id} type="button" role="radio" aria-checked={p.choice === d.id}
+                    className="ap-drill" data-active={p.choice === d.id ? "true" : "false"}
+                    onClick={() => p.setChoice(d.id)}>
+              {d.name}
+            </button>
+          ))}
+        </div>
+        {availability && (
+          <p className="ap-avail" data-tone={availability.tone} role="status">{availability.text}</p>
+        )}
       </div>
 
-      <p className="ap-label">How many</p>
-      <div className="ar-seg ap-count" role="radiogroup" aria-label="How many">
-        {[10, 20, 30, 0].map((n) => (
-          <button key={n} type="button" role="radio" aria-checked={p.count === n}
-                  data-active={p.count === n ? "true" : "false"} onClick={() => p.setCount(n)}>
-            {n === 0 ? "All" : n}
-          </button>
-        ))}
+      <div className="ap-field">
+        <p className="ap-label">How many</p>
+        <div className="ar-seg ap-count" role="radiogroup" aria-label="How many">
+          {[10, 20, 30, 0].map((n) => (
+            <button key={n} type="button" role="radio" aria-checked={p.count === n}
+                    data-active={p.count === n ? "true" : "false"} onClick={() => p.setCount(n)}>
+              {n === 0 ? "All" : n}
+            </button>
+          ))}
+        </div>
       </div>
 
-      <button type="button" className="ar-toggle ap-sent" role="switch" aria-checked={p.sentences}
+      <button type="button" className="ap-option" role="switch" aria-checked={p.sentences}
               onClick={() => p.setSentences(!p.sentences)}>
-        <span className="ar-toggle-knob" aria-hidden /> Include sentences
+        <span className="ap-option-text">
+          <span className="ap-option-title">Include sentences</span>
+          <span className="ap-option-sub">Whole sentences as well as single words</span>
+        </span>
+        <span className="ar-toggle-knob" aria-hidden />
       </button>
 
       {p.error && <p className="ar-note">{p.error}</p>}
 
-      <button type="button" className="nw-btn nw-btn--primary ap-start" onClick={p.onStart}>
-        Start <ArrowRight size={15} aria-hidden />
+      <button type="button" className="nw-btn nw-btn--primary ap-start" onClick={p.onStart}
+              disabled={startCount === 0}>
+        {startCount ? `Start · ${startCount} card${startCount === 1 ? "" : "s"}` : "Start"} <ArrowRight size={15} aria-hidden />
       </button>
     </section>
   );

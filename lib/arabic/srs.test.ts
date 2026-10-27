@@ -61,8 +61,8 @@ describe("quran-match", () => {
   });
   it("offers only the places where the word means what the card means", () => {
     const k = wordKey("عَيْنٌ")!;
-    const index: QuranIndex = { idx: { [k]: [11, ["spring", 6, "76:18:1"], ["eye", 5, "5:45:9"]] } };
-    expect(lookup(index, k, "eye (f)")).toEqual({ count: 5, places: [{ verseKey: "5:45", word: 9 }] });
+    const index: QuranIndex = { idx: { [k]: [11, ["spring", 6, "عين", "عَيْن", "76:18:1"], ["eye", 5, "عين", "عَيْن", "5:45:9"]] } };
+    expect(lookup(index, k, "eye (f)")).toEqual({ count: 5, places: [{ verseKey: "5:45", word: 9 }], root: "عين", lemma: "عَيْن" });
     expect(lookup(index, k, "spring")?.places[0].verseKey).toBe("76:18");
     expect(lookup(index, k, "computer")).toBeNull();
   });

@@ -15,6 +15,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, Check, MapPin, Play, Sparkles } from "lucide-react";
 import { statusOf } from "@/lib/arabic/srs";
+import WordLens, { type LensCard } from "./WordLens";
 import Rail from "../Rail";
 import Toast from "@/components/Toast";
 import { lessonLabel } from "./lesson-label";
@@ -111,6 +112,7 @@ export default function ArabicLesson({ workspaceId, lesson, boxes, prev, next }:
     }
   }
 
+  const [lens, setLens] = useState<LensCard | null>(null);
   const back = () => pushWithSplash(router, `/workspaces/${workspaceId}`);
   const practise = (scope: "lesson" | "unlock") =>
     pushWithSplash(router, `/workspaces/${workspaceId}/arabic/practice?scope=${scope}&lesson=${lesson.id}`);
@@ -121,6 +123,7 @@ export default function ArabicLesson({ workspaceId, lesson, boxes, prev, next }:
   return (
     <div className="workspace-home">
       <Toast message={notice} onDismiss={() => setNotice(null)} tone={noticeTone} />
+      <WordLens card={lens} onClose={() => setLens(null)} />
       <Rail activeWorkspaceId={workspaceId} />
 
       <div className="workspace-home-content ar-lesson-page">
@@ -206,7 +209,8 @@ export default function ArabicLesson({ workspaceId, lesson, boxes, prev, next }:
                   <div className="ar-words">
                     {gw.map((c) => (
                       <div key={c.id} id={`c-${c.id}`} className="ar-word" data-status={statusOf(boxes[c.id])}>
-                        <span className="ar-ar" dir="rtl" lang="ar">{c.arabic}</span>
+                        <button type="button" className="ar-ar ar-ar--btn" dir="rtl" lang="ar"
+                                onClick={() => setLens(c)} title="Open this word">{c.arabic}</button>
                         <span className="ar-en">
                           {c.english}{c.gender && <span className="ar-g" title={c.gender === "f" ? "Feminine" : "Masculine"}>{c.gender}</span>}
                         </span>

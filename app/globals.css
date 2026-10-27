@@ -15154,3 +15154,138 @@ input, textarea { font: inherit; color: inherit; }
   .ap-ar { font-size: 36px; }
   .ap-ayah-text { font-size: 24px; }
 }
+
+/* Practice setup: each choice on its own row, the switch as a settings row,
+   and a note before you start when the Qurʾān drills cannot ask every card. */
+.ap-field { margin-top: 26px; }
+.ap-field .ap-label { margin-top: 0; }
+.ap-avail { margin: 12px 0 0; padding: 10px 14px; border-radius: 12px; font-size: 13px; line-height: 1.5; color: var(--ink-2); background: var(--panel); }
+.ap-avail[data-tone="warn"] { color: var(--ink); background: color-mix(in oklab, oklch(0.75 0.14 75) 20%, var(--panel)); }
+.ap-option {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  width: 100%; margin-top: 26px; padding: 14px 16px; border-radius: 14px;
+  background: var(--panel); text-align: left; transition: background var(--dur-hover, 120ms) ease;
+}
+.ap-option:hover { background: var(--panel-2); }
+.ap-option-text { display: flex; flex-direction: column; gap: 2px; }
+.ap-option-title { font-size: 14px; font-weight: 600; color: var(--ink); }
+.ap-option-sub { font-size: 12.5px; color: var(--ink-3); }
+.ap-option .ar-toggle-knob { flex: none; }
+.ap-option[aria-checked="true"] .ar-toggle-knob { background: var(--accent); }
+.ap-option[aria-checked="true"] .ar-toggle-knob::after { transform: translateX(12px); }
+.ap-start { display: flex; margin-top: 28px; }
+.ap-start:disabled { opacity: .45; cursor: not-allowed; }
+
+/* ══ Word lens and root family (28 Oct 2026) ════════════════════════════════
+   A panel from the right in the Arabic workspace; a small strip in the corner
+   of a word's note space on the Mushaf. Solid tiles, the King Fahd face for
+   every Arabic word, counts in tabular figures. */
+.ar-ar--btn {
+  display: block; width: 100%; padding: 0; margin: 0; border: 0; background: none;
+  font: inherit; color: inherit; text-align: right; cursor: pointer; border-radius: 8px;
+  font-family: var(--font-kfgqpc); font-size: 26px; line-height: 1.65;
+  transition: background var(--dur-hover, 120ms) ease;
+}
+.ar-ar--btn:hover { background: color-mix(in oklab, var(--accent) 10%, transparent); }
+.ar-word[data-status="learning"] .ar-ar--btn { color: var(--ar-learning); }
+.ar-word[data-status="learnt"] .ar-ar--btn { color: var(--ar-learnt); }
+
+.wl-scrim {
+  position: fixed; inset: 0; z-index: var(--z-scrim, 600); background: oklch(0.1 0 0 / .28);
+  transition: opacity var(--dur-overlay, 220ms) ease;
+}
+.wl-scrim[data-state="entering"], .wl-scrim[data-state="exiting"] { opacity: 0; }
+.wl {
+  position: fixed; top: 0; right: 0; bottom: 0; z-index: var(--z-drawer, 610);
+  width: min(440px, 100vw); overflow-y: auto;
+  background: var(--bg-elev); box-shadow: -20px 0 50px -20px rgb(0 0 0 / .3);
+  transition: transform var(--dur-overlay, 220ms) var(--ease-overlay, ease), opacity var(--dur-overlay, 220ms) ease;
+}
+.wl[data-state="entering"], .wl[data-state="exiting"] { transform: translateX(24px); opacity: 0; }
+.wl-body { padding: 22px 22px 40px; display: flex; flex-direction: column; gap: 18px; }
+.wl-head { position: relative; text-align: right; padding: 18px 18px 16px; border-radius: 18px; background: var(--panel); }
+.wl-close { position: absolute; top: 10px; left: 10px; width: 32px; height: 32px; border-radius: 9px; display: grid; place-items: center; color: var(--ink-3); }
+.wl-close:hover { background: var(--hover); color: var(--ink); }
+.wl-ar { margin: 6px 0 0; font-family: var(--font-kfgqpc); font-size: 40px; line-height: 1.6; color: var(--ink); }
+.wl-en { margin: 2px 0 0; text-align: left; font-family: var(--font-serif); font-size: 20px; font-weight: 600; color: var(--ink); }
+.wl-tr { margin: 2px 0 0; text-align: left; display: flex; align-items: center; gap: 8px; font-size: 13.5px; font-style: italic; color: var(--ink-3); }
+.wl-speak { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; color: var(--ink-3); font-style: normal; }
+.wl-speak:hover { background: var(--hover); color: var(--ink); }
+.wl-wait, .wl-none { margin: 0; font-size: 13.5px; color: var(--ink-3); }
+.wl-facts { margin: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.wl-facts > div { padding: 10px 12px; border-radius: 12px; background: var(--panel); }
+.wl-facts > div:first-child { grid-column: 1 / -1; }
+.wl-facts dt { font-size: 12px; color: var(--ink-3); }
+.wl-facts dd { margin: 2px 0 0; font-size: 14px; font-weight: 600; color: var(--ink); }
+.wl-fact-ar { font-family: var(--font-kfgqpc); font-size: 22px !important; font-weight: 400 !important; line-height: 1.5; text-align: right; }
+.wl-sec { display: flex; flex-direction: column; gap: 10px; }
+.wl-h { margin: 0; font-family: var(--font-serif); font-size: 16px; font-weight: 600; color: var(--ink); }
+.wl-ayah { margin: 0; padding: 14px 16px; border-radius: 14px; background: var(--panel); }
+.wl-ayah-ar { margin: 0; font-family: var(--font-kfgqpc); font-size: 24px; line-height: 2; text-align: right; color: var(--ink); }
+.wl-ayah-tr { margin-top: 6px; font-family: var(--font-serif); font-size: 13.5px; font-style: italic; line-height: 1.55; color: var(--ink-2); }
+.wl-ref { font-family: var(--font-sans); font-style: normal; font-size: 12px; font-weight: 600; color: var(--ink-3); }
+.wl-credit { margin: 4px 0 0; font-size: 11.5px; color: var(--ink-4); }
+
+/* Root family */
+.rf { display: flex; flex-direction: column; gap: 10px; }
+.rf-head { margin: 0; display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.rf-root { font-family: var(--font-kfgqpc); font-size: 26px; color: var(--accent-ink); letter-spacing: .08em; }
+.rf-total { font-size: 12.5px; color: var(--ink-3); }
+.rf-sub { margin: 4px 0 0; font-size: 12.5px; font-weight: 600; color: var(--ink-2); }
+.rf-ar { font-family: var(--font-kfgqpc); font-size: 21px; line-height: 1.5; color: var(--ink); }
+.rf-n { font-size: 12px; font-weight: 600; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.rf-m { font-size: 13px; color: var(--ink-2); }
+.rf-kind { color: var(--ink-4); }
+.rf-forms, .rf-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.rf-forms li, .rf-list li {
+  display: grid; grid-template-columns: auto auto 1fr; align-items: baseline; gap: 10px;
+  padding: 8px 12px; border-radius: 11px; background: var(--panel);
+}
+.rf-list li { grid-template-columns: auto 1fr auto; }
+.rf-forms li .rf-m, .rf-list li .rf-m { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rf-verbs { display: flex; flex-wrap: wrap; gap: 6px; }
+.rf-verb { display: inline-flex; align-items: baseline; gap: 7px; padding: 6px 10px; border-radius: 10px; background: color-mix(in oklab, var(--accent) 10%, var(--panel)); }
+.rf-verb-f { font-size: 11.5px; font-weight: 700; color: var(--accent-ink); }
+.rf-verb .rf-ar { font-size: 19px; }
+.rf-verb .rf-m { font-size: 12px; }
+.rf-more { align-self: flex-start; font-size: 12.5px; font-weight: 600; color: var(--accent-ink); padding: 4px 8px; border-radius: 8px; }
+.rf-more:hover { background: var(--accent-soft); }
+
+/* Root strip in a word's note space */
+.wrs {
+  position: absolute; top: 14px; right: 20px; z-index: 41;
+  width: min(300px, calc(100% - 40px)); max-height: calc(100% - 100px); overflow-y: auto;
+  padding: 12px 14px; border-radius: 16px;
+  background: var(--float-bg, var(--bg-elev));
+  -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px);
+  box-shadow: var(--float-shadow, var(--shadow-md));
+  animation: tl-wrs-in 260ms var(--ease-out) both;
+}
+@keyframes tl-wrs-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+.wrs-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-direction: row-reverse; }
+.wrs-lemma { font-family: var(--font-kfgqpc); font-size: 26px; line-height: 1.5; color: var(--ink); }
+.wrs-meaning { font-size: 14px; font-weight: 600; color: var(--ink); }
+.wrs-gram { margin: 2px 0 8px; font-size: 12.5px; color: var(--ink-3); line-height: 1.45; }
+.wrs-root {
+  width: 100%; display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 10px;
+  background: var(--panel); font-size: 13px; font-weight: 600; color: var(--ink); text-align: left;
+}
+.wrs-root:hover { background: var(--panel-2); }
+.wrs-root-ar { font-family: var(--font-kfgqpc); font-size: 19px; font-weight: 400; color: var(--accent-ink); margin-left: 4px; }
+.wrs-counts { flex: 1; font-size: 12px; font-weight: 500; color: var(--ink-3); text-align: right; }
+.wrs-chev { flex: none; color: var(--ink-3); transition: transform 180ms var(--ease-out); }
+.wrs-root[aria-expanded="true"] .wrs-chev { transform: rotate(180deg); }
+.wrs-family { margin-top: 10px; display: flex; flex-direction: column; gap: 8px; }
+.wrs-family .rf-forms li, .wrs-family .rf-list li { background: var(--panel); }
+@media (max-width: 720px) {
+  .wrs { top: auto; bottom: 84px; right: 12px; left: 12px; width: auto; max-height: 45vh; }
+}
+.wl-fact-sub { font-weight: 400; color: var(--ink-3); font-size: 12.5px; }
+/* The strip sits bottom-right: the top belongs to the session chip and its
+   Done button, the bottom-left to zoom, the bottom centre to the page turner. */
+.wrs { top: auto; bottom: 20px; max-height: calc(100% - 120px); }
+@media (max-width: 720px) {
+  .wrs { bottom: calc(124px + env(safe-area-inset-bottom, 0px)); max-height: 40vh; }
+}
+/* In the strip the root is already on the button above it. */
+.wrs .rf-head { display: none; }

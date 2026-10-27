@@ -70,3 +70,32 @@ export function speak(text: string) {
   window.speechSynthesis.speak(u);
   return true;
 }
+
+// ── Roots and per-word grammar (scripts/build-quran-data.mts) ─────────────
+
+/** [lemma, count, pos, verbForm, meaning, ...[form, count, meaning, "s:a:w"]] */
+export type LemmaRow = [string, number, string, string, string, ...[string, number, string, string][]];
+export interface RootIndex { roots: Record<string, [number, ...LemmaRow[]]> }
+
+let rootsPending: Promise<RootIndex | null> | null = null;
+export function loadRoots(): Promise<RootIndex | null> {
+  rootsPending ??= fetch("/data/quran-roots.json")
+    .then((r) => (r.ok ? (r.json() as Promise<RootIndex>) : null))
+    .catch(() => null);
+  return rootsPending;
+}
+
+/** One word's [root, lemma, pos, tags, meaning], by āyah, for one sūrah. */
+export type MorphWord = [string, string, string, string, string];
+const morphCache = new Map<number, Promise<Record<string, MorphWord[]> | null>>();
+export function loadMorph(surah: number): Promise<Record<string, MorphWord[]> | null> {
+  let p = morphCache.get(surah);
+  if (!p) {
+    p = fetch(`/data/morph/${surah}.json`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { a?: Record<string, MorphWord[]> } | null) => d?.a ?? null)
+      .catch(() => null);
+    morphCache.set(surah, p);
+  }
+  return p;
+}

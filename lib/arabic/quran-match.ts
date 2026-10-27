@@ -121,11 +121,17 @@ export function meaningWords(text: string, card = false): string[] {
 }
 
 export interface QuranIndex {
-  /** key → [total, [meaning, count, "s:a:w", …], …] — places shortest āyāt first */
+  /** key → [total, [meaning, count, root, lemma, "s:a:w", …], …] — places shortest āyāt first */
   idx: Record<string, (number | (string | number)[])[]>;
 }
 
-export interface QuranHit { count: number; places: { verseKey: string; word: number }[] }
+export interface QuranHit {
+  count: number;
+  places: { verseKey: string; word: number }[];
+  /** From the Quranic Arabic Corpus, for the most common matching meaning. */
+  root: string;
+  lemma: string;
+}
 
 /**
  * Where a card's word occurs in the Qurʾān with the card's meaning. Null when
@@ -138,15 +144,17 @@ export function lookup(index: QuranIndex, key: string | null, english: string): 
   const want = new Set(meaningWords(english, true));
   if (want.size === 0) return null;
   let count = 0;
+  let root = "", lemma = "";
   const places: { verseKey: string; word: number }[] = [];
   for (const g of row.slice(1) as (string | number)[][]) {
     const words = String(g[0]).split(" ");
     if (!words.some((w) => want.has(w))) continue;
+    if (!count) { root = String(g[2] ?? ""); lemma = String(g[3] ?? ""); }
     count += Number(g[1]);
-    for (const p of g.slice(2) as string[]) {
+    for (const p of g.slice(4) as string[]) {
       const [s, a, w] = p.split(":");
       places.push({ verseKey: `${s}:${a}`, word: Number(w) });
     }
   }
-  return count > 0 ? { count, places } : null;
+  return count > 0 ? { count, places, root, lemma } : null;
 }
