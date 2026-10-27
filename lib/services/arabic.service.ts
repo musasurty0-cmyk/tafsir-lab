@@ -12,6 +12,7 @@ import {
   numberLessons, foldArabic, lessonKind, cleanTitle, HAS_ARABIC,
   MAX_LESSONS, MAX_CARDS, MAX_FIELD, MAX_TITLE, type ParsedLesson,
 } from "@/lib/arabic/parse";
+import { nextBox, dueAfter, unlockBox, statusOf, LEARNT_FROM, type Status } from "@/lib/arabic/srs";
 
 export class ArabicError extends Error {
   constructor(message: string, public readonly code: "NOT_FOUND" | "FORBIDDEN" | "INVALID") {
@@ -236,4 +237,193 @@ export async function setLessonState(
       create: { userId, lessonId, state },
     });
   });
+}
+
+// ── Review (phase 2) ───────────────────────────────────────────────────────
+
+export type ReviewScope = "due" | "lesson" | "unlock";
+
+export interface ReviewCard {
+  id: string; lessonId: string; english: string; arabic: string; translit: string | null;
+  gender: string | null; isSentence: boolean; box: number; due: boolean;
+}
+
+/** New cards a daily session takes from covered lessons, on top of what is due. */
+export const NEW_PER_SESSION = 15;
+
+/**
+ * What to practise.
+ *  - due: every seen card now due, plus new cards from lessons you have
+ *    covered, in course order. Lessons you have not reached stay out.
+ *  - lesson: every card in one lesson, whatever its state.
+ *  - unlock: the cards in one lesson you have never answered — the one-time
+ *    pass that tells the schedule what you already know.
+ * `pool` is the words and meanings wrong answers are drawn from: the same
+ * level, so a distractor is a word you could plausibly confuse it with.
+ */
+export async function reviewQueue(
+  workspaceId: string, userId: string,
+  opts: { scope: ReviewScope; lessonId?: string; sentences: boolean; limit: number },
+) {
+  await gate(workspaceId, userId);
+  const now = new Date();
+  const cardSelect = {
+    id: true, lessonId: true, english: true, arabic: true, translit: true, gender: true, isSentence: true,
+    reviews: { where: { userId }, select: { box: true, due: true } },
+  } as const;
+  type Row = Omit<ReviewCard, "box" | "due"> & { reviews: { box: number; due: Date }[] };
+  const shape = ({ reviews, ...rest }: Row): ReviewCard => {
+    const r = reviews[0];
+    return { ...rest, box: r?.box ?? 0, due: !r || r.due <= now };
+  };
+  const sentenceFilter = opts.sentences ? {} : { isSentence: false };
+  let cards: ReviewCard[];
+
+  if (opts.scope === "due") {
+    const seen = await db.arabicCard.findMany({
+      where:  { lesson: { workspaceId }, ...sentenceFilter, reviews: { some: { userId, due: { lte: now } } } },
+      select: cardSelect,
+      take:   400,
+    });
+    const reached = await db.arabicLessonState.findMany({
+      where:  { userId, lesson: { workspaceId } },
+      select: { lessonId: true },
+    });
+    const fresh = reached.length === 0 ? [] : await db.arabicCard.findMany({
+      where:   { lessonId: { in: reached.map((r) => r.lessonId) }, ...sentenceFilter, reviews: { none: { userId } } },
+      orderBy: [{ lesson: { level: "asc" } }, { lesson: { fileNo: "asc" } }, { ord: "asc" }],
+      select:  cardSelect,
+      take:    NEW_PER_SESSION,
+    });
+    // Due cards shuffled, so the same run never comes back in the same order.
+    cards = [...shuffle(seen.map(shape)), ...fresh.map(shape)];
+  } else {
+    if (!opts.lessonId) throw new ArabicError("Choose a lesson.", "INVALID");
+    const lesson = await db.arabicLesson.findFirst({ where: { id: opts.lessonId, workspaceId }, select: { id: true } });
+    if (!lesson) throw new ArabicError("Lesson not found", "NOT_FOUND");
+    const rows = await db.arabicCard.findMany({
+      where:   {
+        lessonId: lesson.id, ...sentenceFilter,
+        ...(opts.scope === "unlock" ? { reviews: { none: { userId } } } : {}),
+      },
+      orderBy: { ord: "asc" },
+      select:  cardSelect,
+    });
+    cards = rows.map(shape);
+    if (opts.scope === "lesson") cards = shuffle(cards);
+  }
+  cards = cards.slice(0, Math.max(1, Math.min(opts.limit, 500)));
+
+  // Distractors: the same levels as the cards being asked.
+  const lessonIds = [...new Set(cards.map((c) => c.lessonId))];
+  const levels = lessonIds.length
+    ? [...new Set((await db.arabicLesson.findMany({ where: { id: { in: lessonIds } }, select: { level: true } })).map((l) => l.level))]
+    : [];
+  const pool = levels.length === 0 ? [] : await db.arabicCard.findMany({
+    where:  { lesson: { workspaceId, level: { in: levels } } },
+    select: { id: true, lessonId: true, english: true, arabic: true, isSentence: true },
+    take:   4000,
+  });
+
+  return { cards, pool };
+}
+
+function shuffle<T>(xs: T[]): T[] {
+  const a = [...xs];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+/**
+ * Record answers. Right moves a card up a box, wrong drops it to the first.
+ * Answering a card that was not yet due is extra practice: a right answer
+ * does not move it (it would be learnt by cramming), but a wrong one does —
+ * a miss is real news whenever it happens.
+ */
+export async function recordAnswers(workspaceId: string, userId: string, raw: unknown) {
+  await gate(workspaceId, userId);
+  if (!Array.isArray(raw) || raw.length === 0 || raw.length > 200) {
+    throw new ArabicError("Send between 1 and 200 answers.", "INVALID");
+  }
+  const answers = (raw as { cardId?: unknown; correct?: unknown; unlock?: unknown }[])
+    .filter((a) => typeof a?.cardId === "string" && typeof a?.correct === "boolean")
+    .map((a) => ({ cardId: a.cardId as string, correct: a.correct as boolean, unlock: a.unlock === true }));
+  if (answers.length === 0) throw new ArabicError("No valid answers.", "INVALID");
+
+  // Only cards in this workspace.
+  const ids = [...new Set(answers.map((a) => a.cardId))];
+  const valid = new Set((await db.arabicCard.findMany({
+    where: { id: { in: ids }, lesson: { workspaceId } }, select: { id: true },
+  })).map((c) => c.id));
+  const known = new Map((await db.arabicReview.findMany({
+    where: { userId, cardId: { in: ids } }, select: { cardId: true, box: true, due: true },
+  })).map((r) => [r.cardId, r]));
+
+  const now = Date.now();
+  const writes = [];
+  const result: Record<string, { box: number; status: Status }> = {};
+  for (const a of answers) {
+    if (!valid.has(a.cardId)) continue;
+    const prev = known.get(a.cardId);
+    let box: number;
+    if (!prev) box = a.unlock ? unlockBox(a.correct) : nextBox(0, a.correct ? "good" : "again");
+    else if (!a.correct) box = nextBox(prev.box, "again");
+    else if (prev.due.getTime() > now) box = prev.box;            // extra practice
+    else box = nextBox(prev.box, "good");
+    const unchanged = !!prev && box === prev.box && a.correct;
+    const due = unchanged ? prev!.due : dueAfter(box, now);
+    const lapse = prev && !a.correct && prev.box >= LEARNT_FROM ? 1 : 0;
+    known.set(a.cardId, { cardId: a.cardId, box, due });
+    result[a.cardId] = { box, status: statusOf(box) };
+    writes.push(db.arabicReview.upsert({
+      where:  { userId_cardId: { userId, cardId: a.cardId } },
+      update: { box, due, reps: { increment: 1 }, lapses: { increment: lapse }, lastAt: new Date(now) },
+      create: { userId, cardId: a.cardId, box, due, reps: 1, lapses: 0, lastAt: new Date(now) },
+    }));
+  }
+  if (writes.length) await db.$transaction(writes);
+  return result;
+}
+
+/** Per-lesson counts of learning and learnt cards, and how many are due now. */
+export async function reviewSummary(workspaceId: string, userId: string) {
+  await gate(workspaceId, userId);
+  const rows = await db.$queryRaw<{ lessonId: string; learning: bigint; learnt: bigint; due: bigint }[]>`
+    SELECT c."lessonId",
+           count(*) FILTER (WHERE r.box BETWEEN 1 AND ${LEARNT_FROM - 1}) AS learning,
+           count(*) FILTER (WHERE r.box >= ${LEARNT_FROM})                AS learnt,
+           count(*) FILTER (WHERE r.due <= now())                          AS due
+    FROM "ArabicReview" r
+    JOIN "ArabicCard" c   ON c.id = r."cardId"
+    JOIN "ArabicLesson" l ON l.id = c."lessonId"
+    WHERE r."userId" = ${userId}::uuid AND l."workspaceId" = ${workspaceId}::uuid
+    GROUP BY c."lessonId"`;
+  const byLesson: Record<string, { learning: number; learnt: number; due: number }> = {};
+  let due = 0;
+  for (const r of rows) {
+    byLesson[r.lessonId] = { learning: Number(r.learning), learnt: Number(r.learnt), due: Number(r.due) };
+    due += Number(r.due);
+  }
+  // New cards waiting in lessons you have reached count towards today's session.
+  const fresh = await db.arabicCard.count({
+    where: {
+      isSentence: false,
+      lesson: { workspaceId, states: { some: { userId } } },
+      reviews: { none: { userId } },
+    },
+  });
+  return { byLesson, due, fresh: Math.min(fresh, NEW_PER_SESSION), freshTotal: fresh };
+}
+
+/** Each card's box for this reader, for one lesson — the dots on its cards. */
+export async function lessonBoxes(workspaceId: string, userId: string, lessonId: string) {
+  await gate(workspaceId, userId);
+  const rows = await db.arabicReview.findMany({
+    where:  { userId, card: { lessonId, lesson: { workspaceId } } },
+    select: { cardId: true, box: true },
+  });
+  return Object.fromEntries(rows.map((r) => [r.cardId, r.box]));
 }

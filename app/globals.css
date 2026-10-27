@@ -14955,3 +14955,202 @@ input, textarea { font: inherit; color: inherit; }
 
 /* The continue tile, search and its results share one column. */
 .ar-continue, .ar-search, .ar-hits { max-width: 680px; }
+
+/* ── Toast (28 Oct 2026) ───────────────────────────────────────────────────
+   Inverts the page so it reads in both themes, rises in on a spring-like
+   curve, and carries a bar that runs down for as long as it will stay.
+   Hovering pauses the bar, and the bar ending is what dismisses it. */
+.tl-toast {
+  position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); z-index: 9995;
+  display: flex; align-items: center; gap: 10px;
+  max-width: min(520px, calc(100vw - 32px));
+  padding: 12px 10px 14px 14px; border-radius: 14px; overflow: hidden;
+  background: var(--ink); color: var(--bg);
+  font-size: 14px; font-weight: 500; line-height: 1.4;
+  box-shadow: 0 1px 2px rgb(0 0 0 / .12), 0 14px 34px -10px rgb(0 0 0 / .38);
+  transform: translateX(-50%);
+  animation: tl-toast-in 420ms cubic-bezier(0.2, 0.9, 0.25, 1.15) both;
+}
+.tl-toast[data-state="leaving"] { animation: tl-toast-out 200ms cubic-bezier(0.4, 0, 1, 1) both; }
+@keyframes tl-toast-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(18px) scale(0.96); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+}
+@keyframes tl-toast-out {
+  from { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+  to   { opacity: 0; transform: translateX(-50%) translateY(10px) scale(0.97); }
+}
+.tl-toast-icon {
+  flex: none; width: 24px; height: 24px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: color-mix(in srgb, var(--bg) 16%, transparent);
+}
+.tl-toast[data-tone="success"] .tl-toast-icon { background: var(--accent); color: #fff; }
+.tl-toast[data-tone="error"] .tl-toast-icon { background: #d9534f; color: #fff; }
+.tl-toast-text { flex: 1; min-width: 0; }
+.tl-toast-close {
+  flex: none; width: 28px; height: 28px; border-radius: 8px;
+  display: grid; place-items: center;
+  color: color-mix(in srgb, var(--bg) 60%, transparent);
+  transition: background 120ms ease, color 120ms ease;
+}
+.tl-toast-close:hover { background: color-mix(in srgb, var(--bg) 14%, transparent); color: var(--bg); }
+.tl-toast-time {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 3px;
+  background: color-mix(in srgb, var(--bg) 55%, transparent);
+  transform-origin: left center;
+  animation: tl-toast-time var(--toast-ms, 5000ms) linear both;
+}
+.tl-toast[data-tone="success"] .tl-toast-time { background: var(--accent); }
+.tl-toast[data-tone="error"] .tl-toast-time { background: #d9534f; }
+.tl-toast:hover .tl-toast-time, .tl-toast:focus-within .tl-toast-time { animation-play-state: paused; }
+@keyframes tl-toast-time { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+
+/* ══ Arabic practice (28 Oct 2026) ══════════════════════════════════════════
+   Three colours for what you know, and only three: not known in plain ink,
+   learning in red, learnt in green. They colour the Arabic itself, so a
+   lesson reads as a page of what you have and have not got yet. */
+:root { --ar-learning: oklch(0.56 0.17 27); --ar-learnt: oklch(0.55 0.13 150); }
+[data-theme="dark"] { --ar-learning: oklch(0.72 0.15 25); --ar-learnt: oklch(0.76 0.13 150); }
+.ar-word[data-status="learning"] .ar-ar, .ar-sentence[data-status="learning"] .ar-ar { color: var(--ar-learning); }
+.ar-word[data-status="learnt"] .ar-ar, .ar-sentence[data-status="learnt"] .ar-ar { color: var(--ar-learnt); }
+.ar-k-learnt { color: var(--ar-learnt); font-weight: 600; }
+.ar-k-learning { color: var(--ar-learning); font-weight: 600; }
+
+.ar-today { display: flex; gap: 10px; flex-wrap: wrap; max-width: 680px; margin-top: 8px; }
+.ar-today .ar-continue { flex: 1 1 260px; margin-top: 0; }
+.ar-review {
+  position: relative; flex: 1 1 260px; display: flex; align-items: center; gap: 14px;
+  padding: 16px 52px 16px 18px; border-radius: 18px; text-align: left;
+  background: var(--accent); color: #fff;
+  transition: background var(--dur-hover, 120ms) ease, transform 90ms var(--ease-out);
+}
+.ar-review:hover { background: var(--accent-ink); }
+.ar-review:active { transform: scale(0.99); }
+.ar-review .ar-continue-go { color: #fff; }
+.ar-review-n { font-family: var(--font-serif); font-size: 34px; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; }
+.ar-review-t { display: flex; flex-direction: column; gap: 2px; font-size: 15px; font-weight: 600; }
+.ar-review-m { font-size: 12.5px; font-weight: 400; opacity: .88; }
+.ar-review[data-empty="true"] { background: var(--panel); color: var(--ink); }
+.ar-review[data-empty="true"]:hover { background: var(--panel-2); }
+.ar-review[data-empty="true"] .ar-review-m { color: var(--ink-3); opacity: 1; }
+.ar-review[data-empty="true"] .ar-continue-go { color: var(--ink-3); }
+
+.ar-sbar { display: flex; height: 4px; border-radius: 99px; overflow: hidden; background: var(--panel-2); }
+.ar-sbar-g { background: var(--ar-learnt); }
+.ar-sbar-r { background: var(--ar-learning); }
+
+.ar-practise-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+.ar-practise-row .nw-btn { display: inline-flex; align-items: center; gap: 7px; }
+.nw-btn--soft { background: var(--panel); color: var(--ink); }
+.nw-btn--soft:hover:not(:disabled) { background: var(--panel-2); }
+
+/* ── Session ── */
+.ap-page { padding-bottom: 72px; }
+.ap-loading { margin-top: 60px; text-align: center; font-size: 14px; color: var(--ink-3); }
+.ap-title {
+  margin: 0; font-family: var(--font-serif); font-size: 30px; font-weight: 600;
+  letter-spacing: -0.025em; line-height: 1.15; color: var(--ink); text-wrap: balance;
+}
+.ap-sub { margin: 6px 0 0; font-size: 14px; color: var(--ink-3); }
+.ap-label { margin: 26px 0 10px; font-size: 13px; font-weight: 600; color: var(--ink-2); }
+
+.ap-setup { max-width: 640px; margin-top: 18px; }
+.ap-drills { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.ap-drill {
+  height: 46px; border-radius: 12px; background: var(--panel);
+  font-size: 13.5px; font-weight: 600; color: var(--ink-2);
+  transition: background var(--dur-hover, 120ms) ease, transform 90ms var(--ease-out);
+}
+.ap-drill:hover { background: var(--panel-2); }
+.ap-drill:active { transform: scale(0.97); }
+.ap-drill[data-active="true"] { background: color-mix(in oklab, var(--accent) 16%, var(--panel)); color: var(--ink); box-shadow: inset 0 0 0 2px color-mix(in oklab, var(--accent) 55%, transparent); }
+.ap-count button { min-width: 52px; height: 32px; }
+.ap-sent { margin-top: 18px; margin-left: -10px; }
+.ap-start { margin-top: 26px; height: 46px; padding: 0 22px; display: inline-flex; align-items: center; gap: 8px; font-size: 15px; }
+
+.ap-q { max-width: 640px; margin: 18px auto 0; }
+.ap-progress { display: flex; align-items: center; gap: 12px; }
+.ap-bar { flex: 1; height: 5px; border-radius: 99px; background: var(--panel-2); overflow: hidden; }
+.ap-bar > span { display: block; height: 100%; border-radius: inherit; background: var(--accent); transition: width 300ms var(--ease-out); }
+.ap-count-l { font-size: 12.5px; font-weight: 600; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+
+.ap-card {
+  position: relative; margin-top: 18px; min-height: 180px; padding: 30px 24px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+  border-radius: 22px; background: var(--panel); text-align: center;
+  animation: ap-in 260ms var(--ease-out) both;
+}
+@keyframes ap-in { from { opacity: 0; transform: translateY(8px) scale(.985); } to { opacity: 1; transform: none; } }
+.ap-ar { margin: 0; font-family: var(--font-kfgqpc); font-size: 44px; line-height: 1.6; color: var(--ink); }
+.ap-ar--after { font-size: 32px; animation: ap-in 220ms var(--ease-out) both; }
+.ap-tr { margin: 0; font-size: 14px; font-style: italic; color: var(--ink-3); }
+.ap-en { margin: 0; font-family: var(--font-serif); font-size: 26px; font-weight: 600; color: var(--ink); }
+.ap-speak {
+  position: absolute; top: 12px; right: 12px; width: 34px; height: 34px; border-radius: 10px;
+  display: grid; place-items: center; color: var(--ink-3);
+}
+.ap-speak:hover { background: var(--hover); color: var(--ink); }
+.ap-listen {
+  width: 84px; height: 84px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--accent); color: #fff; transition: transform 90ms var(--ease-out), background 120ms ease;
+}
+.ap-listen:hover { background: var(--accent-ink); }
+.ap-listen:active { transform: scale(0.95); }
+
+.ap-ayah { width: 100%; }
+.ap-ayah-text { margin: 0; font-family: var(--font-kfgqpc); font-size: 30px; line-height: 2; color: var(--ink); }
+.ap-hl { padding: 0 4px; border-radius: 6px; background: color-mix(in oklab, var(--accent) 22%, transparent); }
+.ap-gap { display: inline-block; min-width: 3.2em; margin: 0 4px; border-radius: 8px; background: var(--bg-elev); box-shadow: inset 0 -2px 0 var(--accent); }
+.ap-ayah-ref { margin: 6px 0 0; font-size: 12px; font-weight: 600; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.ap-ayah-tr { margin: 10px auto 0; max-width: 52ch; font-family: var(--font-serif); font-size: 14.5px; font-style: italic; line-height: 1.55; color: var(--ink-2); }
+.ap-ayah-wait { font-size: 13.5px; color: var(--ink-3); }
+
+.ap-prompt { margin: 22px 0 12px; text-align: center; font-size: 14px; font-weight: 500; color: var(--ink-3); }
+.ap-options { display: grid; gap: 8px; }
+.ap-opt {
+  display: flex; align-items: center; gap: 14px; min-height: 54px; padding: 10px 16px;
+  border-radius: 14px; background: var(--panel); text-align: left;
+  font-size: 15px; font-weight: 500; color: var(--ink);
+  transition: background 140ms ease, color 140ms ease, opacity 140ms ease, transform 90ms var(--ease-out);
+}
+.ap-opt:hover:not(:disabled) { background: var(--panel-2); }
+.ap-opt:active:not(:disabled) { transform: scale(0.99); }
+.ap-opt:disabled { cursor: default; }
+.ap-opt-n {
+  flex: none; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center;
+  font-size: 12px; font-weight: 600; color: var(--ink-3); background: var(--bg-elev);
+}
+.ap-opt-t { flex: 1; min-width: 0; }
+.ap-options[data-arabic="true"] .ap-opt-t { font-family: var(--font-kfgqpc); font-size: 24px; line-height: 1.6; text-align: right; }
+.ap-opt[data-state="right"] { background: color-mix(in oklab, var(--ar-learnt) 18%, var(--panel)); }
+.ap-opt[data-state="right"] .ap-opt-n { background: var(--ar-learnt); color: #fff; }
+.ap-opt[data-state="wrong"] { background: color-mix(in oklab, var(--ar-learning) 16%, var(--panel)); }
+.ap-opt[data-state="wrong"] .ap-opt-n { background: var(--ar-learning); color: #fff; }
+.ap-opt[data-state="dim"] { opacity: .5; }
+.ap-foot { display: flex; justify-content: center; margin-top: 20px; min-height: 40px; }
+.ap-foot .nw-btn { display: inline-flex; align-items: center; gap: 8px; }
+.ap-end { font-size: 13px; font-weight: 500; color: var(--ink-3); padding: 8px 12px; border-radius: 9px; }
+.ap-end:hover { background: var(--hover); color: var(--ink); }
+
+/* ── Results ── */
+.ap-done { max-width: 640px; margin: 28px auto 0; text-align: center; }
+.ap-ring { width: 120px; height: 120px; margin: 0 auto 14px; display: block; }
+.ap-ring-bg { fill: none; stroke: var(--panel-2); stroke-width: 9; }
+.ap-ring-fg { fill: none; stroke: var(--accent); stroke-width: 9; stroke-linecap: round; transform: rotate(-90deg); transform-origin: 55px 55px; transition: stroke-dashoffset 900ms var(--ease-out); }
+.ap-ring-t { font-family: var(--font-serif); font-size: 22px; font-weight: 600; fill: var(--ink); }
+.ap-done-actions { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin-top: 20px; }
+.ap-done-actions .nw-btn { display: inline-flex; align-items: center; gap: 7px; }
+.ap-missed-h { text-align: left; }
+.ap-missed { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; text-align: left; }
+.ap-missed li { display: grid; grid-template-columns: 1fr auto; gap: 2px 16px; padding: 12px 16px; border-radius: 14px; background: var(--panel); }
+.ap-m-ar { grid-column: 2; grid-row: 1 / span 3; align-self: center; font-family: var(--font-kfgqpc); font-size: 26px; line-height: 1.6; color: var(--ar-learning); }
+.ap-m-en { font-size: 14.5px; font-weight: 600; color: var(--ink); }
+.ap-m-chose { font-size: 12.5px; color: var(--ar-learning); }
+.ap-m-q { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--ink-3); }
+
+@media (max-width: 720px) {
+  .ap-drills { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ap-ar { font-size: 36px; }
+  .ap-ayah-text { font-size: 24px; }
+}

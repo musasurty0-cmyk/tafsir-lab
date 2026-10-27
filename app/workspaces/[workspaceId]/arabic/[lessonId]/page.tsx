@@ -16,9 +16,10 @@ export default async function ArabicLessonPage({
   const { workspaceId, lessonId } = await params;
   const { userId } = await getSession();
 
-  const [lesson, all] = await Promise.all([
+  const [lesson, all, boxes] = await Promise.all([
     ArabicService.getLesson(workspaceId, lessonId, userId),
     ArabicService.listLessons(workspaceId, userId),
+    ArabicService.lessonBoxes(workspaceId, userId, lessonId),
   ]);
   const i = all.findIndex((l) => l.id === lessonId);
   const pick = (l?: (typeof all)[number]) =>
@@ -28,6 +29,7 @@ export default async function ArabicLessonPage({
     <ArabicLesson
       workspaceId={workspaceId}
       lesson={lesson}
+      boxes={boxes}
       prev={pick(all[i - 1])}
       next={pick(all[i + 1])}
     />

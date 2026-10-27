@@ -13,10 +13,11 @@ import { pushWithSplash } from "@/lib/nav-splash";
 import { useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, Check, MapPin } from "lucide-react";
+import { ChevronLeft, ChevronRight, Check, MapPin, Play, Sparkles } from "lucide-react";
+import { statusOf } from "@/lib/arabic/srs";
 import Rail from "../Rail";
 import Toast from "@/components/Toast";
-import { lessonLabel } from "./ArabicHome";
+import { lessonLabel } from "./lesson-label";
 
 interface Card {
   id: string; grp: number; english: string; arabic: string;
@@ -27,6 +28,8 @@ interface Nav { id: string; level: number; number: number | null; kind: string; 
 interface Props {
   workspaceId: string;
   lesson: Nav & { cardCount: number; state: "covered" | "current" | null; cards: Card[] };
+  /** This reader's box for each card answered so far (lib/arabic/srs). */
+  boxes: Record<string, number>;
   prev: Nav | null;
   next: Nav | null;
 }
@@ -34,7 +37,7 @@ interface Props {
 const TRANSLIT_KEY = "tl-arabic-translit";
 type Show = "all" | "words" | "sentences";
 
-export default function ArabicLesson({ workspaceId, lesson, prev, next }: Props) {
+export default function ArabicLesson({ workspaceId, lesson, boxes, prev, next }: Props) {
   const router = useRouter();
   useLayoutEffect(() => {
     document.getElementById("tl-nav-splash")?.remove();
@@ -51,6 +54,7 @@ export default function ArabicLesson({ workspaceId, lesson, prev, next }: Props)
   }
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [noticeTone, setNoticeTone] = useState<"success" | "error">("success");
 
   const [translit, setTranslit] = useState(true);
   useEffect(() => {
@@ -95,10 +99,12 @@ export default function ArabicLesson({ workspaceId, lesson, prev, next }: Props)
         method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error();
+      setNoticeTone("success");
       setNotice(message);
       router.refresh();
     } catch {
       setState(before);
+      setNoticeTone("error");
       setNotice("That didn’t save. Try again.");
     } finally {
       setSaving(false);
@@ -106,10 +112,15 @@ export default function ArabicLesson({ workspaceId, lesson, prev, next }: Props)
   }
 
   const back = () => pushWithSplash(router, `/workspaces/${workspaceId}`);
+  const practise = (scope: "lesson" | "unlock") =>
+    pushWithSplash(router, `/workspaces/${workspaceId}/arabic/practice?scope=${scope}&lesson=${lesson.id}`);
+  const unseen = lesson.cards.filter((c) => !c.isSentence && !(c.id in boxes)).length;
+  const learnt = lesson.cards.filter((c) => statusOf(boxes[c.id]) === "learnt").length;
+  const learning = lesson.cards.filter((c) => statusOf(boxes[c.id]) === "learning").length;
 
   return (
     <div className="workspace-home">
-      <Toast message={notice} onDismiss={() => setNotice(null)} />
+      <Toast message={notice} onDismiss={() => setNotice(null)} tone={noticeTone} />
       <Rail activeWorkspaceId={workspaceId} />
 
       <div className="workspace-home-content ar-lesson-page">
@@ -122,7 +133,24 @@ export default function ArabicLesson({ workspaceId, lesson, prev, next }: Props)
           <h1 className="ar-lesson-title">{lesson.title}</h1>
           <p className="ar-lesson-meta">
             {words} word{words === 1 ? "" : "s"}{sentences ? ` · ${sentences} sentence${sentences === 1 ? "" : "s"}` : ""}
+            {(learnt > 0 || learning > 0) && (<>
+              <span aria-hidden> · </span>
+              <span className="ar-k-learnt">{learnt} learnt</span>
+              <span aria-hidden> · </span>
+              <span className="ar-k-learning">{learning} learning</span>
+            </>)}
           </p>
+
+          <div className="ar-practise-row">
+            {unseen > 0 && (
+              <button type="button" className="nw-btn nw-btn--primary" onClick={() => practise("unlock")}>
+                <Sparkles size={15} aria-hidden /> Unlock test · {unseen} word{unseen === 1 ? "" : "s"}
+              </button>
+            )}
+            <button type="button" className={`nw-btn ${unseen > 0 ? "nw-btn--soft" : "nw-btn--primary"}`} onClick={() => practise("lesson")}>
+              <Play size={14} aria-hidden /> Practise this lesson
+            </button>
+          </div>
 
           <div className="ar-lesson-actions">
             <button
@@ -177,7 +205,7 @@ export default function ArabicLesson({ workspaceId, lesson, prev, next }: Props)
                 {gw.length > 0 && (
                   <div className="ar-words">
                     {gw.map((c) => (
-                      <div key={c.id} id={`c-${c.id}`} className="ar-word">
+                      <div key={c.id} id={`c-${c.id}`} className="ar-word" data-status={statusOf(boxes[c.id])}>
                         <span className="ar-ar" dir="rtl" lang="ar">{c.arabic}</span>
                         <span className="ar-en">
                           {c.english}{c.gender && <span className="ar-g" title={c.gender === "f" ? "Feminine" : "Masculine"}>{c.gender}</span>}
@@ -190,7 +218,7 @@ export default function ArabicLesson({ workspaceId, lesson, prev, next }: Props)
                 {gs.length > 0 && (
                   <ul className="ar-sentences">
                     {gs.map((c) => (
-                      <li key={c.id} id={`c-${c.id}`} className="ar-sentence">
+                      <li key={c.id} id={`c-${c.id}`} className="ar-sentence" data-status={statusOf(boxes[c.id])}>
                         <span className="ar-ar" dir="rtl" lang="ar">{c.arabic}</span>
                         <span className="ar-en">{c.english}</span>
                         {c.translit && <span className="ar-tr">{c.translit}</span>}

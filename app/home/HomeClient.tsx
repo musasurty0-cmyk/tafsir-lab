@@ -516,7 +516,7 @@ export default function HomeClient({
       )}
 
       {/* ── Error toast ── */}
-      <Toast message={navError} onDismiss={() => setNavError(null)} />
+      <Toast message={navError} onDismiss={() => setNavError(null)} tone="error" />
 
       {/* The brand block and the duplicate avatar that used to sit here are
           now the sidebar's job. What is left is the streak line and the

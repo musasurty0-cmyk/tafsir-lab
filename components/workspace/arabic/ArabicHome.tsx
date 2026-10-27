@@ -25,6 +25,7 @@ import WorkspaceSettings from "../WorkspaceSettings";
 import NewWorkspaceModal from "@/components/NewWorkspaceModal";
 import Toast from "@/components/Toast";
 import ArabicImport from "./ArabicImport";
+import { lessonLabel } from "./lesson-label";
 
 export interface LessonRow {
   id: string; level: number; fileNo: number; number: number | null;
@@ -36,20 +37,20 @@ interface Hit {
   lesson: { id: string; level: number; number: number | null; kind: string; title: string };
 }
 
+export interface ReviewSummary {
+  byLesson: Record<string, { learning: number; learnt: number; due: number }>;
+  due: number; fresh: number; freshTotal: number;
+}
+
 interface Props {
   workspaceId: string;
   workspace: { id: string; name: string; type: string; kind: string; ownerId: string; membersCanManagePages: boolean };
   role: MemberRole;
   lessons: LessonRow[];
+  summary: ReviewSummary;
 }
 
-export function lessonLabel(l: { level: number; number: number | null; kind: string }) {
-  return l.number != null ? `Level ${l.level} · Lesson ${l.number}`
-       : l.kind === "prep" ? `Level ${l.level} · Preparation`
-       : `Level ${l.level} · Revision`;
-}
-
-export default function ArabicHome({ workspaceId, workspace, role, lessons }: Props) {
+export default function ArabicHome({ workspaceId, workspace, role, lessons, summary }: Props) {
   const router = useRouter();
   useLayoutEffect(() => {
     document.getElementById("tl-nav-splash")?.remove();
@@ -98,7 +99,7 @@ export default function ArabicHome({ workspaceId, workspace, role, lessons }: Pr
 
   return (
     <div className="workspace-home">
-      <Toast message={notice} onDismiss={() => setNotice(null)} />
+      <Toast message={notice} onDismiss={() => setNotice(null)} tone="success" />
       <Rail activeWorkspaceId={workspaceId} />
 
       <div className="workspace-home-content ar-home">
@@ -144,6 +145,24 @@ export default function ArabicHome({ workspaceId, workspace, role, lessons }: Pr
           </section>
         ) : (
           <>
+            <div className="ar-today">
+              <button
+                type="button"
+                className="ar-review"
+                data-empty={summary.due + summary.fresh === 0 ? "true" : "false"}
+                onClick={() => pushWithSplash(router, `/workspaces/${workspaceId}/arabic/practice`)}
+              >
+                <span className="ar-review-n">{summary.due + summary.fresh}</span>
+                <span className="ar-review-t">
+                  {summary.due + summary.fresh === 0 ? "Nothing due" : "cards to review today"}
+                  <span className="ar-review-m">
+                    {summary.due + summary.fresh === 0
+                      ? "Practise any lesson, or come back tomorrow."
+                      : `${summary.due} due${summary.fresh ? ` · ${summary.fresh} new from lessons you’ve covered` : ""}`}
+                  </span>
+                </span>
+                <ArrowRight size={18} aria-hidden className="ar-continue-go" />
+              </button>
             {current && (
               <button type="button" className="ar-continue" onClick={() => open(current.id)}>
                 <span className="ar-continue-k">You’re on</span>
@@ -152,6 +171,7 @@ export default function ArabicHome({ workspaceId, workspace, role, lessons }: Pr
                 <ArrowRight size={18} aria-hidden className="ar-continue-go" />
               </button>
             )}
+            </div>
 
             <label className="ar-search">
               <Search size={15} aria-hidden />
@@ -207,6 +227,7 @@ export default function ArabicHome({ workspaceId, workspace, role, lessons }: Pr
                                   {l.number ?? (l.kind === "prep" ? "Prep" : "Revision")}
                                 </span>
                                 <span className="ar-lesson-t">{l.title}</span>
+                                <StatusBar total={l.cardCount} s={summary.byLesson[l.id]} />
                                 <span className="ar-lesson-m">
                                   {l.state === "current" ? <span className="ar-current">Current</span>
                                     : l.state === "covered" ? <span className="ar-covered"><Check size={12} strokeWidth={3} aria-hidden /> Covered</span>
@@ -263,6 +284,19 @@ export default function ArabicHome({ workspaceId, workspace, role, lessons }: Pr
       )}
       {modalOpen && <NewWorkspaceModal onClose={() => setModalOpen(false)} />}
     </div>
+  );
+}
+
+/** Learnt in green, learning in red, the rest left in ink — three colours, no more. */
+function StatusBar({ total, s }: { total: number; s?: { learning: number; learnt: number } }) {
+  if (!s || total === 0) return <span className="ar-sbar" aria-hidden />;
+  const g = Math.round((s.learnt / total) * 100);
+  const r = Math.round((s.learning / total) * 100);
+  return (
+    <span className="ar-sbar" title={`${s.learnt} learnt · ${s.learning} learning · ${total - s.learnt - s.learning} not known`}>
+      <span className="ar-sbar-g" style={{ width: `${g}%` }} />
+      <span className="ar-sbar-r" style={{ width: `${r}%` }} />
+    </span>
   );
 }
 

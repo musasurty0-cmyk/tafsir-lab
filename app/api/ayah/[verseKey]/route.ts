@@ -31,7 +31,7 @@ export async function GET(
       `${BASE}/verses/by_key/${apiKey}` +
       `?language=en&words=true&translations=20` +
       `&fields=text_uthmani` +
-      `&word_fields=text_uthmani,transliteration,code_v2,v2_page`;
+      `&word_fields=text_uthmani,text_qpc_hafs,transliteration,code_v2,v2_page`;
 
     const res = await fetch(url, { next: { revalidate: 86400 } });
     if (!res.ok) {

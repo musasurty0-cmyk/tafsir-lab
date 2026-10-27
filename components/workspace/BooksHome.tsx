@@ -137,7 +137,7 @@ export default function BooksHome({ workspaceId, workspace, role, books: initial
 
   return (
     <div className="workspace-home">
-      <Toast message={notice} onDismiss={() => setNotice(null)} />
+      <Toast message={notice} onDismiss={() => setNotice(null)} tone="error" />
 
       {/* .workspace-home is a grid of [rail | content] — the Rail must be the
           first child or the content collapses into the rail column. */}

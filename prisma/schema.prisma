@@ -47,6 +47,7 @@ model User {
   youthMajlis      YouthMajlisProgress?
   youthAssignments YouthMajlisAssignee[]
   arabicStates     ArabicLessonState[]
+  arabicReviews    ArabicReview[]
   demoPresence     DemoPresence?
 }
 
@@ -734,7 +735,8 @@ model ArabicCard {
   /// The Arabic without ḥarakāt or letter variants, for search.
   folded     String
 
-  lesson ArabicLesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  lesson  ArabicLesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  reviews ArabicReview[]
 
   @@index([lessonId, ord])
 }
@@ -750,4 +752,22 @@ model ArabicLessonState {
   lesson ArabicLesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
 
   @@id([userId, lessonId])
+}
+
+/// One reader's memory of one card (prisma/sql/015, lib/arabic/srs).
+/// box 0 not known, 1–4 learning, 5+ learnt. No row means not known.
+model ArabicReview {
+  userId String   @db.Uuid
+  cardId String   @db.Uuid
+  box    Int      @default(0)
+  due    DateTime @default(now()) @db.Timestamptz(6)
+  reps   Int      @default(0)
+  lapses Int      @default(0)
+  lastAt DateTime @default(now()) @db.Timestamptz(6)
+
+  user User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  card ArabicCard @relation(fields: [cardId], references: [id], onDelete: Cascade)
+
+  @@id([userId, cardId])
+  @@index([userId, due])
 }

@@ -70,8 +70,11 @@ export default async function WorkspaceHomePage({
 
   // Arabic study → the course's levels and lessons are home.
   if (gate.workspace.kind === "arabic") {
-    const lessons = await ArabicService.listLessons(workspaceId, userId);
-    return <ArabicHome workspaceId={workspaceId} workspace={gate.workspace} role={gate.role} lessons={lessons} />;
+    const [lessons, summary] = await Promise.all([
+      ArabicService.listLessons(workspaceId, userId),
+      ArabicService.reviewSummary(workspaceId, userId),
+    ]);
+    return <ArabicHome workspaceId={workspaceId} workspace={gate.workspace} role={gate.role} lessons={lessons} summary={summary} />;
   }
 
   /* Nawawi workspace -> the forty-two are home. The sessions that already
