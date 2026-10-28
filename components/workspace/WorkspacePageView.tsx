@@ -409,8 +409,8 @@ export default function WorkspacePageView({
       const now = Date.now();
       const last = lastPollRef.current;
 
-      // Poll notes every 5s
-      if (now - last.notes >= 5000) {
+      // Poll notes every 10s -- every poll is a database read, metered as egress
+      if (now - last.notes >= 10000) {
         last.notes = now;
         fetch(withVersion(`/api/pages/${activePageId}/notes`, seen.notes))
           .then((r) => r.ok ? r.json() : null)
@@ -435,8 +435,8 @@ export default function WorkspacePageView({
           .catch(() => {});
       }
 
-      // Poll group progress every 8s
-      if (now - last.progress >= 8000) {
+      // Poll group progress every 20s: it changes when someone marks an āyah
+      if (now - last.progress >= 20000) {
         last.progress = now;
         fetch(withVersion(`/api/pages/${activePageId}/progress?scope=group`, seen.progress))
           .then((r) => r.ok ? r.json() : null)

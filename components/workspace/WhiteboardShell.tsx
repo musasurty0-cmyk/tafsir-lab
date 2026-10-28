@@ -188,7 +188,7 @@ export default function WhiteboardShell({
           });
         })
         .catch(() => {});
-    }, 5000);
+    }, 10000);   // every poll is a database read, metered as egress
     return () => { live = false; clearInterval(id); };
   }, [pageId]);
 
