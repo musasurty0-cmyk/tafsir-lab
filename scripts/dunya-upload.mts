@@ -195,7 +195,34 @@ if (process.env.DRY_RUN) {
   process.exit(0);
 }
 
+/* The free-tier guard for writes. R2's free plan holds 10 GB and allows a
+   million writes a month, with no spending cap of its own; this stops well
+   short of both. The bucket's present size is counted as well as the new
+   files, so a re-upload that replaces files is over-counted, never under. */
+const MAX_BUCKET_BYTES = 2 * 1024 ** 3;
+const MAX_FILES_PER_RUN = 1_000;
+const MAX_FILE_BYTES = 50 * 1024 ** 2;
+
+function bucketBytes(): number {
+  const info = execFileSync("npx", ["wrangler", "r2", "bucket", "info", BUCKET, "--config", "party/wrangler.jsonc"],
+    { encoding: "utf8", shell: true });
+  const m = /bucket_size:\s*([\d.]+)\s*(B|KB|KiB|MB|MiB|GB|GiB|TB|TiB)\b/i.exec(info);
+  if (!m) throw new Error(`Couldn’t read the bucket's size, so nothing was uploaded:\n${info}`);
+  const unit = m[2].toUpperCase().replace("I", "")[0];
+  return Number(m[1]) * 1024 ** "BKMGT".indexOf(unit);
+}
+
 if (!process.env.SKIP_UPLOAD) {
+  const adding = [...uploads.values()].reduce((n, b) => n + b.length, 0);
+  const big = [...uploads].filter(([, b]) => b.length > MAX_FILE_BYTES).map(([k]) => k);
+  if (big.length) throw new Error(`Over 50 MB, not uploaded: ${big.join(", ")}`);
+  if (uploads.size > MAX_FILES_PER_RUN) throw new Error(`${uploads.size} files is more than ${MAX_FILES_PER_RUN} in one run; nothing uploaded.`);
+  const present = bucketBytes();
+  const mb = (n: number) => `${(n / 1024 ** 2).toFixed(1)} MB`;
+  if (present + adding > MAX_BUCKET_BYTES) {
+    throw new Error(`The bucket holds ${mb(present)}; adding ${mb(adding)} would pass the ${mb(MAX_BUCKET_BYTES)} limit kept to stay on the free plan. Nothing uploaded.`);
+  }
+  console.log(`Bucket ${mb(present)} + ${mb(adding)}, inside the ${mb(MAX_BUCKET_BYTES)} limit.`);
   console.log(`Uploading ${uploads.size} files to R2 (${BUCKET})…`);
   const work = mkdtempSync(join(tmpdir(), "dunya-"));
   let i = 0;

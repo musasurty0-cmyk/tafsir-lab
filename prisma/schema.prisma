@@ -783,5 +783,8 @@ model DunyaPlan {
   passwordHash String
   catalog      Json
   progress     Json?
+  /// File links handed out in fileReadsMonth ("2026-10"): the R2 free-tier guard.
+  fileReads      Int     @default(0)
+  fileReadsMonth String?
   updatedAt    DateTime @default(now()) @updatedAt @db.Timestamptz(6)
 }
