@@ -19,6 +19,7 @@ import { db } from "@/lib/db";
 import { getWorkspaceWithRole, isAdmin } from "./workspaces.service";
 import { PageError } from "./pages.service";
 import { log } from "./activity.service";
+import { pollVersion } from "@/lib/poll-version";
 
 // ── Error type ────────────────────────────────────────────────
 
@@ -175,6 +176,14 @@ export async function setGroupProgress(
   });
 
   return record;
+}
+
+/** The version of a page's group progress (lib/poll-version), membership-checked. */
+export async function groupProgressVersion(pageId: string, userId: string): Promise<string> {
+  const workspaceId = await resolveWorkspaceId(pageId);
+  await getWorkspaceWithRole(workspaceId, userId);
+  const a = await db.groupAyahProgress.aggregate({ where: { pageId }, _max: { changedAt: true }, _count: true });
+  return pollVersion(a._max.changedAt, a._count);
 }
 
 export async function getGroupProgress(

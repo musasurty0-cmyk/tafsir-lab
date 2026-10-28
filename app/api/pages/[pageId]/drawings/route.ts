@@ -26,6 +26,7 @@ import { db } from "@/lib/db";
 import { getSession } from "@/lib/session";
 import { assertPageAccess } from "@/lib/services/pages.service";
 import { apiError } from "@/lib/api-errors";
+import { pollVersion, unchangedBody } from "@/lib/poll-version";
 
 // ── GET ────────────────────────────────────────────────────────────────────
 
@@ -39,6 +40,14 @@ export async function GET(
     // Membership gate: this route reads every author's ink on the page, so a
     // non-member must not reach it. Was previously ungated (IDOR).
     await assertPageAccess(pageId, userId);
+
+    /* Every author's ink is the largest thing a page reads, and the ink layers
+       poll it every 15–20 s. A poll that already has the current ink is told
+       so from one aggregate, and the strokes stay in the database. */
+    const agg = await db.canvasDrawing.aggregate({ where: { pageId }, _max: { updatedAt: true }, _count: true });
+    const version = pollVersion(agg._max.updatedAt, agg._count);
+    const same = unchangedBody(req.nextUrl.searchParams.get("v"), version);
+    if (same) return NextResponse.json(same, { headers: { "Cache-Control": "no-store" } });
 
     const drawings = await db.canvasDrawing.findMany({
       where:   { pageId },
@@ -63,6 +72,7 @@ export async function GET(
     const json = JSON.stringify({
       myStrokes:   mine ? parseStrokes(mine.strokes) : [],
       otherLayers: others,
+      version,
     });
 
     /* Compressed here, in the function, because Vercel refuses any function

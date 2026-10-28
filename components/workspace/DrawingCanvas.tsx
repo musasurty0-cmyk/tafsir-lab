@@ -46,6 +46,7 @@ import {
 } from "react";
 import type { CanvasViewport } from "./ModeBPage";
 import { inkOutboxKey, readInkOutbox } from "@/lib/ink-outbox";
+import { withVersion } from "@/lib/poll-version";
 import {
   type Pt, type InkStroke,
   normPts, hitTest, drawSmooth, drawArrow, paintStroke, strokeSurface,
@@ -808,13 +809,17 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
        page's ink appearing on another, which then saves. The flag drops any
        reply that arrives after the page changed. */
     let live = true;
+    // The last version sent: unchanged ink is not sent again (lib/poll-version).
+    let seen: string | null = null;
     const id = setInterval(() => {
       if (document.visibilityState !== "visible") return;
       const issuedAt = Date.now();   // anything saved after this cannot be in the reply
-      fetch(`/api/pages/${pageId}/drawings`)
+      fetch(withVersion(`/api/pages/${pageId}/drawings`, seen))
         .then(r => r.ok ? r.json() : null)
-        .then((d: { myStrokes?: Stroke[]; otherLayers?: DrawingLayer[] } | null) => {
+        .then((d: { myStrokes?: Stroke[]; otherLayers?: DrawingLayer[]; version?: string; unchanged?: boolean } | null) => {
           if (!live || !d) return;
+          if (d.version) seen = d.version;
+          if (d.unchanged) return;
           if (d.otherLayers) setOtherLayers(d.otherLayers);
           if (d.myStrokes && loadedRef.current) syncMyStrokes(d.myStrokes, issuedAt);
         })

@@ -25,9 +25,10 @@ import * as NotesService from "@/lib/services/notes.service";
 import { WorkspaceError, getWorkspaceWithRole } from "@/lib/services/workspaces.service";
 import { db } from "@/lib/db";
 import { apiError } from "@/lib/api-errors";
+import { unchangedBody } from "@/lib/poll-version";
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ pageId: string }> }
 ) {
   try {
@@ -42,9 +43,13 @@ export async function GET(
     if (!page) return NextResponse.json({ error: "Page not found" }, { status: 404 });
 
     const { role } = await getWorkspaceWithRole(page.workspaceSurah.workspaceId, userId);
+    // A poll that already has the current notes is told so, and sent nothing else.
+    const version = await NotesService.notesVersion(pageId, userId, role);
+    const same = unchangedBody(req.nextUrl.searchParams.get("v"), version);
+    if (same) return NextResponse.json(same);
     const notes = await NotesService.getNotesForPage(pageId, userId, role);
 
-    return NextResponse.json({ notes });
+    return NextResponse.json({ notes, version });
   } catch (err) {
     if (err instanceof WorkspaceError) {
       return NextResponse.json({ error: err.message }, { status: err.code === "NOT_FOUND" ? 404 : 403 });

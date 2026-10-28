@@ -14,6 +14,7 @@
  */
 
 import { pushWithSplash } from "@/lib/nav-splash";
+import { withVersion } from "@/lib/poll-version";
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import type { Chapter, Verse } from "@/lib/types";
@@ -398,6 +399,9 @@ export default function WorkspacePageView({
 
   useEffect(() => {
     if (!activePageId) return;
+    /* What the last reply was (lib/poll-version). Sent back with each poll, so
+       an unchanged page costs a few bytes rather than every note again. */
+    const seen: { notes: string | null; progress: string | null } = { notes: null, progress: null };
 
     function poll() {
       if (document.visibilityState !== "visible") return;
@@ -407,9 +411,10 @@ export default function WorkspacePageView({
       // Poll notes every 5s
       if (now - last.notes >= 5000) {
         last.notes = now;
-        fetch(`/api/pages/${activePageId}/notes`)
+        fetch(withVersion(`/api/pages/${activePageId}/notes`, seen.notes))
           .then((r) => r.ok ? r.json() : null)
-          .then((data: { notes?: NoteData[] } | null) => {
+          .then((data: { notes?: NoteData[]; version?: string } | null) => {
+            if (data?.version) seen.notes = data.version;
             if (!data?.notes) return;
             // MERGE, don't replace: keep unsaved temps and notes created in
             // the last 15s that a stale server read hasn't caught up with.
@@ -432,9 +437,10 @@ export default function WorkspacePageView({
       // Poll group progress every 8s
       if (now - last.progress >= 8000) {
         last.progress = now;
-        fetch(`/api/pages/${activePageId}/progress?scope=group`)
+        fetch(withVersion(`/api/pages/${activePageId}/progress?scope=group`, seen.progress))
           .then((r) => r.ok ? r.json() : null)
-          .then((data: { progress?: Record<string, { status: ProgressStatus; lastChangedBy: string }> } | null) => {
+          .then((data: { progress?: Record<string, { status: ProgressStatus; lastChangedBy: string }>; version?: string } | null) => {
+            if (data?.version) seen.progress = data.version;
             if (data?.progress) setGroupProgress(data.progress);
           })
           .catch(() => {});

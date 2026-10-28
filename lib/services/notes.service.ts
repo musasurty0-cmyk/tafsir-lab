@@ -8,6 +8,7 @@
 import { db } from "@/lib/db";
 import { getWorkspaceWithRole, isAdmin, type MemberRole } from "./workspaces.service";
 import { log } from "./activity.service";
+import { pollVersion } from "@/lib/poll-version";
 
 export class NoteError extends Error {
   constructor(message: string, public code: "NOT_FOUND" | "FORBIDDEN" | "INVALID") {
@@ -77,16 +78,31 @@ function validateAnchor(input: CreateNoteInput) {
 
 // ── Queries ──────────────────────────────────────────────────────────
 
+/** The notes on a page this reader may see — shared by the read and its poll version. */
+function visibleOnPage(pageId: string, userId: string, role: MemberRole) {
+  return {
+    pageId,
+    OR: [
+      { visibility: "workspace" },
+      { visibility: "private", authorId: userId },
+      ...(isAdmin(role) ? [{ visibility: "admin" }] : []),
+    ],
+  };
+}
+
+/** The version of what getNotesForPage would return (lib/poll-version), from one small aggregate. */
+export async function notesVersion(pageId: string, userId: string, role: MemberRole): Promise<string> {
+  const a = await db.structuredNote.aggregate({
+    where: visibleOnPage(pageId, userId, role),
+    _max: { updatedAt: true },
+    _count: true,
+  });
+  return pollVersion(a._max.updatedAt, a._count);
+}
+
 export async function getNotesForPage(pageId: string, userId: string, role: MemberRole) {
   return db.structuredNote.findMany({
-    where: {
-      pageId,
-      OR: [
-        { visibility: "workspace" },
-        { visibility: "private", authorId: userId },
-        ...(isAdmin(role) ? [{ visibility: "admin" }] : []),
-      ],
-    },
+    where: visibleOnPage(pageId, userId, role),
     orderBy: [{ zIndex: "asc" }, { createdAt: "asc" }],
     include: {
       author: { select: { id: true, name: true, avatarUrl: true } },

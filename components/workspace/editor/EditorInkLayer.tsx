@@ -24,6 +24,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { readInkOutbox, writeInkOutbox } from "@/lib/ink-outbox";
+import { withVersion } from "@/lib/poll-version";
 import { PenLine, Highlighter, Eraser, Undo2, X } from "lucide-react";
 import {
   type Pt, type InkStroke,
@@ -218,12 +219,16 @@ export default function EditorInkLayer({ pageId }: Props) {
       scheduleRender();
     }
 
+    // The last version sent: unchanged ink is not sent again (lib/poll-version).
+    let seen: string | null = null;
     function load() {
       const issuedAt = Date.now();   // anything confirmed after this cannot be in the reply
-      fetch(`/api/pages/${pageId}/drawings`)
+      fetch(withVersion(`/api/pages/${pageId}/drawings`, seen))
         .then((r) => (r.ok ? r.json() : null))
-        .then((d: { myStrokes?: InkStroke[]; otherLayers?: OtherInkLayer[] } | null) => {
+        .then((d: { myStrokes?: InkStroke[]; otherLayers?: OtherInkLayer[]; version?: string; unchanged?: boolean } | null) => {
           if (!d || cancelled) return;
+          if (d.version) seen = d.version;
+          if (d.unchanged) return;
           // Merge, never replace — and never read the reply's silence about
           // anything confirmed after it was asked for (lib/ink mergeServerInk).
           strokesRef.current = mergeServerInk(

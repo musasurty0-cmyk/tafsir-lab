@@ -25,6 +25,7 @@ import { getSession } from "@/lib/session";
 import * as ProgressService from "@/lib/services/progress.service";
 import { PageError } from "@/lib/services/pages.service";
 import { apiError } from "@/lib/api-errors";
+import { unchangedBody } from "@/lib/poll-version";
 
 type ProgressBody = {
   scope?:       string;
@@ -48,10 +49,14 @@ export async function GET(
     }
 
     if (scope === "group") {
+      // Polled every 8 s by an open page: unchanged progress is not sent again.
+      const version = await ProgressService.groupProgressVersion(pageId, userId);
+      const same = unchangedBody(req.nextUrl.searchParams.get("v"), version);
+      if (same) return NextResponse.json(same);
       const map = await ProgressService.getGroupProgress(pageId, userId);
       const plain: Record<string, { status: string; lastChangedBy: string }> = {};
       map.forEach((v, k) => { plain[k] = v; });
-      return NextResponse.json({ progress: plain });
+      return NextResponse.json({ progress: plain, version });
     }
 
     return NextResponse.json(

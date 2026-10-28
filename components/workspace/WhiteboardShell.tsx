@@ -24,6 +24,7 @@ import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import type { Editor } from "@tiptap/core";
 import type { MemberRole } from "@/lib/services/workspaces.service";
+import { withVersion } from "@/lib/poll-version";
 import type { NoteData } from "./NoteCard";
 import { EditorContextProvider, type EditorContextValue } from "./editor/EditorContext";
 import { useRoom } from "@/lib/collab/useRoom";
@@ -168,11 +169,13 @@ export default function WhiteboardShell({
   // never wipes a fresh container)
   useEffect(() => {
     let live = true;
+    let seen: string | null = null;   // the last version sent (lib/poll-version)
     const id = setInterval(() => {
       if (document.visibilityState !== "visible") return;
-      fetch(`/api/pages/${pageId}/notes`)
+      fetch(withVersion(`/api/pages/${pageId}/notes`, seen))
         .then((r) => (r.ok ? r.json() : null))
-        .then((d: { notes?: NoteData[] } | null) => {
+        .then((d: { notes?: NoteData[]; version?: string } | null) => {
+          if (live && d?.version) seen = d.version;
           if (!live || !d?.notes) return;
           setNotes((prev) => {
             const server = d.notes!;
