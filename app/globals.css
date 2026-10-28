@@ -15405,3 +15405,18 @@ input, textarea { font: inherit; color: inherit; }
 
 /* Above the page turner, which shares the bottom edge. */
 .wrs { bottom: 76px; max-height: calc(100% - 160px); }
+
+/* The sūrah plate's Study button: an even gap, equal inset all round, and a
+   pill sized to the plate rather than squeezed into its corner. */
+.qcf-plate--btn { gap: 10px; padding-inline: 14px 5px; align-items: center; }
+.qcf-plate--btn .qcf-plate-name { padding: 0; }
+.qcf-plate-study {
+  height: 28px; margin: 0; padding: 0 11px 0 10px; border-radius: 8px;
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12.5px; font-weight: 600; line-height: 1; letter-spacing: 0;
+  color: #fff; background: var(--accent);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--accent) 35%, transparent);
+  transition: background var(--dur-hover, 120ms) ease;
+}
+.qcf-plate-study svg { flex: none; }
+.qcf-plate--btn:hover .qcf-plate-study { background: var(--accent-ink); }

@@ -33,7 +33,7 @@ import type { IncomingMessage, PresenceData } from "./types";
  *  plus the secret shared with the Vercel app, which mints the tokens
  *  (app/api/pages/[pageId]/collab-token). Secrets are set with
  *  `wrangler secret put`, so they are not in the generated types. */
-type RoomEnv = Env & { COLLAB_SECRET?: string; SESSION_SECRET?: string };
+type RoomEnv = Env & { COLLAB_SECRET?: string; SESSION_SECRET?: string; FILES?: R2Bucket };
 
 /** Durable Object storage holds values up to 2 MB; keep clear of it. */
 const MAX_SNAPSHOT = 1_900_000;
@@ -168,8 +168,50 @@ async function gate(req: Request, lobby: Lobby, env: RoomEnv): Promise<Response 
   }
 }
 
+/**
+ * GET /files/<key>?token=… — a private file (the /dunya A-level papers).
+ *
+ * The bucket is not public. The Vercel app, after its own password check,
+ * signs a token naming exactly one key for a couple of minutes, with the same
+ * secret the realtime tokens use; this checks it and streams the file. A
+ * token for one file cannot fetch another, and an old link stops working.
+ */
+async function serveFile(req: Request, env: RoomEnv, key: string): Promise<Response> {
+  const secret = env.COLLAB_SECRET || env.SESSION_SECRET;
+  if (!secret || !env.FILES) return new Response("Not available", { status: 503 });
+  const token = new URL(req.url).searchParams.get("token");
+  if (!token) return new Response("Missing token", { status: 401 });
+  let name = key.split("/").pop() ?? "file.pdf";
+  try {
+    const { payload } = await jwtVerify(token, new TextEncoder().encode(secret));
+    if (payload.file !== key) return new Response("Token is for another file", { status: 403 });
+    // The app names the file for whoever saves it ("Biology Test 08 - Enzymes.pdf").
+    if (typeof payload.name === "string" && payload.name) name = payload.name.slice(0, 150);
+  } catch {
+    return new Response("Invalid or expired link", { status: 401 });
+  }
+  const obj = await env.FILES.get(key);
+  if (!obj) return new Response("Not found", { status: 404 });
+  const download = new URL(req.url).searchParams.get("download") === "1";
+  const ascii = name.replace(/[^\x20-\x7e]/g, "").replace(/["\\]/g, "") || "file.pdf";
+  return new Response(obj.body, {
+    headers: {
+      "Content-Type": obj.httpMetadata?.contentType ?? "application/pdf",
+      "Content-Disposition": `${download ? "attachment" : "inline"}; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(name)}`,
+      "Cache-Control": "private, max-age=300",
+      "X-Content-Type-Options": "nosniff",
+    },
+  });
+}
+
 export default {
   async fetch(req: Request, env: RoomEnv): Promise<Response> {
+    const url = new URL(req.url);
+    if (req.method === "GET" && url.pathname.startsWith("/files/")) {
+      const key = decodeURIComponent(url.pathname.slice("/files/".length));
+      if (!/^[a-z0-9][a-z0-9/_.-]{0,200}$/.test(key) || key.includes("..")) return new Response("Bad key", { status: 400 });
+      return serveFile(req, env, key);
+    }
     return (
       (await routePartykitRequest(req, env, {
         onBeforeConnect: (r, lobby) => gate(r, lobby, env),

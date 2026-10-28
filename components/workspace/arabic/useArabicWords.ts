@@ -18,7 +18,7 @@ import { cardHeadword, lookup } from "@/lib/arabic/quran-match";
 import { loadQuranIndex, loadMorph, type MorphWord } from "@/lib/arabic/quran-index-client";
 
 export interface WordCard {
-  id: string; english: string; arabic: string; box: number;
+  id: string; english: string; arabic: string; box: number; covered?: boolean;
   lesson: { id: string; level: number; number: number | null; kind: string; title: string };
 }
 export type Known = { box: number; cards: WordCard[] };
@@ -37,7 +37,10 @@ export function useArabicWords(workspaceId: string, enabled: boolean) {
       ]);
       if (!live || !index || !res?.cards) return;
       const m = new Map<string, Known>();
-      for (const c of res.cards as WordCard[]) {
+      for (const raw of res.cards as WordCard[]) {
+        /* A lesson you say you have done turns its words red on the Mushaf
+           straight away, practised or not — you have met them. */
+        const c = raw.box === 0 && raw.covered ? { ...raw, box: 1 } : raw;
         const hit = lookup(index, cardHeadword(c.arabic, false), c.english);
         for (const key of new Set([hit?.lemma, c.lesson.kind === "mine" ? c.arabic : undefined])) {
           if (!key) continue;

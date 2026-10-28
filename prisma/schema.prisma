@@ -775,3 +775,13 @@ model ArabicReview {
   @@id([userId, cardId])
   @@index([userId, due])
 }
+
+/// /dunya (prisma/sql/018): password hash, the A-level papers, and attempts.
+/// The PDFs are in a private R2 bucket, served by the realtime worker.
+model DunyaPlan {
+  id           String   @id
+  passwordHash String
+  catalog      Json
+  progress     Json?
+  updatedAt    DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+}

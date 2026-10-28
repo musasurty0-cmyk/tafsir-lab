@@ -77,3 +77,7 @@ ml/dataset.jsonl
 # wrangler dev secrets and local state (party/)
 .dev.vars
 .wrangler/
+
+# A-level papers for /dunya: uploaded to the private R2 bucket, never committed (this repo is public).
+/Tafsir_Lab_*.pdf
+/Tafsir_Lab_*.zip

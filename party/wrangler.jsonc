@@ -15,5 +15,8 @@
     "bindings": [{ "name": "Main", "class_name": "TafsirRoom" }]
   },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["TafsirRoom"] }],
+  // Private files for /dunya (A-level papers). Never public: served only at
+  // /files/<key> with a short-lived token the Vercel app signs (server.ts).
+  "r2_buckets": [{ "binding": "FILES", "bucket_name": "tafsir-lab-dunya" }],
   "observability": { "enabled": true }
 }

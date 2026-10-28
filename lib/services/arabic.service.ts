@@ -461,12 +461,22 @@ export async function wordCards(workspaceId: string, userId: string) {
     orderBy: [{ lesson: { level: "asc" } }, { lesson: { fileNo: "asc" } }, { ord: "asc" }],
     select:  {
       id: true, english: true, arabic: true,
-      lesson:  { select: { id: true, level: true, number: true, kind: true, title: true } },
+      lesson:  {
+        select: {
+          id: true, level: true, number: true, kind: true, title: true,
+          states: { where: { userId, state: "covered" }, select: { state: true } },
+        },
+      },
       reviews: { where: { userId }, select: { box: true } },
     },
     take: 6000,
   });
-  return cards.map(({ reviews, ...c }) => ({ ...c, box: reviews[0]?.box ?? 0 }));
+  return cards.map(({ reviews, lesson: { states, ...lesson }, ...c }) => ({
+    ...c, lesson, box: reviews[0]?.box ?? 0,
+    /** In a lesson you have marked done: counts as learning on the Mushaf
+        even before you have practised it. The lesson you are on does not. */
+    covered: states.length > 0,
+  }));
 }
 
 /**
