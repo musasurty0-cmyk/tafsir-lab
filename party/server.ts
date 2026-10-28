@@ -298,6 +298,49 @@ async function inkAdmin(req: Request, env: RoomEnv): Promise<Response> {
 }
 
 /**
+ * GET /media/<name> — a public file for the website (the launch page's film).
+ *
+ * From the same R2 bucket as the private papers, but only keys under
+ * "public/" can be reached here, and nothing else in the bucket can. R2 has
+ * no egress charge, which is why the film is not served from the app (Vercel
+ * bandwidth) or the repository. Byte ranges are honoured so a video starts
+ * playing at once and can be scrubbed.
+ */
+async function serveMedia(req: Request, env: RoomEnv, name: string): Promise<Response> {
+  if (!env.FILES) return new Response("Not available", { status: 503 });
+  const key = `public/${name}`;
+  const headers = new Headers({
+    "Accept-Ranges": "bytes",
+    "Cache-Control": "public, max-age=86400",
+    "Access-Control-Allow-Origin": "*",
+    "X-Content-Type-Options": "nosniff",
+  });
+  if (req.method === "HEAD") {
+    const head = await env.FILES.head(key);
+    if (!head) return new Response(null, { status: 404 });
+    head.writeHttpMetadata(headers);
+    headers.set("ETag", head.httpEtag);
+    headers.set("Content-Length", String(head.size));
+    return new Response(null, { headers });
+  }
+  const wantsRange = req.headers.has("Range");
+  const obj = await env.FILES.get(key, wantsRange ? { range: req.headers } : undefined);
+  if (!obj) return new Response("Not found", { status: 404 });
+  obj.writeHttpMetadata(headers);
+  headers.set("ETag", obj.httpEtag);
+  const r = obj.range as { offset?: number; length?: number; suffix?: number } | undefined;
+  if (wantsRange && r) {
+    const offset = r.suffix != null ? obj.size - r.suffix : r.offset ?? 0;
+    const length = r.suffix != null ? r.suffix : r.length ?? obj.size - offset;
+    headers.set("Content-Range", `bytes ${offset}-${offset + length - 1}/${obj.size}`);
+    headers.set("Content-Length", String(length));
+    return new Response(obj.body, { status: 206, headers });
+  }
+  headers.set("Content-Length", String(obj.size));
+  return new Response(obj.body, { headers });
+}
+
+/**
  * GET /files/<key>?token=… — a private file (the /dunya A-level papers).
  *
  * The bucket is not public. The Vercel app, after its own password check,
@@ -342,6 +385,11 @@ export default {
       return serveFile(req, env, key);
     }
     if (req.method === "POST" && url.pathname === "/ink-admin") return inkAdmin(req, env);
+    if ((req.method === "GET" || req.method === "HEAD") && url.pathname.startsWith("/media/")) {
+      const name = decodeURIComponent(url.pathname.slice("/media/".length));
+      if (!/^[a-z0-9][a-z0-9._-]{0,80}$/.test(name) || name.includes("..")) return new Response("Bad name", { status: 400 });
+      return serveMedia(req, env, name);
+    }
 
     const origin = req.headers.get("Origin");
     const isInk = url.pathname.endsWith("/ink");

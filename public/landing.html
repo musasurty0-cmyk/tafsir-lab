@@ -3,15 +3,17 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Tafsir Lab — Collaborative Qurʾān study</title>
-<meta name="description" content="Tafsir Lab is a desk for reflecting on the Qurʾān — annotate the Mushaf in real ink, write your tafsīr beside 67 classical sources, and study alone or with your halaqa. Free." />
+<title>Tafsir Lab · A desk for reflecting on the Qurʾān</title>
+<meta name="description" content="Tafsir Lab is a desk for reflecting on the Qurʾān: the Mushaf, your own notes and handwriting, and over a hundred classical tafāsīr in one workspace, alone or with your circle. Free." />
 <link rel="canonical" href="https://tafsir-lab.com/" />
+<meta name="theme-color" content="#fbfaf7" media="(prefers-color-scheme: light)" />
+<meta name="theme-color" content="#1c1b19" media="(prefers-color-scheme: dark)" />
 
 <!-- Open Graph (Facebook, WhatsApp, LinkedIn, iMessage…) -->
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="Tafsir Lab" />
-<meta property="og:title" content="Tafsir Lab — Collaborative Qurʾān study" />
-<meta property="og:description" content="A desk for reflecting on the Qurʾān — the Mushaf, your own ink, and sixty-seven classical tafāsīr in one workspace." />
+<meta property="og:title" content="Tafsir Lab · A desk for reflecting on the Qurʾān" />
+<meta property="og:description" content="The Mushaf, your own notes and handwriting, and over a hundred classical tafāsīr in one workspace. Free." />
 <meta property="og:url" content="https://tafsir-lab.com/" />
 <meta property="og:image" content="https://tafsir-lab.com/og-image.png" />
 <meta property="og:image:width" content="1200" />
@@ -19,8 +21,8 @@
 
 <!-- Twitter/X card -->
 <meta name="twitter:card" content="summary_large_image" />
-<meta name="twitter:title" content="Tafsir Lab — Collaborative Qurʾān study" />
-<meta name="twitter:description" content="A study desk for the Qurʾān — Mushaf, notes, ink and classical tafsīr in one workspace." />
+<meta name="twitter:title" content="Tafsir Lab · A desk for reflecting on the Qurʾān" />
+<meta name="twitter:description" content="The Mushaf, your notes and handwriting, and over a hundred tafāsīr in one workspace. Free." />
 <meta name="twitter:image" content="https://tafsir-lab.com/og-image.png" />
 
 <!-- Favicon -->
@@ -29,6 +31,9 @@
 <link rel="icon" type="image/png" sizes="192x192" href="/favicon-192.png" />
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
 
+<!-- The āyāt are in Quran.com's text_qpc_hafs, the encoding the King Fahd
+     Uthmanic Hafs font expects; its plain Uthmani text draws some marks as
+     dotted circles in this face. -->
 <!-- Tells Google this is a specific product, not just two dictionary words -->
 <script type="application/ld+json">
 {
@@ -37,7 +42,7 @@
   "name": "Tafsir Lab",
   "alternateName": "TafsirLab",
   "url": "https://tafsir-lab.com/",
-  "description": "A study desk for the Qurʾān — Mushaf, notes, ink and classical tafsīr in one workspace.",
+  "description": "A desk for reflecting on the Qurʾān: Mushaf, notes, handwriting and classical tafsīr in one workspace.",
   "applicationCategory": "EducationalApplication",
   "operatingSystem": "Web",
   "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
@@ -46,764 +51,214 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<!-- Newsreader carries the whole page: an editorial serif with optical sizing,
-     so a 76px headline and a 17px paragraph are drawn differently rather than
-     scaled from one master. Its italic is a true italic, which is what lets
-     transliteration sit inside a sentence without shouting. IBM Plex — the
-     previous stack — is the single most over-used face on generated landing
-     pages, and the mono labels that came with it were the loudest tell. -->
-<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,300;1,6..72,400;1,6..72,500&family=Amiri+Quran&family=Scheherazade+New:wght@400;700&family=Caveat:wght@400;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="site.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="preload" href="/fonts/UthmanicHafs1Ver18.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/film-poster.jpg" as="image">
+<link rel="stylesheet" href="/landing.css">
 </head>
 <body>
 
-<!-- ─────────────── NAV ─────────────── -->
 <header class="nav">
-  <a class="brand" href="#top" aria-label="Tafsir Lab home">
-    <span class="brand-mark">T</span>
-    <span class="brand-word">Tafsir<span class="brand-word-2">Lab</span></span>
-  </a>
-  <nav class="nav-links">
-    <a href="#watch">Watch</a>
-    <a href="#editor">Editor</a>
-    <a href="#mushaf">Mushaf</a>
-    <a href="#workspaces">Workspaces</a>
-    <a href="#scholarship">Commentary</a>
-    <a href="#pricing">Pricing</a>
-  </nav>
-  <div class="nav-cta">
-    <a href="/waitlist" class="link-quiet">Join the waitlist</a>
-    <a href="#" class="link-quiet js-beta-gate">Sign in</a>
-    <a href="#" class="btn btn-primary js-beta-gate">Open the lab →</a>
+  <div class="nav-in">
+    <a class="brand" href="#top" aria-label="Tafsir Lab home">
+      <span class="mark" aria-hidden="true">T</span>
+      <span class="brand-word">Tafsir Lab</span>
+    </a>
+    <nav class="nav-links" aria-label="Sections">
+      <a href="#film">Film</a>
+      <a href="#features">Features</a>
+      <a href="#free">Free</a>
+      <a href="#questions">Questions</a>
+    </nav>
+    <div class="nav-end">
+      <a href="#" class="nav-signin js-beta-gate">Sign in</a>
+      <a href="#" class="btn btn-sm js-beta-gate">Open Tafsir Lab</a>
+    </div>
   </div>
 </header>
 
-<main>
+<main id="top">
 
-<!-- ─────────────── HERO ─────────────── -->
-<section class="hero" id="top">
-  <div class="hero-grid">
-    <div class="hero-copy">
-      <p class="eyebrow"><span class="dot"></span> v0.4 — Public beta · ٢٠٢٦</p>
-      <h1 class="display">
-        The Book was sent down
-        <span class="display-em">to be reflected upon.</span>
-        This is a desk for that work.
-      </h1>
-      <p class="lede">
-        Sit with an āyah as long as it takes. Write down what you find in it,
-        mark the Mushaf in ink that stays put, and open sixty-seven classical
-        commentaries in the margin when you want to know how the scholars read
-        it — on your own, or with your halaqa.
-      </p>
-      <div class="hero-cta">
-        <a href="#" class="btn btn-primary btn-lg js-beta-gate">Start a workspace</a>
-        <a href="#editor" class="btn btn-ghost btn-lg">See it in motion ↓</a>
-      </div>
-      <ul class="hero-meta">
-        <li><span class="num">114</span> surahs indexed</li>
-        <li><span class="num">6,236</span> ayāt · word-by-word</li>
-        <li><span class="num">67</span> tafāsīr · English &amp; Arabic</li>
-      </ul>
-    </div>
+<!-- ── Hero ── -->
+<section class="hero">
+  <figure class="hero-ayah">
+    <p lang="ar" dir="rtl">كِتَٰبٌ أَنزَلۡنَٰهُ إِلَيۡكَ مُبَٰرَكٞ لِّيَدَّبَّرُوٓاْ ءَايَٰتِهِۦ وَلِيَتَذَكَّرَ أُوْلُواْ ٱلۡأَلۡبَٰبِ</p>
+    <figcaption>A blessed Book which We have revealed to you, that they might reflect upon its verses. <span>38:29</span></figcaption>
+  </figure>
+  <h1 class="display">A desk for reflecting on the Qurʾān.</h1>
+  <p class="lede">
+    Read the Mushaf. Write what you find beside each āyah, mark the page in your own hand,
+    and open over a hundred tafāsīr in the margin. On your own, or with your circle.
+  </p>
+  <div class="hero-actions">
+    <a href="#" class="btn btn-lg js-beta-gate">Open Tafsir Lab</a>
+    <a href="#film" class="more">Watch the film</a>
+  </div>
+  <p class="hero-note">Free, for everyone. Used by the Youth Majlis study circle.</p>
+</section>
 
-    <!-- Floating product preview: the editor -->
-    <div class="hero-product">
-      <div class="hero-product-frame" id="heroFrame">
-        <div class="frame-chrome">
-          <span class="frame-dot d1"></span>
-          <span class="frame-dot d2"></span>
-          <span class="frame-dot d3"></span>
-          <span class="frame-tab">Al-Fātiḥa · Workspace</span>
-          <span class="frame-presence">
-            <span class="presence-pip" style="background:oklch(0.62 0.11 70)" title="Yusuf"></span>
-            <span class="presence-pip" style="background:oklch(0.55 0.08 160)" title="Yahya"></span>
-            <span class="presence-pip" style="background:oklch(0.52 0.12 275)" title="Musa"></span>
-            <span class="presence-count">+2</span>
-          </span>
-        </div>
-        <div class="frame-body">
-          <aside class="frame-sidebar">
-            <div class="fs-row fs-row-active">
-              <span class="fs-icon">◐</span> Al-Fātiḥa
-            </div>
-            <div class="fs-row"><span class="fs-icon">○</span> Al-Baqara</div>
-            <div class="fs-sub">
-              <div class="fs-row"><span class="fs-icon">·</span> Verse 1–5</div>
-              <div class="fs-row fs-row-soft"><span class="fs-icon">·</span> Verse 255 — Āyat al-Kursī</div>
-              <div class="fs-row"><span class="fs-icon">·</span> Verse 286</div>
-            </div>
-            <div class="fs-row"><span class="fs-icon">○</span> Āl ʿImrān</div>
-            <div class="fs-row"><span class="fs-icon">○</span> Yāsīn</div>
-            <div class="fs-row"><span class="fs-icon">○</span> Al-Mulk</div>
-            <div class="fs-divider"></div>
-            <div class="fs-section">Shared</div>
-            <div class="fs-row"><span class="fs-icon fs-icon-acc">●</span> Tuesday Halaqa</div>
-            <div class="fs-row"><span class="fs-icon fs-icon-acc">●</span> Tafsir 101</div>
-          </aside>
-
-          <div class="frame-doc">
-            <p class="doc-tag">SURAH AL-FĀTIḤA · 1:2</p>
-            <h2 class="doc-h">On praise as the opening posture of the believer</h2>
-            <div class="doc-meta">
-              <span><span class="avatar mini" style="background:linear-gradient(135deg,oklch(0.55 0.08 160),oklch(0.42 0.07 160))">Y</span> Yahya · last edit just now</span>
-              <span class="dot-mini"></span>
-              <span>5 collaborators</span>
-            </div>
-
-            <div class="verse">
-              <div class="verse-h">
-                <span><span class="verse-pip"></span> AL-FĀTIḤA · 1:2</span>
-                <span class="verse-tools">
-                  <span class="vt">⌘ Bookmark</span>
-                  <span class="vt">↗ Open drawer</span>
-                </span>
-              </div>
-              <div class="verse-ar">ٱلْحَمْدُ لِلَّهِ رَبِّ ٱلْعَـٰلَمِينَ</div>
-              <div class="verse-translit">Al-ḥamdu lillāhi rabbi&#39;l-ʿālamīn.</div>
-              <div class="verse-en"><span class="vnum">2</span>All praise is due to Allah, Lord of all the worlds.</div>
-            </div>
-
-            <p class="doc-p">
-              The verse opens with <em>al-ḥamd</em> — definite, total — not merely thanks
-              for what is given but praise for what He is. Al-Rāzī ties this directly to
-              <a class="anchor" href="#">↦ 1:1</a>: the bismillāh names Him; al-ḥamd then renders Him His due.
-            </p>
-            <p class="doc-p">
-              <span class="cursor-row">
-                A second reading places <span class="caret-collab" data-name="Ismail"></span>the lām of <em>lillāh</em> as
-              </span>
-              the lām of <strong>istiḥqāq</strong> — entitlement — so the sentence does not
-              describe a transaction but a fact of the universe.
-            </p>
-
-            <div class="callout">
-              <span class="callout-i">✦</span>
-              <div>
-                <span class="callout-l">Linked commentary · Tafsīr Ibn Kathīr</span>
-                <p>“He is praised for His names and for His acts, before any servant praises Him, and after.”</p>
-              </div>
-            </div>
-          </div>
-        </div>
-        <!-- floating add-comment chip -->
-        <div class="floater f-comment">
-          <span class="avatar mini" style="background:linear-gradient(135deg,oklch(0.62 0.11 70),oklch(0.5 0.1 70))">Y</span>
-          <span>Yusuf · <em>“connect this to 1:5?”</em></span>
-        </div>
-        <div class="floater f-presence">
-          <span class="presence-pip" style="background:oklch(0.55 0.08 160)"></span>
-          Yahya is editing
-        </div>
-      </div>
+<!-- ── Film ── -->
+<section class="band band-dark" id="film">
+  <div class="band-in">
+    <h2 class="h2">See it in use.</h2>
+    <p class="sub">Two minutes of a real study session: the Mushaf, notes, ink, the tafsīr library, books and ḥadīth.</p>
+    <div class="film">
+      <video class="film-video"
+             src="https://tafsir-lab-realtime.tafsir-lab.workers.dev/media/tafsir-lab-film.mp4"
+             poster="/film-poster.jpg"
+             autoplay muted loop playsinline controls preload="metadata"
+             aria-label="Tafsir Lab demo film"></video>
+      <!-- Browsers will not autoplay with sound, so the film starts silent and
+           this offers the sound rather than assuming it. Hidden while the
+           sound is on; back if the viewer mutes again. -->
+      <button class="film-sound" type="button">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l11-6.5a1 1 0 0 0 0-1.72l-11-6.5A1 1 0 0 0 8 5.5z"/></svg>
+        Play with sound
+      </button>
     </div>
   </div>
 </section>
 
-<!-- ─────────────── STUDY CIRCLE STRIP ─────────────── -->
-<section class="strip">
-  <p class="strip-l">In study circles at</p>
-  <div class="strip-items">
-    <span>Youth Majlis</span>
-  </div>
-</section>
+<!-- ── Features ── -->
+<section class="band" id="features">
+  <div class="band-in">
+    <h2 class="h2">Everything an āyah needs.</h2>
+    <p class="sub">One workspace for the whole of your study, from the first reading to the notes you come back to years later.</p>
 
-<!-- ─────────────── VIDEO SHOWCASE ─────────────── -->
-<section class="showcase" id="watch">
-  <div class="section-head section-head-c">
-    <p class="eyebrow">A short tour</p>
-    <h2 class="h2">Seventy-two seconds of someone actually using it.</h2>
-    <p class="lede">Editor, scholar shortcuts, the 67-tafsīr library, ink on the Mushaf, live multiplayer, and workspaces — one continuous tour.</p>
-  </div>
-
-  <div class="showcase-frame">
-    <div class="showcase-chrome">
-      <span class="frame-dot d1"></span>
-      <span class="frame-dot d2"></span>
-      <span class="frame-dot d3"></span>
-      <span class="frame-tab">tafsirlab.app · feature trailer</span>
-      <span class="showcase-rec"><span class="rec-dot"></span> 1080p</span>
-    </div>
-    <video class="showcase-video"
-           src="trailer.mp4"
-           autoplay
-           muted
-           loop
-           controls
-           playsinline
-           preload="auto"
-           poster=""></video>
-
-    <!-- The bed and the cues only reach anyone if they can turn them on:
-         browsers refuse autoplay with sound, so the video stays muted to keep
-         auto-previewing and this offers the sound rather than assuming it.
-         The styles and the handler for it already existed; only the button
-         was missing. -->
-    <button class="showcase-unmute" type="button" aria-label="Play the tour with sound">
-      <span class="unmute-icon" aria-hidden="true">&#9654;</span>
-      Play with sound
-    </button>
-  </div>
-
-  <p class="showcase-cap">A guided tour of the whole app — read, annotate, write, and study together.</p>
-</section>
-
-<!-- ─────────────── PILLARS ─────────────── -->
-<section class="pillars">
-  <div class="section-head">
-    <p class="eyebrow">What you get</p>
-    <h2 class="h2">Three surfaces, and none of them make you leave the page.</h2>
-  </div>
-  <div class="pillars-grid">
-    <article class="pillar">
-      <div class="pillar-num">01</div>
-      <h3>The Editor</h3>
-      <p>A blocks-based document with verse blocks, callouts, and a slash menu tuned for tafsir. Arabic and English flow side by side. Real-time multiplayer.</p>
-      <a class="link" href="#editor">Open the editor →</a>
-    </article>
-    <article class="pillar">
-      <div class="pillar-num">02</div>
-      <h3>The Mushaf</h3>
-      <p>Every page of the Madinah Mushaf, ink-annotatable. Circle a verse, tag a juzʾ, sketch a margin gloss. Your ink syncs across every device.</p>
-      <a class="link" href="#mushaf">Open the mushaf →</a>
-    </article>
-    <article class="pillar">
-      <div class="pillar-num">03</div>
-      <h3>The Library</h3>
-      <p>Sixty-seven classical tafāsīr — al-Ṭabarī, al-Qurṭubī, al-Rāzī, Ibn Kathīr, al-Saʿdī and more — in English and Arabic, indexed verse-by-verse. Pull commentary into the margin without breaking your reading flow.</p>
-      <a class="link" href="#scholarship">Open the library →</a>
-    </article>
-  </div>
-</section>
-
-<!-- ─────────────── EDITOR DEEP-DIVE ─────────────── -->
-<section class="deep" id="editor">
-  <div class="deep-copy">
-    <p class="eyebrow">The editor</p>
-    <h2 class="h2">Writing should still feel like writing, even when four people are doing it at once.</h2>
-    <p class="lede">
-      A blocks editor where verses are first-class objects. Type <span class="kbd">/</span> to insert
-      a verse, a callout, a translation pair, or a Mushaf clip. Mention any āyah with <span class="kbd">@</span> and
-      we resolve it to its canonical reference.
-    </p>
-
-    <ul class="check-list">
-      <li><span class="cl-i">↳</span><strong>Multiplayer.</strong> Live cursors, presence pips, last-edit chips.</li>
-      <li><span class="cl-i">↳</span><strong>Verse blocks.</strong> Arabic, transliteration, and translation, locked together.</li>
-      <li><span class="cl-i">↳</span><strong>Cross-reference autocomplete.</strong> Type <span class="kbd">@2:255</span>, get Āyat al-Kursī.</li>
-      <li><span class="cl-i">↳</span><strong>Markdown in, markdown out.</strong> Paste your old notes; export when you’re done.</li>
-    </ul>
-  </div>
-
-  <div class="deep-stage">
-    <!-- mini editor with playback -->
-    <div class="mini-editor">
-      <div class="me-head">
-        <span class="me-crumb">Tafsir 101 / Al-Baqara / 2:255</span>
-        <span class="me-status"><span class="presence-pip" style="background:oklch(0.55 0.08 160)"></span> Saved · 12s ago</span>
-      </div>
-      <div class="me-body">
-        <p class="me-tag">SURAT AL-BAQARA · ĀYAT AL-KURSĪ · 2:255</p>
-        <h3 class="me-h">The throne is the world that holds the worlds</h3>
-
-        <div class="verse compact">
-          <div class="verse-h">
-            <span><span class="verse-pip"></span> AL-BAQARA · 2:255</span>
-          </div>
-          <div class="verse-ar">وَسِعَ كُرْسِيُّهُ ٱلسَّمَـٰوَٰتِ وَٱلْأَرْضَ</div>
-          <div class="verse-en"><span class="vnum">255</span>His Throne extends over the heavens and the earth.</div>
+    <div class="tiles">
+      <article class="tile tile-wide">
+        <div class="tile-copy">
+          <h3>The Mushaf, page by page.</h3>
+          <p>The Madinah Mushaf in its own page layout. Tap a word or an āyah and a note opens right there, tied to it.</p>
         </div>
-
-        <p class="me-p" id="typingP">
-          <span id="typed"></span><span id="caret" class="caret-blink"></span>
-        </p>
-
-        <div class="me-slash" id="slash">
-          <div class="slash-h">Insert</div>
-          <div class="slash-row" data-sel="true"><span class="slash-i">⤓</span><span class="slash-n">Verse block</span><span class="slash-k">/v</span></div>
-          <div class="slash-row"><span class="slash-i">✎</span><span class="slash-n">Callout</span><span class="slash-k">/c</span></div>
-          <div class="slash-row"><span class="slash-i">⌘</span><span class="slash-n">Mushaf clip</span><span class="slash-k">/m</span></div>
-          <div class="slash-row"><span class="slash-i">⌥</span><span class="slash-n">Word-by-word</span><span class="slash-k">/w</span></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="deep-aside">
-      <p class="aside-l">Slash menu</p>
-      <p>Eight blocks. None invented for the sake of it.</p>
-    </div>
-  </div>
-</section>
-
-<!-- ─────────────── MUSHAF DEEP-DIVE ─────────────── -->
-<section class="deep deep-dark" id="mushaf">
-  <div class="deep-stage">
-    <figure class="mushaf-shot">
-      <img src="mushaf-annotations.png" width="1560" height="1100" loading="lazy" decoding="async"
-           alt="Page 1 of the Mushaf, Surat al-Fatihah, with handwritten margin notes and highlights anchored to individual words">
-      <figcaption>
-        <span class="presence-pip" style="background:oklch(0.62 0.11 70)"></span>
-        Ismail is annotating page ١
-      </figcaption>
-    </figure>
-  </div>
-
-  <div class="deep-copy">
-    <p class="eyebrow on-dark">The Mushaf</p>
-    <h2 class="h2 on-dark">Ink that doesn’t<br>belong to the device.</h2>
-    <p class="lede on-dark">
-      The full Madinah Mushaf, page-faithful and zoomable. Annotate with pressure-sensitive
-      ink, tag āyāt with juzʾ markers, drop sticky notes in the margin. Your ink is bound to
-      the verse, not the page — it follows you to every reader who opens the same workspace.
-    </p>
-    <ul class="check-list on-dark">
-      <li><span class="cl-i">↳</span><strong>Pen, highlighter, and stamp tools.</strong></li>
-      <li><span class="cl-i">↳</span><strong>Layered annotations</strong> — toggle teacher’s ink on or off.</li>
-      <li><span class="cl-i">↳</span><strong>Stylus-grade input</strong> — Apple Pencil, S-Pen, Wacom.</li>
-      <li><span class="cl-i">↳</span><strong>Print-perfect export.</strong> Send a marked-up juzʾ to your students.</li>
-    </ul>
-  </div>
-</section>
-
-<!-- ─────────────── WORKSPACES ─────────────── -->
-<section class="deep" id="workspaces">
-  <div class="deep-copy">
-    <p class="eyebrow">Workspaces</p>
-    <h2 class="h2">A workspace can be yours alone, or it can belong to your whole halaqa.</h2>
-    <p class="lede">
-      Every workspace is a folder of surahs, pages, and notes — owned by one person, by a
-      class, or by a community. Invite by link, by domain, or keep a workspace strictly
-      between you and the page.
-    </p>
-    <ul class="check-list">
-      <li><span class="cl-i">↳</span><strong>Three permission tiers</strong> — owner, editor, reader.</li>
-      <li><span class="cl-i">↳</span><strong>Per-surah branching</strong> — each surah is its own document.</li>
-      <li><span class="cl-i">↳</span><strong>Live cursors</strong> across editor, mushaf, and drawer.</li>
-      <li><span class="cl-i">↳</span><strong>Read-only publish</strong> — share a finished tafsir as a public page.</li>
-    </ul>
-  </div>
-
-  <div class="deep-stage">
-    <div class="ws-grid">
-      <article class="ws-card ws-card-acc">
-        <div class="ws-card-h">
-          <span class="ws-avatar" style="background:linear-gradient(135deg,oklch(0.55 0.08 160),oklch(0.42 0.07 160))">Y</span>
-          <div>
-            <p class="ws-name">Yahya · Personal</p>
-            <p class="ws-sub">Private · 1 member</p>
-          </div>
-        </div>
-        <p class="ws-line">23 surahs · 412 notes</p>
-        <p class="ws-line ws-mono">last touched · 2026-04-30</p>
-        <div class="ws-pills">
-          <span class="ws-pill">tafsir</span>
-          <span class="ws-pill">draft</span>
-        </div>
+        <img class="tile-shot" src="/mushaf-annotations.png" width="1560" height="1100" loading="lazy" decoding="async"
+             alt="A page of the Mushaf, Sūrat al-Fātiḥah, with handwritten notes and highlights tied to individual words">
       </article>
 
-      <article class="ws-card">
-        <div class="ws-card-h">
-          <span class="ws-avatar" style="background:linear-gradient(135deg,oklch(0.62 0.11 70),oklch(0.5 0.1 70))">TH</span>
-          <div>
-            <p class="ws-name">Tuesday Halaqa</p>
-            <p class="ws-sub">Shared · 14 members</p>
-          </div>
-        </div>
-        <p class="ws-line">Currently studying — Al-Mulk</p>
-        <p class="ws-line ws-mono">3 collaborators online</p>
-        <div class="ws-presence-row">
-          <span class="presence-pip" style="background:oklch(0.55 0.08 160)"></span>
-          <span class="presence-pip" style="background:oklch(0.62 0.11 70)"></span>
-          <span class="presence-pip" style="background:oklch(0.52 0.12 275)"></span>
-          <span class="presence-pip" style="background:oklch(0.5 0.18 25)"></span>
-          <span class="presence-more">+10</span>
-        </div>
+      <article class="tile">
+        <h3>Your own hand.</h3>
+        <p>Write on the page with an Apple Pencil, a stylus or a mouse. The ink stays with the āyah, on every device.</p>
       </article>
 
-      <article class="ws-card">
-        <div class="ws-card-h">
-          <span class="ws-avatar" style="background:linear-gradient(135deg,oklch(0.52 0.12 275),oklch(0.42 0.11 275))">QS</span>
-          <div>
-            <p class="ws-name">Qalam Seminary 2026</p>
-            <p class="ws-sub">Class · 87 members</p>
-          </div>
-        </div>
-        <p class="ws-line">Module 4 — Sūrat Yūsuf</p>
-        <p class="ws-line ws-mono">teacher · ust. Musa</p>
-        <div class="ws-pills">
-          <span class="ws-pill">course</span>
-          <span class="ws-pill">read-only</span>
-        </div>
+      <article class="tile">
+        <h3>116 tafāsīr.</h3>
+        <p>Al-Ṭabarī, al-Qurṭubī, Ibn Kathīr, al-Saʿdī and many more, in 33 languages, a keystroke from the verse.</p>
       </article>
 
-      <article class="ws-card ws-card-empty">
-        <div class="ws-empty-plus">+</div>
-        <p class="ws-empty-l">New workspace</p>
-        <p class="ws-empty-s">Solo, halaqa, or class.</p>
+      <article class="tile">
+        <h3>Study together.</h3>
+        <p>Share a workspace with a halaqa or a class and see each other writing, live.</p>
       </article>
-    </div>
-  </div>
-</section>
 
-<!-- ─────────────── STUDY MODES ─────────────── -->
-<section class="pillars" id="modes">
-  <div class="section-head">
-    <p class="eyebrow">New — how a workspace opens</p>
-    <h2 class="h2">Begin at the Mushaf, at a blank board, or inside a book.</h2>
-  </div>
-  <div class="pillars-grid">
-    <article class="pillar">
-      <div class="pillar-num" style="font-size:22px">☾</div>
-      <h3>Qurʾān study</h3>
-      <p>All 114 sūrahs, the Madinah Mushaf, verse-linked tafsir, and word-level notes — the full study desk you already know.</p>
-    </article>
+      <article class="tile">
+        <h3>Boards.</h3>
+        <p>An open board for a week’s lesson. Pull in any āyah with <span class="kbd">/ayah</span> or any tafsīr with <span class="kbd">/tafsir</span>.</p>
+      </article>
 
-    <article class="pillar">
-      <div class="pillar-num" style="font-size:22px">◇</div>
-      <h3>Blank boards</h3>
-      <p>Infinite whiteboards for a weekly halaqa or loose ideas. Drop note cards anywhere, pull in any verse or tafsir with <code>/ayah</code> and <code>/tabari</code>, and annotate freely with the pen. Spin up a fresh board each week under one class.</p>
-    </article>
+      <article class="tile">
+        <h3>Books.</h3>
+        <p>Study a matn as its PDF, with notes and ink around it, from your own shelf or ours.</p>
+      </article>
 
-    <article class="pillar">
-      <div class="pillar-num" style="font-size:22px">📚</div>
-      <h3>Book study <span class="ws-pill" style="vertical-align:middle">new</span></h3>
-      <p>Open a PDF and annotate <em>over and around it</em> — pen, highlighter, and rich note cards on an infinite canvas. Upload your own, or start from our shelf of classical mutūn:</p>
-      <div class="ws-pills" style="margin-top:12px;flex-wrap:wrap;gap:6px">
-        <span class="ws-pill">Al-ʿAqīdah al-Wāsiṭiyyah</span>
-        <span class="ws-pill">The Forty Ḥadīth</span>
-        <span class="ws-pill">Al-Ājurrūmiyyah</span>
-        <span class="ws-pill">Al-Waraqāt</span>
-        <span class="ws-pill">Al-Bayqūniyyah</span>
-        <span class="ws-pill">Matn Abī Shujāʿ</span>
-        <span class="ws-pill">Thalāthat al-Uṣūl</span>
-        <span class="ws-pill">Shamāʾil</span>
-        <span class="ws-pill">+ 5 more</span>
-      </div>
-    </article>
-  </div>
-</section>
+      <article class="tile">
+        <h3>Ḥadīth.</h3>
+        <p>An-Nawawī’s Forty, each ḥadīth a page of its own to study.</p>
+      </article>
 
-<!-- ─────────────── SCHOLARSHIP / DRAWER ─────────────── -->
-<section class="scholarship" id="scholarship">
-  <div class="section-head section-head-c">
-    <p class="eyebrow">The margin</p>
-    <h2 class="h2">Sixty-seven commentaries, and not one of them further than a keystroke from the āyah.</h2>
-    <p class="lede">
-      Open the drawer on any verse and read al-Ṭabarī, al-Qurṭubī, al-Rāzī, Ibn Kathīr,
-      al-Saʿdī, al-Baghawī, the Jalālayn — 12 English and 55 Arabic tafāsīr, every one
-      indexed verse-by-verse, filterable by language with one tap. Word-by-word
-      morphology beneath every āyah.
-    </p>
-  </div>
-
-  <div class="drawer-demo">
-    <!-- the document side, dimmed -->
-    <div class="drawer-doc">
-      <p class="doc-tag">SURAT AL-IKHLĀṢ · 112:1–4</p>
-      <h3 class="doc-h doc-h-sm">A four-verse statement of pure tawḥīd</h3>
-      <p class="doc-p">
-        The chapter is short enough to memorise in a breath, and dense enough
-        that ten centuries of commentary haven’t exhausted it. Tap any verse
-        below to open the drawer →
-      </p>
-      <div class="verse">
-        <div class="verse-h">
-          <span><span class="verse-pip"></span> AL-IKHLĀṢ · 112:1</span>
+      <article class="tile tile-wide tile-accent">
+        <div class="tile-copy">
+          <h3>Arabic, as you learn it.</h3>
+          <p>Bring your course’s vocabulary, practise it, and see the words you know coloured on the Mushaf as you read.</p>
         </div>
-        <div class="verse-ar">قُلْ هُوَ ٱللَّهُ أَحَدٌ</div>
-        <div class="verse-en"><span class="vnum">1</span>Say: He is Allah, the One.</div>
-      </div>
-      <div class="verse verse-active">
-        <div class="verse-h">
-          <span><span class="verse-pip"></span> AL-IKHLĀṢ · 112:2</span>
-          <span class="verse-tools"><span class="vt vt-active">↗ Drawer open</span></span>
-        </div>
-        <div class="verse-ar">ٱللَّهُ ٱلصَّمَدُ</div>
-        <div class="verse-en"><span class="vnum">2</span>Allah, the Eternal, the Absolute.</div>
-      </div>
-    </div>
-
-    <!-- drawer -->
-    <aside class="drawer">
-      <header class="drawer-h">
         <div>
-          <p class="drawer-h-l">AL-IKHLĀṢ · 112:2</p>
-          <p class="drawer-h-s">67 sources · English &amp; Arabic</p>
-        </div>
-        <span class="drawer-x">×</span>
-      </header>
-
-      <div class="drawer-tabs">
-        <span class="drawer-tab drawer-tab-active">Commentary</span>
-        <span class="drawer-tab">Translations</span>
-        <span class="drawer-tab">Word-by-word</span>
-        <span class="drawer-tab">Discussion <span class="badge">3</span></span>
-      </div>
-
-      <div class="drawer-langs">
-        <span class="dl-l">Language</span>
-        <span class="dl-chip dl-active">All</span>
-        <span class="dl-chip">EN · 12</span>
-        <span class="dl-chip">AR · 55</span>
-      </div>
-
-      <div class="drawer-body scroll">
-
-        <div class="drawer-verse">
-          <div class="dv-ar">ٱللَّهُ ٱلصَّمَدُ</div>
-          <div class="dv-en">Allah, the Eternal, the Absolute.</div>
-        </div>
-
-        <div class="commentary">
-          <div class="commentary-h">
-            <span class="comm-avatar">ك</span>
-            <div>
-              <p class="comm-name">Tafsīr Ibn Kathīr</p>
-              <p class="comm-sub">d. 774 AH · 1373 CE</p>
-            </div>
-            <span class="comm-link">↗</span>
-          </div>
-          <p class="comm-p">
-            <em>Al-Ṣamad</em> — “the master who is complete in His mastership.”
-            He is the One to whom every creature turns in every need, who needs
-            no other. He is owed what He is owed by virtue of who He is, not by
-            what He has done for any creature.
-            <span class="ar-inline">ٱلَّذِى يُصْمَدُ إِلَيْهِ</span>
-            All creation depends on Him for its origin and its continuation; He
-            depends on no one. This is the meaning of <em>al-ṣamad</em>.
+          <p class="tile-ar" lang="ar" dir="rtl" aria-label="Al-Fātiḥah 1:2, with each word coloured by how well it is known">
+            <span class="w-known">ٱلۡحَمۡدُ</span> <span class="w-known">لِلَّهِ</span> <span class="w-almost">رَبِّ</span> <span class="w-learning">ٱلۡعَٰلَمِينَ</span>
           </p>
+          <p class="tile-legend" aria-hidden="true"><span><i style="background:var(--known)"></i>Learnt</span><span><i style="background:var(--almost)"></i>Almost</span><span><i style="background:var(--learning)"></i>Learning</span></p>
         </div>
-
-        <div class="commentary">
-          <div class="commentary-h">
-            <span class="comm-avatar comm-avatar-2">س</span>
-            <div>
-              <p class="comm-name">Tafsīr al-Saʿdī</p>
-              <p class="comm-sub">d. 1376 AH · 1956 CE</p>
-            </div>
-            <span class="comm-lang">AR</span>
-          </div>
-          <p class="comm-p comm-p-ar">
-            ﴿ٱللَّهُ ٱلصَّمَدُ﴾ أي: المقصودُ في جميع الحوائج، فأهلُ العالم العلويّ
-            والسفليّ يصمدون إليه ويسألونه حوائجَهم، ويرغبون إليه في مهمّاتهم؛
-            لأنه الكامل في أوصافه…
-          </p>
-        </div>
-
-        <div class="commentary commentary-soon">
-          <p class="comm-soon-l">+ 65 more sources in this drawer</p>
-          <p class="comm-soon-s">al-Ṭabarī · al-Qurṭubī · al-Rāzī · al-Baghawī · Jalālayn · al-Muyassar …</p>
-        </div>
-
-      </div>
-    </aside>
-  </div>
-
-  <!-- the shelf: full tafsir catalog -->
-  <div class="library-wall">
-    <div class="lw-head">
-      <p class="lw-count"><span class="lw-num">67</span> tafāsīr on the shelf</p>
-      <p class="lw-sub">12 English · 55 Arabic — every one indexed to the āyah</p>
-    </div>
-    <div class="lw-chips">
-      <span class="lw-chip"><i class="lw-lang lw-ar">AR</i>Tafsīr al-Ṭabarī</span>
-      <span class="lw-chip"><i class="lw-lang lw-ar">AR</i>Tafsīr al-Qurṭubī</span>
-      <span class="lw-chip"><i class="lw-lang lw-en">EN</i>Tafsīr Ibn Kathīr</span>
-      <span class="lw-chip"><i class="lw-lang lw-ar">AR</i>Tafsīr Ibn Kathīr</span>
-      <span class="lw-chip"><i class="lw-lang lw-ar">AR</i>Tafsīr al-Rāzī</span>
-      <span class="lw-chip"><i class="lw-lang lw-ar">AR</i>Tafsīr al-Saʿdī</span>
-      <span class="lw-chip"><i class="lw-lang lw-ar">AR</i>Tafsīr al-Baghawī</span>
-      <span class="lw-chip"><i class="lw-lang lw-en">EN</i>Al-Jalālayn</span>
-      <span class="lw-chip"><i class="lw-lang lw-ar">AR</i>Tafsīr al-Jalālayn</span>
-      <span class="lw-chip"><i class="lw-lang lw-ar">AR</i>al-Taḥrīr wa-l-Tanwīr · Ibn ʿĀshūr</span>
-      <span class="lw-chip"><i class="lw-lang lw-ar">AR</i>Fatḥ al-Qadīr · al-Shawkānī</span>
-      <span class="lw-chip"><i class="lw-lang lw-ar">AR</i>al-Kashshāf · al-Zamakhsharī</span>
-      <span class="lw-chip"><i class="lw-lang lw-ar">AR</i>Tafsīr al-Bayḍāwī</span>
-      <span class="lw-chip"><i class="lw-lang lw-ar">AR</i>Rūḥ al-Maʿānī · al-Ālūsī</span>
-      <span class="lw-chip"><i class="lw-lang lw-ar">AR</i>Tafsīr Ibn al-Qayyim</span>
-      <span class="lw-chip"><i class="lw-lang lw-ar">AR</i>Tafsīr Ibn ʿUthaymīn</span>
-      <span class="lw-chip"><i class="lw-lang lw-ar">AR</i>al-Muyassar</span>
-      <span class="lw-chip"><i class="lw-lang lw-en">EN</i>Al-Mukhtaṣar</span>
-      <span class="lw-chip"><i class="lw-lang lw-en">EN</i>Maʿārif al-Qurʾān</span>
-      <span class="lw-chip"><i class="lw-lang lw-en">EN</i>Asbāb al-Nuzūl · al-Wāḥidī</span>
-      <span class="lw-chip"><i class="lw-lang lw-en">EN</i>Tanwīr al-Miqbās</span>
-      <span class="lw-chip"><i class="lw-lang lw-en">EN</i>Tafsīr al-Tustarī</span>
-      <span class="lw-chip"><i class="lw-lang lw-en">EN</i>al-Qushayrī</span>
-      <span class="lw-chip"><i class="lw-lang lw-ar">AR</i>al-Nukat wa-l-ʿUyūn · al-Māwardī</span>
-      <span class="lw-chip"><i class="lw-lang lw-ar">AR</i>Zād al-Masīr · Ibn al-Jawzī</span>
-      <span class="lw-chip"><i class="lw-lang lw-ar">AR</i>Tafsīr al-Nasafī</span>
-      <span class="lw-chip"><i class="lw-lang lw-ar">AR</i>al-Baḥr al-Muḥīṭ · Abū Ḥayyān</span>
-      <span class="lw-chip lw-chip-more">+ 40 more</span>
-    </div>
-  </div>
-
-  <!-- word-by-word strip -->
-  <div class="wbw-strip">
-    <p class="wbw-h">— Word-by-word · 112:2</p>
-    <div class="wbw">
-      <div class="wbw-c">
-        <p class="wbw-ar">ٱللَّهُ</p>
-        <p class="wbw-tr">Allāhu</p>
-        <p class="wbw-en">Allah</p>
-        <p class="wbw-pos">PN · NOM</p>
-      </div>
-      <div class="wbw-c">
-        <p class="wbw-ar">ٱلصَّمَدُ</p>
-        <p class="wbw-tr">aṣ-ṣamad</p>
-        <p class="wbw-en">the Eternal</p>
-        <p class="wbw-pos">N · NOM · DEF</p>
-      </div>
-      <div class="wbw-c wbw-c-empty">
-        <p class="wbw-pos">root</p>
-        <p class="wbw-ar root">ص م د</p>
-        <p class="wbw-en">to repair to</p>
-        <p class="wbw-pos">8 occurrences</p>
-      </div>
+      </article>
     </div>
   </div>
 </section>
 
-<!-- ─────────────── QUOTE / VERSE ─────────────── -->
-<section class="quote-section">
-  <div class="quote-frame">
-    <p class="quote-ar">ٱقْرَأْ وَرَبُّكَ ٱلْأَكْرَمُ ۙ ٱلَّذِى عَلَّمَ بِٱلْقَلَمِ</p>
-    <p class="quote-en">Read, and your Lord is the Most Generous — who taught by the pen.</p>
-    <p class="quote-cite">— Al-ʿAlaq · 96:3–4</p>
+<!-- ── Free ── -->
+<section class="band band-soft" id="free">
+  <div class="band-in band-narrow">
+    <h2 class="h2">Free. For everyone, for good.</h2>
+    <p class="sub">Nobody should have to pay to sit with the Qurʾān. Everything is open to everyone, whether you read alone, run a weekly halaqa, or teach a class.</p>
+    <ul class="free-list">
+      <li>Unlimited workspaces</li>
+      <li>The whole Mushaf, with notes and ink</li>
+      <li>Every tafsīr, in every language</li>
+      <li>Shared workspaces for your circle</li>
+    </ul>
+    <a href="#" class="btn btn-lg js-beta-gate">Open Tafsir Lab</a>
   </div>
 </section>
 
-<!-- ─────────────── PRICING ─────────────── -->
-<section class="pricing" id="pricing">
-  <div class="section-head">
-    <p class="eyebrow">What it costs</p>
-    <h2 class="h2">It costs nothing, and it is going to stay that way.</h2>
-    <p class="lede">Nobody should have to pay to sit with the Qurʾān. Everything is unlocked for everyone — whether you read on your own, run a weekly halaqa, or teach a class of eighty.</p>
-  </div>
-
-  <div class="price-grid price-grid-2">
-    <article class="price price-feat price-wide">
-      <p class="price-tag">For everyone</p>
-      <p class="price-name">Tafsir Lab</p>
-      <p class="price-fig"><span class="price-amt">$0</span><span class="price-per">/forever · for everyone</span></p>
-      <ul class="price-list price-list-2col">
-        <li>Unlimited personal workspaces</li>
-        <li>Full Mushaf annotation</li>
-        <li>All 67 tafāsīr — English &amp; Arabic</li>
-        <li>Word-by-word for every verse</li>
-        <li>Live cursors + presence</li>
-        <li>Shared halaqa workspaces</li>
-        <li>Lesson plans + assignments</li>
-        <li>Read-only public publishing</li>
-      </ul>
-      <a href="#" class="btn btn-primary btn-block js-beta-gate">Open the lab — free →</a>
-    </article>
-
-    <article class="price">
-      <p class="price-name">Institution</p>
-      <p class="price-fig"><span class="price-amt">Talk to us</span></p>
-      <ul class="price-list">
-        <li>Everything in Tafsir Lab</li>
-        <li>SAML SSO + domain capture</li>
-        <li>Org-wide library + branding</li>
-        <li>Audit log + retention controls</li>
-        <li>White-glove onboarding</li>
-      </ul>
-      <a href="#" class="btn btn-ghost btn-block">Contact sales</a>
-    </article>
-  </div>
-
-  <p class="price-foot">No card required. No paid tier. Donations toward server costs are welcome but never asked for.</p>
-</section>
-
-<!-- ─────────────── FAQ ─────────────── -->
-<section class="faq">
-  <div class="section-head">
-    <p class="eyebrow">Questions</p>
-    <h2 class="h2">The things people actually ask us.</h2>
-  </div>
-  <div class="faq-grid">
-    <details class="faq-i" open>
-      <summary>Is the Arabic text verified?</summary>
-      <p>Yes. Our base text is the Madinah Mushaf, cross-checked against tanzil.net. We do not edit the rasm or the diacritical marks under any circumstance.</p>
-    </details>
-    <details class="faq-i">
-      <summary>Which tafāsīr do you ship?</summary>
-      <p>Sixty-seven — twelve in English and fifty-five in Arabic. Al-Ṭabarī, al-Qurṭubī, al-Rāzī, Ibn Kathīr, al-Saʿdī, al-Baghawī, the Jalālayn, Ibn ʿĀshūr, al-Shawkānī, and many more — each indexed verse-by-verse and filterable by language in the drawer.</p>
-    </details>
-    <details class="faq-i">
-      <summary>Who owns the notes I write?</summary>
-      <p>You do. Export everything as Markdown + PNG at any time. We don’t train models on your study notes.</p>
-    </details>
-    <details class="faq-i">
-      <summary>How is multiplayer different from a Google Doc?</summary>
-      <p>Verse blocks are atomic. You can’t accidentally chop an āyah in half mid-merge. Comments anchor to verse references, not to character offsets, so they survive any rewrite.</p>
-    </details>
+<!-- ── Questions ── -->
+<section class="band" id="questions">
+  <div class="band-in band-narrow">
+    <h2 class="h2">Questions.</h2>
+    <div class="faq">
+      <details open>
+        <summary>Is the Arabic text verified?</summary>
+        <p>The Mushaf is set in the King Fahd Complex’s own page fonts, as published by Quran.com, so every page matches the printed Madinah Mushaf. We never edit the text.</p>
+      </details>
+      <details>
+        <summary>Who owns what I write?</summary>
+        <p>You do. Export any page whenever you like. Your notes are not used to train anything.</p>
+      </details>
+      <details>
+        <summary>Can I study with other people?</summary>
+        <p>Yes. Invite anyone to a workspace; you will see each other’s cursors and writing as it happens.</p>
+      </details>
+      <details>
+        <summary>Does it cost anything?</summary>
+        <p>No, and it will stay that way. There is no paid tier.</p>
+      </details>
+    </div>
   </div>
 </section>
 
-<!-- ─────────────── FINAL CTA ─────────────── -->
-<section class="final-cta">
-  <p class="quote-ar small">بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ</p>
-  <h2 class="h1">Somewhere to put<br><span class="h1-em">what you notice.</span></h2>
-  <p class="lede center">A workspace takes about ten seconds to make. Bring a friend, bring a class, or bring nobody at all.</p>
-  <div class="hero-cta center">
-    <a href="#" class="btn btn-primary btn-lg js-beta-gate">Create a workspace</a>
-    <a href="#" class="btn btn-ghost btn-lg">Read the docs</a>
-  </div>
+<!-- ── Close ── -->
+<section class="close">
+  <p class="close-ar" lang="ar" dir="rtl">ٱقۡرَأۡ وَرَبُّكَ ٱلۡأَكۡرَمُ ٱلَّذِي عَلَّمَ بِٱلۡقَلَمِ</p>
+  <p class="close-en">Recite, and your Lord is the most Generous, who taught by the pen. <span>96:3–4</span></p>
+  <a href="#" class="btn btn-lg js-beta-gate">Open Tafsir Lab</a>
 </section>
 
 </main>
 
-<!-- ─────────────── FOOTER ─────────────── -->
 <footer class="foot">
-  <div class="foot-top">
-    <div class="foot-brand">
-      <a class="brand brand-foot" href="#top">
-        <span class="brand-mark">T</span>
-        <span class="brand-word">Tafsir<span class="brand-word-2">Lab</span></span>
-      </a>
-      <p class="foot-tag">A study desk for the Qurʾān, made for serious readers and the people they read with.</p>
-      <p class="foot-built">Made in the UK 🇬🇧</p>
-    </div>
-    <div class="foot-cols">
-      <div>
-        <p class="foot-col-h">Product</p>
-        <a href="#editor">Editor</a><a href="#mushaf">Mushaf</a><a href="#scholarship">Library</a><a href="#workspaces">Workspaces</a><a href="#pricing">Pricing</a>
-      </div>
-    </div>
-  </div>
-  <div class="foot-bot">
-    <span>© 2026 Tafsir Lab · Made in the UK</span>
-    <span class="foot-mono">v0.4.2 · public beta</span>
+  <div class="foot-in">
+    <span class="brand brand-foot"><span class="mark" aria-hidden="true">T</span><span class="brand-word">Tafsir Lab</span></span>
+    <span class="foot-note">A desk for the Qurʾān. Made in the UK.</span>
+    <span class="foot-note">© 2026 Tafsir Lab</span>
   </div>
 </footer>
 
-<!-- ─────────────── BETA GATE MODAL ─────────────── -->
-<div id="beta-modal" class="beta-modal" role="dialog" aria-modal="true" aria-labelledby="beta-modal-title" hidden>
-  <div class="beta-modal-backdrop"></div>
-  <div class="beta-modal-card">
-    <div class="beta-modal-logo">T</div>
-    <h2 class="beta-modal-title" id="beta-modal-title">Private Beta</h2>
-    <p class="beta-modal-sub">Enter your access code to continue</p>
-    <form id="beta-modal-form" class="beta-modal-form" novalidate>
-      <input
-        id="beta-modal-input"
-        class="beta-modal-input"
-        type="password"
-        placeholder="Access code"
-        autocomplete="off"
-        aria-label="Beta access code"
-      />
-      <p id="beta-modal-error" class="beta-modal-error" hidden></p>
-      <button class="beta-modal-btn" type="submit">Continue →</button>
+<!-- ── Access code ── -->
+<div id="beta-modal" class="gate" role="dialog" aria-modal="true" aria-labelledby="gate-title" hidden>
+  <div class="gate-backdrop"></div>
+  <div class="gate-card">
+    <span class="mark mark-lg" aria-hidden="true">T</span>
+    <h2 class="gate-title" id="gate-title">Private beta.</h2>
+    <p class="gate-sub">Enter your access code to continue.</p>
+    <form id="beta-modal-form" class="gate-form" novalidate>
+      <input id="beta-modal-input" class="gate-input" type="password" placeholder="Access code" autocomplete="off" aria-label="Access code" />
+      <button class="gate-go" type="submit" aria-label="Continue">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </button>
     </form>
-    <p class="beta-modal-alt">
-      No code yet? <a href="/waitlist">Join the waitlist</a>
-    </p>
-    <button class="beta-modal-close" type="button" aria-label="Close">✕</button>
+    <p id="beta-modal-error" class="gate-error" role="alert" hidden></p>
+    <p class="gate-alt">No code yet? <a href="/waitlist">Join the waitlist</a></p>
+    <button class="gate-close" type="button" aria-label="Close">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
   </div>
 </div>
 
-<script src="site.js"></script>
+<script src="/landing.js"></script>
 </body>
 </html>
