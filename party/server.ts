@@ -18,16 +18,21 @@
  *   • App connections (lib/collab/useRoom's PartySocket) — speak JSON:
  *     presence-update / stroke-segment / stroke-complete / ping.
  *
+ * And plain requests to /parties/main/<pageId>/ink: the page's handwriting,
+ * which lives in the room's own storage (party/ink.ts) rather than in the
+ * database.
+ *
  * JSON traffic must NEVER reach Yjs provider connections (their handler
  * expects binary and chokes on strings), so connections that have spoken JSON
  * are tracked as "app" connections and presence + strokes go only to those.
  */
 
-import { routePartykitRequest, type Connection, type Lobby, type WSMessage } from "partyserver";
+import { getServerByName, routePartykitRequest, type Connection, type Lobby, type WSMessage } from "partyserver";
 import { YServer } from "y-partyserver";
 import * as Y from "yjs";
 import { jwtVerify } from "jose";
 import type { IncomingMessage, PresenceData } from "./types";
+import { ensureInk, importInk, inkSummary, readInk, saveInk, wipeInk } from "./ink";
 
 /** The worker's bindings (worker-configuration.d.ts, from `wrangler types`)
  *  plus the secret shared with the Vercel app, which mints the tokens
@@ -76,6 +81,54 @@ export class TafsirRoom extends YServer {
       type:     "presence-sync",
       presence: Object.fromEntries(this.presence),
     });
+  }
+
+  // ── Ink (party/ink.ts) ─────────────────────────────────────────────────────
+
+  private inkReady = false;
+  private inkSql() {
+    const sql = this.ctx.storage.sql;
+    if (!this.inkReady) { ensureInk(sql); this.inkReady = true; }
+    return sql;
+  }
+
+  /** GET/POST /parties/main/<pageId>/ink — reached only through inkGate, which
+   *  verified the token and set who is asking. */
+  async onRequest(req: Request): Promise<Response> {
+    if (!new URL(req.url).pathname.endsWith("/ink")) return new Response("Not found", { status: 404 });
+    const me = {
+      uid:      req.headers.get("x-tl-uid") ?? "",
+      name:     req.headers.get("x-tl-name") ?? "",
+      canWrite: req.headers.get("x-tl-write") === "1",
+    };
+    if (!me.uid) return new Response("Unauthorised", { status: 401 });
+    const sql = this.inkSql();
+    if (req.method === "GET") {
+      const q = new URL(req.url).searchParams;
+      return readInk(sql, me, q.get("mine"), q.get("others"));
+    }
+    if (req.method === "POST") {
+      let body: unknown;
+      try { body = JSON.parse(await req.text()); } catch { return new Response("Bad JSON", { status: 400 }); }
+      // All of one save, or none of it.
+      return this.ctx.storage.transactionSync(() => saveInk(sql, me, body));
+    }
+    return new Response("Method not allowed", { status: 405 });
+  }
+
+  /** Admin (the app, via /ink-admin): replace an author's ink with a copy. */
+  async inkImport(author: string, name: string, updated: number, strokes: { id: string; surface?: string }[]): Promise<number> {
+    const sql = this.inkSql();
+    return this.ctx.storage.transactionSync(() => importInk(sql, author, name, updated, strokes));
+  }
+  /** Admin: remove one author's ink, or all of it (a deleted page). */
+  async inkWipe(author?: string): Promise<void> {
+    const sql = this.inkSql();
+    this.ctx.storage.transactionSync(() => wipeInk(sql, author));
+  }
+  /** Admin: what is stored, to check a copy. */
+  async inkSummary() {
+    return inkSummary(this.inkSql());
   }
 
   // ── Incoming messages ───────────────────────────────────────────────────────
@@ -169,6 +222,82 @@ async function gate(req: Request, lobby: Lobby, env: RoomEnv): Promise<Response 
 }
 
 /**
+ * Ink request gate. The browser reads and saves a page's ink here directly,
+ * with the same short-lived token the live connection uses (minted after a
+ * workspace-membership check). Verified here, then who is asking travels to
+ * the room in headers this sets, never ones the caller sent. Only /ink is
+ * open to plain requests; anything else is refused.
+ */
+async function inkGate(req: Request, lobby: Lobby, env: RoomEnv): Promise<Response | Request> {
+  if (!new URL(req.url).pathname.endsWith("/ink")) return new Response("Not found", { status: 404 });
+  const secret = env.COLLAB_SECRET || env.SESSION_SECRET;
+  if (!secret) return new Response("collab secret not configured", { status: 401 });
+  const token = new URL(req.url).searchParams.get("token");
+  if (!token) return new Response("missing token", { status: 401 });
+  try {
+    const { payload } = await jwtVerify(token, new TextEncoder().encode(secret));
+    if (payload.room !== lobby.name || typeof payload.uid !== "string") return new Response("token is for a different page", { status: 401 });
+    const headers = new Headers(req.headers);
+    for (const k of ["x-tl-uid", "x-tl-name", "x-tl-write"]) headers.delete(k);
+    headers.set("x-tl-uid", payload.uid);
+    headers.set("x-tl-name", typeof payload.name === "string" ? payload.name : "");
+    // Every member writes (workspaces.service capabilitiesFor: writeContent).
+    headers.set("x-tl-write", ["owner", "admin", "member"].includes(String(payload.role)) ? "1" : "0");
+    return new Request(req, { headers });
+  } catch {
+    return new Response("invalid or expired token", { status: 401 });
+  }
+}
+
+/** The app's own origins, which may read ink from the browser. */
+const INK_ORIGINS = /^(https:\/\/(www\.)?tafsir-lab\.com|https:\/\/tafsir-[a-z0-9-]+\.vercel\.app|http:\/\/localhost:\d+)$/;
+function withCors(res: Response, origin: string | null): Response {
+  if (!origin || !INK_ORIGINS.test(origin)) return res;
+  const out = new Response(res.body, res);
+  out.headers.set("Access-Control-Allow-Origin", origin);
+  out.headers.set("Vary", "Origin");
+  return out;
+}
+
+/**
+ * POST /ink-admin — the app's own operations on ink, signed with the shared
+ * secret and an `admin: "ink"` claim (a page token cannot do this):
+ *   { op: "wipe",    pages: string[], author?: string }  a deleted page, workspace or account
+ *   { op: "import",  page, author, name, updated, strokes }  the copy from the database
+ *   { op: "summary", pages: string[] }  what is stored, to check the copy
+ */
+async function inkAdmin(req: Request, env: RoomEnv): Promise<Response> {
+  const secret = env.COLLAB_SECRET || env.SESSION_SECRET;
+  const token = (req.headers.get("Authorization") ?? "").replace(/^Bearer /, "");
+  if (!secret || !token) return new Response("Unauthorised", { status: 401 });
+  try {
+    const { payload } = await jwtVerify(token, new TextEncoder().encode(secret));
+    if (payload.admin !== "ink") return new Response("Forbidden", { status: 403 });
+  } catch {
+    return new Response("invalid or expired token", { status: 401 });
+  }
+  const b = await req.json() as {
+    op?: string; pages?: string[]; page?: string; author?: string; name?: string; updated?: number;
+    strokes?: { id: string; surface?: string }[];
+  };
+  const room = (id: string) => getServerByName(env.Main, id);
+  if (b.op === "wipe" && Array.isArray(b.pages)) {
+    for (const id of b.pages) await (await room(id)).inkWipe(b.author || undefined);
+    return Response.json({ ok: true, pages: b.pages.length });
+  }
+  if (b.op === "import" && b.page && b.author && Array.isArray(b.strokes)) {
+    const n = await (await room(b.page)).inkImport(b.author, b.name ?? "", Number(b.updated) || Date.now(), b.strokes);
+    return Response.json({ ok: true, strokes: n });
+  }
+  if (b.op === "summary" && Array.isArray(b.pages)) {
+    const out: Record<string, unknown> = {};
+    for (const id of b.pages) out[id] = await (await room(id)).inkSummary();
+    return Response.json(out);
+  }
+  return new Response("Bad request", { status: 400 });
+}
+
+/**
  * GET /files/<key>?token=… — a private file (the /dunya A-level papers).
  *
  * The bucket is not public. The Vercel app, after its own password check,
@@ -212,10 +341,23 @@ export default {
       if (!/^[a-z0-9][a-z0-9/_.-]{0,200}$/.test(key) || key.includes("..")) return new Response("Bad key", { status: 400 });
       return serveFile(req, env, key);
     }
-    return (
-      (await routePartykitRequest(req, env, {
-        onBeforeConnect: (r, lobby) => gate(r, lobby, env),
-      })) ?? new Response("Not found", { status: 404 })
-    );
+    if (req.method === "POST" && url.pathname === "/ink-admin") return inkAdmin(req, env);
+
+    const origin = req.headers.get("Origin");
+    const isInk = url.pathname.endsWith("/ink");
+    // Reads are plain GETs and saves are text/plain POSTs (no preflight, so a
+    // save sent as the tab closes still goes), but answer one if it comes.
+    if (isInk && req.method === "OPTIONS") {
+      return withCors(new Response(null, { status: 204, headers: {
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Max-Age": "86400",
+      } }), origin);
+    }
+    const res = (await routePartykitRequest(req, env, {
+      onBeforeConnect: (r, lobby) => gate(r, lobby, env),
+      onBeforeRequest: (r, lobby) => inkGate(r, lobby, env),
+    })) ?? new Response("Not found", { status: 404 });
+    return isInk ? withCors(res, origin) : res;
   },
 } satisfies ExportedHandler<RoomEnv>;

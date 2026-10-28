@@ -19,6 +19,7 @@ import { SignJWT } from "jose";
 import { getSession } from "@/lib/session";
 import { assertPageAccess } from "@/lib/services/pages.service";
 import { apiError } from "@/lib/api-errors";
+import { db } from "@/lib/db";
 
 function collabSecret(): Uint8Array {
   const s = process.env.COLLAB_SECRET || process.env.SESSION_SECRET;
@@ -35,7 +36,10 @@ export async function GET(
     const { pageId } = await params;
     const { role } = await assertPageAccess(pageId, userId);
 
-    const token = await new SignJWT({ room: pageId, uid: userId, role })
+    /* The name labels this person's ink for others on the page, now that
+       ink is stored in the page's room rather than beside the user record. */
+    const user = await db.user.findUnique({ where: { id: userId }, select: { name: true } });
+    const token = await new SignJWT({ room: pageId, uid: userId, role, name: user?.name ?? "" })
       .setProtectedHeader({ alg: "HS256" })
       .setIssuedAt()
       .setExpirationTime("2m")

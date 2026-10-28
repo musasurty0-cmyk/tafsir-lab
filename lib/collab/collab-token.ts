@@ -72,3 +72,12 @@ export function forgetCollabToken(pageId?: string) {
   if (pageId) cache.delete(pageId);
   else cache.clear();
 }
+
+/**
+ * The token already in hand, if it is still valid — without waiting. For a
+ * save sent as the tab closes, which cannot wait on a network round trip.
+ */
+export function peekCollabToken(pageId: string): string | null {
+  const hit = cache.get(pageId);
+  return hit?.token && hit.expires > Date.now() ? hit.token : null;
+}

@@ -17,6 +17,7 @@
  */
 
 import { paintStroke, type InkStroke } from "@/lib/ink";
+import { readInk } from "@/lib/collab/ink-client";
 
 /** Whiteboard ink lives on this sentinel page (the real Mushaf starts at 1). */
 const WB_PAGE = 0;
@@ -40,7 +41,7 @@ export interface BoardSnapshot {
 
 /** Every stroke on the whiteboard surface, mine and other people's. */
 export async function loadBoardStrokes(pageId: string): Promise<InkStroke[]> {
-  const res = await fetch(`/api/pages/${pageId}/drawings`).catch(() => null);
+  const res = await readInk(pageId).catch(() => null);
   if (!res?.ok) return [];
   const data = await res.json().catch(() => null) as {
     myStrokes?: unknown[];

@@ -121,12 +121,12 @@ export default async function WorkspaceHomePage({
       },
     }),
     /* Which sūrahs have real work in them: any note, any ink, or any written
-       text in a page document. One query, cheap EXISTS checks; the ink is
-       never read, only whether its array is non-empty. */
+       text in a page document. One query, cheap EXISTS checks. Ink lives in
+       the pages' realtime rooms; Page.inkAt says a page has some. */
     db.$queryRaw<{ id: string; hasWork: boolean }[]>`
       SELECT ws.id,
         (EXISTS (SELECT 1 FROM "StructuredNote" sn JOIN "Page" p ON p.id = sn."pageId" WHERE p."workspaceSurahId" = ws.id)
-         OR EXISTS (SELECT 1 FROM "InkStroke" k JOIN "Page" p ON p.id = k."pageId" WHERE p."workspaceSurahId" = ws.id)
+         OR EXISTS (SELECT 1 FROM "Page" p WHERE p."workspaceSurahId" = ws.id AND p."inkAt" IS NOT NULL)
          OR EXISTS (SELECT 1 FROM "Page" p WHERE p."workspaceSurahId" = ws.id
                     AND p."tiptapContent"::text ~ '"text":"[^"]*[^[:space:]"]')) AS "hasWork"
       FROM "WorkspaceSurah" ws

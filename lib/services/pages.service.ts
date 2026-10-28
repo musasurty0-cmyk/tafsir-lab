@@ -20,6 +20,7 @@
  */
 
 import { db } from "@/lib/db";
+import { wipeInk } from "@/lib/collab/ink-admin";
 import { getWorkspaceWithRole, isAdmin, canManagePages, MemberRole } from "./workspaces.service";
 
 // ── Error type ────────────────────────────────────────────────
@@ -325,6 +326,8 @@ export async function deletePage(
   }
 
   await db.page.delete({ where: { id: pageId } });
+  // Its ink is in its realtime room, which the cascade above cannot reach.
+  await wipeInk([pageId]);
 }
 
 // ─────────────────────────────────────────────────────────────

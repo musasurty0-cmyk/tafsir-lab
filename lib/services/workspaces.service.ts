@@ -11,6 +11,7 @@
  */
 
 import { db } from "@/lib/db";
+import { wipeInk } from "@/lib/collab/ink-admin";
 import { log } from "./activity.service";
 import { randomBytes } from "crypto";
 
@@ -431,7 +432,10 @@ export async function leaveWorkspace(workspaceId: string, userId: string) {
 export async function deleteWorkspace(workspaceId: string, userId: string) {
   const { role } = await getWorkspaceWithRole(workspaceId, userId);
   if (role !== "owner") throw new WorkspaceError("Only the owner can delete the workspace", "FORBIDDEN");
+  // Every page's ink is in its realtime room, out of the cascade's reach.
+  const pages = await db.page.findMany({ where: { workspaceSurah: { workspaceId } }, select: { id: true } });
   await db.workspace.delete({ where: { id: workspaceId } });
+  await wipeInk(pages.map((p) => p.id));
 }
 
 export async function ensureInviteCode(workspaceId: string): Promise<string> {

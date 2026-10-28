@@ -265,6 +265,8 @@ model Page {
   id               String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   workspaceSurahId String @db.Uuid
   title            String
+  /// When the page first got ink (sql 021); the ink itself is in its realtime room.
+  inkAt            DateTime? @db.Timestamptz(6)
   orderIndex       Int
   // 'draft' | 'published' | 'archived'
   status           String @default("draft")

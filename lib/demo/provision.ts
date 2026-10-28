@@ -16,6 +16,7 @@
 import { randomUUID } from "crypto";
 import { cookies } from "next/headers";
 import { db } from "@/lib/db";
+import { wipeInk } from "@/lib/collab/ink-admin";
 import { createSession } from "@/lib/session";
 import * as WorkspacesService from "@/lib/services/workspaces.service";
 import * as PagesService from "@/lib/services/pages.service";
@@ -70,11 +71,20 @@ export async function deleteDemoUser(userId: string): Promise<boolean> {
   const outside = { workspaceSurah: { workspaceId: { notIn: own } } };
   const foreign =
     (await db.structuredNote.count({ where: { authorId: userId, page: outside } })) +
-    (await db.inkStroke.count({ where: { authorId: userId, page: outside } })) +
     (await db.page.count({ where: { createdById: userId, ...outside } })) +
     (await db.quranSegment.count({ where: { createdById: userId, workspaceId: { notIn: own } } })) +
     (await db.quranConnection.count({ where: { createdById: userId, workspaceId: { notIn: own } } }));
   if (foreign > 0) return false;
+
+  /* Ink is in the pages' realtime rooms, out of the database cascade's reach:
+     all of it on the demo's own pages, and the demo's strokes on any other
+     page it could reach (ink needs membership, so those are the pages of
+     workspaces it joined). Gathered before the rows that name them go. */
+  const ownPages = (await db.page.findMany({ where: { workspaceSurah: { workspaceId: { in: own } } }, select: { id: true } })).map((p) => p.id);
+  const joined = (await db.workspaceMember.findMany({ where: { userId, workspaceId: { notIn: own } }, select: { workspaceId: true } })).map((m) => m.workspaceId);
+  const otherPages = joined.length
+    ? (await db.page.findMany({ where: { workspaceSurah: { workspaceId: { in: joined } } }, select: { id: true } })).map((p) => p.id)
+    : [];
 
   try {
     await db.$transaction([
@@ -84,6 +94,8 @@ export async function deleteDemoUser(userId: string): Promise<boolean> {
       db.workspace.deleteMany({ where: { ownerId: userId } }),   // pages, notes, ink, segments… go with them
       db.user.delete({ where: { id: userId } }),
     ]);
+    await wipeInk(ownPages);
+    await wipeInk(otherPages, userId);
     return true;
   } catch {
     return false;

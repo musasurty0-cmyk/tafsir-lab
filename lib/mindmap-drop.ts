@@ -21,6 +21,7 @@ import {
   type MindNode, type MindmapLayout,
 } from "@/lib/mindmap";
 import type { InkStroke } from "@/lib/ink";
+import { saveInk } from "@/lib/collab/ink-client";
 
 /** Just enough of a board container to stay out of its way. */
 export interface PlacedBox { offsetX: number; offsetY: number; width: number; height: number | null }
@@ -120,12 +121,7 @@ export async function dropMindmap(opts: {
     /* Merged by id server-side, so sending only the new arrows preserves
        every stroke already on the board — including ones this client has
        never seen. */
-    await fetch(`/api/pages/${pageId}/drawings`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ strokes, surface: "canvas" }),
-      signal,
-    }).catch(() => null);
+    if (!signal?.aborted) await saveInk(pageId, JSON.stringify({ strokes, surface: "canvas" })).catch(() => null);
   }
 
   return {

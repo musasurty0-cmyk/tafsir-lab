@@ -25,11 +25,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { readInkOutbox, writeInkOutbox } from "@/lib/ink-outbox";
 import { shouldPoll } from "@/lib/idle";
+import { readInk, saveInk } from "@/lib/collab/ink-client";
 import { PenLine, Highlighter, Eraser, Undo2, X } from "lucide-react";
 import {
   type Pt, type InkStroke,
   normPts, hitTest, drawSmooth, strokeSurface, mergeServerInk,
-  type InkSeen, inkReadUrl, noteInkVersions,
+  type InkSeen, noteInkVersions,
 } from "@/lib/ink";
 
 // ── Types / constants ──────────────────────────────────────────────────────
@@ -90,7 +91,7 @@ export default function EditorInkLayer({ pageId }: Props) {
      erased stroke back for the same 20 seconds. The Muṣḥaf canvas closed
      this race long ago (DrawingCanvas syncMyStrokes); this layer had not. */
   const savedAtRef    = useRef<Map<string, number>>(new Map());
-  /* The versions of this page's ink already here (lib/ink inkReadUrl): reads
+  /* The versions of this page's ink already here (lib/collab/ink-client readInk): reads
      send them so only what changed comes back; a save updates `mine`. */
   const inkSeenRef    = useRef<InkSeen>({ mine: null, others: null });
   const erasedAtRef   = useRef<Map<string, number>>(new Map());
@@ -188,12 +189,7 @@ export default function EditorInkLayer({ pageId }: Props) {
     const deletedIds = [...deletedRef.current];
     if (!strokes.length && !deletedIds.length) { writeOutbox(); return Promise.resolve(null); }
     const body = JSON.stringify({ strokes, surface: "editor", deletedIds, base: inkSeenRef.current.mine });
-    return fetch(`/api/pages/${pageId}/drawings`, {
-      method:  "PUT",
-      headers: { "Content-Type": "application/json" },
-      body,
-      keepalive: keepalive && body.length < 60_000,
-    }).then((r) => {
+    return saveInk(pageId, body, keepalive).then((r) => {
       if (!r.ok) throw new Error("save failed: " + r.status);
       r.clone().json().then((j: { mine?: string }) => noteInkVersions(inkSeenRef.current, j)).catch(() => {});
       const t = Date.now();
@@ -251,7 +247,7 @@ export default function EditorInkLayer({ pageId }: Props) {
     inkSeenRef.current = { mine: null, others: null };
     function load() {
       const issuedAt = Date.now();   // anything confirmed after this cannot be in the reply
-      fetch(inkReadUrl(pageId, inkSeenRef.current))
+      readInk(pageId, inkSeenRef.current)
         .then((r) => (r.ok ? r.json() : null))
         .then((d: { myStrokes?: InkStroke[]; otherLayers?: OtherInkLayer[]; mine?: string; others?: string; unchanged?: boolean } | null) => {
           if (!d || cancelled) return;

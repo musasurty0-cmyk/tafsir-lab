@@ -47,11 +47,12 @@ import {
 import type { CanvasViewport } from "./ModeBPage";
 import { inkOutboxKey, readInkOutbox } from "@/lib/ink-outbox";
 import { shouldPoll } from "@/lib/idle";
+import { readInk, saveInk } from "@/lib/collab/ink-client";
 import {
   type Pt, type InkStroke,
   normPts, hitTest, drawSmooth, drawArrow, paintStroke, strokeSurface,
   lassoTakes, pointsBounds, translatePoints,
-  type InkSeen, inkReadUrl, noteInkVersions,
+  type InkSeen, noteInkVersions,
 } from "@/lib/ink";
 import { isTypingTarget } from "@/lib/is-typing";
 
@@ -285,7 +286,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
   //   included in a PUT that succeeded). A stroke we know was on the server
   //   that later vanishes from a GET was deleted elsewhere → drop it locally.
   const tombstonesRef = useRef<Set<string>>(new Set());
-  /* The versions of this page's ink already here (lib/ink inkReadUrl): every
+  /* The versions of this page's ink already here (lib/collab/ink-client readInk): every
      read sends them so only what changed comes back, and a save updates
      `mine` so drawing never downloads your own ink again. */
   const inkSeenRef    = useRef<InkSeen>({ mine: null, others: null });
@@ -724,7 +725,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
 
     inkSeenRef.current = { mine: null, others: null };
     function load() {
-      fetch(`/api/pages/${pageId}/drawings`)
+      readInk(pageId)
         .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
         .then((d: { myStrokes?: Stroke[]; otherLayers?: DrawingLayer[]; mine?: string; others?: string; unchanged?: boolean }) => {
           if (!alive) return;
@@ -768,11 +769,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
               // Fire-and-forget — server merges by id, so sending only the
               // re-tagged strokes updates those and touches nothing else.
               const retagged = migrated.filter((s, i) => s !== mine[i]);
-              fetch(`/api/pages/${pageId}/drawings`, {
-                method:  "PUT",
-                headers: { "Content-Type": "application/json" },
-                body:    JSON.stringify({ strokes: retagged, surface: "canvas" }),
-              }).catch(() => {});
+              saveInk(pageId, JSON.stringify({ strokes: retagged, surface: "canvas" })).catch(() => {});
             }
           }
 
@@ -819,7 +816,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     const id = setInterval(() => {
       if (!shouldPoll()) return;   // hidden, or nobody at the page (lib/idle)
       const issuedAt = Date.now();   // anything saved after this cannot be in the reply
-      fetch(inkReadUrl(pageId, inkSeenRef.current))
+      readInk(pageId, inkSeenRef.current)
         .then(r => r.ok ? r.json() : null)
         .then((d: { myStrokes?: Stroke[]; otherLayers?: DrawingLayer[]; mine?: string; others?: string; unchanged?: boolean } | null) => {
           if (!live || !d) return;
@@ -914,7 +911,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     let live = true;   // same cross-page guard as the poll and the refocus
     const onOpen = () => {
       if (first) { first = false; return; } // skip the initial connect
-      fetch(inkReadUrl(pageId, inkSeenRef.current))
+      readInk(pageId, inkSeenRef.current)
         .then((r) => (r.ok ? r.json() : null))
         .then((d: { myStrokes?: Stroke[]; otherLayers?: DrawingLayer[]; mine?: string; others?: string; unchanged?: boolean } | null) => {
           if (!live || !d) return;
@@ -966,14 +963,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
 
     setSaveState("saving");
     const body = JSON.stringify({ strokes, surface: "canvas", deletedIds, base: inkSeenRef.current.mine });
-    return fetch(`/api/pages/${pageId}/drawings`, {
-      method:  "PUT",
-      headers: { "Content-Type": "application/json" },
-      body,
-      // The browser refuses a keepalive request over 64 KB outright, which
-      // would lose the flush; past that, send it as an ordinary request.
-      keepalive: keepalive && body.length < 60_000,
-    }).then((r) => {
+    return saveInk(pageId, body, keepalive).then((r) => {
       // A rejected save (413, 500, an expired session) is a FAILURE: throw so
       // the caller retries. It used to be counted as done.
       if (!r.ok) throw new Error("save failed: " + r.status);
@@ -1053,7 +1043,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
         flushPending();
       } else {
         // Back from suspension — don't wait up to 15 s for the poll.
-        fetch(inkReadUrl(pageId, inkSeenRef.current))
+        readInk(pageId, inkSeenRef.current)
           .then(r => r.ok ? r.json() : null)
           .then((d: { myStrokes?: Stroke[]; otherLayers?: DrawingLayer[]; mine?: string; others?: string; unchanged?: boolean } | null) => {
             if (!live || !d) return;
