@@ -117,13 +117,18 @@ export async function PUT(
        crossing a fresh save, a closing tab's flush -- each read the row before
        the other wrote it, and the second write threw away the first one's
        strokes. The client had been told they were saved, so nothing sent them
-       again. The lock is taken before the read, and works before the row exists. */
-    await db.$transaction(async (tx) => {
-      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`drawing:${pageId}:${userId}`}))`;
+       again.
 
-      const existing = await tx.canvasDrawing.findUnique({
+       Compare-and-swap, not a lock: the write only lands if the row is still
+       the one that was read (same updatedAt), else it reads again and
+       re-merges. A lock held a database connection for as long as a save
+       waited, and the free plan has few to spare -- when the database
+       stalled, waiting saves held them all and every page failed with them. */
+    let saved = false;
+    for (let attempt = 0; attempt < 4 && !saved; attempt++) {
+      const existing = await db.canvasDrawing.findUnique({
         where:  { pageId_authorId: { pageId, authorId: userId } },
-        select: { strokes: true },
+        select: { strokes: true, updatedAt: true },
       });
       const prev = Array.isArray(existing?.strokes)
         ? (existing!.strokes as { id?: string; surface?: string }[])
@@ -148,12 +153,21 @@ export async function PUT(
          and every old drawing is re-encoded the next time it is touched. */
       const packed = packStrokes(merged as { points?: unknown }[]) as unknown as Prisma.InputJsonValue;
 
-      await tx.canvasDrawing.upsert({
-        where:  { pageId_authorId: { pageId, authorId: userId } },
-        create: { pageId, authorId: userId, strokes: packed },
-        update: { strokes: packed },
-      });
-    }, { timeout: 15_000 });
+      if (!existing) {
+        // Two first saves can race to create the row; the loser merges into the winner's.
+        saved = await db.canvasDrawing.create({ data: { pageId, authorId: userId, strokes: packed } })
+          .then(() => true)
+          .catch((e: { code?: string }) => { if (e?.code === "P2002") return false; throw e; });
+      } else {
+        const { count } = await db.canvasDrawing.updateMany({
+          where: { pageId, authorId: userId, updatedAt: existing.updatedAt },
+          data:  { strokes: packed, updatedAt: new Date() },
+        });
+        saved = count === 1;
+      }
+    }
+    // Still contended after four tries: say so, and the client saves again.
+    if (!saved) return NextResponse.json({ error: "Busy, try again" }, { status: 409 });
 
     return NextResponse.json({ ok: true });
   } catch (err) {
