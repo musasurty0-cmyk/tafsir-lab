@@ -34,6 +34,28 @@ export function strokeSurface(s: { surface?: string }): "canvas" | "editor" {
   return s.surface === "editor" ? "editor" : "canvas";
 }
 
+// ── Reading ink without re-downloading it ──────────────────────────────────
+
+/** The versions of a page's ink this reader already has (drawings route). */
+export interface InkSeen { mine: string | null; others: string | null }
+
+/** The drawings URL, saying what this reader already has, so only what changed comes back. */
+export function inkReadUrl(pageId: string, seen: InkSeen): string {
+  const q = new URLSearchParams();
+  if (seen.mine) q.set("mine", seen.mine);
+  if (seen.others) q.set("others", seen.others);
+  const qs = q.toString();
+  return `/api/pages/${pageId}/drawings${qs ? `?${qs}` : ""}`;
+}
+
+/** Record the versions a read or a save reported. Own-ink versions only move
+ *  forward: a read sent before a save can come back after it. */
+export function noteInkVersions(seen: InkSeen, d: { mine?: string; others?: string } | null | undefined): void {
+  if (!d) return;
+  if (d.mine && (!seen.mine || Number(d.mine) > Number(seen.mine))) seen.mine = d.mine;
+  if (d.others) seen.others = d.others;
+}
+
 // ── Merging a server read into local ink ───────────────────────────────────
 
 export interface InkSyncState {

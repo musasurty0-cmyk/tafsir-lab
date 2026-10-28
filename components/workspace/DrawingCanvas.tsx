@@ -46,12 +46,12 @@ import {
 } from "react";
 import type { CanvasViewport } from "./ModeBPage";
 import { inkOutboxKey, readInkOutbox } from "@/lib/ink-outbox";
-import { withVersion } from "@/lib/poll-version";
 import { shouldPoll } from "@/lib/idle";
 import {
   type Pt, type InkStroke,
   normPts, hitTest, drawSmooth, drawArrow, paintStroke, strokeSurface,
   lassoTakes, pointsBounds, translatePoints,
+  type InkSeen, inkReadUrl, noteInkVersions,
 } from "@/lib/ink";
 import { isTypingTarget } from "@/lib/is-typing";
 
@@ -285,6 +285,10 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
   //   included in a PUT that succeeded). A stroke we know was on the server
   //   that later vanishes from a GET was deleted elsewhere → drop it locally.
   const tombstonesRef = useRef<Set<string>>(new Set());
+  /* The versions of this page's ink already here (lib/ink inkReadUrl): every
+     read sends them so only what changed comes back, and a save updates
+     `mine` so drawing never downloads your own ink again. */
+  const inkSeenRef    = useRef<InkSeen>({ mine: null, others: null });
   const savedIdsRef   = useRef<Set<string>>(new Set());
   const loadedRef     = useRef(false);
   /* dirty: id -> edit number, for every stroke added or moved since the
@@ -718,12 +722,14 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
       setSaveState("unsaved");
     }
 
+    inkSeenRef.current = { mine: null, others: null };
     function load() {
       fetch(`/api/pages/${pageId}/drawings`)
         .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
-        .then((d: { myStrokes?: Stroke[]; otherLayers?: DrawingLayer[] }) => {
+        .then((d: { myStrokes?: Stroke[]; otherLayers?: DrawingLayer[]; mine?: string; others?: string; unchanged?: boolean }) => {
           if (!alive) return;
           loadedRef.current = true;
+          noteInkVersions(inkSeenRef.current, d);
 
           if (d.myStrokes) {
             const curPage = mushafPageRef.current;
@@ -810,17 +816,14 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
        page's ink appearing on another, which then saves. The flag drops any
        reply that arrives after the page changed. */
     let live = true;
-    // The last version sent: unchanged ink is not sent again (lib/poll-version).
-    let seen: string | null = null;
     const id = setInterval(() => {
       if (!shouldPoll()) return;   // hidden, or nobody at the page (lib/idle)
       const issuedAt = Date.now();   // anything saved after this cannot be in the reply
-      fetch(withVersion(`/api/pages/${pageId}/drawings`, seen))
+      fetch(inkReadUrl(pageId, inkSeenRef.current))
         .then(r => r.ok ? r.json() : null)
-        .then((d: { myStrokes?: Stroke[]; otherLayers?: DrawingLayer[]; version?: string; unchanged?: boolean } | null) => {
+        .then((d: { myStrokes?: Stroke[]; otherLayers?: DrawingLayer[]; mine?: string; others?: string; unchanged?: boolean } | null) => {
           if (!live || !d) return;
-          if (d.version) seen = d.version;
-          if (d.unchanged) return;
+          noteInkVersions(inkSeenRef.current, d);
           if (d.otherLayers) setOtherLayers(d.otherLayers);
           if (d.myStrokes && loadedRef.current) syncMyStrokes(d.myStrokes, issuedAt);
         })
@@ -911,10 +914,11 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     let live = true;   // same cross-page guard as the poll and the refocus
     const onOpen = () => {
       if (first) { first = false; return; } // skip the initial connect
-      fetch(`/api/pages/${pageId}/drawings`)
+      fetch(inkReadUrl(pageId, inkSeenRef.current))
         .then((r) => (r.ok ? r.json() : null))
-        .then((d: { myStrokes?: Stroke[]; otherLayers?: DrawingLayer[] } | null) => {
+        .then((d: { myStrokes?: Stroke[]; otherLayers?: DrawingLayer[]; mine?: string; others?: string; unchanged?: boolean } | null) => {
           if (!live || !d) return;
+          noteInkVersions(inkSeenRef.current, d);
           if (d.otherLayers) setOtherLayers(d.otherLayers);
           if (d.myStrokes && loadedRef.current) syncMyStrokes(d.myStrokes);
         })
@@ -932,8 +936,17 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
   // hidden/closed (mosque Wi-Fi reality).
 
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /* One save at a time. With the database slow, every stroke used to start
+     another save while the last was still running, each carrying every
+     unconfirmed stroke, and they piled up until each one took minutes and
+     the site went down with them. A save asked for meanwhile now waits for
+     the running one, then goes (with the usual retries). The flush as a tab
+     closes is the exception: it goes at once, or it never would. */
+  const inFlightRef  = useRef<Promise<Response | null> | null>(null);
+  const saveAgainRef = useRef(false);
+  const scheduleSaveRef = useRef<() => void>(() => {});
 
-  const putStrokes = useCallback((keepalive = false) => {
+  const putOnce = useCallback((keepalive = false) => {
     // surface:"canvas" → the server merges by id within this surface,
     // preserving editor-surface strokes AND every canvas stroke this save
     // does not mention. deletedIds carries the user's explicit deletions.
@@ -952,7 +965,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     }
 
     setSaveState("saving");
-    const body = JSON.stringify({ strokes, surface: "canvas", deletedIds });
+    const body = JSON.stringify({ strokes, surface: "canvas", deletedIds, base: inkSeenRef.current.mine });
     return fetch(`/api/pages/${pageId}/drawings`, {
       method:  "PUT",
       headers: { "Content-Type": "application/json" },
@@ -964,6 +977,8 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
       // A rejected save (413, 500, an expired session) is a FAILURE: throw so
       // the caller retries. It used to be counted as done.
       if (!r.ok) throw new Error("save failed: " + r.status);
+      // Up to date with our own row again, without reading it back (see the route).
+      r.clone().json().then((j: { mine?: string }) => noteInkVersions(inkSeenRef.current, j)).catch(() => {});
       const t = Date.now();
       for (const [id, v] of sent) {
         if (dirtyRef.current.get(id) === v) dirtyRef.current.delete(id);
@@ -982,6 +997,19 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
       throw err;
     });
   }, [pageId, setSaveState, hasUnsaved, writeOutbox]);
+
+  const putStrokes = useCallback((keepalive = false): Promise<Response | null> => {
+    if (inFlightRef.current && !keepalive) {
+      saveAgainRef.current = true;
+      return inFlightRef.current;
+    }
+    const run = putOnce(keepalive).finally(() => {
+      if (inFlightRef.current === run) inFlightRef.current = null;
+      if (saveAgainRef.current) { saveAgainRef.current = false; scheduleSaveRef.current(); }
+    });
+    inFlightRef.current = run;
+    return run;
+  }, [putOnce]);
 
   const scheduleSave = useCallback(() => {
     writeOutbox();
@@ -1004,6 +1032,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
       attempt(0);
     }, SAVE_DEBOUNCE);
   }, [putStrokes, setSaveState, writeOutbox]);
+  useEffect(() => { scheduleSaveRef.current = scheduleSave; }, [scheduleSave]);
 
   // Flush pending saves before the tab suspends; refresh peers on refocus.
   useEffect(() => {
@@ -1024,10 +1053,11 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
         flushPending();
       } else {
         // Back from suspension — don't wait up to 15 s for the poll.
-        fetch(`/api/pages/${pageId}/drawings`)
+        fetch(inkReadUrl(pageId, inkSeenRef.current))
           .then(r => r.ok ? r.json() : null)
-          .then((d: { myStrokes?: Stroke[]; otherLayers?: DrawingLayer[] } | null) => {
+          .then((d: { myStrokes?: Stroke[]; otherLayers?: DrawingLayer[]; mine?: string; others?: string; unchanged?: boolean } | null) => {
             if (!live || !d) return;
+            noteInkVersions(inkSeenRef.current, d);
             if (d.otherLayers) setOtherLayers(d.otherLayers);
             if (d.myStrokes && loadedRef.current) syncMyStrokes(d.myStrokes);
           })

@@ -24,12 +24,12 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { readInkOutbox, writeInkOutbox } from "@/lib/ink-outbox";
-import { withVersion } from "@/lib/poll-version";
 import { shouldPoll } from "@/lib/idle";
 import { PenLine, Highlighter, Eraser, Undo2, X } from "lucide-react";
 import {
   type Pt, type InkStroke,
   normPts, hitTest, drawSmooth, strokeSurface, mergeServerInk,
+  type InkSeen, inkReadUrl, noteInkVersions,
 } from "@/lib/ink";
 
 // ── Types / constants ──────────────────────────────────────────────────────
@@ -90,6 +90,9 @@ export default function EditorInkLayer({ pageId }: Props) {
      erased stroke back for the same 20 seconds. The Muṣḥaf canvas closed
      this race long ago (DrawingCanvas syncMyStrokes); this layer had not. */
   const savedAtRef    = useRef<Map<string, number>>(new Map());
+  /* The versions of this page's ink already here (lib/ink inkReadUrl): reads
+     send them so only what changed comes back; a save updates `mine`. */
+  const inkSeenRef    = useRef<InkSeen>({ mine: null, others: null });
   const erasedAtRef   = useRef<Map<string, number>>(new Map());
 
   // ── Render ─────────────────────────────────────────────────────────────
@@ -170,11 +173,21 @@ export default function EditorInkLayer({ pageId }: Props) {
     );
   }, [pageId]);
 
-  const putStrokes = useCallback((keepalive = false) => {
+  /* One save at a time. With the database slow, every stroke used to start
+     another save while the last was still running, each carrying every
+     unconfirmed stroke, and they piled up until each one took minutes and
+     the site went down with them. A save asked for meanwhile now waits for
+     the running one, then goes (with the usual retries). The flush as a tab
+     closes is the exception: it goes at once, or it never would. */
+  const inFlightRef  = useRef<Promise<Response | null> | null>(null);
+  const saveAgainRef = useRef(false);
+  const scheduleSaveRef = useRef<() => void>(() => {});
+
+  const putOnce = useCallback((keepalive = false) => {
     const strokes = strokesRef.current.filter((st) => pendingRef.current.has(st.id));
     const deletedIds = [...deletedRef.current];
     if (!strokes.length && !deletedIds.length) { writeOutbox(); return Promise.resolve(null); }
-    const body = JSON.stringify({ strokes, surface: "editor", deletedIds });
+    const body = JSON.stringify({ strokes, surface: "editor", deletedIds, base: inkSeenRef.current.mine });
     return fetch(`/api/pages/${pageId}/drawings`, {
       method:  "PUT",
       headers: { "Content-Type": "application/json" },
@@ -182,6 +195,7 @@ export default function EditorInkLayer({ pageId }: Props) {
       keepalive: keepalive && body.length < 60_000,
     }).then((r) => {
       if (!r.ok) throw new Error("save failed: " + r.status);
+      r.clone().json().then((j: { mine?: string }) => noteInkVersions(inkSeenRef.current, j)).catch(() => {});
       const t = Date.now();
       for (const st of strokes) { pendingRef.current.delete(st.id); savedAtRef.current.set(st.id, t); }
       for (const id of deletedIds) { deletedRef.current.delete(id); erasedAtRef.current.set(id, t); }
@@ -189,6 +203,19 @@ export default function EditorInkLayer({ pageId }: Props) {
       return r;
     });
   }, [pageId, writeOutbox]);
+
+  const putStrokes = useCallback((keepalive = false): Promise<Response | null> => {
+    if (inFlightRef.current && !keepalive) {
+      saveAgainRef.current = true;
+      return inFlightRef.current;
+    }
+    const run = putOnce(keepalive).finally(() => {
+      if (inFlightRef.current === run) inFlightRef.current = null;
+      if (saveAgainRef.current) { saveAgainRef.current = false; scheduleSaveRef.current(); }
+    });
+    inFlightRef.current = run;
+    return run;
+  }, [putOnce]);
 
   const scheduleSave = useCallback(() => {
     writeOutbox();
@@ -200,6 +227,7 @@ export default function EditorInkLayer({ pageId }: Props) {
       });
     }, SAVE_DEBOUNCE);
   }, [putStrokes, writeOutbox]);
+  useEffect(() => { scheduleSaveRef.current = scheduleSave; }, [scheduleSave]);
 
   useEffect(() => {
     let cancelled = false;
@@ -220,16 +248,14 @@ export default function EditorInkLayer({ pageId }: Props) {
       scheduleRender();
     }
 
-    // The last version sent: unchanged ink is not sent again (lib/poll-version).
-    let seen: string | null = null;
+    inkSeenRef.current = { mine: null, others: null };
     function load() {
       const issuedAt = Date.now();   // anything confirmed after this cannot be in the reply
-      fetch(withVersion(`/api/pages/${pageId}/drawings`, seen))
+      fetch(inkReadUrl(pageId, inkSeenRef.current))
         .then((r) => (r.ok ? r.json() : null))
-        .then((d: { myStrokes?: InkStroke[]; otherLayers?: OtherInkLayer[]; version?: string; unchanged?: boolean } | null) => {
+        .then((d: { myStrokes?: InkStroke[]; otherLayers?: OtherInkLayer[]; mine?: string; others?: string; unchanged?: boolean } | null) => {
           if (!d || cancelled) return;
-          if (d.version) seen = d.version;
-          if (d.unchanged) return;
+          noteInkVersions(inkSeenRef.current, d);
           // Merge, never replace — and never read the reply's silence about
           // anything confirmed after it was asked for (lib/ink mergeServerInk).
           strokesRef.current = mergeServerInk(

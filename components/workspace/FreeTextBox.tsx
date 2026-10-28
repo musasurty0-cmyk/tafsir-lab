@@ -188,7 +188,7 @@ export default function FreeTextBox({ note, startEditing = false, ayahInline = f
     e.preventDefault();
     e.stopPropagation();
     sizeRef.current = { side, startMx: e.clientX, startW: width, startX: pos.x, zoom: zoomAt(e.currentTarget as HTMLElement) };
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    try { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); } catch { /* pointer already gone */ }
   }
 
   function onSideMove(e: React.PointerEvent) {
