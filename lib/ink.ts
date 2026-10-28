@@ -34,6 +34,46 @@ export function strokeSurface(s: { surface?: string }): "canvas" | "editor" {
   return s.surface === "editor" ? "editor" : "canvas";
 }
 
+// ── Merging a server read into local ink ───────────────────────────────────
+
+export interface InkSyncState {
+  /** Drawn here, not yet confirmed by the server. */
+  pending: ReadonlySet<string>;
+  /** Erased here, not yet confirmed. */
+  deleted: ReadonlySet<string>;
+  /** When the server confirmed each save, and each erase. */
+  savedAt: ReadonlyMap<string, number>;
+  erasedAt: ReadonlyMap<string, number>;
+}
+
+/**
+ * Local ink after a server read, given when that read was SENT.
+ *
+ * The reply describes the server as it was when the request went out, so it
+ * cannot know about a save or erase confirmed after that. Treating its silence
+ * as news is what made handwriting vanish until the next poll: a stroke saved
+ * mid-poll was missing from the reply, no longer pending, and dropped; an erase
+ * confirmed mid-poll was undone the same way.
+ *
+ * Kept: the server's strokes, less any erased here (pending, or confirmed
+ * since), with the local copy preferred while it is pending; then local
+ * strokes the server has not got — pending, or saved since the read went out.
+ * Anything else the server lacks was deleted elsewhere, and goes.
+ */
+export function mergeServerInk<T extends { id: string }>(
+  local: readonly T[], server: readonly T[], s: InkSyncState, issuedAt: number,
+): T[] {
+  const since = (m: ReadonlyMap<string, number>, id: string) => (m.get(id) ?? 0) >= issuedAt;
+  const fromServer = server.filter((st) => !s.deleted.has(st.id) && !since(s.erasedAt, st.id));
+  const serverIds = new Set(fromServer.map((st) => st.id));
+  const newer = local.filter((st) => s.pending.has(st.id) || since(s.savedAt, st.id));
+  const mine = new Map(newer.map((st) => [st.id, st]));
+  return [
+    ...fromServer.map((st) => mine.get(st.id) ?? st),
+    ...newer.filter((st) => !serverIds.has(st.id)),
+  ];
+}
+
 // ── Backwards compatibility ────────────────────────────────────────────────
 // Old strokes were stored as {x, y} objects; new ones as [x, y, pressure].
 

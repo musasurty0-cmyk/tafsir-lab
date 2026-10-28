@@ -27,7 +27,7 @@ import { readInkOutbox, writeInkOutbox } from "@/lib/ink-outbox";
 import { PenLine, Highlighter, Eraser, Undo2, X } from "lucide-react";
 import {
   type Pt, type InkStroke,
-  normPts, hitTest, drawSmooth, strokeSurface,
+  normPts, hitTest, drawSmooth, strokeSurface, mergeServerInk,
 } from "@/lib/ink";
 
 // ── Types / constants ──────────────────────────────────────────────────────
@@ -79,6 +79,16 @@ export default function EditorInkLayer({ pageId }: Props) {
      a moment before, while its save was still waiting. */
   const pendingRef    = useRef<Set<string>>(new Set());
   const deletedRef    = useRef<Set<string>>(new Set());
+  /* When the server CONFIRMED each save and each erase. A poll's reply
+     describes the server as it was when the poll was sent, so it says nothing
+     about anything confirmed after that. Without these, a stroke whose save
+     landed while a poll was in flight was missing from the reply, no longer
+     pending, and so dropped -- handwriting vanished for up to 20 seconds and
+     came back with the next poll. An erase confirmed mid-poll brought the
+     erased stroke back for the same 20 seconds. The Muṣḥaf canvas closed
+     this race long ago (DrawingCanvas syncMyStrokes); this layer had not. */
+  const savedAtRef    = useRef<Map<string, number>>(new Map());
+  const erasedAtRef   = useRef<Map<string, number>>(new Map());
 
   // ── Render ─────────────────────────────────────────────────────────────
 
@@ -170,8 +180,9 @@ export default function EditorInkLayer({ pageId }: Props) {
       keepalive: keepalive && body.length < 60_000,
     }).then((r) => {
       if (!r.ok) throw new Error("save failed: " + r.status);
-      for (const st of strokes) pendingRef.current.delete(st.id);
-      for (const id of deletedIds) deletedRef.current.delete(id);
+      const t = Date.now();
+      for (const st of strokes) { pendingRef.current.delete(st.id); savedAtRef.current.set(st.id, t); }
+      for (const id of deletedIds) { deletedRef.current.delete(id); erasedAtRef.current.set(id, t); }
       writeOutbox();
       return r;
     });
@@ -193,6 +204,8 @@ export default function EditorInkLayer({ pageId }: Props) {
     let first = true;
     pendingRef.current = new Set();
     deletedRef.current = new Set();
+    savedAtRef.current = new Map();
+    erasedAtRef.current = new Map();
     strokesRef.current = [];
 
     // Unsaved ink from an earlier visit: shown now, sent again once loaded.
@@ -206,20 +219,19 @@ export default function EditorInkLayer({ pageId }: Props) {
     }
 
     function load() {
+      const issuedAt = Date.now();   // anything confirmed after this cannot be in the reply
       fetch(`/api/pages/${pageId}/drawings`)
         .then((r) => (r.ok ? r.json() : null))
         .then((d: { myStrokes?: InkStroke[]; otherLayers?: OtherInkLayer[] } | null) => {
           if (!d || cancelled) return;
-          // Merge, never replace: the server's strokes, less any erased here,
-          // plus anything drawn here that hasn't been saved yet.
-          const server = (d.myStrokes ?? []).filter((s) => strokeSurface(s) === "editor" && !deletedRef.current.has(s.id));
-          const serverIds = new Set(server.map((s) => s.id));
-          const pendingLocal = strokesRef.current.filter((s) => pendingRef.current.has(s.id));
-          const localCopy = new Map(pendingLocal.map((s) => [s.id, s]));
-          strokesRef.current = [
-            ...server.map((s) => localCopy.get(s.id) ?? s),
-            ...pendingLocal.filter((s) => !serverIds.has(s.id)),
-          ];
+          // Merge, never replace — and never read the reply's silence about
+          // anything confirmed after it was asked for (lib/ink mergeServerInk).
+          strokesRef.current = mergeServerInk(
+            strokesRef.current,
+            (d.myStrokes ?? []).filter((s) => strokeSurface(s) === "editor"),
+            { pending: pendingRef.current, deleted: deletedRef.current, savedAt: savedAtRef.current, erasedAt: erasedAtRef.current },
+            issuedAt,
+          );
           if (first) {
             first = false;
             if (pendingRef.current.size || deletedRef.current.size) scheduleSave();

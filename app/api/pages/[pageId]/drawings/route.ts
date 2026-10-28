@@ -112,38 +112,48 @@ export async function PUT(
     // Stamp the surface on incoming strokes.
     const stamped = incoming.map((s) => ({ ...s, surface }));
 
-    const existing = await db.canvasDrawing.findUnique({
-      where:  { pageId_authorId: { pageId, authorId: userId } },
-      select: { strokes: true },
-    });
-    const prev = Array.isArray(existing?.strokes)
-      ? (existing!.strokes as { id?: string; surface?: string }[])
-      : [];
+    /* Read, merge and write as ONE step per author and page. Two saves in
+       flight together -- the canvas and the note page saving at once, a retry
+       crossing a fresh save, a closing tab's flush -- each read the row before
+       the other wrote it, and the second write threw away the first one's
+       strokes. The client had been told they were saved, so nothing sent them
+       again. The lock is taken before the read, and works before the row exists. */
+    await db.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`drawing:${pageId}:${userId}`}))`;
 
-    // Other surface passes through untouched. Within the saved surface,
-    // merge by id: client copies win, unknown-to-client strokes survive,
-    // explicit deletions are honored. Additive-by-default means a client
-    // that loaded an empty/stale set can never wipe strokes it never saw.
-    const keptOther   = prev.filter((s) => (s?.surface === "editor" ? "editor" : "canvas") !== surface);
-    const clientIds   = new Set(stamped.map((s) => s.id).filter(Boolean));
-    const keptSame    = prev.filter((s) =>
-      (s?.surface === "editor" ? "editor" : "canvas") === surface &&
-      s.id != null && !clientIds.has(s.id) && !deleted.has(s.id));
-    const merged = [...keptOther, ...keptSame, ...stamped.filter((s) => s.id == null || !deleted.has(s.id))];
+      const existing = await tx.canvasDrawing.findUnique({
+        where:  { pageId_authorId: { pageId, authorId: userId } },
+        select: { strokes: true },
+      });
+      const prev = Array.isArray(existing?.strokes)
+        ? (existing!.strokes as { id?: string; surface?: string }[])
+        : [];
 
-    /* Pack on the SERVER, not in each client. Coordinates were arriving at
-       float64 precision with per-point {"x":…,"y":…} keys — 0.71 MB of ink per
-       ayah on disk, ~4.3 GB for one person annotating the whole Qur'an.
-       Rounding to 0.1px and storing tuples measured 10.3x smaller on the real
-       strokes, with every point kept. Doing it here means no client can forget,
-       and every old drawing is re-encoded the next time it is touched. */
-    const packed = packStrokes(merged as { points?: unknown }[]) as unknown as Prisma.InputJsonValue;
+      // Other surface passes through untouched. Within the saved surface,
+      // merge by id: client copies win, unknown-to-client strokes survive,
+      // explicit deletions are honored. Additive-by-default means a client
+      // that loaded an empty/stale set can never wipe strokes it never saw.
+      const keptOther   = prev.filter((s) => (s?.surface === "editor" ? "editor" : "canvas") !== surface);
+      const clientIds   = new Set(stamped.map((s) => s.id).filter(Boolean));
+      const keptSame    = prev.filter((s) =>
+        (s?.surface === "editor" ? "editor" : "canvas") === surface &&
+        s.id != null && !clientIds.has(s.id) && !deleted.has(s.id));
+      const merged = [...keptOther, ...keptSame, ...stamped.filter((s) => s.id == null || !deleted.has(s.id))];
 
-    await db.canvasDrawing.upsert({
-      where:  { pageId_authorId: { pageId, authorId: userId } },
-      create: { pageId, authorId: userId, strokes: packed },
-      update: { strokes: packed },
-    });
+      /* Pack on the SERVER, not in each client. Coordinates were arriving at
+         float64 precision with per-point {"x":…,"y":…} keys — 0.71 MB of ink per
+         ayah on disk, ~4.3 GB for one person annotating the whole Qur'an.
+         Rounding to 0.1px and storing tuples measured 10.3x smaller on the real
+         strokes, with every point kept. Doing it here means no client can forget,
+         and every old drawing is re-encoded the next time it is touched. */
+      const packed = packStrokes(merged as { points?: unknown }[]) as unknown as Prisma.InputJsonValue;
+
+      await tx.canvasDrawing.upsert({
+        where:  { pageId_authorId: { pageId, authorId: userId } },
+        create: { pageId, authorId: userId, strokes: packed },
+        update: { strokes: packed },
+      });
+    }, { timeout: 15_000 });
 
     return NextResponse.json({ ok: true });
   } catch (err) {

@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   packStroke, packStrokes, normPts, resample, streamline,
-  pointInPolygon, lassoTakes, pointsBounds, translatePoints, LASSO_GRAB,
+  pointInPolygon, lassoTakes, pointsBounds, translatePoints, LASSO_GRAB, mergeServerInk,
   type Pt,
 } from "./ink";
 
@@ -288,5 +288,42 @@ describe("pointsBounds", () => {
 
   it("is null for no points", () => {
     expect(pointsBounds([])).toBeNull();
+  });
+});
+
+describe("mergeServerInk — a server read never undoes what it could not know", () => {
+  const st = (id: string) => ({ id });
+  const none = { pending: new Set<string>(), deleted: new Set<string>(), savedAt: new Map<string, number>(), erasedAt: new Map<string, number>() };
+  const ids = (xs: { id: string }[]) => xs.map((x) => x.id).sort();
+
+  it("keeps a stroke whose save was confirmed while the read was in flight", () => {
+    // read sent at 100; the save for "b" confirmed at 150; the reply predates it
+    const out = mergeServerInk([st("a"), st("b")], [st("a")], { ...none, savedAt: new Map([["b", 150]]) }, 100);
+    expect(ids(out)).toEqual(["a", "b"]);
+  });
+
+  it("drops a stroke saved before the read that the server no longer has (erased elsewhere)", () => {
+    const out = mergeServerInk([st("a"), st("b")], [st("a")], { ...none, savedAt: new Map([["b", 50]]) }, 100);
+    expect(ids(out)).toEqual(["a"]);
+  });
+
+  it("keeps a stroke not yet saved", () => {
+    const out = mergeServerInk([st("a")], [], { ...none, pending: new Set(["a"]) }, 100);
+    expect(ids(out)).toEqual(["a"]);
+  });
+
+  it("does not bring back a stroke whose erase was confirmed while the read was in flight", () => {
+    const out = mergeServerInk([], [st("a"), st("b")], { ...none, erasedAt: new Map([["b", 150]]) }, 100);
+    expect(ids(out)).toEqual(["a"]);
+  });
+
+  it("does not bring back a stroke erased here and not yet confirmed", () => {
+    const out = mergeServerInk([], [st("a")], { ...none, deleted: new Set(["a"]) }, 100);
+    expect(out).toEqual([]);
+  });
+
+  it("adds strokes drawn on another device", () => {
+    const out = mergeServerInk([st("a")], [st("a"), st("z")], { ...none, savedAt: new Map([["a", 10]]) }, 100);
+    expect(ids(out)).toEqual(["a", "z"]);
   });
 });
