@@ -24,6 +24,9 @@ export class ArabicError extends Error {
 
 export type LessonState = "covered" | "current";
 
+/** Course lessons are everyone's; a "My words" lesson is only its owner's. */
+const mineOrShared = (userId: string) => ({ OR: [{ ownerId: null }, { ownerId: userId }] });
+
 async function gate(workspaceId: string, userId: string) {
   const g = await getWorkspaceWithRole(workspaceId, userId);
   if (g.workspace.kind !== "arabic") throw new ArabicError("This isn't an Arabic study workspace.", "NOT_FOUND");
@@ -35,7 +38,7 @@ async function gate(workspaceId: string, userId: string) {
 export async function listLessons(workspaceId: string, userId: string) {
   await gate(workspaceId, userId);
   const lessons = await db.arabicLesson.findMany({
-    where:   { workspaceId },
+    where:   { workspaceId, ...mineOrShared(userId) },
     orderBy: [{ level: "asc" }, { fileNo: "asc" }],
     select:  {
       id: true, level: true, fileNo: true, number: true, kind: true, title: true, cardCount: true,
@@ -48,7 +51,7 @@ export async function listLessons(workspaceId: string, userId: string) {
 export async function getLesson(workspaceId: string, lessonId: string, userId: string) {
   await gate(workspaceId, userId);
   const lesson = await db.arabicLesson.findFirst({
-    where:  { id: lessonId, workspaceId },
+    where:  { id: lessonId, workspaceId, ...mineOrShared(userId) },
     select: {
       id: true, level: true, fileNo: true, number: true, kind: true, title: true, cardCount: true,
       states: { where: { userId }, select: { state: true } },
@@ -73,7 +76,7 @@ export async function search(workspaceId: string, userId: string, raw: string) {
   if (!term) return [];
   const cards = await db.arabicCard.findMany({
     where: {
-      lesson: { workspaceId },
+      lesson: { workspaceId, ...mineOrShared(userId) },
       ...(arabic
         ? { folded: { contains: term } }
         : { english: { contains: term, mode: "insensitive" as const } }),
@@ -199,7 +202,7 @@ export async function importLessons(
 export async function setCurrentLesson(workspaceId: string, userId: string, lessonId: string) {
   await gate(workspaceId, userId);
   const lessons = await db.arabicLesson.findMany({
-    where:   { workspaceId },
+    where:   { workspaceId, ...mineOrShared(userId) },
     orderBy: [{ level: "asc" }, { fileNo: "asc" }],
     select:  { id: true },
   });
@@ -218,7 +221,7 @@ export async function setLessonState(
   workspaceId: string, userId: string, lessonId: string, state: LessonState | null,
 ) {
   await gate(workspaceId, userId);
-  const lesson = await db.arabicLesson.findFirst({ where: { id: lessonId, workspaceId }, select: { id: true } });
+  const lesson = await db.arabicLesson.findFirst({ where: { id: lessonId, workspaceId, ...mineOrShared(userId) }, select: { id: true } });
   if (!lesson) throw new ArabicError("Lesson not found", "NOT_FOUND");
   if (state === null) {
     await db.arabicLessonState.deleteMany({ where: { userId, lessonId } });
@@ -285,7 +288,7 @@ export async function reviewQueue(
 
   if (opts.scope === "due") {
     const seen = await db.arabicCard.findMany({
-      where:  { lesson: { workspaceId }, ...sentenceFilter, reviews: { some: { userId, due: { lte: now } } } },
+      where:  { lesson: { workspaceId, ...mineOrShared(userId) }, ...sentenceFilter, reviews: { some: { userId, due: { lte: now } } } },
       select: cardSelect,
       take:   400,
     });
@@ -306,13 +309,13 @@ export async function reviewQueue(
     const ids = (opts.cardIds ?? []).filter((x) => /^[0-9a-f-]{36}$/i.test(x)).slice(0, 100);
     if (ids.length === 0) throw new ArabicError("Choose some cards.", "INVALID");
     const rows = await db.arabicCard.findMany({
-      where:  { id: { in: ids }, lesson: { workspaceId }, ...sentenceFilter },
+      where:  { id: { in: ids }, lesson: { workspaceId, ...mineOrShared(userId) }, ...sentenceFilter },
       select: cardSelect,
     });
     cards = shuffle(rows.map(shape));
   } else {
     if (!opts.lessonId) throw new ArabicError("Choose a lesson.", "INVALID");
-    const lesson = await db.arabicLesson.findFirst({ where: { id: opts.lessonId, workspaceId }, select: { id: true } });
+    const lesson = await db.arabicLesson.findFirst({ where: { id: opts.lessonId, workspaceId, ...mineOrShared(userId) }, select: { id: true } });
     if (!lesson) throw new ArabicError("Lesson not found", "NOT_FOUND");
     const rows = await db.arabicCard.findMany({
       where:   {
@@ -334,13 +337,13 @@ export async function reviewQueue(
     : [];
   const poolSelect = { id: true, lessonId: true, english: true, arabic: true, isSentence: true } as const;
   let pool = levels.length === 0 ? [] : await db.arabicCard.findMany({
-    where:  { lesson: { workspaceId, level: { in: levels } } },
+    where:  { lesson: { workspaceId, level: { in: levels }, ...mineOrShared(userId) } },
     select: poolSelect,
     take:   4000,
   });
   // A handful of your own words is too few to choose wrong answers from.
   if (pool.length < 12) {
-    pool = await db.arabicCard.findMany({ where: { lesson: { workspaceId } }, select: poolSelect, take: 4000 });
+    pool = await db.arabicCard.findMany({ where: { lesson: { workspaceId, ...mineOrShared(userId) } }, select: poolSelect, take: 4000 });
   }
 
   return { cards, pool };
@@ -374,7 +377,7 @@ export async function recordAnswers(workspaceId: string, userId: string, raw: un
   // Only cards in this workspace.
   const ids = [...new Set(answers.map((a) => a.cardId))];
   const valid = new Set((await db.arabicCard.findMany({
-    where: { id: { in: ids }, lesson: { workspaceId } }, select: { id: true },
+    where: { id: { in: ids }, lesson: { workspaceId, ...mineOrShared(userId) } }, select: { id: true },
   })).map((c) => c.id));
   const known = new Map((await db.arabicReview.findMany({
     where: { userId, cardId: { in: ids } }, select: { cardId: true, box: true, due: true },
@@ -453,7 +456,7 @@ export async function lessonBoxes(workspaceId: string, userId: string, lessonId:
 export async function wordCards(workspaceId: string, userId: string) {
   await gate(workspaceId, userId);
   const cards = await db.arabicCard.findMany({
-    where:   { lesson: { workspaceId }, isSentence: false },
+    where:   { lesson: { workspaceId, ...mineOrShared(userId) }, isSentence: false },
     orderBy: [{ lesson: { level: "asc" } }, { lesson: { fileNo: "asc" } }, { ord: "asc" }],
     select:  {
       id: true, english: true, arabic: true,
@@ -473,7 +476,7 @@ export async function wordCards(workspaceId: string, userId: string) {
 export async function lessonBoard(workspaceId: string, userId: string, lessonId: string) {
   await gate(workspaceId, userId);
   const lesson = await db.arabicLesson.findFirst({
-    where:  { id: lessonId, workspaceId },
+    where:  { id: lessonId, workspaceId, ...mineOrShared(userId) },
     select: { id: true, level: true, number: true, kind: true, title: true, pageId: true },
   });
   if (!lesson) throw new ArabicError("Lesson not found", "NOT_FOUND");
@@ -485,6 +488,33 @@ export async function lessonBoard(workspaceId: string, userId: string, lessonId:
   const page = await createWorkspaceBoard(workspaceId, userId, `Level ${lesson.level} · ${label} · ${lesson.title}`.slice(0, 80));
   await db.arabicLesson.update({ where: { id: lesson.id }, data: { pageId: page.id } });
   return page.id;
+}
+
+/**
+ * This reader's "My words" lesson, made on first use. Every reader's sits at
+ * level 0 and takes the next free file number there, since (workspace,
+ * level, file) is unique. Two adds racing to make it both end up with one.
+ */
+async function myWordsLesson(workspaceId: string, userId: string, attempt = 0): Promise<{ id: string; cardCount: number }> {
+  const found = await db.arabicLesson.findFirst({
+    where:  { workspaceId, kind: MY_WORDS.kind, ownerId: userId },
+    select: { id: true, cardCount: true },
+  });
+  if (found) return found;
+  const taken = await db.arabicLesson.findMany({ where: { workspaceId, level: MY_WORDS.level }, select: { fileNo: true } });
+  const used = new Set(taken.map((t) => t.fileNo));
+  let fileNo = MY_WORDS.fileNo;
+  while (used.has(fileNo)) fileNo++;
+  try {
+    return await db.arabicLesson.create({
+      data:   { workspaceId, level: MY_WORDS.level, fileNo, kind: MY_WORDS.kind, title: MY_WORDS.title, ownerId: userId },
+      select: { id: true, cardCount: true },
+    });
+  } catch (err) {
+    // Someone took that file number between the read and the write: look again.
+    if (attempt < 3) return myWordsLesson(workspaceId, userId, attempt + 1);
+    throw err;
+  }
 }
 
 /**
@@ -502,12 +532,7 @@ export async function addMyWord(
   const translit = typeof raw.translit === "string" ? raw.translit.trim().slice(0, MAX_FIELD) || null : null;
   if (!HAS_ARABIC.test(arabic) || !english) throw new ArabicError("A word needs its Arabic and its meaning.", "INVALID");
 
-  const lesson = await db.arabicLesson.upsert({
-    where:  { workspaceId_level_fileNo: { workspaceId, level: MY_WORDS.level, fileNo: MY_WORDS.fileNo } },
-    update: {},
-    create: { workspaceId, level: MY_WORDS.level, fileNo: MY_WORDS.fileNo, kind: MY_WORDS.kind, title: MY_WORDS.title },
-    select: { id: true, cardCount: true },
-  });
+  const lesson = await myWordsLesson(workspaceId, userId);
   const folded = foldArabic(arabic);
   const already = await db.arabicCard.findFirst({ where: { lessonId: lesson.id, folded }, select: { id: true } });
   if (already) return { cardId: already.id, added: false };

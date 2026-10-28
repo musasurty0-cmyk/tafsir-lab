@@ -15331,3 +15331,5 @@ input, textarea { font: inherit; color: inherit; }
 .aq-practise { height: 34px; padding: 0 14px; font-size: 13px; }
 .aq-add { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
 .ar-lesson[data-kind="mine"] .ar-lesson-n { font-family: var(--font-serif); font-size: 22px; color: var(--ink); line-height: 1; }
+.wl-open { display: inline-block; margin-top: 8px; font-size: 12.5px; font-weight: 600; color: var(--accent-ink); text-decoration: none; }
+.wl-open:hover { text-decoration: underline; }

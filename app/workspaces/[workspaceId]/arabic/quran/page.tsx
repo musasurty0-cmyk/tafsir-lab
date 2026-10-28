@@ -9,24 +9,36 @@ export const dynamic = "force-dynamic";
 
 import { getSession } from "@/lib/session";
 import * as ArabicService from "@/lib/services/arabic.service";
-import { fetchChapters } from "@/lib/quran-api";
+import { fetchChapters, fetchVerses } from "@/lib/quran-api";
 import ArabicQuran from "@/components/workspace/arabic/ArabicQuran";
 
 export default async function ArabicQuranPage({
   params, searchParams,
 }: {
   params: Promise<{ workspaceId: string }>;
-  searchParams: Promise<{ surah?: string; page?: string }>;
+  searchParams: Promise<{ surah?: string; page?: string; word?: string }>;
 }) {
   const { workspaceId } = await params;
-  const { surah, page } = await searchParams;
+  const { surah, page, word } = await searchParams;
   const { userId } = await getSession();
   // The gate: this must be an Arabic study workspace the reader belongs to.
   await ArabicService.listLessons(workspaceId, userId);
-  const chapters = await fetchChapters();
   const n = Math.min(114, Math.max(1, Number(surah) || 1));
-  const ch = chapters.find((c) => c.id === n);
+  /* The sūrah's pages come from its own verses, exactly as Qurʾān study
+     works them out — the chapter list's page range can stop a page short
+     (it puts all of al-Ghāshiyah on 592; its last four āyāt are on 593). */
+  const [chapters, verses] = await Promise.all([fetchChapters(), fetchVerses(n)]);
+  const pages = [...new Set(verses.map((v) => v.page_number).filter(Boolean))].sort((a, b) => a - b);
   const p = Number(page);
-  const initialPage = ch && p >= ch.pages[0] && p <= ch.pages[1] ? p : undefined;
-  return <ArabicQuran workspaceId={workspaceId} chapters={chapters} initialSurah={n} initialPage={initialPage} />;
+  const initialPage = pages.includes(p) ? p : undefined;
+  // ?word=s:a:w — arriving from a word's āyāt, that word opens selected.
+  const m = /^(\d{1,3}):(\d{1,3}):(\d{1,3})$/.exec(word ?? "");
+  const initialWord = m && Number(m[1]) === n ? { verseKey: `${m[1]}:${m[2]}`, position: Number(m[3]) } : undefined;
+  return (
+    <ArabicQuran
+      key={n}
+      workspaceId={workspaceId} chapters={chapters} pages={pages.length ? pages : undefined}
+      initialSurah={n} initialPage={initialPage} initialWord={initialWord}
+    />
+  );
 }

@@ -16,7 +16,7 @@ export function loadQuranIndex(): Promise<QuranIndex | null> {
   return pending;
 }
 
-export interface AyahWord { position: number; text: string; isWord: boolean }
+export interface AyahWord { position: number; text: string; isWord: boolean; page: number | null }
 export interface Ayah { verseKey: string; words: AyahWord[]; translation: string | null }
 
 const ayahCache = new Map<string, Promise<Ayah | null>>();
@@ -28,7 +28,7 @@ export function loadAyah(verseKey: string): Promise<Ayah | null> {
     p = fetch(`/api/ayah/${verseKey.replace(":", "_")}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((d: { verse?: {
-        words?: { position: number; char_type_name: string; text_qpc_hafs?: string; text_uthmani?: string }[];
+        words?: { position: number; char_type_name: string; text_qpc_hafs?: string; text_uthmani?: string; v2_page?: number }[];
         translations?: { text: string }[];
       } } | null) => {
         if (!d?.verse?.words) return null;
@@ -38,6 +38,7 @@ export function loadAyah(verseKey: string): Promise<Ayah | null> {
             position: w.position,
             text: w.text_qpc_hafs || w.text_uthmani || "",
             isWord: w.char_type_name === "word",
+            page: typeof w.v2_page === "number" ? w.v2_page : null,
           })),
           translation: d.verse.translations?.[0]?.text?.replace(/<sup[^>]*>.*?<\/sup>/g, "").replace(/<[^>]+>/g, "").trim() ?? null,
         };
@@ -98,4 +99,21 @@ export function loadMorph(surah: number): Promise<Record<string, MorphWord[]> | 
     morphCache.set(surah, p);
   }
   return p;
+}
+
+/**
+ * Dictionary form → its root, across the whole Qurʾān. For a word that was
+ * saved as its dictionary form (My words), which the spelling index cannot
+ * always find when that bare form never occurs.
+ */
+let lemmaRoots: Promise<Map<string, string>> | null = null;
+export function loadLemmaRoots(): Promise<Map<string, string>> {
+  lemmaRoots ??= loadRoots().then((r) => {
+    const m = new Map<string, string>();
+    for (const [root, row] of Object.entries(r?.roots ?? {})) {
+      for (const l of row.slice(1) as LemmaRow[]) if (!m.has(l[0])) m.set(l[0], root);
+    }
+    return m;
+  });
+  return lemmaRoots;
 }

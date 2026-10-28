@@ -16,8 +16,9 @@ import { useOverlayMotion } from "@/lib/use-overlay-motion";
 import { useDismissable } from "@/lib/use-dismissable";
 import { cardHeadword, lookup, type QuranHit } from "@/lib/arabic/quran-match";
 import { rootLetters } from "@/lib/arabic/morph";
+import Link from "next/link";
 import {
-  loadQuranIndex, loadRoots, loadAyah, arabicVoice, speak,
+  loadQuranIndex, loadRoots, loadAyah, loadLemmaRoots, arabicVoice, speak,
   type Ayah, type LemmaRow,
 } from "@/lib/arabic/quran-index-client";
 import RootFamily, { LemmaForms, lemmaKind } from "./RootFamily";
@@ -26,7 +27,9 @@ export interface LensCard {
   arabic: string; english: string; translit: string | null; gender: string | null; isSentence: boolean;
 }
 
-export default function WordLens({ card, onClose }: { card: LensCard | null; onClose: () => void }) {
+export default function WordLens({
+  card, onClose, workspaceId,
+}: { card: LensCard | null; onClose: () => void; workspaceId: string }) {
   const { mounted, state } = useOverlayMotion(!!card, 220);
   const [shown, setShown] = useState<LensCard | null>(card);
   if (card && card !== shown) setShown(card);
@@ -36,13 +39,13 @@ export default function WordLens({ card, onClose }: { card: LensCard | null; onC
     <>
       <div className="wl-scrim" data-state={state} onClick={onClose} />
       <aside className="wl" data-state={state} aria-label="Word" role="dialog">
-        <LensBody key={shown.arabic + shown.english} card={shown} onClose={onClose} />
+        <LensBody key={shown.arabic + shown.english} card={shown} onClose={onClose} workspaceId={workspaceId} />
       </aside>
     </>
   );
 }
 
-function LensBody({ card, onClose }: { card: LensCard; onClose: () => void }) {
+function LensBody({ card, onClose, workspaceId }: { card: LensCard; onClose: () => void; workspaceId: string }) {
   const [hit, setHit] = useState<QuranHit | null | undefined>(undefined);
   const [root, setRoot] = useState<{ total: number; lemmas: LemmaRow[] } | null>(null);
   const [ayahs, setAyahs] = useState<(Ayah | null)[]>([]);
@@ -53,7 +56,21 @@ function LensBody({ card, onClose }: { card: LensCard; onClose: () => void }) {
     let live = true;
     void (async () => {
       const index = await loadQuranIndex();
-      const h = index ? lookup(index, cardHeadword(card.arabic, card.isSentence), card.english) : null;
+      let h = index ? lookup(index, cardHeadword(card.arabic, card.isSentence), card.english) : null;
+      /* A card that IS a dictionary form (a word added from the Qurʾān) is
+         found by that form directly, with the places its forms occur. */
+      if (!h && !card.isSentence) {
+        const [lemmaRoots, roots] = await Promise.all([loadLemmaRoots(), loadRoots()]);
+        const root = lemmaRoots.get(card.arabic.trim());
+        const row = root ? (roots?.roots[root]?.slice(1) as LemmaRow[] | undefined)?.find((l) => l[0] === card.arabic.trim()) : undefined;
+        if (root && row) {
+          const places = (row.slice(5) as [string, number, string, string][]).map(([, , , at]) => {
+            const [s, a, w] = at.split(":");
+            return { verseKey: `${s}:${a}`, word: Number(w) };
+          });
+          h = { count: row[1], places, root, lemma: row[0] };
+        }
+      }
       if (!live) return;
       setHit(h);
       if (!h) return;
@@ -134,6 +151,16 @@ function LensBody({ card, onClose }: { card: LensCard; onClose: () => void }) {
                     ))}
                   </p>
                   {a.translation && <figcaption className="wl-ayah-tr">“{a.translation}” <span className="wl-ref">{a.verseKey}</span></figcaption>}
+                  {(() => {
+                    const target = hit.places[i];
+                    const page = a.words.find((w) => w.position === target.word)?.page;
+                    const [s] = a.verseKey.split(":");
+                    return page ? (
+                      <Link className="wl-open" href={`/workspaces/${workspaceId}/arabic/quran?surah=${s}&page=${page}&word=${a.verseKey}:${target.word}`}>
+                        Open in the Qurʾān ›
+                      </Link>
+                    ) : null;
+                  })()}
                 </figure>
               ))}
             </section>

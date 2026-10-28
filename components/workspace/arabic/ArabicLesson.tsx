@@ -139,7 +139,7 @@ export default function ArabicLesson({ workspaceId, lesson, boxes, prev, next }:
   return (
     <div className="workspace-home">
       <Toast message={notice} onDismiss={() => setNotice(null)} tone={noticeTone} />
-      <WordLens card={lens} onClose={() => setLens(null)} />
+      <WordLens card={lens} onClose={() => setLens(null)} workspaceId={workspaceId} />
       <Rail activeWorkspaceId={workspaceId} />
 
       <div className="workspace-home-content ar-lesson-page">

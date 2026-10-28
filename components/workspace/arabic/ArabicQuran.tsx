@@ -42,21 +42,27 @@ const CARD_WIDTH = 720;
 const COLOUR_KEY = "tl-arabic-quran-colour";
 
 export default function ArabicQuran({
-  workspaceId, chapters, initialSurah, initialPage,
-}: { workspaceId: string; chapters: Chapter[]; initialSurah: number; initialPage?: number }) {
+  workspaceId, chapters, pages: surahPages, initialSurah, initialPage, initialWord,
+}: {
+  workspaceId: string; chapters: Chapter[]; initialSurah: number; initialPage?: number;
+  /** This sūrah's Mushaf pages, from its own verses (as in Qurʾān study). */
+  pages?: number[];
+  initialWord?: { verseKey: string; position: number };
+}) {
   const router = useRouter();
   useLayoutEffect(() => {
     document.getElementById("tl-nav-splash")?.remove();
     document.getElementById("tl-nav-splash-style")?.remove();
   }, []);
 
-  const [surah, setSurah] = useState(initialSurah);
+  const surah = initialSurah;
   const chapter = chapters.find((c) => c.id === surah) ?? chapters[0];
   const pages = useMemo(() => {
+    if (surahPages?.length) return surahPages;
     const [a, b] = chapter.pages;
     return Array.from({ length: b - a + 1 }, (_, i) => a + i);
-  }, [chapter]);
-  const [page, setPage] = useState(initialPage ?? chapter.pages[0]);
+  }, [chapter, surahPages]);
+  const [page, setPage] = useState(initialPage ?? pages[0]);
 
   // ── The page, exactly as Qurʾān study loads it ──────────────────────────
   /* Keyed by what was loaded, so "still loading" is simply "not this page
@@ -145,7 +151,7 @@ export default function ArabicQuran({
   }, [colour, morph, verses, byLemma]);
 
   // ── Navigation and zoom ────────────────────────────────────────────────
-  const [picked, setPicked] = useState<Picked | null>(null);
+  const [picked, setPicked] = useState<Picked | null>(initialWord ?? null);
   const at = pages.indexOf(page);
   const goTo = useCallback((p: number) => { setPage(p); setPicked(null); }, []);
   const prev = useCallback(() => { if (at > 0) goTo(pages[at - 1]); }, [at, pages, goTo]);
@@ -205,12 +211,9 @@ export default function ArabicQuran({
 
   const cardRef = useRef<HTMLDivElement>(null);
   const noop = useCallback(() => {}, []);
+  // A new sūrah is a new page list, which the server works out.
   const chooseSurah = (n: number) => {
-    const c = chapters.find((x) => x.id === n);
-    if (!c) return;
-    setSurah(n);
-    setPage(c.pages[0]);
-    setPicked(null);
+    if (chapters.some((x) => x.id === n)) router.push(`/workspaces/${workspaceId}/arabic/quran?surah=${n}`);
   };
 
   const pickedWord = picked && morph ? morph[picked.verseKey.split(":")[1]]?.[picked.position - 1] ?? null : null;
