@@ -171,6 +171,10 @@ for (const arg of args) {
   }
 }
 
+const db = new PrismaClient();
+const previousRow = await db.dunyaPlan.findUnique({ where: { id: "main" }, select: { passwordHash: true, catalog: true } });
+const previous = { stored: ((previousRow?.catalog ?? {}) as { stored?: Record<string, number> }).stored ?? {} };
+
 // Course order: Edexcel series as taught, OCR by module; papers by number or specification point.
 const order = ["Pure", "Mechanics", "Statistics"];
 for (const s of subjects.values()) {
@@ -217,7 +221,12 @@ if (!process.env.SKIP_UPLOAD) {
   const big = [...uploads].filter(([, b]) => b.length > MAX_FILE_BYTES).map(([k]) => k);
   if (big.length) throw new Error(`Over 50 MB, not uploaded: ${big.join(", ")}`);
   if (uploads.size > MAX_FILES_PER_RUN) throw new Error(`${uploads.size} files is more than ${MAX_FILES_PER_RUN} in one run; nothing uploaded.`);
-  const present = bucketBytes();
+  /* Cloudflare's figure lags uploads by minutes or more, so it is checked
+     against this script's own record of everything it has stored, and the
+     larger is believed. A replaced file counts once, at its new size. */
+  const record = { ...previous.stored, ...Object.fromEntries([...uploads].map(([k, b]) => [k, b.length])) };
+  const recorded = Object.values(record).reduce((n, b) => n + b, 0);
+  const present = Math.max(bucketBytes() + adding, recorded) - adding;
   const mb = (n: number) => `${(n / 1024 ** 2).toFixed(1)} MB`;
   if (present + adding > MAX_BUCKET_BYTES) {
     throw new Error(`The bucket holds ${mb(present)}; adding ${mb(adding)} would pass the ${mb(MAX_BUCKET_BYTES)} limit kept to stay on the free plan. Nothing uploaded.`);
@@ -238,8 +247,9 @@ if (!process.env.SKIP_UPLOAD) {
   console.log();
 }
 
-const catalog: Catalog = { v: 2, subjects: [...subjects.values()] };
-const db = new PrismaClient();
+const stored = process.env.SKIP_UPLOAD ? previous.stored
+  : { ...previous.stored, ...Object.fromEntries([...uploads].map(([k, b]) => [k, b.length])) };
+const catalog: Catalog = { v: 2, subjects: [...subjects.values()], stored };
 const pw = process.env.DUNYA_PASSWORD?.trim().toLowerCase();
 const hash = pw
   ? (() => {
@@ -249,7 +259,7 @@ const hash = pw
       return `scrypt$${N}$${r}$${p}$${salt.toString("base64")}$${h.toString("base64")}`;
     })()
   : null;
-const existing = await db.dunyaPlan.findUnique({ where: { id: "main" }, select: { passwordHash: true } });
+const existing = previousRow;
 if (!existing && !hash) throw new Error("First run: set DUNYA_PASSWORD.");
 if (existing) {
   await db.dunyaPlan.update({

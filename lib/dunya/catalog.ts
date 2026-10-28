@@ -25,7 +25,12 @@ export interface Subject {
   all: FileRef[];
   groups: Group[];
 }
-export interface Catalog { v: 2; subjects: Subject[] }
+export interface Catalog {
+  v: 2; subjects: Subject[];
+  /** Every key ever uploaded and its size, so the upload script can count
+      what the bucket holds without waiting on Cloudflare's lagging figure. */
+  stored?: Record<string, number>;
+}
 
 export type Confidence = "red" | "amber" | "green";
 export interface Attempt {
