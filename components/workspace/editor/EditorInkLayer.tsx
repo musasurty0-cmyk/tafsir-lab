@@ -25,6 +25,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { readInkOutbox, writeInkOutbox } from "@/lib/ink-outbox";
 import { withVersion } from "@/lib/poll-version";
+import { shouldPoll } from "@/lib/idle";
 import { PenLine, Highlighter, Eraser, Undo2, X } from "lucide-react";
 import {
   type Pt, type InkStroke,
@@ -253,7 +254,7 @@ export default function EditorInkLayer({ pageId }: Props) {
 
     load();
     const id = setInterval(() => {
-      if (document.visibilityState === "visible") load();
+      if (shouldPoll()) load();   // visible, and someone at the page (lib/idle)
     }, OTHERS_POLL_MS);
 
     function flush() {

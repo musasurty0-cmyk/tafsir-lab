@@ -47,6 +47,7 @@ import {
 import type { CanvasViewport } from "./ModeBPage";
 import { inkOutboxKey, readInkOutbox } from "@/lib/ink-outbox";
 import { withVersion } from "@/lib/poll-version";
+import { shouldPoll } from "@/lib/idle";
 import {
   type Pt, type InkStroke,
   normPts, hitTest, drawSmooth, drawArrow, paintStroke, strokeSurface,
@@ -812,7 +813,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     // The last version sent: unchanged ink is not sent again (lib/poll-version).
     let seen: string | null = null;
     const id = setInterval(() => {
-      if (document.visibilityState !== "visible") return;
+      if (!shouldPoll()) return;   // hidden, or nobody at the page (lib/idle)
       const issuedAt = Date.now();   // anything saved after this cannot be in the reply
       fetch(withVersion(`/api/pages/${pageId}/drawings`, seen))
         .then(r => r.ok ? r.json() : null)

@@ -15,6 +15,7 @@ import Link from "next/link";
 import { ChevronLeft, Upload } from "lucide-react";
 import type { MemberRole } from "@/lib/services/workspaces.service";
 import { withVersion } from "@/lib/poll-version";
+import { shouldPoll } from "@/lib/idle";
 import type { NoteData } from "./NoteCard";
 import { EditorContextProvider, type EditorContextValue } from "./editor/EditorContext";
 import { useRoom } from "@/lib/collab/useRoom";
@@ -130,7 +131,7 @@ export default function BookShell({
     let live = true;
     let seen: string | null = null;   // the last version sent (lib/poll-version)
     const id = setInterval(() => {
-      if (document.visibilityState !== "visible") return;
+      if (!shouldPoll()) return;   // hidden, or nobody at the page (lib/idle)
       fetch(withVersion(`/api/pages/${pageId}/notes`, seen))
         .then((r) => (r.ok ? r.json() : null))
         .then((d: { notes?: NoteData[]; version?: string } | null) => {

@@ -15,6 +15,7 @@
 
 import { pushWithSplash } from "@/lib/nav-splash";
 import { withVersion } from "@/lib/poll-version";
+import { shouldPoll } from "@/lib/idle";
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import type { Chapter, Verse } from "@/lib/types";
@@ -404,7 +405,7 @@ export default function WorkspacePageView({
     const seen: { notes: string | null; progress: string | null } = { notes: null, progress: null };
 
     function poll() {
-      if (document.visibilityState !== "visible") return;
+      if (!shouldPoll()) return;   // hidden, or nobody at the page (lib/idle)
       const now = Date.now();
       const last = lastPollRef.current;
 
