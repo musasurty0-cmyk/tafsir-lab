@@ -70,7 +70,7 @@ export async function deleteDemoUser(userId: string): Promise<boolean> {
   const outside = { workspaceSurah: { workspaceId: { notIn: own } } };
   const foreign =
     (await db.structuredNote.count({ where: { authorId: userId, page: outside } })) +
-    (await db.canvasDrawing.count({ where: { authorId: userId, page: outside } })) +
+    (await db.inkStroke.count({ where: { authorId: userId, page: outside } })) +
     (await db.page.count({ where: { createdById: userId, ...outside } })) +
     (await db.quranSegment.count({ where: { createdById: userId, workspaceId: { notIn: own } } })) +
     (await db.quranConnection.count({ where: { createdById: userId, workspaceId: { notIn: own } } }));

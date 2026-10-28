@@ -126,8 +126,7 @@ export default async function WorkspaceHomePage({
     db.$queryRaw<{ id: string; hasWork: boolean }[]>`
       SELECT ws.id,
         (EXISTS (SELECT 1 FROM "StructuredNote" sn JOIN "Page" p ON p.id = sn."pageId" WHERE p."workspaceSurahId" = ws.id)
-         OR EXISTS (SELECT 1 FROM "CanvasDrawing" c JOIN "Page" p ON p.id = c."pageId"
-                    WHERE p."workspaceSurahId" = ws.id AND jsonb_typeof(c.strokes) = 'array' AND jsonb_array_length(c.strokes) > 0)
+         OR EXISTS (SELECT 1 FROM "InkStroke" k JOIN "Page" p ON p.id = k."pageId" WHERE p."workspaceSurahId" = ws.id)
          OR EXISTS (SELECT 1 FROM "Page" p WHERE p."workspaceSurahId" = ws.id
                     AND p."tiptapContent"::text ~ '"text":"[^"]*[^[:space:]"]')) AS "hasWork"
       FROM "WorkspaceSurah" ws

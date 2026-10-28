@@ -8,20 +8,25 @@
  *                   reply is { unchanged: true, mine, others }).
  *
  * PUT  /api/pages/[pageId]/drawings
- *   Body: { strokes: Stroke[], surface?: "canvas" | "editor", deletedIds?: string[] }
- *   MERGES the given surface's strokes by id: the client's copies win for
- *   ids it sends, strokes it doesn't know about are PRESERVED (same account
- *   on another device, or a stroke drawn before this client's initial load),
- *   and only ids listed in deletedIds are removed. The other surface is
- *   untouched (canvas and editor ink save independently; a missing surface
- *   means "canvas" for backward compatibility). Body `base` is the `mine`
- *   version the client last read or wrote; when nobody else wrote the row
- *   since, the reply is { ok: true, mine } and the client is up to date
- *   without reading its own ink back. Otherwise { ok: true }.
+ *   Body: { strokes: Stroke[], surface?: "canvas" | "editor", deletedIds?: string[], base?: string }
+ *   MERGES by id: the client's copies win for ids it sends, strokes it
+ *   doesn't know about are PRESERVED (same account on another device, or a
+ *   stroke drawn before this client's initial load), and only ids listed in
+ *   deletedIds are removed. `surface` is stamped on the strokes sent (a
+ *   missing surface means "canvas" for backward compatibility). `base` is the
+ *   `mine` version the client last read or wrote; when nobody else wrote since,
+ *   the reply is { ok: true, mine } and the client is up to date without
+ *   reading its own ink back. Otherwise { ok: true }.
  *
  *   The old replace-the-surface semantics silently destroyed strokes the
  *   writing client didn't have in memory — the root cause of annotation
  *   layers "randomly disappearing".
+ *
+ * Storage (prisma/sql/020): one InkStroke row per stroke, and one InkHead row
+ * per author per page whose updatedAt is the version. Ink used to be one JSON
+ * array per author per page, up to 2.8 MB, rewritten whole on every save;
+ * Supabase warned that this was exhausting the database's Disk IO budget. A
+ * save now writes only the strokes it touches.
  */
 
 import { gzipSync } from "node:zlib";
@@ -46,18 +51,13 @@ export async function GET(
     // non-member must not reach it. Was previously ungated (IDOR).
     await assertPageAccess(pageId, userId);
 
-    /* Ink is by far the largest thing a page reads — one person's on one page
-       has reached 2.8 MB — and it was read every 15–20 s by each open page,
-       on every return to the tab and on every reconnect. That is what ran the
-       database past its monthly egress and took the site down.
-
-       So the reader says what it already has, in two halves: its own ink
-       (`mine`, the row's updatedAt) and everyone else's (`others`). Only the
-       versions are read first — a few bytes a row — and a half is fetched and
-       sent only when it changed. Drawing does not re-download your own ink:
-       a save tells the page its new `mine` (see PUT). */
+    /* The reader says what it already has, in two halves: its own ink
+       (`mine`) and everyone else's (`others`). Only the heads are read first —
+       one tiny row per author — and a half is fetched and sent only when it
+       changed. Ink is the largest thing a page reads and the ink layers poll
+       it, so this is most of what keeps the database inside its egress. */
     const sp = req.nextUrl.searchParams;
-    const heads = await db.canvasDrawing.findMany({ where: { pageId }, select: { authorId: true, updatedAt: true } });
+    const heads = await db.inkHead.findMany({ where: { pageId }, select: { authorId: true, updatedAt: true } });
     const myHead = heads.find((h) => h.authorId === userId);
     const otherHeads = heads.filter((h) => h.authorId !== userId);
     const mineV = String(myHead ? myHead.updatedAt.getTime() : 0);
@@ -71,29 +71,36 @@ export async function GET(
       return NextResponse.json({ unchanged: true, mine: mineV, others: othersV }, { headers: { "Cache-Control": "no-store" } });
     }
 
-    const drawings = await db.canvasDrawing.findMany({
-      where:   { pageId, ...(needMine && needOthers ? {} : needMine ? { authorId: userId } : { authorId: { not: userId } }) },
-      include: { author: { select: { id: true, name: true } } },
-    });
+    const wantOthers = needOthers && otherHeads.length > 0;
+    const rows = needMine || wantOthers
+      ? await db.inkStroke.findMany({
+          where:   { pageId, ...(needMine && wantOthers ? {} : needMine ? { authorId: userId } : { authorId: { not: userId } }) },
+          orderBy: { seq: "asc" },
+          select:  { authorId: true, data: true },
+        })
+      : [];
 
-    // Safely parse strokes — they are stored as Json which may be any value.
-    function parseStrokes(raw: unknown): object[] {
-      if (Array.isArray(raw)) return raw as object[];
-      return [];
+    const byAuthor = new Map<string, object[]>();
+    for (const r of rows) {
+      const list = byAuthor.get(r.authorId) ?? [];
+      list.push(r.data as object);
+      byAuthor.set(r.authorId, list);
     }
-
-    const mine = drawings.find((d) => d.authorId === userId);
-    const others = drawings
-      .filter((d) => d.authorId !== userId)
-      .map((d) => ({
-        authorId:   d.authorId,
-        authorName: d.author.name,
-        strokes:    parseStrokes(d.strokes),
-      }));
+    const names = wantOthers
+      ? new Map((await db.user.findMany({
+          where:  { id: { in: otherHeads.map((h) => h.authorId) } },
+          select: { id: true, name: true },
+        })).map((u) => [u.id, u.name]))
+      : new Map<string, string>();
 
     const json = JSON.stringify({
-      ...(needMine ? { myStrokes: mine ? parseStrokes(mine.strokes) : [] } : {}),
-      ...(needOthers ? { otherLayers: others } : {}),
+      ...(needMine ? { myStrokes: byAuthor.get(userId) ?? [] } : {}),
+      // Sent whenever it changed, even empty, so ink erased elsewhere clears here.
+      ...(needOthers
+        ? { otherLayers: otherHeads
+            .filter((h) => byAuthor.has(h.authorId))
+            .map((h) => ({ authorId: h.authorId, authorName: names.get(h.authorId) ?? "", strokes: byAuthor.get(h.authorId)! })) }
+        : {}),
       mine:   mineV,
       others: othersV,
     });
@@ -129,68 +136,65 @@ export async function PUT(
   try {
     const { userId } = await getSession();
     const { pageId } = await params;
-    // Membership is the gate, matching saveDrawing()'s existing policy: any
-    // member may annotate, a non-member cannot reach the page at all.
+    // Membership is the gate: any member may annotate, a non-member cannot
+    // reach the page at all.
     await assertPageAccess(pageId, userId);
 
     const body = await req.json() as { strokes?: unknown; surface?: unknown; deletedIds?: unknown; base?: unknown };
     const base = typeof body.base === "string" ? body.base : null;
     const incoming = Array.isArray(body.strokes) ? body.strokes as { id?: string; surface?: string }[] : [];
     const surface  = body.surface === "editor" ? "editor" : "canvas";
-    const deleted  = new Set(
+    const deleted  = [...new Set(
       Array.isArray(body.deletedIds)
         ? (body.deletedIds as unknown[]).filter((x): x is string => typeof x === "string")
         : [],
-    );
+    )];
+    const gone = new Set(deleted);
 
-    // Stamp the surface on incoming strokes.
-    const stamped = incoming.map((s) => ({ ...s, surface }));
-
-    /* One statement, merged inside the database. The row is one author's ink
-       on the page — up to megabytes — and an earlier version read it out,
-       merged in JavaScript and wrote it back: every save sent the whole row
-       out of the database (metered egress) and, with saves overlapping, a
-       compare-and-swap retried that up to four times each. On the smallest
-       instance that piled up until every connection was a slow ink save and
-       the site went down.
-
-       Now only the new strokes travel. Postgres drops the strokes this save
-       replaces or deletes (by id) and appends the new ones under the row's
-       own lock, so overlapping saves queue rather than lose each other's
-       strokes. Packed here, as before, so stored points stay compact. */
-    const keep = stamped.filter((s) => s.id == null || !deleted.has(s.id));
-    const drop = [...new Set([...stamped.map((s) => s.id).filter((x): x is string => !!x), ...deleted])];
+    /* Pack on the SERVER, not in each client: coordinates arrive at float64
+       precision with per-point keys, and rounding to 0.1px into tuples is ~10x
+       smaller with every point kept. A stroke without an id cannot be merged
+       by id, so it is not stored. */
+    const keep = incoming
+      .filter((s) => typeof s?.id === "string" && !gone.has(s.id))
+      .map((s) => ({ ...s, surface }));
     const packed = JSON.stringify(packStrokes(keep as { points?: unknown }[]));
-    type Saved = { updatedAt: Date; prev: Date | null };
-    // The existing row, locked in the same statement; `prev` is its version before this save.
-    const update = () => db.$queryRaw<Saved[]>`
-      UPDATE "CanvasDrawing" d SET
-        "strokes" = COALESCE((
-          SELECT jsonb_agg(e) FROM jsonb_array_elements(
-            CASE WHEN jsonb_typeof(d."strokes") = 'array' THEN d."strokes" ELSE '[]'::jsonb END
-          ) e
-          WHERE NOT (COALESCE(e->>'id', '') = ANY(${drop}::text[]))
-        ), '[]'::jsonb) || ${packed}::jsonb,
-        "updatedAt" = now()
-      FROM (SELECT ctid, "updatedAt" AS old FROM "CanvasDrawing"
-            WHERE "pageId" = ${pageId}::uuid AND "authorId" = ${userId}::uuid FOR UPDATE) o
-      WHERE d.ctid = o.ctid
-      RETURNING d."updatedAt", o.old AS prev`;
-    let [row] = await update();
-    if (!row) {
-      // This author's first ink on the page. Two first saves can race: the loser updates instead.
-      [row] = await db.$queryRaw<Saved[]>`
-        INSERT INTO "CanvasDrawing" ("pageId", "authorId", "strokes", "updatedAt")
-        VALUES (${pageId}::uuid, ${userId}::uuid, ${packed}::jsonb, now())
-        ON CONFLICT ("pageId", "authorId") DO NOTHING
-        RETURNING "updatedAt", NULL::timestamptz AS prev`;
-      if (!row) [row] = await update();
-    }
 
-    /* The row's new version, when this client already had everything else in
-       it (nobody else wrote since its `base`): then it need not read its own
-       ink back. Otherwise its next read fetches the row. */
-    const upToDate = row && base === String(row.prev ? new Date(row.prev).getTime() : 0);
+    /* One transaction, in this order:
+       1. the author's head row exists (dated at the epoch, so a first save's
+          `prev` is version "0");
+       2. the head moves on, locked: this serialises one author's saves on a
+          page, and `prev` is the version before this save. clock_timestamp(),
+          taken after the lock, and never the same millisecond twice, keeps
+          versions strictly increasing;
+       3. erased strokes go;
+       4. sent strokes are inserted or replaced, keeping their drawing order. */
+    const [, moved] = await db.$transaction([
+      db.$executeRaw`
+        INSERT INTO "InkHead" ("pageId", "authorId", "updatedAt")
+        VALUES (${pageId}::uuid, ${userId}::uuid, 'epoch'::timestamptz)
+        ON CONFLICT DO NOTHING`,
+      db.$queryRaw<{ updatedAt: Date; prev: Date }[]>`
+        UPDATE "InkHead" h
+        SET "updatedAt" = GREATEST(clock_timestamp(), o.old + interval '1 millisecond')
+        FROM (SELECT ctid, "updatedAt" AS old FROM "InkHead"
+              WHERE "pageId" = ${pageId}::uuid AND "authorId" = ${userId}::uuid FOR UPDATE) o
+        WHERE h.ctid = o.ctid
+        RETURNING h."updatedAt", o.old AS prev`,
+      db.$executeRaw`
+        DELETE FROM "InkStroke"
+        WHERE "pageId" = ${pageId}::uuid AND "authorId" = ${userId}::uuid AND "id" = ANY(${deleted}::text[])`,
+      db.$executeRaw`
+        INSERT INTO "InkStroke" ("pageId", "authorId", "id", "surface", "data", "updatedAt")
+        SELECT ${pageId}::uuid, ${userId}::uuid, t.e->>'id', ${surface}, t.e, now()
+        FROM jsonb_array_elements(${packed}::jsonb) WITH ORDINALITY AS t(e, ord)
+        ORDER BY t.ord
+        ON CONFLICT ("pageId", "authorId", "id") DO UPDATE
+          SET "data" = EXCLUDED."data", "surface" = EXCLUDED."surface", "updatedAt" = EXCLUDED."updatedAt"`,
+    ]);
+
+    const row = moved[0];
+    const upToDate = row && base === String(new Date(row.prev).getTime());
     const mine = upToDate ? String(new Date(row.updatedAt).getTime()) : null;
     return NextResponse.json(mine ? { ok: true, mine } : { ok: true });
   } catch (err) {

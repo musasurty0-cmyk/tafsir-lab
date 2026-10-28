@@ -33,6 +33,8 @@ model User {
   publishedPages   Page[]                 @relation("PagePublishedBy")
   notes            StructuredNote[]
   drawings         CanvasDrawing[]
+  inkStrokes       InkStroke[]
+  inkHeads         InkHead[]
   personalProgress PersonalAyahProgress[]
   groupChanges     GroupAyahProgress[]    @relation("GroupProgressChangedBy")
   pagePrefs        PageUserPrefs[]
@@ -296,6 +298,8 @@ model Page {
   publishedBy      User?                  @relation("PagePublishedBy", fields: [publishedById], references: [id])
   notes            StructuredNote[]
   drawings         CanvasDrawing[]
+  inkStrokes       InkStroke[]
+  inkHeads         InkHead[]
   personalProgress PersonalAyahProgress[]
   groupProgress    GroupAyahProgress[]
   userPrefs        PageUserPrefs[]
@@ -398,6 +402,37 @@ model StructuredNote {
 // All layers are rendered together in the UI.
 // No shared collaborative drawing layer in v1.
 // ─────────────────────────────────────────────────────────────
+/// Handwriting, one row per stroke (prisma/sql/020). Replaces CanvasDrawing's
+/// one-array-per-author rows, which every save rewrote whole.
+model InkStroke {
+  pageId    String   @db.Uuid
+  authorId  String   @db.Uuid
+  id        String
+  surface   String   @default("canvas")
+  data      Json
+  seq       BigInt   @default(autoincrement())
+  updatedAt DateTime @default(now()) @db.Timestamptz(6)
+
+  page   Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@id([pageId, authorId, id])
+  @@index([pageId, seq])
+}
+
+/// When an author's ink on a page last changed: the version readers compare.
+model InkHead {
+  pageId    String   @db.Uuid
+  authorId  String   @db.Uuid
+  updatedAt DateTime @default(now()) @db.Timestamptz(6)
+
+  page   Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@id([pageId, authorId])
+}
+
+/// Legacy: superseded by InkStroke/InkHead (sql 020). Kept until the copy is confirmed.
 model CanvasDrawing {
   id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   pageId    String   @db.Uuid
