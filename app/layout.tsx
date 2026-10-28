@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import {
   Inter, Source_Serif_4, JetBrains_Mono,
-  Caveat, Patrick_Hand, Comic_Neue,
+  Caveat, Patrick_Hand, Comic_Neue, Carlito,
 } from "next/font/google";
 import NavSplashCleaner from "@/components/NavSplashCleaner";
 import AppearanceBoot from "@/components/AppearanceBoot";
@@ -41,6 +41,16 @@ const mono = JetBrains_Mono({
    string "var(--font-hand), ..." in their textStyle mark, so repointing this
    variable silently restyles existing handwriting — the marker face gets its
    own variable instead of taking this one over. */
+/* Note text is Calibri. Windows has it; iPads and Macs without Office do
+   not, so Carlito — its free, metric-identical twin — stands in, and a note
+   lays out the same on every device. */
+const carlito = Carlito({
+  subsets: ["latin"],
+  weight: ["400", "700"],
+  style: ["normal", "italic"],
+  variable: "--font-carlito",
+  display: "swap",
+});
 const caveat = Caveat({
   subsets: ["latin"],
   weight: ["400", "600"],
@@ -83,7 +93,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body
-        className={`${sans.variable} ${serif.variable} ${mono.variable} ${caveat.variable} ${comicNeue.variable} ${patrickHand.variable}`}
+        className={`${sans.variable} ${serif.variable} ${mono.variable} ${carlito.variable} ${caveat.variable} ${comicNeue.variable} ${patrickHand.variable}`}
         style={{ fontFamily: "var(--font-sans), system-ui, sans-serif" }}
       >
         <LocaleProvider>

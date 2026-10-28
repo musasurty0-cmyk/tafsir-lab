@@ -10378,16 +10378,30 @@ input, textarea { font: inherit; color: inherit; }
    One face for prose in the editor, Latin and Arabic alike: Calibri covers
    both, so a mixed note does not change face mid-sentence. The Muṣḥaf is
    untouched — its QCF glyph metrics ARE the page layout. */
+/* Its own variable: --font-sans is the interface face, and next/font sets
+   it to Inter on <body>, which silently replaced the Calibri meant for notes.
+   Carlito is loaded in app/layout.tsx for devices without Calibri. */
+body {
+  --font-body: "Calibri", var(--font-carlito, "Carlito"), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
 .page-editor-content,
 .free-textbox-input,
 .free-textbox .page-editor-content {
-  font-family: var(--font-sans);
+  font-family: var(--font-body);
 }
+/* Body text in every block, not just the root: the old `.tiptap li` rule set
+   list items in the serif face (and its own 16px), so bulleted and numbered
+   lines read in a different face and size from the paragraphs around them.
+   Headings keep their serif. */
+.page-editor-content :is(p, li, blockquote, td, th) {
+  font-family: var(--font-body);
+}
+.page-editor-content li { font-size: inherit; }
 /* Arabic typed into a note reads in the same face as the English beside it. */
 .page-editor-content [dir="rtl"],
 .page-editor-content [lang="ar"],
 .page-editor-content blockquote[dir="rtl"] {
-  font-family: var(--font-sans);
+  font-family: var(--font-body);
 }
 
 /* An embedded /tafsir block is prose, so it follows the editor face. */

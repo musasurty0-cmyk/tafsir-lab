@@ -44,6 +44,7 @@ import { ConnectionBlockExtension } from "./ConnectionBlockExtension";
 import { ToggleListExtension } from "./ToggleListExtension";
 import { TextDirection } from "./TextDirection";
 import { ListItemWithHeading, PasteTidy } from "./PasteTidy";
+import { EmptyFirstLine } from "./EmptyFirstLine";
 
 export interface BaseEditorOptions {
   /**
@@ -89,6 +90,8 @@ export function baseExtensions(o: BaseEditorOptions): Extensions {
     /* Pasted HTML from OneNote, Word and Docs comes in looking as it did
        there; a paste from another TafsirLab note is left untouched. */
     PasteTidy,
+    // A blank first line can be deleted, so a title can reach the top.
+    EmptyFirstLine,
 
     Underline,
     Highlight.configure({ multicolor: true }),
