@@ -49,7 +49,8 @@ import { announceFocus } from "./editor/blockFormat";
  *  palette, ayah/tafsir search results and toolbars are comfortable without
  *  a manual resize. */
 export const TEXTBOX_DEFAULT_WIDTH = 340;
-const MIN_WIDTH = 140, MAX_WIDTH = 900;
+/* Wide enough for a long passage laid out across the page; the sheet scrolls to fit. */
+const MIN_WIDTH = 140, MAX_WIDTH = 2400;
 
 /**
  * From a box's corner to the middle of its first line of text (its padding,
@@ -146,7 +147,56 @@ export default function FreeTextBox({ note, startEditing = false, ayahInline = f
       .catch(() => {});
   }
 
+  // ── Scrolling the page while a box is carried ───────────────────────────
+  /* The pointer cannot leave the window, so a box near the edge of the page
+     could not be widened or moved any further: the only way was to drag it
+     left, widen it, and drag it back. Now, while a box is held within EDGE px
+     of the page's edge, the page scrolls on its own and the box keeps growing
+     or moving with it, as far as the page needs to go. Rightward and downward
+     are open-ended (the sheet grows to fit); left and up stop at the start. */
+  const EDGE = 56;
+  const autoRef = useRef<{ raf: number; x: number; y: number; ex: number; ey: number } | null>(null);
+
+  function startAuto(el: HTMLElement, x: number, y: number, apply: () => void, vertical: boolean) {
+    stopAuto();
+    const scroller = el.closest(".doc-wrap") as HTMLElement | null;
+    const a = { raf: 0, x, y, ex: 0, ey: 0 };
+    autoRef.current = a;
+    if (!scroller) return;   // boards and the Muṣḥaf canvas pan instead
+    const speed = (over: number) => Math.min(24, 4 + over / 3);
+    const tick = () => {
+      if (autoRef.current !== a) return;
+      const r = scroller.getBoundingClientRect();
+      let sx = a.x > r.right - EDGE ? speed(a.x - (r.right - EDGE)) : a.x < r.left + EDGE ? -speed(r.left + EDGE - a.x) : 0;
+      let sy = !vertical ? 0 : a.y > r.bottom - EDGE ? speed(a.y - (r.bottom - EDGE)) : a.y < r.top + EDGE ? -speed(r.top + EDGE - a.y) : 0;
+      if (sx < 0 && scroller.scrollLeft <= 0) sx = 0;
+      if (sy < 0 && scroller.scrollTop <= 0) sy = 0;
+      if (sx || sy) {
+        // Grow first, then scroll: the sheet is only as wide as what is on it.
+        a.ex += sx; a.ey += sy;
+        apply();
+        scroller.scrollBy(sx, sy);
+      }
+      a.raf = requestAnimationFrame(tick);
+    };
+    a.raf = requestAnimationFrame(tick);
+  }
+
+  function stopAuto() {
+    if (autoRef.current) cancelAnimationFrame(autoRef.current.raf);
+    autoRef.current = null;
+  }
+
   // ── Drag (grip handle) ──────────────────────────────────────────────────
+
+  function applyDrag() {
+    const d = dragRef.current, a = autoRef.current;
+    if (!d || !a) return;
+    setPos({
+      x: d.startX + (a.x - d.startMx + a.ex) / d.zoom,
+      y: d.startY + (a.y - d.startMy + a.ey) / d.zoom,
+    });
+  }
 
   function onGripDown(e: React.PointerEvent) {
     e.preventDefault();
@@ -154,27 +204,27 @@ export default function FreeTextBox({ note, startEditing = false, ayahInline = f
     // Drag deltas map 1:1 to canvas-space units at any zoom level.
     const zoom = zoomAt(e.currentTarget as HTMLElement);
     dragRef.current = { startMx: e.clientX, startMy: e.clientY, startX: pos.x, startY: pos.y, zoom };
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    startAuto(e.currentTarget as HTMLElement, e.clientX, e.clientY, applyDrag, true);
+    try { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); } catch { /* pointer already gone */ }
   }
 
   function onGripMove(e: React.PointerEvent) {
-    const d = dragRef.current;
-    if (!d) return;
-    setPos({
-      x: d.startX + (e.clientX - d.startMx) / d.zoom,
-      y: d.startY + (e.clientY - d.startMy) / d.zoom,
-    });
+    const a = autoRef.current;
+    if (!dragRef.current || !a) return;
+    a.x = e.clientX; a.y = e.clientY;
+    applyDrag();
   }
 
   function onGripUp() {
     const d = dragRef.current;
     if (!d) return;
     dragRef.current = null;
+    stopAuto();
     if (isTemp) return; // geometry persists with the server note
     fetch(`/api/notes/${note.id}`, {
       method:  "PATCH",
       headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({ offsetX: pos.x, offsetY: pos.y }),
+      body:    JSON.stringify({ offsetX: posRef.current.x, offsetY: posRef.current.y }),
     }).catch(() => {});
   }
 
@@ -184,26 +234,35 @@ export default function FreeTextBox({ note, startEditing = false, ayahInline = f
      one keeps the right edge where it is, so it moves the box as it widens. */
   const sizeRef = useRef<{ side: "left" | "right"; startMx: number; startW: number; startX: number; zoom: number } | null>(null);
 
+  function applySize() {
+    const r = sizeRef.current, a = autoRef.current;
+    if (!r || !a) return;
+    const dx = (a.x - r.startMx + a.ex) / r.zoom;
+    const w = Math.round(Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, r.startW + (r.side === "right" ? dx : -dx))));
+    setWidth(w);
+    if (r.side === "left") setPos((p) => ({ ...p, x: r.startX + (r.startW - w) }));
+  }
+
   function onSideDown(side: "left" | "right", e: React.PointerEvent) {
     e.preventDefault();
     e.stopPropagation();
     sizeRef.current = { side, startMx: e.clientX, startW: width, startX: pos.x, zoom: zoomAt(e.currentTarget as HTMLElement) };
+    startAuto(e.currentTarget as HTMLElement, e.clientX, e.clientY, applySize, false);
     try { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); } catch { /* pointer already gone */ }
   }
 
   function onSideMove(e: React.PointerEvent) {
-    const r = sizeRef.current;
-    if (!r) return;
-    const dx = (e.clientX - r.startMx) / r.zoom;
-    const w = Math.round(Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, r.startW + (r.side === "right" ? dx : -dx))));
-    setWidth(w);
-    if (r.side === "left") setPos((p) => ({ ...p, x: r.startX + (r.startW - w) }));
+    const a = autoRef.current;
+    if (!sizeRef.current || !a) return;
+    a.x = e.clientX; a.y = e.clientY;
+    applySize();
   }
 
   function onSideUp() {
     const r = sizeRef.current;
     if (!r) return;
     sizeRef.current = null;
+    stopAuto();
     // The width is saved by the ResizeObserver above; a left-side drag also moved the box.
     if (isTemp || r.side !== "left") return;
     fetch(`/api/notes/${note.id}`, {
@@ -212,6 +271,9 @@ export default function FreeTextBox({ note, startEditing = false, ayahInline = f
       body:    JSON.stringify({ offsetX: posRef.current.x }),
     }).catch(() => {});
   }
+
+  // Never leave a scroll loop running after the box goes away.
+  useEffect(() => () => stopAuto(), []);
 
   // ── Render ──────────────────────────────────────────────────────────────
 
