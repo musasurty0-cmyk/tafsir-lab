@@ -75,6 +75,17 @@ const patrickHand = Patrick_Hand({
 export const metadata: Metadata = {
   title: "TafsirLab",
   description: "Collaborative Quranic research workspace",
+  /* The black T in every tab, as on the launch page. Without these the app's
+     pages showed the browser's generic globe. Every layout and page below
+     inherits them. */
+  icons: {
+    icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: "/favicon-32.png", sizes: "32x32", type: "image/png" },
+      { url: "/favicon-192.png", sizes: "192x192", type: "image/png" },
+    ],
+    apple: { url: "/apple-touch-icon.png", sizes: "180x180" },
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
