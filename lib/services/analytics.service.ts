@@ -9,10 +9,10 @@
  * in the thousands, not the millions, and the queries below are indexed on the
  * columns they filter.
  *
- * "Annotation" means a StructuredNote — a thing with words in it. Ink
- * (CanvasDrawing) is one row per page+author holding a stroke array, so it
- * cannot be counted per mark; it contributes "this page has ink", never a
- * number. Saying so is more honest than inflating a total with a figure that
+ * "Annotation" means a StructuredNote — a thing with words in it. Ink lives
+ * in each page's realtime room on Cloudflare, not the database, so it is not
+ * counted here; at most it contributes "this page has ink" (Page.inkAt), never
+ * a number. Saying so is more honest than inflating a total with a figure that
  * means something different.
  */
 

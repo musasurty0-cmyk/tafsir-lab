@@ -5,7 +5,7 @@
  * Run:  npm run db:reset-product
  *
  * What is removed:
- *   • All StructuredNotes, CanvasDrawings, PageUserPrefs
+ *   • All StructuredNotes, PageUserPrefs, and every page's ink (in its realtime room)
  *   • All PersonalAyahProgress, GroupAyahProgress
  *   • All Pages
  *   • All WorkspaceSurahs  (started-surah sessions)
@@ -21,6 +21,7 @@
  */
 
 import { PrismaClient } from "@prisma/client";
+import { wipeInk } from "../lib/collab/ink-admin";
 
 const db = new PrismaClient();
 
@@ -75,20 +76,22 @@ async function main() {
   console.log(`  Preserving workspace: "${defaultWorkspace.name}" (${defaultWorkspace.id})\n`);
 
   // ── 1. Clear note/drawing/prefs/progress data ─────────────────────────
-  const [notes, drawings, prefs, personal, group] = await Promise.all([
+  const [notes, prefs, personal, group] = await Promise.all([
     db.structuredNote.deleteMany({}),
-    db.canvasDrawing.deleteMany({}),
     db.pageUserPrefs.deleteMany({}),
     db.personalAyahProgress.deleteMany({}),
     db.groupAyahProgress.deleteMany({}),
   ]);
   console.log(`  Deleted ${notes.count} structured notes`);
-  console.log(`  Deleted ${drawings.count} canvas drawings`);
   console.log(`  Deleted ${prefs.count} page user prefs`);
   console.log(`  Deleted ${personal.count} personal ayah progress records`);
   console.log(`  Deleted ${group.count} group ayah progress records`);
 
   // ── 2. Clear pages ────────────────────────────────────────────────────
+  // Ink is in each page's realtime room, out of the database's reach: wipe it first.
+  const pageIds = (await db.page.findMany({ select: { id: true } })).map((p) => p.id);
+  await wipeInk(pageIds);
+  console.log(`  Wiped ink on ${pageIds.length} pages`);
   const pages = await db.page.deleteMany({});
   console.log(`  Deleted ${pages.count} pages`);
 
