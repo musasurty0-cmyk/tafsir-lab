@@ -78,6 +78,9 @@ interface Props {
   groupProgress: Record<string, { status: ProgressStatus; lastChangedBy: string }>;
   currentUserId: string;
   currentUserName: string;
+  /** An Arabic study workspace: the Mushaf opens first, and it colours the
+   *  words you know and analyses an opened word (see ModeBPage `arabic`). */
+  arabic?:       boolean;
 }
 
 // ── Tweaks helpers ────────────────────────────────────────────────────────
@@ -112,13 +115,14 @@ export default function WorkspacePageView({
   groupProgress: initialGroupProgress,
   currentUserId,
   currentUserName,
+  arabic = false,
 }: Props) {
   const router = useRouter();
 
   // ── UI state ─────────────────────────────────────────────────────────
   const [tweaks, setTweaks]               = useState<TweaksState>(TWEAKS_DEFAULTS);
   const [showTweaks, setShowTweaks]       = useState(false);
-  const [mode, setMode]                   = useState<ViewMode>("editor");
+  const [mode, setMode]                   = useState<ViewMode>(arabic ? "canvas" : "editor");
   const [aiOpen, setAiOpen]               = useState(false);
   // Deep-link: ?mode=board (from the surah grid's Blank board button) opens
   // this page straight into the whiteboard.
@@ -128,10 +132,10 @@ export default function WorkspacePageView({
       /* "read" is no longer offered. It stays out of this list so an old link
          or a stored preference cannot drop someone into a mode with no button
          to leave it by. */
-      if (m === "board" || m === "canvas" || m === "split" || m === "editor")
+      if ((m === "board" && !arabic) || m === "canvas" || m === "split" || m === "editor")
         setMode(m as ViewMode);
     } catch { /* ignore */ }
-  }, []);
+  }, [arabic]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   /* The topbar needs no collapse state here any more: it auto-hides on its
      own, taskbar-style — hidden until the pointer visits the top edge. */
@@ -631,6 +635,7 @@ export default function WorkspacePageView({
           onNoteDeleted={handleNoteDeleted}
           onAyahSelect={handleAyahSelect}
           scrollToNoteId={selectedNoteId}
+          arabic={arabic}
         />
       </EditorContextProvider>
     );
@@ -740,6 +745,7 @@ export default function WorkspacePageView({
           onToggleAi={() => setAiOpen((v) => !v)}
           mode={mode}
           onSetMode={setMode}
+          hideBoard={arabic}
           progressLoading={progressLoading}
           tafsirOpen={tafsirOpen}
           onToggleTafsir={() => {

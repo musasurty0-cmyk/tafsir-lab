@@ -54,7 +54,7 @@ export default async function PageViewPage({
     // Access control
     db.workspace.findUnique({
       where:  { id: workspaceId },
-      select: { id: true, name: true, type: true, ownerId: true, membersCanManagePages: true },
+      select: { id: true, name: true, type: true, kind: true, ownerId: true, membersCanManagePages: true },
     }),
     db.workspaceMember.findUnique({
       where:  { workspaceId_userId: { workspaceId, userId } },
@@ -174,6 +174,7 @@ export default async function PageViewPage({
       groupProgress={groupProgress}
       currentUserId={userId}
       currentUserName={currentUser?.name ?? "Anonymous"}
+      arabic={workspace.kind === "arabic"}
     />
   );
 }

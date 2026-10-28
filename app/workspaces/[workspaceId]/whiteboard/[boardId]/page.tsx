@@ -43,6 +43,7 @@ export default async function BoardRoute({
       currentUserId={userId}
       currentUserName={currentUser?.name ?? "Anonymous"}
       back={lesson ? { href: `/workspaces/${workspaceId}/arabic/${lesson.id}`, label: lesson.title } : undefined}
+      notesOnly={workspace.kind === "arabic"}
     />
   );
 }

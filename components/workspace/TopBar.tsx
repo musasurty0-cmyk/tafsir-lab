@@ -124,6 +124,8 @@ interface Props {
   /** Download this page as Markdown. Absent = nothing to export yet, and the
    *  control is not rendered rather than rendered inert. */
   onExport?:          () => void;
+  /** Arabic study workspaces have no blank board. */
+  hideBoard?:         boolean;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────
@@ -147,6 +149,7 @@ export default function TopBar({
   onToggleFormatting,
   presenceOthers = [],
   liveStatus,
+  hideBoard = false,
 }: Props) {
   const t = useT();
 
@@ -249,15 +252,17 @@ export default function TopBar({
           >
             <SplitIcon />
           </button>
-          <button
-            className="mode-btn"
-            data-active={mode === "board" ? "true" : "false"}
-            onClick={() => mode !== "board" && onSetMode("board")}
-            title="Whiteboard — blank scratch canvas"
-            aria-label="Whiteboard — blank scratch canvas"
-          >
-            <BoardIcon />
-          </button>
+          {!hideBoard && (
+            <button
+              className="mode-btn"
+              data-active={mode === "board" ? "true" : "false"}
+              onClick={() => mode !== "board" && onSetMode("board")}
+              title="Whiteboard — blank scratch canvas"
+              aria-label="Whiteboard — blank scratch canvas"
+            >
+              <BoardIcon />
+            </button>
+          )}
         </div>
 
         {/* Formatting toggle — only in editor / split mode */}

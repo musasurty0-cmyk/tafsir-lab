@@ -1,16 +1,23 @@
 /**
- * /workspaces/[workspaceId]/arabic/quran?surah=N
- *   The Qurʾān inside an Arabic study workspace: the same Mushaf as Qurʾān
- *   study, but a tapped word opens what it is (root, grammar, your cards) and
- *   the words you are learning or have learnt are coloured.
+ * /workspaces/[workspaceId]/arabic/quran?surah=N&page=P&word=s:a:w
+ *
+ * The way into the Qurʾān from an Arabic study workspace. It is the same
+ * Qurʾān study page — same Mushaf, same note space — opened in this
+ * workspace, where it also colours the words you know and analyses a word
+ * you open (ModeBPage `arabic`). This route makes the sūrah's session and a
+ * page for it the first time, then sends you there; `page` and `word` carry
+ * through so a word's āyāt open on that page with that word already open.
  */
 
 export const dynamic = "force-dynamic";
 
+import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
+import { db } from "@/lib/db";
 import * as ArabicService from "@/lib/services/arabic.service";
-import { fetchChapters, fetchVerses } from "@/lib/quran-api";
-import ArabicQuran from "@/components/workspace/arabic/ArabicQuran";
+import * as WorkspacesService from "@/lib/services/workspaces.service";
+import * as PagesService from "@/lib/services/pages.service";
+import { fetchChapter } from "@/lib/quran-api";
 
 export default async function ArabicQuranPage({
   params, searchParams,
@@ -21,24 +28,23 @@ export default async function ArabicQuranPage({
   const { workspaceId } = await params;
   const { surah, page, word } = await searchParams;
   const { userId } = await getSession();
-  // The gate: this must be an Arabic study workspace the reader belongs to.
+  // The gate: an Arabic study workspace this reader belongs to.
   await ArabicService.listLessons(workspaceId, userId);
+
   const n = Math.min(114, Math.max(1, Number(surah) || 1));
-  /* The sūrah's pages come from its own verses, exactly as Qurʾān study
-     works them out — the chapter list's page range can stop a page short
-     (it puts all of al-Ghāshiyah on 592; its last four āyāt are on 593). */
-  const [chapters, verses] = await Promise.all([fetchChapters(), fetchVerses(n)]);
-  const pages = [...new Set(verses.map((v) => v.page_number).filter(Boolean))].sort((a, b) => a - b);
-  const p = Number(page);
-  const initialPage = pages.includes(p) ? p : undefined;
-  // ?word=s:a:w — arriving from a word's āyāt, that word opens selected.
-  const m = /^(\d{1,3}):(\d{1,3}):(\d{1,3})$/.exec(word ?? "");
-  const initialWord = m && Number(m[1]) === n ? { verseKey: `${m[1]}:${m[2]}`, position: Number(m[3]) } : undefined;
-  return (
-    <ArabicQuran
-      key={n}
-      workspaceId={workspaceId} chapters={chapters} pages={pages.length ? pages : undefined}
-      initialSurah={n} initialPage={initialPage} initialWord={initialWord}
-    />
-  );
+  const session = await WorkspacesService.startSurah(workspaceId, n, userId);
+  let first = await db.page.findFirst({
+    where:   { workspaceSurahId: session.id },
+    orderBy: { orderIndex: "asc" },
+    select:  { id: true },
+  });
+  if (!first) {
+    const chapter = await fetchChapter(n);
+    first = await PagesService.createPage(session.id, userId, chapter.name_simple);
+  }
+
+  const q = new URLSearchParams({ mode: "canvas" });
+  if (Number(page)) q.set("mpage", String(Number(page)));
+  if (/^\d{1,3}:\d{1,3}:\d{1,3}$/.test(word ?? "")) q.set("word", word!);
+  redirect(`/workspaces/${workspaceId}/surahs/${n}/pages/${first.id}?${q}`);
 }

@@ -77,9 +77,9 @@ interface Props {
    *  the page and ink written in either view lines up in the other. */
   isolateAyah?:      number | null;
   /** Arabic study only: how well the reader knows each word, keyed
-   *  "verseKey:position". Learning words are drawn red, learnt words green;
-   *  absent (Qurʾān study) leaves the page exactly as it always was. */
-  wordStatus?:       ReadonlyMap<string, "learning" | "learnt">;
+   *  "verseKey:position" — red learning, amber almost there, green learnt;
+   *  absent (any other workspace) leaves the page exactly as it always was. */
+  wordStatus?:       ReadonlyMap<string, "learning" | "almost" | "learnt">;
 }
 
 /** Wash for the ayah whose annotation layer is currently open. */

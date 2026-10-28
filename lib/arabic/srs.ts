@@ -5,17 +5,18 @@
  * right and drops to the first when you miss it, and each box waits longer
  * than the last. Easy to explain, and enough for a course's vocabulary.
  *
- *   box 0  not known   black   never answered
- *   box 1  learning    red     missed: back in 10 minutes
- *   box 2  learning    red     1 day
- *   box 3  learning    red     3 days    (where the unlock test puts a word you knew)
- *   box 4  learning    red     7 days
- *   box 5+ learnt      green   16, 35, 75 days
+ *   box 0  not known      black   never answered
+ *   box 1  learning       red     missed: back in 10 minutes
+ *   box 2  learning       red     1 day
+ *   box 3  almost there   amber   3 days    (where the unlock test puts a word you knew)
+ *   box 4  almost there   amber   7 days
+ *   box 5+ learnt         green   16, 35, 75 days
  *
- * Three colours only, as the owner asked: there is no "almost there".
+ * The owner first asked for three colours, then for amber as well (28 Oct
+ * 2026), so the long stretch from red to green shows that it is moving.
  */
 
-export type Status = "unknown" | "learning" | "learnt";
+export type Status = "unknown" | "learning" | "almost" | "learnt";
 export type Rating = "again" | "good" | "easy";
 
 const MIN = 60_000;
@@ -24,11 +25,13 @@ const DAY = 86_400_000;
 /** How long each box waits before the card is due again. */
 export const WAIT: number[] = [0, 10 * MIN, 1 * DAY, 3 * DAY, 7 * DAY, 16 * DAY, 35 * DAY, 75 * DAY];
 export const TOP = WAIT.length - 1;
+export const ALMOST_FROM = 3;
 export const LEARNT_FROM = 5;
 
 export function statusOf(box: number | null | undefined): Status {
   if (!box) return "unknown";
-  return box >= LEARNT_FROM ? "learnt" : "learning";
+  if (box >= LEARNT_FROM) return "learnt";
+  return box >= ALMOST_FROM ? "almost" : "learning";
 }
 
 /**

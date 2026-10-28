@@ -135,6 +135,7 @@ export default function ArabicLesson({ workspaceId, lesson, boxes, prev, next }:
   const unseen = lesson.cards.filter((c) => !c.isSentence && !(c.id in boxes)).length;
   const learnt = lesson.cards.filter((c) => statusOf(boxes[c.id]) === "learnt").length;
   const learning = lesson.cards.filter((c) => statusOf(boxes[c.id]) === "learning").length;
+  const almost = lesson.cards.filter((c) => statusOf(boxes[c.id]) === "almost").length;
 
   return (
     <div className="workspace-home">
@@ -152,9 +153,11 @@ export default function ArabicLesson({ workspaceId, lesson, boxes, prev, next }:
           <h1 className="ar-lesson-title">{lesson.title}</h1>
           <p className="ar-lesson-meta">
             {words} word{words === 1 ? "" : "s"}{sentences ? ` · ${sentences} sentence${sentences === 1 ? "" : "s"}` : ""}
-            {(learnt > 0 || learning > 0) && (<>
+            {(learnt > 0 || almost > 0 || learning > 0) && (<>
               <span aria-hidden> · </span>
               <span className="ar-k-learnt">{learnt} learnt</span>
+              <span aria-hidden> · </span>
+              <span className="ar-k-almost">{almost} almost there</span>
               <span aria-hidden> · </span>
               <span className="ar-k-learning">{learning} learning</span>
             </>)}
@@ -170,7 +173,7 @@ export default function ArabicLesson({ workspaceId, lesson, boxes, prev, next }:
               <Play size={14} aria-hidden /> Practise this lesson
             </button>
             <button type="button" className="nw-btn nw-btn--soft" onClick={openBoard} disabled={opening}>
-              <NotebookPen size={14} aria-hidden /> {opening ? "Opening…" : "Notes and board"}
+              <NotebookPen size={14} aria-hidden /> {opening ? "Opening…" : "Notes"}
             </button>
           </div>
 

@@ -87,11 +87,14 @@ interface Props {
   /** Where the back link goes. A lesson's notes go back to the lesson; a
    *  plain board goes back to its workspace. */
   back?:           { href: string; label: string };
+  /** Just the notes document — no canvas, no board list. An Arabic lesson's
+   *  notes are this: Arabic study workspaces have no blank board. */
+  notesOnly?:      boolean;
 }
 
 export default function WhiteboardShell({
   workspaceId, workspaceName, pageId, boardTitle, boardContent, role,
-  currentUserId, currentUserName, back,
+  currentUserId, currentUserName, back, notesOnly = false,
 }: Props) {
   const [notes, setNotes] = useState<NoteData[]>([]);
   const recentCreatedRef  = useRef<Map<string, number>>(new Map());
@@ -100,13 +103,14 @@ export default function WhiteboardShell({
      a lazy initialiser: the server renders this component too, and seeding
      state from storage during render makes the first client paint disagree
      with the server's HTML. */
-  const [view, setView] = useState<BoardView>("canvas");
+  const [view, setView] = useState<BoardView>(notesOnly ? "notes" : "canvas");
   useEffect(() => {
+    if (notesOnly) return;
     try {
       const saved = localStorage.getItem(VIEW_KEY(pageId));
       if (saved === "notes" || saved === "canvas") setView(saved);
     } catch { /* ignore */ }
-  }, [pageId]);
+  }, [pageId, notesOnly]);
   const chooseView = useCallback((v: BoardView) => {
     setView(v);
     try { localStorage.setItem(VIEW_KEY(pageId), v); } catch { /* ignore */ }
@@ -211,9 +215,10 @@ export default function WhiteboardShell({
         <Link href={back?.href ?? `/workspaces/${workspaceId}`} className="whiteboard-shell-back">
           <ChevronLeft size={16} className="wsb-chev" /> <span className="wsb-name">{back?.label ?? workspaceName}</span>
         </Link>
-        <span className="whiteboard-shell-title">◇ {boardTitle ?? "Whiteboard"}</span>
+        <span className="whiteboard-shell-title">{notesOnly ? "" : "◇ "}{boardTitle ?? "Whiteboard"}</span>
 
         <div className="whiteboard-shell-tools">
+          {!notesOnly && (<>
           <div className="mode-toggle" role="group" aria-label="Board view">
             <button
               className="mode-btn"
@@ -243,6 +248,7 @@ export default function WhiteboardShell({
           >
             <ImportIcon />
           </button>
+          </>)}
 
           <BookmarkButton
             pageId={pageId}
@@ -274,12 +280,14 @@ export default function WhiteboardShell({
       <EditorToolbar editor={editor} open={view === "notes" && formattingOpen} />
 
       <div className="whiteboard-shell-body">
-        <BoardsSidebar
-          workspaceId={workspaceId}
-          currentId={pageId}
-          view={view}
-          onView={chooseView}
-        />
+        {!notesOnly && (
+          <BoardsSidebar
+            workspaceId={workspaceId}
+            currentId={pageId}
+            view={view}
+            onView={chooseView}
+          />
+        )}
 
         <EditorContextProvider value={ctx}>
           {view === "canvas" ? (

@@ -30,8 +30,14 @@ export default async function SurahIndexPage({
 
   const workspaceSurah = await db.workspaceSurah.findUnique({
     where: { workspaceId_surahNumber: { workspaceId, surahNumber } },
-    select: { id: true },
+    select: { id: true, workspace: { select: { kind: true } } },
   });
+  /* An Arabic study workspace reads the Qurʾān through its own entry, which
+     makes the sūrah's session and page on first use (the sūrah switcher on
+     the Mushaf lands here). */
+  const kind = workspaceSurah?.workspace.kind
+    ?? (await db.workspace.findUnique({ where: { id: workspaceId }, select: { kind: true } }))?.kind;
+  if (kind === "arabic") redirect(`/workspaces/${workspaceId}/arabic/quran?surah=${surahNumber}`);
   if (!workspaceSurah) notFound();
 
   const [{ workspace, role }, pages, chapter] = await Promise.all([

@@ -15333,3 +15333,75 @@ input, textarea { font: inherit; color: inherit; }
 .ar-lesson[data-kind="mine"] .ar-lesson-n { font-family: var(--font-serif); font-size: 22px; color: var(--ink); line-height: 1; }
 .wl-open { display: inline-block; margin-top: 8px; font-size: 12.5px; font-weight: 600; color: var(--accent-ink); text-decoration: none; }
 .wl-open:hover { text-decoration: underline; }
+
+/* Amber, between red and green: almost there (box 3–4). */
+:root { --ar-almost: oklch(0.68 0.15 70); }
+[data-theme="dark"] { --ar-almost: oklch(0.8 0.14 78); }
+.ar-word[data-status="almost"] .ar-ar, .ar-sentence[data-status="almost"] .ar-ar,
+.ar-word[data-status="almost"] .ar-ar--btn { color: var(--ar-almost); }
+.ar-k-almost { color: var(--ar-almost); font-weight: 600; }
+.ar-sbar-a { background: var(--ar-almost); }
+.qcf-word--almost { color: var(--ar-almost); }
+.aq-dot--almost { background: var(--ar-almost); }
+.aq-mine li[data-status="almost"] .aq-mine-ar { color: var(--ar-almost); }
+
+/* ── Arabic study on the Qurʾān study canvas (28 Oct 2026) ──────────────────
+   Only rendered in an Arabic study workspace. A small floating bar
+   bottom-right while reading; the analysis card takes that corner when a
+   word is open. */
+.ab-bar {
+  position: absolute; right: 20px; bottom: 20px; z-index: 30;
+  display: inline-flex; align-items: center; gap: 4px; padding: 4px;
+  border-radius: 13px; background: var(--float-bg, var(--bg-elev));
+  -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px);
+  box-shadow: var(--float-shadow, var(--shadow-md));
+}
+.ab-practise {
+  height: 34px; padding: 0 14px; border-radius: 9px;
+  font-size: 13px; font-weight: 600; color: #fff; background: var(--accent);
+  transition: background var(--dur-hover, 120ms) ease;
+}
+.ab-practise:hover { background: var(--accent-ink); }
+.ab-colour {
+  height: 34px; padding: 0 12px; border-radius: 9px; display: inline-flex; align-items: center; gap: 8px;
+  font-size: 13px; font-weight: 500; color: var(--ink-2);
+}
+.ab-colour:hover { background: var(--hover); color: var(--ink); }
+.ab-dots { display: inline-flex; gap: 3px; }
+.ab-dots i { width: 8px; height: 8px; border-radius: 50%; }
+.ab-dots i[data-s="learning"] { background: var(--ar-learning); }
+.ab-dots i[data-s="almost"] { background: var(--ar-almost); }
+.ab-dots i[data-s="learnt"] { background: var(--ar-learnt); }
+.ab-colour[aria-checked="false"] .ab-dots { opacity: .35; }
+.wrs-facts { margin: 0 0 8px; font-size: 12.5px; color: var(--ink-3); }
+.wa-mine { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 4px; }
+.wa-mine li { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 10px; background: var(--panel); font-size: 13px; }
+.wa-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ink-4); flex: none; }
+.wa-mine li[data-status="learning"] .wa-dot { background: var(--ar-learning); }
+.wa-mine li[data-status="almost"] .wa-dot { background: var(--ar-almost); }
+.wa-mine li[data-status="learnt"] .wa-dot { background: var(--ar-learnt); }
+.wa-en { font-weight: 600; color: var(--ink); }
+.wa-where { margin-left: auto; font-size: 12px; color: var(--ink-3); }
+.wa-add { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 0 0 8px; }
+.wa-none { font-size: 12.5px; color: var(--ink-3); }
+.wa-add-btn { height: 30px; padding: 0 12px; font-size: 12.5px; }
+@media (max-width: 720px) {
+  .ab-bar { bottom: calc(124px + env(safe-area-inset-bottom, 0px)); right: 12px; }
+}
+
+/* The Qurʾān, as one of the three tiles at the top of an Arabic workspace. */
+.ar-today { max-width: 960px; }
+.ar-quran {
+  position: relative; flex: 1 1 260px; display: grid; gap: 2px; align-content: center;
+  padding: 16px 52px 16px 18px; border-radius: 18px; text-align: left;
+  background: var(--panel); transition: background var(--dur-hover, 120ms) ease, transform 90ms var(--ease-out);
+}
+.ar-quran:hover { background: var(--panel-2); }
+.ar-quran:active { transform: scale(0.99); }
+.ar-quran-icon { color: var(--accent-ink); margin-bottom: 4px; }
+.ar-quran-t { font-family: var(--font-serif); font-size: 21px; font-weight: 600; letter-spacing: -0.015em; color: var(--ink); }
+.ar-quran-m { font-size: 13px; line-height: 1.45; color: var(--ink-3); }
+.ar-quran .ar-continue-go { color: var(--ink-3); }
+
+/* Above the page turner, which shares the bottom edge. */
+.wrs { bottom: 76px; max-height: calc(100% - 160px); }

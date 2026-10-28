@@ -3,11 +3,13 @@ import { statusOf, nextBox, dueAfter, unlockBox, WAIT, TOP } from "./srs";
 import { wordKey, cardHeadword, meaningWords, lookup, type QuranIndex } from "./quran-match";
 
 describe("srs", () => {
-  it("has three colours and no in-between", () => {
+  it("goes black, red, amber, green", () => {
     expect(statusOf(null)).toBe("unknown");
     expect(statusOf(0)).toBe("unknown");
     expect(statusOf(1)).toBe("learning");
-    expect(statusOf(4)).toBe("learning");
+    expect(statusOf(2)).toBe("learning");
+    expect(statusOf(3)).toBe("almost");
+    expect(statusOf(4)).toBe("almost");
     expect(statusOf(5)).toBe("learnt");
   });
   it("climbs on a right answer, drops to the first box on a miss", () => {
@@ -20,8 +22,9 @@ describe("srs", () => {
   });
   it("learnt takes more than one session's worth of right answers", () => {
     let box = unlockBox(true);
+    expect(statusOf(box)).toBe("almost");
     box = nextBox(box, "good");
-    expect(statusOf(box)).toBe("learning");
+    expect(statusOf(box)).toBe("almost");
     box = nextBox(box, "good");
     expect(statusOf(box)).toBe("learnt");
   });

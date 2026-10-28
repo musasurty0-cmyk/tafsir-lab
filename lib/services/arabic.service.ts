@@ -13,7 +13,7 @@ import {
   numberLessons, foldArabic, lessonKind, cleanTitle, HAS_ARABIC,
   MAX_LESSONS, MAX_CARDS, MAX_FIELD, MAX_TITLE, type ParsedLesson,
 } from "@/lib/arabic/parse";
-import { nextBox, dueAfter, unlockBox, statusOf, LEARNT_FROM, type Status } from "@/lib/arabic/srs";
+import { nextBox, dueAfter, unlockBox, statusOf, ALMOST_FROM, LEARNT_FROM, type Status } from "@/lib/arabic/srs";
 
 export class ArabicError extends Error {
   constructor(message: string, public readonly code: "NOT_FOUND" | "FORBIDDEN" | "INVALID") {
@@ -409,23 +409,24 @@ export async function recordAnswers(workspaceId: string, userId: string, raw: un
   return result;
 }
 
-/** Per-lesson counts of learning and learnt cards, and how many are due now. */
+/** Per-lesson counts of learning, almost-there and learnt cards, and how many are due now. */
 export async function reviewSummary(workspaceId: string, userId: string) {
   await gate(workspaceId, userId);
-  const rows = await db.$queryRaw<{ lessonId: string; learning: bigint; learnt: bigint; due: bigint }[]>`
+  const rows = await db.$queryRaw<{ lessonId: string; learning: bigint; almost: bigint; learnt: bigint; due: bigint }[]>`
     SELECT c."lessonId",
-           count(*) FILTER (WHERE r.box BETWEEN 1 AND ${LEARNT_FROM - 1}) AS learning,
-           count(*) FILTER (WHERE r.box >= ${LEARNT_FROM})                AS learnt,
+           count(*) FILTER (WHERE r.box BETWEEN 1 AND ${ALMOST_FROM - 1})           AS learning,
+           count(*) FILTER (WHERE r.box BETWEEN ${ALMOST_FROM} AND ${LEARNT_FROM - 1}) AS almost,
+           count(*) FILTER (WHERE r.box >= ${LEARNT_FROM})                          AS learnt,
            count(*) FILTER (WHERE r.due <= now())                          AS due
     FROM "ArabicReview" r
     JOIN "ArabicCard" c   ON c.id = r."cardId"
     JOIN "ArabicLesson" l ON l.id = c."lessonId"
     WHERE r."userId" = ${userId}::uuid AND l."workspaceId" = ${workspaceId}::uuid
     GROUP BY c."lessonId"`;
-  const byLesson: Record<string, { learning: number; learnt: number; due: number }> = {};
+  const byLesson: Record<string, { learning: number; almost: number; learnt: number; due: number }> = {};
   let due = 0;
   for (const r of rows) {
-    byLesson[r.lessonId] = { learning: Number(r.learning), learnt: Number(r.learnt), due: Number(r.due) };
+    byLesson[r.lessonId] = { learning: Number(r.learning), almost: Number(r.almost), learnt: Number(r.learnt), due: Number(r.due) };
     due += Number(r.due);
   }
   // New cards waiting in lessons you have reached count towards today's session.

@@ -38,7 +38,7 @@ interface Hit {
 }
 
 export interface ReviewSummary {
-  byLesson: Record<string, { learning: number; learnt: number; due: number }>;
+  byLesson: Record<string, { learning: number; almost: number; learnt: number; due: number }>;
   due: number; fresh: number; freshTotal: number;
 }
 
@@ -115,15 +115,6 @@ export default function ArabicHome({ workspaceId, workspace, role, lessons, summ
             </p>
           </div>
           <div className="ws-home-actions">
-            {lessons.length > 0 && (
-              <button
-                className="ws-new-btn ws-new-btn--ghost"
-                onClick={() => pushWithSplash(router, `/workspaces/${workspaceId}/arabic/quran`)}
-                title="Read the Qurʾān with the words you know coloured"
-              >
-                <BookOpen size={14} aria-hidden /> Qurʾān
-              </button>
-            )}
             {admin && lessons.length > 0 && (
               <button className="ws-new-btn ws-new-btn--ghost" onClick={() => setImportOpen(true)}>
                 <Plus size={14} aria-hidden /> Add lessons
@@ -180,6 +171,18 @@ export default function ArabicHome({ workspaceId, workspace, role, lessons, summ
                 <ArrowRight size={18} aria-hidden className="ar-continue-go" />
               </button>
             )}
+            {/* The Qurʾān, with the words you know coloured and every word's
+                analysis a tap away. One of the three things you come here for. */}
+            <button
+              type="button"
+              className="ar-quran"
+              onClick={() => pushWithSplash(router, `/workspaces/${workspaceId}/arabic/quran`)}
+            >
+              <BookOpen size={22} aria-hidden className="ar-quran-icon" />
+              <span className="ar-quran-t">The Qurʾān</span>
+              <span className="ar-quran-m">Read it with your words coloured, and tap any word for its root and grammar</span>
+              <ArrowRight size={18} aria-hidden className="ar-continue-go" />
+            </button>
             </div>
 
             <label className="ar-search">
@@ -312,15 +315,16 @@ export default function ArabicHome({ workspaceId, workspace, role, lessons, summ
   );
 }
 
-/** Learnt in green, learning in red, the rest left in ink — three colours, no more. */
-function StatusBar({ total, s }: { total: number; s?: { learning: number; learnt: number } }) {
+/** Learnt in green, almost there in amber, learning in red, the rest left in ink. */
+function StatusBar({ total, s }: { total: number; s?: { learning: number; almost: number; learnt: number } }) {
   if (!s || total === 0) return <span className="ar-sbar" aria-hidden />;
-  const g = Math.round((s.learnt / total) * 100);
-  const r = Math.round((s.learning / total) * 100);
+  const pct = (n: number) => `${Math.round((n / total) * 100)}%`;
+  const rest = total - s.learnt - s.almost - s.learning;
   return (
-    <span className="ar-sbar" title={`${s.learnt} learnt · ${s.learning} learning · ${total - s.learnt - s.learning} not known`}>
-      <span className="ar-sbar-g" style={{ width: `${g}%` }} />
-      <span className="ar-sbar-r" style={{ width: `${r}%` }} />
+    <span className="ar-sbar" title={`${s.learnt} learnt · ${s.almost} almost there · ${s.learning} learning · ${rest} not known`}>
+      <span className="ar-sbar-g" style={{ width: pct(s.learnt) }} />
+      <span className="ar-sbar-a" style={{ width: pct(s.almost) }} />
+      <span className="ar-sbar-r" style={{ width: pct(s.learning) }} />
     </span>
   );
 }

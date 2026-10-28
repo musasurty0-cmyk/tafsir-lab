@@ -19,6 +19,10 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { ChevronLeft, ChevronRight, Minus, Plus, RotateCw } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { pushWithSplash } from "@/lib/nav-splash";
+import { useArabicWords, useMorph, usePageWords } from "./arabic/useArabicWords";
+import WordAnalysis from "./arabic/WordAnalysis";
 import { isTypingTarget } from "@/lib/is-typing";
 
 const HINT_KEY        = "tl-word-tap-hint-dismissed";
@@ -133,6 +137,10 @@ interface Props {
   // Split-view sync
   onAyahSelect?:    (verseKey: string) => void;
   scrollToNoteId?:  string | null;
+  /** Set only in an Arabic study workspace: words you know are coloured, an
+   *  opened word's note space also shows its linguistic analysis, and the
+   *  page can be practised. Absent everywhere else — Qurʾān study is as it was. */
+  arabic?:          boolean;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────
@@ -148,6 +156,7 @@ export default function ModeBPage({
   onNoteDeleted,
   onAyahSelect,
   scrollToNoteId,
+  arabic = false,
 }: Props) {
 
   /* ── Segments ──────────────────────────────────────────────────────────
@@ -638,6 +647,23 @@ export default function ModeBPage({
   // chapter.id is stable per workspace page — safe to include
   }, [currentMushafahPage, chapter.id]);
 
+  // ── Arabic study only ─────────────────────────────────────────────────
+  const router = useRouter();
+  const { byLemma, addWord } = useArabicWords(workspaceId, arabic);
+  const morph = useMorph(chapter.id, arabic);
+  const pageWords = usePageWords(qcfVerses, morph, byLemma);
+  const [colourWords, setColourWords] = useState(true);
+  useEffect(() => {
+    if (!arabic) return;
+    // A preference kept in this browser, so it can only be read here.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    try { if (localStorage.getItem("tl-arabic-quran-colour") === "off") setColourWords(false); } catch { /* private mode */ }
+  }, [arabic]);
+  const toggleColourWords = () => setColourWords((v) => {
+    try { localStorage.setItem("tl-arabic-quran-colour", v ? "off" : "on"); } catch { /* private mode */ }
+    return !v;
+  });
+
   // ── Viewport ──────────────────────────────────────────────────────────
   const [viewport, setViewport] = useState<CanvasViewport>(() => ({
     x:    userPrefs?.canvasViewport?.x    ?? 40,
@@ -1067,6 +1093,21 @@ export default function ModeBPage({
     patchViewport(next);
   }, [pageId, patchViewport, centeredX]);
 
+  /* Arabic study: arriving from a word's āyāt (?mpage=593&word=88:23:4) opens
+     that page with the word's note space and analysis already open. Read once. */
+  const deepLinked = useRef(false);
+  useEffect(() => {
+    if (!arabic || deepLinked.current || availablePages.length === 0) return;
+    deepLinked.current = true;
+    const q = new URLSearchParams(window.location.search);
+    const p = Number(q.get("mpage"));
+    // From the address bar, which only exists once the browser does.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (p && availablePages.includes(p)) goToPage(p);
+    const m = /^(\d+):(\d+):(\d+)$/.exec(q.get("word") ?? "");
+    if (m && Number(m[1]) === chapter.id) openFocus(`${m[1]}:${m[2]}`, Number(m[3]));
+  }, [arabic, availablePages, goToPage, openFocus, chapter.id]);
+
   const goToPrevPage = useCallback(() => {
     const idx = availablePages.indexOf(currentMushafahPage);
     if (idx > 0) goToPage(availablePages[idx - 1]);
@@ -1460,6 +1501,7 @@ export default function ModeBPage({
             const sg = segments.find((x) => x.id === ids[0]);
             if (sg) openSegment(sg);
           }}
+          wordStatus={arabic && colourWords ? pageWords.status : undefined}
           /* Note-derived highlights belong to the study layer, not the page */
           notedWordColors={studyVisible ? notedWordColors : undefined}
           notedAyahColors={studyVisible ? notedEndColors  : undefined}
@@ -1574,6 +1616,41 @@ export default function ModeBPage({
         eraserRadius={eraserSize}
         onAnchorsChange={setStrokeAnchors}
       />}
+
+      {/* Arabic study: the opened word's linguistic analysis, beside its note space. */}
+      {arabic && focusAnchor && focusAnchor.wordPos != null && !focusAnchor.segmentId && (
+        <WordAnalysis
+          key={`${focusAnchor.verseKey}:${focusAnchor.wordPos}`}
+          verseKey={focusAnchor.verseKey}
+          word={morph?.[focusAnchor.verseKey.split(":")[1]]?.[focusAnchor.wordPos - 1] ?? null}
+          mine={(() => {
+            const lemma = morph?.[focusAnchor.verseKey.split(":")[1]]?.[focusAnchor.wordPos - 1]?.[1];
+            return lemma ? byLemma.get(lemma) ?? null : null;
+          })()}
+          onAdd={addWord}
+        />
+      )}
+
+      {/* Arabic study: practise the words on this page, and the colour switch. */}
+      {arabic && !focusAnchor && (
+        <div className="ab-bar" onPointerDown={(e) => e.stopPropagation()}>
+          {pageWords.cardIds.length > 0 && (
+            <button
+              type="button"
+              className="ab-practise"
+              onClick={() => pushWithSplash(router,
+                `/workspaces/${workspaceId}/arabic/practice?scope=cards&ids=${pageWords.cardIds.join(",")}&surah=${chapter.id}&page=${currentMushafahPage}`)}
+            >
+              Practise this page · {pageWords.cardIds.length}
+            </button>
+          )}
+          <button type="button" className="ab-colour" role="switch" aria-checked={colourWords} onClick={toggleColourWords}
+                  title="Red learning, amber almost there, green learnt">
+            <span className="ab-dots" aria-hidden><i data-s="learning" /><i data-s="almost" /><i data-s="learnt" /></span>
+            {colourWords ? "Colours on" : "Colours off"}
+          </button>
+        </div>
+      )}
 
       {/* ── Annotation session chip — the ONLY exit is Done ── */}
       {focusAnchor && (
