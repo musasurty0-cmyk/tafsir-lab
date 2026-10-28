@@ -37,7 +37,7 @@ const BUCKET = "tafsir-lab-dunya";
 
 const SUBJECTS: Record<string, Omit<Subject, "groups" | "all">> = {
   biology:   { id: "biology",   name: "Biology",   board: "Edexcel A (Salters-Nuffield)", level: "Year 1" },
-  chemistry: { id: "chemistry", name: "Chemistry", board: "OCR A",                        level: "" },
+  chemistry: { id: "chemistry", name: "Chemistry", board: "OCR A",                        level: "Year 1" },
   maths:     { id: "maths",     name: "Maths",     board: "Edexcel",                      level: "AS" },
 };
 
@@ -78,6 +78,13 @@ function frontPage(bytes: Buffer): Front {
   const time = /Time allowed\s+(?:(\d+)\s*hours?)?\s*(?:(\d+)\s*minutes)?/.exec(t);
   const minutes = time ? (Number(time[1] ?? 0) * 60 + Number(time[2] ?? 0)) || null : null;
   return { title, section, marks, minutes };
+}
+
+/** "Module 2 · Foundations in chemistry", from a zip folder or a paper's front page. */
+function chemModule(m: ArrayLike<string | undefined> | null): string {
+  if (!m?.[1]) return "Topics";
+  const name = (m[2] ?? "").trim();
+  return name ? `Module ${m[1]} · ${name[0].toUpperCase()}${name.slice(1).toLowerCase()}` : `Module ${m[1]}`;
 }
 
 const tidy = (s: string) => s.replace(/_/g, " ").replace(/\s+/g, " ").trim();
@@ -135,7 +142,9 @@ function take(subjectId: string, path: string, bytes: Buffer) {
     const n = Number(num);
     const groupName = subjectId === "biology"
       ? BIO_TOPICS[/Topic (\d+)/.exec(path)?.[1] ?? ""] ?? "Topics"
-      : series[0].toUpperCase() + series.slice(1).toLowerCase();
+      : subjectId === "chemistry"
+        ? chemModule(/Module (\d+) ([^/]+)/.exec(path))
+        : series[0].toUpperCase() + series.slice(1).toLowerCase();
     const stem = `${series.toLowerCase()}-${pad(n)}`;
     key = `${subjectId}/${stem}${kind.suffix}.pdf`;
     paper = paperIn(subject, groupName, `${subjectId}-${stem}`, () => ({
@@ -145,9 +154,10 @@ function take(subjectId: string, path: string, bytes: Buffer) {
     const span = ocr![1];
     const [a, b] = span.split("-");
     key = `${subjectId}/${span}${kind.suffix}.pdf`;
-    const groupName = `Module ${a.split(".")[0]}${front?.section ? ` · ${front.section}` : ""}`;
+    const groupName = chemModule([, a.split(".")[0], front?.section ?? ""]);
+    // Unnumbered (n 0): it sits after the module's numbered tests, named by its specification points.
     paper = paperIn(subject, groupName, `${subjectId}-${span}`, () => ({
-      id: `${subjectId}-${span}`, n: 0, title: span, ref: b ? `${a}–${b}` : a, marks: null, minutes: null, files: [],
+      id: `${subjectId}-${span}`, n: 0, title: span, ref: `Topic test · ${b ? `${a}–${b}` : a}`, marks: null, minutes: null, files: [],
     }));
   }
   uploads.set(key, bytes);
@@ -160,6 +170,7 @@ function take(subjectId: string, path: string, bytes: Buffer) {
 }
 
 // Papers before their answers, so an OCR paper's module is known when its mark scheme arrives.
+// (Zips are read whole, with their own papers and answers together.)
 const args = process.argv.slice(2).sort((a, b) => Number(/_TEST\.pdf$/i.test(b)) - Number(/_TEST\.pdf$/i.test(a)));
 for (const arg of args) {
   const name = basename(arg);
@@ -180,8 +191,8 @@ const order = ["Pure", "Mechanics", "Statistics"];
 for (const s of subjects.values()) {
   s.groups.sort((a, b) => (order.indexOf(a.name) + 1 || 99) - (order.indexOf(b.name) + 1 || 99) || a.name.localeCompare(b.name, undefined, { numeric: true }));
   for (const g of s.groups) {
-    g.papers.sort((a, b) => a.n - b.n || (a.ref ?? "").localeCompare(b.ref ?? "", undefined, { numeric: true }));
-    g.papers.forEach((p, i) => { if (!p.n) p.n = i + 1; });
+    // Numbered tests in order; unnumbered ones (n 0) after them.
+    g.papers.sort((a, b) => (a.n || 1e9) - (b.n || 1e9) || (a.ref ?? "").localeCompare(b.ref ?? "", undefined, { numeric: true }));
   }
 }
 

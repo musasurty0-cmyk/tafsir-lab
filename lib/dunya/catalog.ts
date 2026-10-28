@@ -11,6 +11,7 @@
 export interface FileRef { label: string; key: string }
 
 export interface Paper {
+  /** n is the test's number in its course; 0 for one that has none (a longer topic test). */
   id: string; n: number; title: string;
   /** The specification points it covers, where the board numbers them ("2.1.2–2.1.3"). */
   ref: string | null;
@@ -78,7 +79,7 @@ export function fileFor(catalog: Catalog, key: string): string | null {
     for (const g of s.groups) for (const p of g.papers) {
       const f = p.files.find((x) => x.key === key);
       if (!f) continue;
-      const which = p.ref ?? `${s.id === "biology" ? "Test" : g.name} ${String(p.n).padStart(2, "0")}`;
+      const which = p.n ? `${s.id === "maths" ? g.name : "Test"} ${String(p.n).padStart(2, "0")}` : p.ref ?? "";
       const base = `${s.name} ${which} - ${p.title}`.replace(/[–·]/g, "-");
       return f.label === "Paper" ? `${base}.pdf` : `${base} (${f.label.toLowerCase()}).pdf`;
     }
