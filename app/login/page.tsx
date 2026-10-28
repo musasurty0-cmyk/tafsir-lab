@@ -7,7 +7,8 @@ import {
   type AuthProvider, type UserCredential,
 } from "firebase/auth";
 import { getFirebaseAuth, googleProvider, microsoftProvider } from "@/lib/firebase/client";
-import { useT, LanguageSwitcher } from "@/lib/i18n/LocaleProvider";
+import { useT, useLocale } from "@/lib/i18n/LocaleProvider";
+import { LOCALES } from "@/lib/i18n/dictionaries";
 import { BUILD_ID } from "@/lib/build-id";
 
 /**
@@ -36,6 +37,7 @@ const USER_ABORTED = new Set([
 export default function LoginPage() {
   const router                = useRouter();
   const t                     = useT();
+  const { locale, setLocale } = useLocale();
   const [loading, setLoading] = useState<"google" | "microsoft" | "demo" | null>(null);
   const [error,   setError]   = useState<string | null>(null);
   // True while completing a redirect sign-in after returning from the provider.
@@ -155,95 +157,97 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="login-page">
-      <div className="login-card">
+    <main className="login-page">
+      <section className="login-hero">
+        <div className="login-brand">
+          {/* The mark — secretly toggles the demo-code prompt */}
+          <span className="login-logo-mark" onClick={() => setDemoOpen((v) => !v)} role="presentation">T</span>
+          <span className="login-brand-name">TafsirLab</span>
+        </div>
+        <h1 className="login-headline">{t("login.headline")}</h1>
+        <p className="login-lede">{t("login.subtitle")}.</p>
 
-        {/* Logo — secretly toggles the demo-code prompt */}
-        <div className="login-logo">
-          <div
-            className="login-logo-mark"
-            onClick={() => setDemoOpen((v) => !v)}
-            role="presentation"
+        <figure className="login-ayah">
+          <p lang="ar" dir="rtl">وَلَقَدْ يَسَّرْنَا ٱلْقُرْءَانَ لِلذِّكْرِ فَهَلْ مِن مُّدَّكِرٍ</p>
+          <figcaption>
+            {locale !== "ar" && <>And We have certainly made the Qur’ān easy for remembrance, so is there any who will remember? </>}
+            <span className="login-ayah-ref">54:17</span>
+          </figcaption>
+        </figure>
+      </section>
+
+      <section className="login-panel" aria-label="Sign in">
+        <div className="login-card">
+          {useSafariHint && (
+            <p className="login-hint">
+              On iPhone &amp; iPad, please open this page in <strong>Safari</strong> to sign in.
+            </p>
+          )}
+
+          <button
+            className="login-btn login-btn--primary"
+            onClick={() => handleSignIn(googleProvider, "google")}
+            disabled={loading !== null || completing}
           >
-            T
-          </div>
+            {loading === "google" || completing ? <span className="login-spinner" /> : <span className="login-btn-icon"><GoogleIcon /></span>}
+            {loading === "google" || completing ? t("login.signingIn") : t("login.google")}
+          </button>
+
+          <button
+            className="login-btn"
+            onClick={() => handleSignIn(microsoftProvider, "microsoft")}
+            disabled={loading !== null || completing}
+          >
+            {loading === "microsoft" ? <span className="login-spinner" /> : <span className="login-btn-icon"><MicrosoftIcon /></span>}
+            {loading === "microsoft" ? t("login.signingIn") : t("login.microsoft")}
+          </button>
+
+          {/* Hidden demo entry — revealed by tapping the mark */}
+          {demoOpen && (
+            <div className="login-demo-row">
+              <input
+                className="login-demo-input"
+                type="password"
+                inputMode="numeric"
+                placeholder={t("login.demoCode")}
+                value={demoCode}
+                onChange={(e) => setDemoCode(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") handleDemo(); }}
+                disabled={loading !== null}
+                autoFocus
+              />
+              <button
+                className="login-demo-go"
+                onClick={handleDemo}
+                disabled={loading !== null || !demoCode.trim()}
+              >
+                {loading === "demo" ? t("login.opening") : t("login.openDemo")}
+              </button>
+            </div>
+          )}
+
+          {error && <p className="login-error" role="alert">{error}</p>}
+
+          <p className="login-footer">{t("login.footer")}</p>
         </div>
 
-        <h1 className="login-title">TafsirLab</h1>
-        <p className="login-subtitle">{t("login.subtitle")}</p>
-
-        {useSafariHint && (
-          <div
-            style={{
-              margin: "0 0 14px",
-              padding: "10px 12px",
-              borderRadius: 10,
-              background: "oklch(0.95 0.03 250 / 0.6)",
-              border: "1px solid oklch(0.8 0.06 250 / 0.5)",
-              color: "var(--ink, #18181b)",
-              fontSize: 13,
-              lineHeight: 1.5,
-              textAlign: "center",
-            }}
-          >
-            On iPhone &amp; iPad, please open this page in <strong>Safari</strong> to sign in.
-          </div>
-        )}
-
-        <button
-          className="login-google-btn"
-          onClick={() => handleSignIn(googleProvider, "google")}
-          disabled={loading !== null || completing}
-        >
-          {loading === "google" || completing ? <span className="login-spinner" /> : <GoogleIcon />}
-          {loading === "google" || completing ? t("login.signingIn") : t("login.google")}
-        </button>
-
-        <button
-          className="login-google-btn"
-          onClick={() => handleSignIn(microsoftProvider, "microsoft")}
-          disabled={loading !== null || completing}
-        >
-          {loading === "microsoft" ? <span className="login-spinner" /> : <MicrosoftIcon />}
-          {loading === "microsoft" ? t("login.signingIn") : t("login.microsoft")}
-        </button>
-
-        {/* Hidden demo entry — revealed by tapping the logo */}
-        {demoOpen && (
-          <div className="login-demo-row">
-            <input
-              className="login-demo-input"
-              type="password"
-              inputMode="numeric"
-              placeholder={t("login.demoCode")}
-              value={demoCode}
-              onChange={(e) => setDemoCode(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") handleDemo(); }}
-              disabled={loading !== null}
-              autoFocus
-            />
-            <button
-              className="login-demo-go"
-              onClick={handleDemo}
-              disabled={loading !== null || !demoCode.trim()}
-            >
-              {loading === "demo" ? t("login.opening") : t("login.openDemo")}
-            </button>
-          </div>
-        )}
-
-        {error && <p className="login-error">{error}</p>}
-
-        <p className="login-footer">{t("login.footer")}</p>
-
-        <div style={{ marginTop: 14, display: "flex", justifyContent: "center" }}>
-          <LanguageSwitcher compact />
+        <div className="login-meta">
+          {/* Each language in its own name; the one in use in ink. */}
+          <nav className="login-langs" aria-label="Language">
+            {LOCALES.map((l) => (
+              <button
+                key={l.code} type="button" lang={l.code} aria-pressed={locale === l.code}
+                onClick={() => setLocale(l.code)}
+              >
+                {l.label}
+              </button>
+            ))}
+          </nav>
+          {/* Build stamp — lets anyone confirm which deploy a device is running */}
+          <span className="login-build">build {BUILD_ID}</span>
         </div>
-
-        {/* Build stamp — lets anyone confirm which deploy a device is running */}
-        <p className="login-build">build {BUILD_ID}</p>
-      </div>
-    </div>
+      </section>
+    </main>
   );
 }
 

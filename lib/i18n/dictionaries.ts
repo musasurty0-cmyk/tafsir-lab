@@ -22,6 +22,7 @@ type Dict = Record<string, string>;
 
 const en: Dict = {
   // ── Login ──
+  "login.headline":        "Study the Qurʾān, together.",
   "login.subtitle":        "Your personal Qurʾān study space",
   "login.google":          "Continue with Google",
   "login.microsoft":       "Continue with Microsoft",
@@ -123,6 +124,7 @@ const en: Dict = {
 };
 
 const ar: Dict = {
+  "login.headline":        "تدبَّر القرآن، معًا.",
   "login.subtitle":        "مساحتك الخاصة لدراسة القرآن",
   "login.google":          "المتابعة بحساب جوجل",
   "login.microsoft":       "المتابعة بحساب مايكروسوفت",
@@ -215,6 +217,7 @@ const ar: Dict = {
 };
 
 const ur: Dict = {
+  "login.headline":        "قرآن کا مطالعہ، مل کر۔",
   "login.subtitle":        "قرآن کے مطالعے کی آپ کی ذاتی جگہ",
   "login.google":          "گوگل کے ساتھ جاری رکھیں",
   "login.microsoft":       "مائیکروسافٹ کے ساتھ جاری رکھیں",
