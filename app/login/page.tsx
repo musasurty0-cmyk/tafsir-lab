@@ -10,6 +10,22 @@ import { getFirebaseAuth, googleProvider, microsoftProvider } from "@/lib/fireba
 import { useT, LanguageSwitcher } from "@/lib/i18n/LocaleProvider";
 import { BUILD_ID } from "@/lib/build-id";
 
+/**
+ * Where to go once signed in: the page that sent you here (?next=), if it is
+ * a path on this site, else home. Kept in sessionStorage too, since the
+ * redirect sign-in flow can come back without the query.
+ */
+function nextPath(): string {
+  // A path on this site: one leading slash, never "//host" or a backslash.
+  const safe = (p: string | null) => p && /^\/(?![/\\])[^\\]*$/.test(p) ? p : null;
+  const fromQuery = safe(new URLSearchParams(window.location.search).get("next"));
+  try {
+    if (fromQuery) sessionStorage.setItem("tl-login-next", fromQuery);
+    return fromQuery ?? safe(sessionStorage.getItem("tl-login-next")) ?? "/home";
+  } catch { return fromQuery ?? "/home"; }
+}
+function forgetNext() { try { sessionStorage.removeItem("tl-login-next"); } catch { /* private mode */ } }
+
 /** Popup failures that mean "the user aborted" — don't fall back to redirect. */
 const USER_ABORTED = new Set([
   "auth/popup-closed-by-user",
@@ -54,12 +70,15 @@ export default function LoginPage() {
       const data = await res.json().catch(() => ({})) as { error?: string };
       throw new Error(data.error ?? "Sign-in failed");
     }
-    router.push("/home");
+    const to = nextPath();
+    forgetNext();
+    router.push(to);
     router.refresh();
   }
 
   // On mount, finish any sign-in that used the redirect flow (iOS path).
   useEffect(() => {
+    nextPath(); // remembered now, before a redirect sign-in leaves the page
     const auth = getFirebaseAuth();
     setCompleting(true);
     getRedirectResult(auth)
@@ -125,7 +144,9 @@ export default function LoginPage() {
         const data = await res.json().catch(() => ({})) as { error?: string };
         throw new Error(data.error ?? "Demo unavailable");
       }
-      router.push("/home");
+      const to = nextPath();
+      forgetNext();
+      router.push(to);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");

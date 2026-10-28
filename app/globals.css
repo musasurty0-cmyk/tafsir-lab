@@ -3801,7 +3801,8 @@ input, textarea { font: inherit; color: inherit; }
   border: 1px solid transparent;
   background: transparent;
   box-shadow: none;
-  resize: horizontal;   /* free width resize; text reflows, height auto-grows */
+  /* Width comes from the side handles (FreeTextBox); text reflows and the
+     height grows with it. */
   overflow: hidden;
   animation: textbox-in 0.24s var(--ease-soft) both;
   transition: border-color var(--dur-hover) var(--ease-soft);
@@ -3811,6 +3812,21 @@ input, textarea { font: inherit; color: inherit; }
   to   { opacity: 1; }
 }
 .free-textbox:hover           { border-color: var(--line); }
+/* Both sides are handles: a strip down each edge, the full height. */
+.free-textbox-side {
+  position: absolute; top: 0; bottom: 0; width: 8px; z-index: 2;
+  cursor: ew-resize; touch-action: none;
+}
+.free-textbox-side[data-side="left"]  { left: -1px; }
+.free-textbox-side[data-side="right"] { right: -1px; }
+.free-textbox-side::after {
+  content: ""; position: absolute; top: 50%; width: 3px; height: 28px; margin-top: -14px; border-radius: 2px;
+  background: var(--line-strong); opacity: 0; transition: opacity var(--dur-hover) var(--ease-soft);
+}
+.free-textbox-side[data-side="left"]::after  { left: 2px; }
+.free-textbox-side[data-side="right"]::after { right: 2px; }
+.free-textbox:hover .free-textbox-side::after,
+.free-textbox-side:active::after { opacity: 1; }
 .free-textbox:focus-within,
 .free-textbox[data-focused="true"] { border-color: var(--line-strong); }
 

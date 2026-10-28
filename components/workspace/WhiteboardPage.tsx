@@ -19,7 +19,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import { Minus, Plus, RotateCw } from "lucide-react";
 import { isTypingTarget } from "@/lib/is-typing";
 import type { NoteData } from "./NoteCard";
-import FreeTextBox, { TEXTBOX_DEFAULT_WIDTH } from "./FreeTextBox";
+import FreeTextBox, { CARET_OFFSET, TEXTBOX_DEFAULT_WIDTH } from "./FreeTextBox";
 import DrawingCanvas, { type DrawTool, type DrawingCanvasHandle, type SaveState } from "./DrawingCanvas";
 import CanvasToolRail, {
   DEFAULT_PEN_COLOR, DEFAULT_PEN_SIZE,
@@ -148,7 +148,7 @@ export default function WhiteboardPage({
       surahNumber: null, ayahNumber: null, wordPosition: null,
       content: { type: "doc", content: [{ type: "paragraph" }] },
       color: null,
-      offsetX: Math.round(wx), offsetY: Math.round(wy),
+      offsetX: Math.round(wx - CARET_OFFSET.x), offsetY: Math.round(wy - CARET_OFFSET.y), // the caret, not the corner, at the click
       width: TEXTBOX_DEFAULT_WIDTH, height: null,
       isMinimized: false, zIndex: 1, isAdmin: false,
       createdAt: new Date().toISOString(),

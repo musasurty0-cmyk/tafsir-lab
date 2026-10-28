@@ -43,6 +43,7 @@ import { TafsirBlockExtension } from "./TafsirBlockExtension";
 import { ConnectionBlockExtension } from "./ConnectionBlockExtension";
 import { ToggleListExtension } from "./ToggleListExtension";
 import { TextDirection } from "./TextDirection";
+import { ListItemWithHeading, PasteTidy } from "./PasteTidy";
 
 export interface BaseEditorOptions {
   /**
@@ -70,6 +71,8 @@ export function baseExtensions(o: BaseEditorOptions): Extensions {
       history:        o.history === false ? false : undefined,
       heading:        { levels: [1, 2, 3] },
       horizontalRule: {},
+      // Replaced below by one whose first line may be a heading.
+      listItem:       false,
       /* Accent rather than the default black, so the drop target reads as part
          of the app rather than a browser default. */
       ...(o.dropcursor ? { dropcursor: { color: "var(--accent)", width: 2 } } : {}),
@@ -81,6 +84,11 @@ export function baseExtensions(o: BaseEditorOptions): Extensions {
          the inner paragraph at once, rendering doubled ghost text. */
       includeChildren: false,
     }),
+
+    ListItemWithHeading,
+    /* Pasted HTML from OneNote, Word and Docs comes in looking as it did
+       there; a paste from another TafsirLab note is left untouched. */
+    PasteTidy,
 
     Underline,
     Highlight.configure({ multicolor: true }),

@@ -28,6 +28,8 @@ export async function proxy(req: NextRequest) {
   const AUTH_PATHS = [
     "/home", "/workspaces", "/workspace",
     "/analytics", "/leaderboard", "/friends", "/settings", "/contact", "/explore", "/assistant",
+    // Sign in before the portal's password, so the organisers know who is in the circle.
+    "/youth-majlis",
   ];
   const needsAuth  = AUTH_PATHS.some(
     (p) => pathname === p || pathname.startsWith(p + "/"),
@@ -36,16 +38,22 @@ export async function proxy(req: NextRequest) {
   if (!needsAuth) return NextResponse.next();
 
   const token = req.cookies.get(SESSION_COOKIE)?.value;
+  // Back to where you were going once you have signed in.
+  const toLogin = () => {
+    const url = new URL("/login", req.url);
+    url.searchParams.set("next", pathname + req.nextUrl.search);
+    return url;
+  };
 
   if (!token) {
-    return NextResponse.redirect(new URL("/login", req.url));
+    return NextResponse.redirect(toLogin());
   }
 
   try {
     await jwtVerify(token, sessionSecret());
     return NextResponse.next();
   } catch {
-    const res = NextResponse.redirect(new URL("/login", req.url));
+    const res = NextResponse.redirect(toLogin());
     res.cookies.delete(SESSION_COOKIE);
     return res;
   }
@@ -56,5 +64,6 @@ export const config = {
     "/home/:path*", "/workspaces/:path*", "/workspace/:path*",
     "/analytics/:path*", "/leaderboard/:path*", "/friends/:path*",
     "/settings/:path*", "/contact/:path*", "/explore/:path*", "/assistant/:path*",
+    "/youth-majlis/:path*",
   ],
 };

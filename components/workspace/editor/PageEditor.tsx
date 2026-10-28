@@ -40,7 +40,7 @@ import { PARTYKIT_HOST } from "@/lib/collab/config";
 import { BlockMove } from "./BlockMove";
 import BlockHandle from "./BlockHandle";
 import EditorInkLayer from "./EditorInkLayer";
-import FreeTextBox, { TEXTBOX_DEFAULT_WIDTH } from "../FreeTextBox";
+import FreeTextBox, { CARET_OFFSET, TEXTBOX_DEFAULT_WIDTH, zoomAt } from "../FreeTextBox";
 import type { NoteData } from "../NoteCard";
 import {
   SlashCommandExtension,
@@ -196,7 +196,7 @@ export default function PageEditor({
       surahNumber: null, ayahNumber: null, wordPosition: null,
       content: { type: "doc", content: [{ type: "paragraph" }] },
       color: null,
-      offsetX: Math.round(x), offsetY: Math.round(y),
+      offsetX: Math.round(x - CARET_OFFSET.x), offsetY: Math.round(y - CARET_OFFSET.y), // the caret, not the corner, at the click
       width: TEXTBOX_DEFAULT_WIDTH, height: null,
       isMinimized: false, zIndex: 1, isAdmin: false,
       createdAt: new Date().toISOString(),
@@ -251,8 +251,12 @@ export default function PageEditor({
         t.classList.contains("doc") ||
         t.classList.contains("doc-wrap");
       if (!isCanvasSpace) return;
+      /* The box is placed in the page's own units. With the page zoomed (CSS
+         zoom: 80%, 115%…) screen pixels are not those units, so an unscaled
+         offset put the box short of — or past — the click. */
       const r = pe.getBoundingClientRect();
-      createTempAt(e.clientX - r.left, e.clientY - r.top);
+      const z = zoomAt(pe);
+      createTempAt((e.clientX - r.left) / z, (e.clientY - r.top) / z);
     }
     document.addEventListener("click", onDocClick);
     return () => document.removeEventListener("click", onDocClick);

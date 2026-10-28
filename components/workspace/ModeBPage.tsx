@@ -35,7 +35,7 @@ import type { ProgressStatus } from "@/lib/services/progress.service";
 import type { NoteData } from "./NoteCard";
 import QCFMushafPage from "./QCFMushafPage";
 import AnchoredNoteCard from "./AnchoredNoteCard";
-import FreeTextBox, { TEXTBOX_DEFAULT_WIDTH } from "./FreeTextBox";
+import FreeTextBox, { CARET_OFFSET, TEXTBOX_DEFAULT_WIDTH } from "./FreeTextBox";
 import { OpenSelectionPrompt, NameSelectionPrompt } from "./SelectionDialogs";
 import SelectionList from "./SelectionList";
 import ConnectionsPanel from "./ConnectionsPanel";
@@ -865,7 +865,7 @@ export default function ModeBPage({
       layerView: (anchorFields as { layerView?: string }).layerView ?? null,
       content: { type: "doc", content: [{ type: "paragraph" }] },
       color: null,
-      offsetX: Math.round(wx), offsetY: Math.round(wy),
+      offsetX: Math.round(wx - CARET_OFFSET.x), offsetY: Math.round(wy - CARET_OFFSET.y), // the caret, not the corner, at the click
       width: TEXTBOX_DEFAULT_WIDTH, height: null,
       isMinimized: false, zIndex: 1, isAdmin: false,
       createdAt: new Date().toISOString(),

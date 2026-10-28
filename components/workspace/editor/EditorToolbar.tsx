@@ -19,13 +19,27 @@ import {
 import {
   FontSizeControl, ColorControl, FormatPainter, TableControl, UndoRedo,
 } from "./toolbarControls";
+import { formatBlocks, onEditorFocus } from "./blockFormat";
 
 interface Props {
   editor: Editor | null;
   open:   boolean;
 }
 
-export default function EditorToolbar({ editor, open }: Props) {
+export default function EditorToolbar({ editor: pageEditor, open }: Props) {
+  /* The bar formats whichever editor you are in: the page, or a text box on
+     it. Bound to the page alone, its H2 changed the main document while the
+     caret sat in a box. A box that goes away hands the bar back to the page. */
+  const [focused, setFocused] = useState<Editor | null>(null);
+  useEffect(() => onEditorFocus(setFocused), []);
+  useEffect(() => {
+    if (!pageEditor) return;
+    const back = () => setFocused(null);
+    pageEditor.on("focus", back);
+    return () => { pageEditor.off("focus", back); };
+  }, [pageEditor]);
+  const editor = focused && !focused.isDestroyed ? focused : pageEditor;
+
   /* The toolbar is handed the editor as a PROP, so it never re-rendered on a
      transaction: TipTap only re-renders the component that owns useEditor.
      Every isActive() read and the font-size display were therefore frozen at
@@ -81,19 +95,19 @@ export default function EditorToolbar({ editor, open }: Props) {
 
         {([1, 2, 3] as const).map((level) => (
           <Btn key={level} active={editor.isActive("heading", { level })} title={`Heading ${level}`}
-            onClick={() => editor.chain().focus().toggleHeading({ level }).run()}>
+            onClick={() => formatBlocks(editor, (c) => c.toggleHeading({ level }), { heading: true })}>
             <span className="et-heading-label">H{level}</span>
           </Btn>
         ))}
 
         <Sep />
 
-        <Btn active={editor.isActive("bulletList")}  title="Bullet list"   onClick={() => editor.chain().focus().toggleBulletList().run()}><BulletIcon /></Btn>
-        <Btn active={editor.isActive("orderedList")} title="Numbered list" onClick={() => editor.chain().focus().toggleOrderedList().run()}><NumberedIcon /></Btn>
+        <Btn active={editor.isActive("bulletList")}  title="Bullet list"   onClick={() => formatBlocks(editor, (c) => c.toggleBulletList())}><BulletIcon /></Btn>
+        <Btn active={editor.isActive("orderedList")} title="Numbered list" onClick={() => formatBlocks(editor, (c) => c.toggleOrderedList())}><NumberedIcon /></Btn>
 
         <Sep />
 
-        <Btn active={editor.isActive("blockquote")} title="Quote" onClick={() => editor.chain().focus().toggleBlockquote().run()}><QuoteIcon /></Btn>
+        <Btn active={editor.isActive("blockquote")} title="Quote" onClick={() => formatBlocks(editor, (c) => c.toggleBlockquote())}><QuoteIcon /></Btn>
         <Btn title="Divider" onClick={() => editor.chain().focus().setHorizontalRule().run()}><DividerIcon /></Btn>
 
         <Sep />

@@ -28,6 +28,7 @@ import {
   Btn, Sep, Popover,
   HighlightSwatches, ColorSwatches, FontList, DirectionList,
 } from "./editorShared";
+import { formatBlocks } from "./blockFormat";
 
 interface Props { editor: Editor | null }
 
@@ -242,19 +243,19 @@ export default function SelectionToolbar({ editor }: Props) {
 
       {([1, 2, 3] as const).map((level) => (
         <Btn key={level} active={editor.isActive("heading", { level })} title={`H${level}`}
-          onClick={() => editor.chain().focus().toggleHeading({ level }).run()}>
+          onClick={() => formatBlocks(editor, (c) => c.toggleHeading({ level }), { heading: true })}>
           <span className="et-heading-label">H{level}</span>
         </Btn>
       ))}
 
       <Sep />
 
-      <Btn active={editor.isActive("bulletList")}  title="Bullet"   onClick={() => editor.chain().focus().toggleBulletList().run()}><BulletIcon /></Btn>
-      <Btn active={editor.isActive("orderedList")} title="Numbered" onClick={() => editor.chain().focus().toggleOrderedList().run()}><NumberedIcon /></Btn>
+      <Btn active={editor.isActive("bulletList")}  title="Bullet"   onClick={() => formatBlocks(editor, (c) => c.toggleBulletList())}><BulletIcon /></Btn>
+      <Btn active={editor.isActive("orderedList")} title="Numbered" onClick={() => formatBlocks(editor, (c) => c.toggleOrderedList())}><NumberedIcon /></Btn>
 
       <Sep />
 
-      <Btn active={editor.isActive("blockquote")} title="Quote" onClick={() => editor.chain().focus().toggleBlockquote().run()}><QuoteIcon /></Btn>
+      <Btn active={editor.isActive("blockquote")} title="Quote" onClick={() => formatBlocks(editor, (c) => c.toggleBlockquote())}><QuoteIcon /></Btn>
 
       <Popover open={lnOpen} onClose={() => setLnOpen(false)} trigger={
         <Btn active={editor.isActive("link")} title="Link (Ctrl+K)" onClick={() => {

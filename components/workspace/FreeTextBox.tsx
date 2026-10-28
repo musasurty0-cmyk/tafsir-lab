@@ -18,6 +18,7 @@
  * Interactions (hand tool active — the drawing overlay passes events through):
  *   click text   → edit in place
  *   drag grip    → move (PATCH offsetX/offsetY on release)
+ *   drag a side  → widen or narrow it (the left side moves it as well)
  *   ✕ button     → delete
  */
 
@@ -42,11 +43,33 @@ import { parseRange, type SearchTarget } from "@/lib/quran-search";
 import { useEditorCtxOptional } from "./editor/EditorContext";
 import type { NoteData } from "./NoteCard";
 import { StaticDoc, docIsEmpty } from "@/lib/prosemirror-static";
+import { announceFocus } from "./editor/blockFormat";
 
 /** Default width for a freshly placed container — wide enough that the slash
  *  palette, ayah/tafsir search results and toolbars are comfortable without
  *  a manual resize. */
 export const TEXTBOX_DEFAULT_WIDTH = 340;
+const MIN_WIDTH = 140, MAX_WIDTH = 900;
+
+/**
+ * From a box's corner to the middle of its first line of text (its padding,
+ * the hidden drag bar, half a line). A box placed by a click is moved back by
+ * this, so the caret appears under the pointer rather than below and right of it.
+ */
+export const CARET_OFFSET = { x: 13, y: 35 };
+
+/**
+ * Screen pixels per canvas unit where `el` sits. Two kinds of zoom can apply:
+ * the canvas's transform (whiteboards, the Muṣḥaf canvas) and CSS `zoom` (the
+ * document page's 80%, 115%…). Missing the second is why, on a zoomed page, a
+ * dragged box ran ahead of the cursor.
+ */
+export function zoomAt(el: HTMLElement): number {
+  const inner = el.closest(".mode-b-inner") as HTMLElement | null;
+  const t = inner ? new DOMMatrixReadOnly(getComputedStyle(inner).transform).a || 1 : 1;
+  const css = (el as HTMLElement & { currentCSSZoom?: number }).currentCSSZoom;
+  return t * (typeof css === "number" && css > 0 ? css : 1);
+}
 
 // ── Props ──────────────────────────────────────────────────────────────────
 
@@ -72,6 +95,7 @@ interface Props {
 
 export default function FreeTextBox({ note, startEditing = false, ayahInline = false, onUpdated, onDeleted, onPersistTemp }: Props) {
   const [pos, setPos]         = useState({ x: note.offsetX, y: note.offsetY });
+  const [width, setWidth]     = useState(note.width || TEXTBOX_DEFAULT_WIDTH);
   const [hovered, setHovered] = useState(false);
   const [focused, setFocused] = useState(false);
   /* An empty container shows NO chrome, even while focused: clicking a blank
@@ -89,8 +113,9 @@ export default function FreeTextBox({ note, startEditing = false, ayahInline = f
   const posRef = useRef(pos);
   posRef.current = pos;
 
-  // Sync position if the note moves remotely
+  // Sync position and width if the note changes remotely
   useEffect(() => { setPos({ x: note.offsetX, y: note.offsetY }); }, [note.offsetX, note.offsetY]);
+  useEffect(() => { if (note.width) setWidth(note.width); }, [note.width]);
 
   // Persist manual width resize (CSS resize handle) — debounced PATCH
   useEffect(() => {
@@ -126,14 +151,8 @@ export default function FreeTextBox({ note, startEditing = false, ayahInline = f
   function onGripDown(e: React.PointerEvent) {
     e.preventDefault();
     e.stopPropagation();
-    // Derive current zoom from the transformed parent so drag deltas map
-    // 1:1 to canvas-space units at any zoom level.
-    const inner = (e.currentTarget as HTMLElement).closest(".mode-b-inner") as HTMLElement | null;
-    let zoom = 1;
-    if (inner) {
-      const m = new DOMMatrixReadOnly(getComputedStyle(inner).transform);
-      zoom = m.a || 1;
-    }
+    // Drag deltas map 1:1 to canvas-space units at any zoom level.
+    const zoom = zoomAt(e.currentTarget as HTMLElement);
     dragRef.current = { startMx: e.clientX, startMy: e.clientY, startX: pos.x, startY: pos.y, zoom };
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
   }
@@ -159,6 +178,41 @@ export default function FreeTextBox({ note, startEditing = false, ayahInline = f
     }).catch(() => {});
   }
 
+  // ── Resize (either side) ────────────────────────────────────────────────
+  /* The box could only be widened from its bottom-right corner (CSS resize),
+     a few pixels you had to find. Both whole sides are handles now. The left
+     one keeps the right edge where it is, so it moves the box as it widens. */
+  const sizeRef = useRef<{ side: "left" | "right"; startMx: number; startW: number; startX: number; zoom: number } | null>(null);
+
+  function onSideDown(side: "left" | "right", e: React.PointerEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    sizeRef.current = { side, startMx: e.clientX, startW: width, startX: pos.x, zoom: zoomAt(e.currentTarget as HTMLElement) };
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  }
+
+  function onSideMove(e: React.PointerEvent) {
+    const r = sizeRef.current;
+    if (!r) return;
+    const dx = (e.clientX - r.startMx) / r.zoom;
+    const w = Math.round(Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, r.startW + (r.side === "right" ? dx : -dx))));
+    setWidth(w);
+    if (r.side === "left") setPos((p) => ({ ...p, x: r.startX + (r.startW - w) }));
+  }
+
+  function onSideUp() {
+    const r = sizeRef.current;
+    if (!r) return;
+    sizeRef.current = null;
+    // The width is saved by the ResizeObserver above; a left-side drag also moved the box.
+    if (isTemp || r.side !== "left") return;
+    fetch(`/api/notes/${note.id}`, {
+      method:  "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ offsetX: posRef.current.x }),
+    }).catch(() => {});
+  }
+
   // ── Render ──────────────────────────────────────────────────────────────
 
   return (
@@ -167,7 +221,7 @@ export default function FreeTextBox({ note, startEditing = false, ayahInline = f
       className="free-textbox"
       data-focused={focused ? "true" : "false"}
       data-empty={empty ? "true" : "false"}
-      style={{ left: pos.x, top: pos.y, width: note.width || TEXTBOX_DEFAULT_WIDTH }}
+      style={{ left: pos.x, top: pos.y, width }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onMouseDown={(e) => e.stopPropagation()}
@@ -207,6 +261,19 @@ export default function FreeTextBox({ note, startEditing = false, ayahInline = f
       />
 
       <span className="free-textbox-author">{note.author.name.split(" ")[0]}</span>
+
+      {!empty && (["left", "right"] as const).map((side) => (
+        <span
+          key={side}
+          className="free-textbox-side"
+          data-side={side}
+          aria-hidden
+          onPointerDown={(e) => onSideDown(side, e)}
+          onPointerMove={onSideMove}
+          onPointerUp={onSideUp}
+          onPointerCancel={onSideUp}
+        />
+      ))}
     </div>
   );
 }
@@ -394,7 +461,9 @@ function RichBody({
          with no Yjs to own undo. */
       ...baseExtensions({
         history: true,
-        placeholder: "Type '/' for commands…",
+        /* Nothing: clicking the page should give a caret and no more. The
+           slash palette is still there the moment "/" is typed. */
+        placeholder: "",
         workspaceId,
       }),
 
@@ -455,7 +524,7 @@ function RichBody({
       saveTimer.current = setTimeout(() => flush(), 900);
     },
 
-    onFocus() { cbRef.current.onFocusChange(true); },
+    onFocus({ editor }) { cbRef.current.onFocusChange(true); announceFocus(editor); },
 
     onBlur({ editor, event }) {
       // Clicking a palette / picker item steals focus for a moment — not a real exit
