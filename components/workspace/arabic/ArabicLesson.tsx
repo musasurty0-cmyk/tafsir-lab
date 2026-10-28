@@ -148,7 +148,7 @@ export default function ArabicLesson({ workspaceId, lesson, boxes, prev, next }:
         </button>
 
         <header className="ar-lesson-head">
-          <p className="ar-lesson-kicker">{lessonLabel(lesson)}</p>
+          <p className="ar-lesson-kicker">{lesson.kind === "mine" ? "Added from the Qurʾān" : lessonLabel(lesson)}</p>
           <h1 className="ar-lesson-title">{lesson.title}</h1>
           <p className="ar-lesson-meta">
             {words} word{words === 1 ? "" : "s"}{sentences ? ` · ${sentences} sentence${sentences === 1 ? "" : "s"}` : ""}

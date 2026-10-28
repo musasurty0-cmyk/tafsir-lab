@@ -28,7 +28,8 @@ export interface ParsedCard {
   isSentence: boolean;
 }
 
-export type LessonKind = "lesson" | "revision" | "prep";
+/** "mine" is the reader's own "My words", added from the Qurʾān; never imported. */
+export type LessonKind = "lesson" | "revision" | "prep" | "mine";
 
 export interface ParsedLesson {
   level:  number;

@@ -195,6 +195,22 @@ export default function ArabicHome({ workspaceId, workspace, role, lessons, summ
               )}
             </label>
 
+            {/* Words you added yourself from the Qurʾān, ahead of the course. */}
+            {!shownHits && levels.get(0)?.map((l) => (
+              <section key={l.id} className="ar-stage ar-mine">
+                <h2 className="ar-stage-title">My words</h2>
+                <p className="ar-stage-sub">Words you added from the Qurʾān</p>
+                <div className="ar-lessons">
+                  <Link href={`/workspaces/${workspaceId}/arabic/${l.id}`} className="ar-lesson" data-kind="mine" data-state="none">
+                    <span className="ar-lesson-n">{l.cardCount}</span>
+                    <span className="ar-lesson-t">word{l.cardCount === 1 ? "" : "s"} of your own</span>
+                    <StatusBar total={l.cardCount} s={summary.byLesson[l.id]} />
+                    <span className="ar-lesson-m"><span>Open</span></span>
+                  </Link>
+                </div>
+              </section>
+            ))}
+
             {shownHits ? (
               <SearchResults hits={shownHits} workspaceId={workspaceId} />
             ) : (

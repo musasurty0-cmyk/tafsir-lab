@@ -1,6 +1,6 @@
 /**
  * GET  /api/workspaces/[workspaceId]/arabic/review
- *        ?scope=due|lesson|unlock &lesson=<id> &sentences=1 &limit=20
+ *        ?scope=due|lesson|unlock|cards &lesson=<id> &ids=<id,id…> &sentences=1 &limit=20
  *      → { cards, pool } — what to practise, and the words wrong answers
  *        are drawn from.
  * POST /api/workspaces/[workspaceId]/arabic/review
@@ -22,13 +22,14 @@ export async function GET(
     const { userId } = await getSession();
     const q = new URL(req.url).searchParams;
     const scope = q.get("scope");
-    if (scope !== "due" && scope !== "lesson" && scope !== "unlock") {
-      return NextResponse.json({ error: "scope must be due, lesson or unlock" }, { status: 400 });
+    if (scope !== "due" && scope !== "lesson" && scope !== "unlock" && scope !== "cards") {
+      return NextResponse.json({ error: "scope must be due, lesson, unlock or cards" }, { status: 400 });
     }
     const limit = Number(q.get("limit") ?? 20);
     const result = await ArabicService.reviewQueue(workspaceId, userId, {
       scope,
       lessonId:  q.get("lesson") ?? undefined,
+      cardIds:   q.get("ids")?.split(",") ?? undefined,
       sentences: q.get("sentences") === "1",
       limit:     Number.isFinite(limit) ? limit : 20,
     });

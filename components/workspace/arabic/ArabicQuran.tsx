@@ -42,8 +42,8 @@ const CARD_WIDTH = 720;
 const COLOUR_KEY = "tl-arabic-quran-colour";
 
 export default function ArabicQuran({
-  workspaceId, chapters, initialSurah,
-}: { workspaceId: string; chapters: Chapter[]; initialSurah: number }) {
+  workspaceId, chapters, initialSurah, initialPage,
+}: { workspaceId: string; chapters: Chapter[]; initialSurah: number; initialPage?: number }) {
   const router = useRouter();
   useLayoutEffect(() => {
     document.getElementById("tl-nav-splash")?.remove();
@@ -56,7 +56,7 @@ export default function ArabicQuran({
     const [a, b] = chapter.pages;
     return Array.from({ length: b - a + 1 }, (_, i) => a + i);
   }, [chapter]);
-  const [page, setPage] = useState(chapter.pages[0]);
+  const [page, setPage] = useState(initialPage ?? chapter.pages[0]);
 
   // ── The page, exactly as Qurʾān study loads it ──────────────────────────
   /* Keyed by what was loaded, so "still loading" is simply "not this page
@@ -102,11 +102,16 @@ export default function ArabicQuran({
       const m = new Map<string, { box: number; cards: WordCard[] }>();
       for (const c of res.cards as WordCard[]) {
         const hit = lookup(index, cardHeadword(c.arabic, false), c.english);
-        if (!hit?.lemma) continue;
-        const e = m.get(hit.lemma) ?? { box: 0, cards: [] };
-        e.box = Math.max(e.box, c.box);
-        e.cards.push(c);
-        m.set(hit.lemma, e);
+        /* A word added from here is stored as its dictionary form, so it is
+           found by that exactly even where the bare form never occurs. */
+        const keys = new Set([hit?.lemma, c.lesson.kind === "mine" ? c.arabic : undefined]);
+        for (const key of keys) {
+          if (!key) continue;
+          const e = m.get(key) ?? { box: 0, cards: [] };
+          e.box = Math.max(e.box, c.box);
+          e.cards.push(c);
+          m.set(key, e);
+        }
       }
       setByLemma(m);
     })();
@@ -159,6 +164,45 @@ export default function ArabicQuran({
     return () => window.removeEventListener("keydown", onKey);
   }, [prev, next]);
 
+  /* Your cards for the words on this page that you are learning or have
+     learnt — what "Practise this page" asks. */
+  const pageCards = useMemo(() => {
+    if (!morph) return [];
+    const ids = new Set<string>();
+    for (const v of verses) {
+      const ayah = v.verse_key.split(":")[1];
+      for (const w of v.words) {
+        const lemma = w.char_type_name === "word" ? morph[ayah]?.[w.position - 1]?.[1] : undefined;
+        for (const c of (lemma ? byLemma.get(lemma)?.cards : undefined) ?? []) if (c.box > 0) ids.add(c.id);
+      }
+    }
+    return [...ids];
+  }, [morph, verses, byLemma]);
+
+  const addWord = useCallback(async (w: MorphWord, english: string) => {
+    const res = await fetch(`/api/workspaces/${workspaceId}/arabic/words`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ arabic: w[1], english }),
+    });
+    const data = await res.json().catch(() => ({})) as { cardId?: string };
+    if (!res.ok || !data.cardId) return false;
+    // Colour it at once: a new word goes in as learning.
+    setByLemma((m) => {
+      const next = new Map(m);
+      const e = next.get(w[1]) ?? { box: 0, cards: [] };
+      if (!e.cards.some((c) => c.id === data.cardId)) {
+        e.cards = [...e.cards, {
+          id: data.cardId!, english, arabic: w[1], box: 1,
+          lesson: { id: "", level: 0, number: null, kind: "mine", title: "My words" },
+        }];
+      }
+      e.box = Math.max(e.box, 1);
+      next.set(w[1], { ...e });
+      return next;
+    });
+    return true;
+  }, [workspaceId]);
+
   const cardRef = useRef<HTMLDivElement>(null);
   const noop = useCallback(() => {}, []);
   const chooseSurah = (n: number) => {
@@ -191,6 +235,16 @@ export default function ArabicQuran({
             {chapters.map((c) => <option key={c.id} value={c.id}>{c.id}. {c.name_simple}</option>)}
           </select>
           <span className="aq-sp" />
+          {pageCards.length > 0 && (
+            <button
+              type="button"
+              className="nw-btn nw-btn--primary aq-practise"
+              onClick={() => pushWithSplash(router,
+                `/workspaces/${workspaceId}/arabic/practice?scope=cards&ids=${pageCards.join(",")}&surah=${chapter.id}&page=${page}`)}
+            >
+              Practise this page · {pageCards.length}
+            </button>
+          )}
           {colour && (
             <span className="aq-legend" aria-hidden>
               <span className="aq-dot aq-dot--learning" /> Learning
@@ -254,6 +308,7 @@ export default function ArabicQuran({
         roots={roots}
         mine={pickedWord?.[1] ? byLemma.get(pickedWord[1]) ?? null : null}
         workspaceId={workspaceId}
+        onAdd={addWord}
         onClose={() => setPicked(null)}
       />
     </div>
@@ -265,10 +320,14 @@ export default function ArabicQuran({
 function QuranWordPanel(p: {
   open: boolean; word: MorphWord | null; glyph: { code: string; page: number } | null;
   verseKey: string; roots: RootIndex | null; mine: { box: number; cards: WordCard[] } | null;
-  workspaceId: string; onClose: () => void;
+  workspaceId: string; onAdd: (w: MorphWord, english: string) => Promise<boolean>; onClose: () => void;
 }) {
   const { mounted, state } = useOverlayMotion(p.open, 220);
   useDismissable(p.onClose, p.open);
+  const [adding, setAdding] = useState<"idle" | "busy" | "failed">("idle");
+  const wordKey = p.word ? `${p.verseKey}:${p.word[1]}` : "";
+  const [addingFor, setAddingFor] = useState(wordKey);
+  if (addingFor !== wordKey) { setAddingFor(wordKey); setAdding("idle"); }
   if (!mounted || !p.word) return null;
 
   const [rootKey, lemma, pos, tags, meaning] = p.word;
@@ -306,12 +365,30 @@ function QuranWordPanel(p: {
                   <li key={c.id} data-status={statusOf(c.box)}>
                     <span className="aq-mine-ar" dir="rtl" lang="ar">{c.arabic}</span>
                     <span className="aq-mine-en">{c.english}</span>
-                    <span className="aq-mine-where">{lessonLabel(c.lesson)}, {c.lesson.title}</span>
+                    <span className="aq-mine-where">{c.lesson.kind === "mine" ? "My words" : `${lessonLabel(c.lesson)}, ${c.lesson.title}`}</span>
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="wl-none">Not in your lessons yet.</p>
+              <div className="aq-add">
+                <p className="wl-none">Not in your lessons yet.</p>
+                {lemma && (
+                  <button
+                    type="button"
+                    className="nw-btn nw-btn--primary"
+                    disabled={adding === "busy"}
+                    onClick={async () => {
+                      setAdding("busy");
+                      const english = (lemmaRow?.[4] || meaning).replace(/^\([^)]*\)\s*/, "").trim();
+                      const ok = await p.onAdd(p.word!, english);
+                      setAdding(ok ? "idle" : "failed");
+                    }}
+                  >
+                    {adding === "busy" ? "Adding…" : "Add to my words"}
+                  </button>
+                )}
+                {adding === "failed" && <p className="ar-error">That didn’t save. Try again.</p>}
+              </div>
             )}
           </section>
 

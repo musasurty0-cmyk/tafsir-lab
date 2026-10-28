@@ -242,7 +242,10 @@ export async function setLessonState(
 
 // ── Review (phase 2) ───────────────────────────────────────────────────────
 
-export type ReviewScope = "due" | "lesson" | "unlock";
+export type ReviewScope = "due" | "lesson" | "unlock" | "cards";
+
+/** The lesson that holds words a reader adds themselves, from the Qurʾān. */
+export const MY_WORDS = { level: 0, fileNo: 0, kind: "mine", title: "My words" } as const;
 
 export interface ReviewCard {
   id: string; lessonId: string; english: string; arabic: string; translit: string | null;
@@ -264,7 +267,7 @@ export const NEW_PER_SESSION = 15;
  */
 export async function reviewQueue(
   workspaceId: string, userId: string,
-  opts: { scope: ReviewScope; lessonId?: string; sentences: boolean; limit: number },
+  opts: { scope: ReviewScope; lessonId?: string; cardIds?: string[]; sentences: boolean; limit: number },
 ) {
   await gate(workspaceId, userId);
   const now = new Date();
@@ -298,6 +301,15 @@ export async function reviewQueue(
     });
     // Due cards shuffled, so the same run never comes back in the same order.
     cards = [...shuffle(seen.map(shape)), ...fresh.map(shape)];
+  } else if (opts.scope === "cards") {
+    // A chosen set — the words on a Qurʾān page you are reading.
+    const ids = (opts.cardIds ?? []).filter((x) => /^[0-9a-f-]{36}$/i.test(x)).slice(0, 100);
+    if (ids.length === 0) throw new ArabicError("Choose some cards.", "INVALID");
+    const rows = await db.arabicCard.findMany({
+      where:  { id: { in: ids }, lesson: { workspaceId }, ...sentenceFilter },
+      select: cardSelect,
+    });
+    cards = shuffle(rows.map(shape));
   } else {
     if (!opts.lessonId) throw new ArabicError("Choose a lesson.", "INVALID");
     const lesson = await db.arabicLesson.findFirst({ where: { id: opts.lessonId, workspaceId }, select: { id: true } });
@@ -320,11 +332,16 @@ export async function reviewQueue(
   const levels = lessonIds.length
     ? [...new Set((await db.arabicLesson.findMany({ where: { id: { in: lessonIds } }, select: { level: true } })).map((l) => l.level))]
     : [];
-  const pool = levels.length === 0 ? [] : await db.arabicCard.findMany({
+  const poolSelect = { id: true, lessonId: true, english: true, arabic: true, isSentence: true } as const;
+  let pool = levels.length === 0 ? [] : await db.arabicCard.findMany({
     where:  { lesson: { workspaceId, level: { in: levels } } },
-    select: { id: true, lessonId: true, english: true, arabic: true, isSentence: true },
+    select: poolSelect,
     take:   4000,
   });
+  // A handful of your own words is too few to choose wrong answers from.
+  if (pool.length < 12) {
+    pool = await db.arabicCard.findMany({ where: { lesson: { workspaceId } }, select: poolSelect, take: 4000 });
+  }
 
   return { cards, pool };
 }
@@ -468,4 +485,41 @@ export async function lessonBoard(workspaceId: string, userId: string, lessonId:
   const page = await createWorkspaceBoard(workspaceId, userId, `Level ${lesson.level} · ${label} · ${lesson.title}`.slice(0, 80));
   await db.arabicLesson.update({ where: { id: lesson.id }, data: { pageId: page.id } });
   return page.id;
+}
+
+/**
+ * Add a word you met in the Qurʾān to "My words". It goes in as learning,
+ * due now, so today's review picks it up straight away. Adding the same word
+ * twice returns the card already there.
+ */
+export async function addMyWord(
+  workspaceId: string, userId: string,
+  raw: { arabic?: unknown; english?: unknown; translit?: unknown },
+) {
+  await gate(workspaceId, userId);
+  const arabic = typeof raw.arabic === "string" ? raw.arabic.trim().slice(0, MAX_FIELD) : "";
+  const english = typeof raw.english === "string" ? raw.english.trim().slice(0, MAX_FIELD) : "";
+  const translit = typeof raw.translit === "string" ? raw.translit.trim().slice(0, MAX_FIELD) || null : null;
+  if (!HAS_ARABIC.test(arabic) || !english) throw new ArabicError("A word needs its Arabic and its meaning.", "INVALID");
+
+  const lesson = await db.arabicLesson.upsert({
+    where:  { workspaceId_level_fileNo: { workspaceId, level: MY_WORDS.level, fileNo: MY_WORDS.fileNo } },
+    update: {},
+    create: { workspaceId, level: MY_WORDS.level, fileNo: MY_WORDS.fileNo, kind: MY_WORDS.kind, title: MY_WORDS.title },
+    select: { id: true, cardCount: true },
+  });
+  const folded = foldArabic(arabic);
+  const already = await db.arabicCard.findFirst({ where: { lessonId: lesson.id, folded }, select: { id: true } });
+  if (already) return { cardId: already.id, added: false };
+
+  const card = await db.$transaction(async (tx) => {
+    const c = await tx.arabicCard.create({
+      data: { lessonId: lesson.id, ord: lesson.cardCount, english, arabic, translit, isSentence: false, folded },
+      select: { id: true },
+    });
+    await tx.arabicLesson.update({ where: { id: lesson.id }, data: { cardCount: { increment: 1 } } });
+    await tx.arabicReview.create({ data: { userId, cardId: c.id, box: 1, due: new Date() } });
+    return c;
+  });
+  return { cardId: card.id, added: true };
 }

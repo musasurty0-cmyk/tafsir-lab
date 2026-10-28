@@ -25,7 +25,7 @@ import { makeOptions, type Drill, type DrillCard, type Option } from "@/lib/arab
 import { cardHeadword, lookup, type QuranHit } from "@/lib/arabic/quran-match";
 import { loadQuranIndex, loadAyah, arabicVoice, speak, type Ayah } from "@/lib/arabic/quran-index-client";
 
-type Scope = "due" | "lesson" | "unlock";
+type Scope = "due" | "lesson" | "unlock" | "cards";
 type Choice = Drill | "mixed";
 
 interface QueueCard extends DrillCard {
@@ -41,6 +41,9 @@ interface Props {
   workspaceId: string;
   scope: Scope;
   lesson: { id: string; title: string; label: string } | null;
+  /** For scope "cards": the cards to practise, and where to go back to. */
+  cardIds?: string[];
+  from?: { href: string; label: string; title: string } | null;
 }
 
 const DRILLS: { id: Choice; name: string; hint: string }[] = [
@@ -54,7 +57,7 @@ const DRILLS: { id: Choice; name: string; hint: string }[] = [
 
 const TRANSLIT_KEY = "tl-arabic-translit";
 
-export default function ArabicPractice({ workspaceId, scope, lesson }: Props) {
+export default function ArabicPractice({ workspaceId, scope, lesson, cardIds, from }: Props) {
   const router = useRouter();
   useLayoutEffect(() => {
     document.getElementById("tl-nav-splash")?.remove();
@@ -101,11 +104,12 @@ export default function ArabicPractice({ workspaceId, scope, lesson }: Props) {
       scope, limit: String(scope === "unlock" || count === 0 ? 500 : count), sentences: sentences ? "1" : "0",
     });
     if (lesson) q.set("lesson", lesson.id);
+    if (scope === "cards" && cardIds?.length) q.set("ids", cardIds.join(","));
     const res = await fetch(`/api/workspaces/${workspaceId}/arabic/review?${q}`);
     const data = await res.json() as { cards?: QueueCard[]; pool?: DrillCard[]; error?: string };
     if (!res.ok) throw new Error(data.error ?? "Couldn’t load the cards.");
     return { cards: data.cards ?? [], pool: data.pool ?? [] };
-  }, [scope, count, sentences, lesson, workspaceId]);
+  }, [scope, count, sentences, lesson, workspaceId, cardIds]);
 
   useEffect(() => {
     if (phase !== "setup") return;
@@ -255,15 +259,17 @@ export default function ArabicPractice({ workspaceId, scope, lesson }: Props) {
     return () => window.removeEventListener("keydown", onKey);
   }, [phase, item, picked, choose, advance]);
 
-  const leave = () => pushWithSplash(router, lesson ? `/workspaces/${workspaceId}/arabic/${lesson.id}` : `/workspaces/${workspaceId}`);
-  const title = scope === "unlock" ? "What do you already know?" : lesson ? lesson.title : "Today’s review";
+  const leave = () => pushWithSplash(router,
+    from ? from.href : lesson ? `/workspaces/${workspaceId}/arabic/${lesson.id}` : `/workspaces/${workspaceId}`);
+  const title = scope === "unlock" ? "What do you already know?"
+    : from ? from.title : lesson ? lesson.title : "Today’s review";
 
   return (
     <div className="workspace-home">
       <Rail activeWorkspaceId={workspaceId} />
       <div className="workspace-home-content ap-page">
         <button type="button" className="ar-back" onClick={leave}>
-          <ChevronLeft size={15} aria-hidden /> {lesson ? lesson.label : "All lessons"}
+          <ChevronLeft size={15} aria-hidden /> {from ? from.label : lesson ? lesson.label : "All lessons"}
         </button>
 
         {phase === "setup" && (
