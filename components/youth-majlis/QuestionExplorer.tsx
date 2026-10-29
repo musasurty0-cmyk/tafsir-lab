@@ -38,11 +38,13 @@ export function Ring({ value, max, size = 56, stroke = 5, label }: {
 
 const STATE_TEXT = { written: "Written", started: "Started", empty: "Not started" } as const;
 
-export default function QuestionExplorer({ questions, modules, current, stats, signedIn }: {
+export default function QuestionExplorer({ questions, modules, current, stats = {}, signedIn = false }: {
   questions: Q[]; modules: M[]; current: number;
   /** Per module number, the ten tabs in the student's workspace. */
-  stats: Record<number, TabStat[]>;
-  signedIn: boolean;
+  /** How far each point has got. The portal no longer passes these (29 Oct
+   *  2026): its progress counted personal workspaces, not the shared one. */
+  stats?: Record<number, TabStat[]>;
+  signedIn?: boolean;
 }) {
   const [mod, setMod] = useState(current);
   const [qn, setQn]   = useState(1);

@@ -27,7 +27,7 @@ import { modulesWithNotes } from "@/lib/youth-majlis/notes";
 import { getSessionOrNull } from "@/lib/session";
 import {
   cohortMember, currentModule, daysUntil, getSessions, getSettings, joinCohort, londonToday, longDate,
-  moduleDone, nextSession, sessionPoints, sessionScope, tabStats, writtenCount, type SessionView, type TabStat,
+  moduleDone, nextSession, sessionPoints, sessionScope, tabStats, type SessionView,
 } from "@/lib/youth-majlis/data";
 import {
   AIM, AIM_DETAIL, AREAS, COHORT, LEVELS, METHOD, MODULES, QUESTIONS, SHAYKH, TAB_TITLES,
@@ -94,11 +94,12 @@ export default async function YouthMajlisPage({ searchParams }: { searchParams: 
   const current = MODULES.find((m) => m.n === modN) ?? MODULES[0];
   const tonight = next?.date === londonToday();
 
-  // Real preparation, per module, from the student's own workspace.
-  const stats: Record<number, TabStat[]> = {};
-  if (me) for (const m of MODULES) stats[m.n] = await tabStats(me.workspaceId, m.surah);
-  // Assigned research is done in the shared workspace once there is one.
-  const sharedStats = settings.cohortWorkspaceId ? await tabStats(settings.cohortWorkspaceId, current.surah) : null;
+  /* How far assigned research has got, from its tab: in the shared workspace,
+     where everyone writes since the portal opens sūrahs there. Per-student
+     progress (the ten points, the rings on the journey) was removed on 29 Oct
+     2026 at the owner's request: it counted the students' personal
+     workspaces, which nobody writes in any more. */
+  const researchStats = me ? await tabStats(settings.cohortWorkspaceId ?? me.workspaceId, current.surah) : null;
 
   const states: Record<number, TileState> = {};
   const counts: Record<number, number> = {};
@@ -106,8 +107,6 @@ export default async function YouthMajlisPage({ searchParams }: { searchParams: 
     states[m.n] = m.n === modN ? "current" : moduleDone(sessions, m.n, modN) ? "done" : "upcoming";
     counts[m.n] = sessions.filter((s) => s.moduleN === m.n).length;
   }
-  const written = me ? Object.fromEntries(MODULES.map((m) => [m.n, writtenCount(stats[m.n])])) : null;
-  const inScope = next ? sessionPoints(next) : new Set<number>();
   const myAssignments = next && account
     ? next.assignments.filter((a) => a.assignees.some((x) => x.userId === account.userId)) : [];
   const slim = MODULES.map(({ n, surah, surahEn, surahAr, title }) => ({ n, surah, surahEn, surahAr, title }));
@@ -231,7 +230,7 @@ export default async function YouthMajlisPage({ searchParams }: { searchParams: 
                 ) : (
                   <ul className="y-assignments">
                     {myAssignments.map((a) => {
-                      const st = a.point ? (sharedStats ?? stats[modN])?.find((t) => t.n === a.point) : undefined;
+                      const st = a.point ? researchStats?.find((t) => t.n === a.point) : undefined;
                       const group = a.assignees.length > 1;
                       return (
                         <li key={a.id}>
@@ -252,28 +251,6 @@ export default async function YouthMajlisPage({ searchParams }: { searchParams: 
                 )}
               </div>
             </div>
-
-            <div className="y-points" data-reveal>
-              <div className="y-points-head">
-                <p className="y-prep-h">Your ten points for {current.surahEn}</p>
-                {me && <span className="y-points-count">{writtenCount(stats[modN])} of 10 written</span>}
-              </div>
-              {!account ? (
-                <p className="y-prep-empty">Sign in to TafsirLab and this shows how far you’ve got with each point, from what you’ve actually written. <a className="y-more" href="/login">Sign in</a></p>
-              ) : (
-                <ol className="y-points-list">
-                  {stats[modN].map((t) => (
-                    <li key={t.n}>
-                      <a href={`/youth-majlis/open/${current.surah}?point=${t.n}`} data-state={t.state} data-focus={inScope.has(t.n) ? "" : undefined}>
-                        <span className="y-pt-dot" aria-hidden />
-                        <span className="y-pt-title">{t.title}{inScope.has(t.n) && <span className="y-pt-focus">This session</span>}</span>
-                        <span className="y-pt-meta">{t.state === "empty" ? "Not started" : `${t.words} words${t.notes ? `, ${t.notes} notes` : ""}`}</span>
-                      </a>
-                    </li>
-                  ))}
-                </ol>
-              )}
-            </div>
           </div>
         </section>
 
@@ -283,7 +260,7 @@ export default async function YouthMajlisPage({ searchParams }: { searchParams: 
             <Words id="y-j-h" className="y-h2" text="The journey." />
             <p className="y-h2-sub" data-reveal>Three levels, each built upon the one before.</p>
           </div>
-          <JourneyRail modules={slim} levels={LEVELS} states={states} written={written} sessions={counts} total={QUESTIONS.length} />
+          <JourneyRail modules={slim} levels={LEVELS} states={states} written={null} sessions={counts} total={QUESTIONS.length} />
         </section>
 
         {/* ── Every session ── */}
@@ -353,7 +330,7 @@ export default async function YouthMajlisPage({ searchParams }: { searchParams: 
             <Words id="y-q-h" className="y-h2" text={"Ten questions.\nEvery sūrah."} />
             <p className="y-h2-sub" data-reveal>How to research each point, and how far you’ve really got with it.</p>
             <div data-reveal>
-              <QuestionExplorer questions={QUESTIONS} modules={slim} current={modN} stats={stats} signedIn={!!me} />
+              <QuestionExplorer questions={QUESTIONS} modules={slim} current={modN} />
             </div>
             <p className="y-method" data-reveal>{METHOD.join("  ·  ")}</p>
           </div>
