@@ -1,9 +1,10 @@
 /**
  * GET /youth-majlis/open/[surah]?point=N
  *
- * "Open in TafsirLab": the sūrah in the student's personal Youth Majlis
- * workspace (see lib/youth-majlis/workspace.ts — one per student, never
- * another), with the ten points as its tabs, landing on point N (default 1).
+ * "Open in TafsirLab": the sūrah in the cohort's shared workspace (or, until
+ * an organiser makes one, the student's personal Youth Majlis workspace; see
+ * lib/youth-majlis/workspace.ts majlisWorkspace), with the ten points as its
+ * tabs, landing on point N (default 1).
  *
  * Not signed in to TafsirLab → the login page. Not through the portal's gate
  * → the portal.
@@ -13,7 +14,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSessionOrNull } from "@/lib/session";
 import { hasAccess } from "@/lib/youth-majlis/gate";
 import { joinCohort } from "@/lib/youth-majlis/data";
-import { personalWorkspace, surahWithTabs } from "@/lib/youth-majlis/workspace";
+import { majlisWorkspace, surahWithTabs } from "@/lib/youth-majlis/workspace";
 
 export async function GET(
   req: NextRequest,
@@ -31,7 +32,7 @@ export async function GET(
   if (!session) return to("/login");
 
   if (!(await joinCohort(session.userId))) return to("/login");   // the account is gone
-  const workspaceId = await personalWorkspace(session.userId);
+  const workspaceId = await majlisWorkspace(session.userId);
   const tabs = await surahWithTabs(workspaceId, surah, session.userId);
   const pageId = tabs.get(point) ?? tabs.get(1);
   return to(`/workspaces/${workspaceId}/surahs/${surah}${pageId ? `/pages/${pageId}` : ""}`);

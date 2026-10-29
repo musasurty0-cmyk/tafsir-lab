@@ -11,8 +11,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getSessionOrNull } from "@/lib/session";
 import { hasAccess } from "@/lib/youth-majlis/gate";
-import { getSettings, joinCohort } from "@/lib/youth-majlis/data";
-import { personalWorkspace, surahWithTabs } from "@/lib/youth-majlis/workspace";
+import { joinCohort } from "@/lib/youth-majlis/data";
+import { majlisWorkspace, surahWithTabs } from "@/lib/youth-majlis/workspace";
 import { MODULES } from "@/lib/youth-majlis/content";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -30,14 +30,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
   // Also adds them to the cohort workspace. Null: the account is gone.
   if (!(await joinCohort(session.userId))) return to("/login");
-  const { cohortWorkspaceId } = await getSettings();
-  const member = cohortWorkspaceId
-    ? await db.workspaceMember.findUnique({
-        where: { workspaceId_userId: { workspaceId: cohortWorkspaceId, userId: session.userId } },
-        select: { workspaceId: true },
-      })
-    : null;
-  const workspaceId = member?.workspaceId ?? await personalWorkspace(session.userId);
+  const workspaceId = await majlisWorkspace(session.userId);
 
   const tabs = await surahWithTabs(workspaceId, surah, session.userId);
   const pageId = tabs.get(a.point ?? 1) ?? tabs.get(1);

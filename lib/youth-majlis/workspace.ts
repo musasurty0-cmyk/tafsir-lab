@@ -1,10 +1,11 @@
 /**
  * Youth Majlis — the TafsirLab workspaces behind the portal.
  *
- * Each student has one personal "Youth Majlis" workspace, pinned to their
- * account, never duplicated. The cohort may also share one workspace, where
- * assigned research is pooled for the Majlis. In either, a sūrah always opens
- * with the ten points as its tabs.
+ * The cohort shares one workspace, where everyone studies the sūrah together
+ * (each with their own Mushaf board, see Workspace.privateBoards). Until an
+ * organiser makes it, each student has one personal "Youth Majlis"
+ * workspace, pinned to their account, never duplicated. In either, a sūrah
+ * always opens with the ten points as its tabs.
  *
  * Every creation runs under a transaction-scoped advisory lock, so a double
  * tap cannot make two workspaces, two sūrah sessions or two sets of tabs.
@@ -12,7 +13,7 @@
 
 import { db } from "@/lib/db";
 import { QUESTIONS, TAB_TITLES } from "@/lib/youth-majlis/content";
-import { tabNumber } from "@/lib/youth-majlis/data";
+import { getSettings, tabNumber } from "@/lib/youth-majlis/data";
 
 const WORKSPACE_NAME = "Youth Majlis";
 const ADMIN_ROLES = ["owner", "admin"];
@@ -27,6 +28,23 @@ function questionDoc(q: string) {
       { type: "bulletList", content: [{ type: "listItem", content: [{ type: "paragraph" }] }] },
     ],
   };
+}
+
+/**
+ * Where the portal opens a sūrah: the shared cohort workspace, for anyone in
+ * it (joinCohort adds every member of the cohort), else their personal one.
+ * Since 29 Oct 2026 (owner's request): "Open al-Ṣaff" goes to the shared
+ * workspace, not a private one.
+ */
+export async function majlisWorkspace(userId: string): Promise<string> {
+  const { cohortWorkspaceId } = await getSettings();
+  if (cohortWorkspaceId) {
+    const member = await db.workspaceMember.findUnique({
+      where: { workspaceId_userId: { workspaceId: cohortWorkspaceId, userId } }, select: { workspaceId: true },
+    });
+    if (member) return member.workspaceId;
+  }
+  return personalWorkspace(userId);
 }
 
 /**
@@ -110,6 +128,11 @@ export async function createCohortWorkspace(organiserId: string): Promise<string
  * Returns the tab ids by point number.
  */
 export async function surahWithTabs(workspaceId: string, surah: number, userId: string): Promise<Map<number, string>> {
+  /* In the shared workspace the tabs are everyone's, so they are published:
+     a draft is seen only by whoever made it and the admins. In a personal
+     workspace they stay drafts, as they always were. */
+  const { cohortWorkspaceId } = await getSettings();
+  const status = workspaceId === cohortWorkspaceId ? "published" : "draft";
   return db.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`ym-tabs:${workspaceId}:${surah}`}))`;
     const ws = await tx.workspaceSurah.upsert({
@@ -129,7 +152,8 @@ export async function surahWithTabs(workspaceId: string, surah: number, userId: 
       if (ids.has(q.n)) continue;
       const page = await tx.page.create({
         data: {
-          workspaceSurahId: ws.id, title: TAB_TITLES[q.n - 1], orderIndex: next++, status: "draft",
+          workspaceSurahId: ws.id, title: TAB_TITLES[q.n - 1], orderIndex: next++, status,
+          ...(status === "published" ? { publishedById: userId, publishedAt: new Date() } : {}),
           tiptapContent: questionDoc(q.q), createdById: userId,
         },
         select: { id: true },
