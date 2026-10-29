@@ -142,7 +142,12 @@
 .og-removed summary { cursor: pointer; font-size: 14px; font-weight: 600; color: var(--ink-3); width: fit-content; }
 .og-removed .og-sub { margin-top: 8px; }
 .og-removed .og-members { margin-top: 10px; }
-.og-member-mail { color: var(--ink-3); font-size: 14px; overflow: hidden; text-overflow: ellipsis; }
+.og-member-mail { color: var(--ink-3); font-size: 14px; overflow: hidden; text-overflow: ellipsis; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.og-mail-text { overflow: hidden; text-overflow: ellipsis; }
+.og-viewas { font-size: 13px; font-weight: 600; color: var(--accent-ink); width: fit-content; }
+.og-viewas:hover { text-decoration: underline; }
+.og-chip--link { text-decoration: none; transition: filter 140ms ease; }
+.og-chip--link:hover { filter: brightness(0.95); text-decoration: underline; }
 .og-members select { background: var(--bg); padding: 8px 10px; }
 
 /* ── Cards ── */
@@ -168,6 +173,8 @@
   .og-fields--4, .og-fields--2 { grid-template-columns: 1fr 1fr; }
   .og-assign > li:not(.og-empty) { grid-template-columns: 1fr; }
   .og-members li { grid-template-columns: minmax(0, 1fr) 130px 34px; gap: 10px; }
-  .og-member-mail { display: none; }
+  .og-mail-text { display: none; }
+  .og-members li > .og-member-mail { grid-column: 1 / -1; order: 9; margin-top: -6px; }
+  .og-removed .og-member-mail { display: none; }
   .og-row-head { flex-wrap: wrap; gap: 6px 14px; }
 }

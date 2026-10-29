@@ -45,6 +45,9 @@ async function act(body: Record<string, unknown>): Promise<string | null> {
   return d?.error ?? "Couldn’t save. Check your connection.";
 }
 
+/** The portal as one student sees it, at the part with their research. */
+const asStudent = (userId: string) => `/youth-majlis?as=${userId}#prepare`;
+
 const fmt = (d: string | null) => d
   ? new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric", timeZone: "Europe/London" }).format(new Date(`${d}T12:00:00Z`))
   : "No date yet";
@@ -152,7 +155,10 @@ export default function OrganiserApp({
           {active.map((m) => (
             <li key={m.userId}>
               <MemberName member={m} run={run} />
-              <span className="og-member-mail">{m.email}</span>
+              <span className="og-member-mail">
+                <span className="og-mail-text">{m.email}</span>
+                {m.userId !== meId && <a className="og-viewas" href={asStudent(m.userId)}>See their portal</a>}
+              </span>
               <select
                 value={m.role}
                 aria-label={`Role for ${m.name}`}
@@ -406,7 +412,12 @@ function Assignments({ sessions, members, tabTitles, defaultSession, run }: {
               <div className="og-assign-who">
                 {a.assignees.map((x) => {
                   const t = a.point ? status.get(x.userId)?.tabs.find((tt) => tt.n === a.point) : undefined;
-                  return <span key={x.userId} className="og-chip" data-state={t?.state}>{x.name}{t ? ` · ${t.words}w` : ""}</span>;
+                  return (
+                    <a key={x.userId} className="og-chip og-chip--link" data-state={t?.state} href={asStudent(x.userId)}
+                       title={`See this as ${x.name} does`}>
+                      {x.name}{t ? ` · ${t.words}w` : ""}
+                    </a>
+                  );
                 })}
               </div>
               <button className="og-link-btn" onClick={() => setEditing(a)}>Edit</button>

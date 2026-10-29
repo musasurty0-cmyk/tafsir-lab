@@ -26,7 +26,7 @@ import { hasAccess } from "@/lib/youth-majlis/gate";
 import { modulesWithNotes } from "@/lib/youth-majlis/notes";
 import { getSessionOrNull } from "@/lib/session";
 import {
-  currentModule, daysUntil, getSessions, getSettings, joinCohort, londonToday, longDate,
+  cohortMember, currentModule, daysUntil, getSessions, getSettings, joinCohort, londonToday, longDate,
   moduleDone, nextSession, sessionPoints, sessionScope, tabStats, writtenCount, type SessionView, type TabStat,
 } from "@/lib/youth-majlis/data";
 import {
@@ -64,7 +64,10 @@ function Words({ text, className, id, as: Tag = "h2" }: {
   );
 }
 
-export default async function YouthMajlisPage() {
+/* ?as=<userId>: an organiser sees the portal exactly as that student does,
+   with their research and how far they've got (counts, as the organise page
+   already shows), to check what they've set before anyone else sees it. */
+export default async function YouthMajlisPage({ searchParams }: { searchParams: Promise<{ as?: string }> }) {
   if (!(await hasAccess("majlis"))) {
     return (
       <Gate
@@ -77,10 +80,14 @@ export default async function YouthMajlisPage() {
 
   // ── What the page knows ──
   const [sessions, settings, session, withNotes] = await Promise.all([getSessions(), getSettings(), getSessionOrNull(), modulesWithNotes()]);
-  const me = session ? await joinCohort(session.userId) : null;
+  const self = session ? await joinCohort(session.userId) : null;
+  const { as } = await searchParams;
+  const viewing = as && session && self?.role === "organiser" && as !== session.userId ? await cohortMember(as) : null;
+  // From here on, "me" is whoever the page is for: you, or the student you're viewing as.
+  const me = viewing ? { role: "student" as const, workspaceId: viewing.workspaceId } : self;
   // A session whose account is gone (a closed demo) counts as signed out.
-  const account = me ? session : null;
-  const organiser = me?.role === "organiser";
+  const account = viewing ? { userId: viewing.userId } : self ? session : null;
+  const organiser = !viewing && self?.role === "organiser";
 
   const next = nextSession(sessions);
   const modN = currentModule(sessions);
@@ -125,6 +132,13 @@ export default async function YouthMajlisPage() {
         </div>
         <span className="y-progress" aria-hidden />
       </header>
+
+      {viewing && (
+        <div className="y-viewas" role="note">
+          <span>You’re seeing the portal as <strong>{viewing.name}</strong> sees it.</span>
+          <Link href="/youth-majlis/organise#og-cohort" className="y-viewas-back">Back to Organise</Link>
+        </div>
+      )}
 
       {settings.announcement && (
         <div className="y-announce" role="note">

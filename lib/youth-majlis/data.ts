@@ -171,6 +171,15 @@ export async function joinCohort(userId: string): Promise<{ role: Role; workspac
   return { role: row.role as Role, workspaceId: row.workspaceId };
 }
 
+/** A member of the cohort, for an organiser seeing the portal as them. Null if they aren't in it. */
+export async function cohortMember(userId: string): Promise<{ userId: string; name: string; workspaceId: string | null } | null> {
+  if (!/^[0-9a-f-]{36}$/i.test(userId)) return null;
+  const row = await db.youthMajlisProgress.findUnique({
+    where: { userId }, select: { role: true, workspaceId: true, user: { select: { name: true } } },
+  });
+  return row && row.role !== "left" ? { userId, name: row.user.name, workspaceId: row.workspaceId } : null;
+}
+
 export async function isOrganiser(userId: string): Promise<boolean> {
   const row = await db.youthMajlisProgress.findUnique({ where: { userId }, select: { role: true } });
   return row?.role === "organiser";
