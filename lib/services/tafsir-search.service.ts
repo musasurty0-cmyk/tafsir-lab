@@ -175,15 +175,15 @@ export async function semanticSearch(
  */
 /* Slugs live in code, ids live in the database, and the index predicate needs
    ids. Resolved once per process — the set only changes when someone edits the
-   list and rebuilds the index, which is a deploy, not a request. */
-let indexedIdsCache: string[] | null = null;
-async function indexedSourceIds(): Promise<string[]> {
-  if (indexedIdsCache) return indexedIdsCache;
-  const rows = await db.tafsirSource.findMany({
+   list and rebuilds the index, which is a deploy, not a request. The promise
+   is what's kept, so requests arriving together share one lookup; a failed
+   lookup is forgotten so the next request tries again. */
+let indexedIdsCache: Promise<string[]> | null = null;
+function indexedSourceIds(): Promise<string[]> {
+  indexedIdsCache ??= db.tafsirSource.findMany({
     where:  { slug: { in: [...LEXICAL_SOURCE_SLUGS] } },
     select: { id: true },
-  });
-  indexedIdsCache = rows.map((r) => r.id);
+  }).then((rows) => rows.map((r) => r.id), (e) => { indexedIdsCache = null; throw e; });
   return indexedIdsCache;
 }
 
