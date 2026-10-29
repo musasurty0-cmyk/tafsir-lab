@@ -117,6 +117,27 @@
 }
 .og-assign-what p { margin-top: 4px; }
 
+/* ── Prep pack PDFs, inside an open session ── */
+.og-packs { margin: 4px 18px 6px; padding: 16px 18px; border-radius: 12px; background: var(--bg); }
+.og-packs-h { font-size: 15px; font-weight: 700; }
+.og-packs .og-sub { margin-top: 2px; font-size: 13.5px; }
+.og-pack-list { margin-top: 12px; display: flex; flex-direction: column; gap: 4px; }
+.og-pack-list li { display: flex; align-items: center; gap: 14px; padding: 8px 12px; border-radius: 10px; background: var(--panel); }
+.og-pack-t { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 10px; }
+.og-pack-t b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.og-pack-t span { flex: none; color: var(--ink-3); font-size: 13px; font-variant-numeric: tabular-nums; }
+.og-pack-list .og-link-btn { font-size: 14px; padding: 4px; }
+.og-danger-btn { color: var(--danger); }
+.og-pack-add { margin-top: 12px; display: flex; gap: 10px; }
+.og-pack-title {
+  flex: 1; min-width: 0; padding: 10px 12px; border: 0; border-radius: 10px; outline: none;
+  background: var(--panel); color: var(--ink); font: inherit; font-size: 15px;
+}
+.og-pack-title:focus { box-shadow: 0 0 0 3px var(--accent-soft); }
+.og-pack-add .og-btn { flex: none; min-width: 150px; font-variant-numeric: tabular-nums; }
+.og-pack-err { margin-top: 8px; font-size: 13.5px; color: var(--danger); }
+@media (max-width: 560px) { .og-pack-add { flex-direction: column; } }
+
 /* ── Members ── */
 .og-members { margin-top: 20px; display: flex; flex-direction: column; gap: 6px; }
 .og-members li {

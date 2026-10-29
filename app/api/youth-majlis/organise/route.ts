@@ -8,6 +8,9 @@
  *   assignment.delete
  *   member.role      make someone an organiser, a student, or remove them
  *   member.rename    change someone's name on their TafsirLab account
+ *   pack.begin       start uploading a prep pack PDF for a session → { id, uploadUrl }
+ *   pack.done        the browser has sent it: check it arrived, then show it
+ *   pack.delete      remove a prep pack, file and all
  *   settings.save    the announcement shown at the top of the portal
  *   cohort.create    make the shared cohort workspace
  *
@@ -23,6 +26,7 @@ import { hasAccess } from "@/lib/youth-majlis/gate";
 import { isOrganiser, saveSettings, getSettings } from "@/lib/youth-majlis/data";
 import { createCohortWorkspace } from "@/lib/youth-majlis/workspace";
 import { MODULES } from "@/lib/youth-majlis/content";
+import { beginUpload, cleanFileName, finishUpload, PackError, removePacks } from "@/lib/youth-majlis/packs";
 
 class Bad extends Error {}
 
@@ -108,7 +112,11 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ ok: true, id: s.id });
       }
       case "session.delete": {
-        await db.youthMajlisSession.delete({ where: { id: uuid(b.id) } });
+        const id = uuid(b.id);
+        // Its prep packs go too, file and all; the rows alone would cascade.
+        const packs = await db.youthMajlisPack.findMany({ where: { sessionId: id }, select: { id: true } });
+        await removePacks(packs.map((p) => p.id));
+        await db.youthMajlisSession.delete({ where: { id } });
         return NextResponse.json({ ok: true });
       }
       case "assignment.save": {
@@ -160,6 +168,22 @@ export async function POST(req: NextRequest) {
         }
         return NextResponse.json({ ok: true });
       }
+      case "pack.begin": {
+        const sessionId = uuid(b.sessionId);
+        if (!(await db.youthMajlisSession.findUnique({ where: { id: sessionId }, select: { id: true } }))) throw new Bad("That session has gone.");
+        const fileName = cleanFileName(typeof b.fileName === "string" ? b.fileName : "");
+        const title = str(b.title, 120) ?? fileName.replace(/\.pdf$/, "");
+        const res = await beginUpload({ sessionId, title, fileName, bytes: Number(b.bytes), userId: session.userId });
+        return NextResponse.json({ ok: true, ...res });
+      }
+      case "pack.done": {
+        await finishUpload(uuid(b.id));
+        return NextResponse.json({ ok: true });
+      }
+      case "pack.delete": {
+        await removePacks([uuid(b.id)]);
+        return NextResponse.json({ ok: true });
+      }
       case "member.rename": {
         /* The account's own name, so it reads the same everywhere in
            TafsirLab, not only here. Only for people in the cohort. */
@@ -183,7 +207,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Unknown action." }, { status: 400 });
     }
   } catch (e) {
-    if (e instanceof Bad) return NextResponse.json({ error: e.message }, { status: 400 });
+    if (e instanceof Bad || e instanceof PackError) return NextResponse.json({ error: e.message }, { status: 400 });
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2025") {
       return NextResponse.json({ error: "That item no longer exists." }, { status: 404 });
     }

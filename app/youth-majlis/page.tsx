@@ -215,9 +215,11 @@ export default async function YouthMajlisPage({ searchParams }: { searchParams: 
             <div className="y-prep-grid">
               <div className="y-prep-card" data-reveal>
                 <p className="y-prep-h">The prep pack</p>
-                {next && next.prep.length > 0
-                  ? <ul className="y-prep-list">{next.prep.map((p, i) => <li key={i}>{p.text}</li>)}</ul>
-                  : <p className="y-prep-empty">Nothing set yet. Shaykh Omid’s preparation for this session will appear here.</p>}
+                {next && next.prep.length > 0 && <ul className="y-prep-list">{next.prep.map((p, i) => <li key={i}>{p.text}</li>)}</ul>}
+                {next && next.packs.length > 0 && <PackList packs={next.packs} />}
+                {!(next && (next.prep.length > 0 || next.packs.length > 0)) && (
+                  <p className="y-prep-empty">Nothing set yet. Shaykh Omid’s preparation for this session will appear here.</p>
+                )}
               </div>
 
               <div className="y-prep-card" data-reveal data-reveal-i={1}>
@@ -421,6 +423,28 @@ export default async function YouthMajlisPage({ searchParams }: { searchParams: 
   );
 }
 
+const size = (b: number) => b < 1024 * 1024 ? `${Math.max(1, Math.round(b / 1024))} KB` : `${(b / 1024 / 1024).toFixed(1)} MB`;
+
+/** Prep pack PDFs: read in the browser, or save a copy. */
+function PackList({ packs }: { packs: SessionView["packs"] }) {
+  return (
+    <ul className="y-packs">
+      {packs.map((p) => (
+        <li key={p.id}>
+          <svg className="y-pack-icon" width="22" height="26" viewBox="0 0 22 26" aria-hidden>
+            <path d="M3 1h10l6 6v16a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2z" fill="currentColor" opacity=".14" />
+            <path d="M13 1v4a2 2 0 0 0 2 2h4" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+            <path d="M3 1h10l6 6v16a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+          </svg>
+          <span className="y-pack-t"><b>{p.title}</b><small>PDF · {size(p.bytes)}</small></span>
+          <a className="y-pack-btn" href={`/api/youth-majlis/pack/${p.id}`} target="_blank" rel="noopener">Read</a>
+          <a className="y-pack-btn y-pack-btn--fill" href={`/api/youth-majlis/pack/${p.id}?download=1`}>Download</a>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 /** One session in the archive: when, what, and what to keep from it. */
 function SessionCard({ s, isNext }: { s: SessionView; isNext: boolean }) {
   const past = !!s.date && s.date < londonToday();
@@ -437,13 +461,16 @@ function SessionCard({ s, isNext }: { s: SessionView; isNext: boolean }) {
           {s.takeaways.map((t, i) => <li key={i}>{t}</li>)}
         </ol>
       )}
-      {(s.recordingUrl || s.followUp) && (
+      {(s.recordingUrl || s.followUp || s.packs.length > 0) && (
         <p className="y-sess-foot">
+          {s.packs.map((p) => (
+            <a key={p.id} className="y-more" href={`/api/youth-majlis/pack/${p.id}`} target="_blank" rel="noopener">{p.title}</a>
+          ))}
           {s.recordingUrl && <a className="y-more" href={s.recordingUrl} target="_blank" rel="noreferrer">Recording</a>}
           {s.followUp && <span>Follow-up: {s.followUp}</span>}
         </p>
       )}
-      {past && s.takeaways.length === 0 && !s.recordingUrl && <p className="y-sess-none">Takeaways not added yet.</p>}
+      {past && s.takeaways.length === 0 && !s.recordingUrl && s.packs.length === 0 && <p className="y-sess-none">Takeaways not added yet.</p>}
     </li>
   );
 }

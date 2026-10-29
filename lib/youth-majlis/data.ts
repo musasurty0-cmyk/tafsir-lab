@@ -41,7 +41,10 @@ export interface SessionView {
   prep: PrepItem[]; prepDue: string | null; takeaways: string[];
   recordingUrl: string | null; followUp: string | null; agenda: AgendaItem[];
   assignments: AssignmentView[];
+  /** Prep pack PDFs, uploaded by organisers (lib/youth-majlis/packs). */
+  packs: PackView[];
 }
+export interface PackView { id: string; title: string; fileName: string; bytes: number }
 export interface AssignmentView {
   id: string; sessionId: string; point: number | null; ayahFrom: number | null; ayahTo: number | null;
   note: string | null; due: string | null; assignees: { userId: string; name: string }[];
@@ -61,6 +64,7 @@ export async function getSessions(): Promise<SessionView[]> {
         orderBy: [{ point: "asc" }, { createdAt: "asc" }],
         include: { assignees: { include: { user: { select: { id: true, name: true } } } } },
       },
+      packs: { where: { ready: true }, orderBy: { createdAt: "asc" }, select: { id: true, title: true, fileName: true, bytes: true } },
     },
   });
   return rows.map((r) => {
@@ -77,6 +81,7 @@ export async function getSessions(): Promise<SessionView[]> {
         note: a.note, due: ymd(a.due),
         assignees: a.assignees.map((x) => ({ userId: x.user.id, name: x.user.name })),
       })),
+      packs: r.packs,
     };
   });
 }

@@ -376,6 +376,63 @@ async function serveFile(req: Request, env: RoomEnv, key: string): Promise<Respo
   });
 }
 
+/* Prep packs for the Youth Majlis, uploaded by an organiser straight from
+   the browser: a PDF can be bigger than the app's 4.5 MB request limit, so
+   it never passes through Vercel. The app signs a token naming one key under
+   "youth-majlis/" and the most bytes it may hold, for ten minutes. */
+const PACK_PREFIX = "youth-majlis/";
+const PACK_MAX = 50 * 1024 * 1024;
+
+async function uploadFile(req: Request, env: RoomEnv, key: string): Promise<Response> {
+  const secret = env.COLLAB_SECRET || env.SESSION_SECRET;
+  if (!secret || !env.FILES) return new Response("Not available", { status: 503 });
+  if (!key.startsWith(PACK_PREFIX)) return new Response("Forbidden", { status: 403 });
+  const token = new URL(req.url).searchParams.get("token");
+  if (!token) return new Response("Missing token", { status: 401 });
+  let max = 0;
+  try {
+    const { payload } = await jwtVerify(token, new TextEncoder().encode(secret));
+    if (payload.upload !== key) return new Response("Token is for another file", { status: 403 });
+    max = Math.min(PACK_MAX, Number(payload.max) || 0);
+  } catch {
+    return new Response("Invalid or expired link", { status: 401 });
+  }
+  // Refused before reading the body, so an oversized upload costs nothing.
+  const length = Number(req.headers.get("Content-Length"));
+  if (!length || length > max) return new Response("Too large", { status: 413 });
+  const body = await req.arrayBuffer();
+  if (body.byteLength > max) return new Response("Too large", { status: 413 });
+  const head = new Uint8Array(body, 0, Math.min(5, body.byteLength));
+  if (String.fromCharCode(...head) !== "%PDF-") return new Response("Not a PDF", { status: 415 });
+  await env.FILES.put(key, body, { httpMetadata: { contentType: "application/pdf" } });
+  return Response.json({ ok: true, bytes: body.byteLength });
+}
+
+/** POST /files-admin: the app checking or removing prep packs it uploaded ({ op, keys }). */
+async function filesAdmin(req: Request, env: RoomEnv): Promise<Response> {
+  const secret = env.COLLAB_SECRET || env.SESSION_SECRET;
+  const token = (req.headers.get("Authorization") ?? "").replace(/^Bearer /, "");
+  if (!secret || !token || !env.FILES) return new Response("Unauthorised", { status: 401 });
+  try {
+    const { payload } = await jwtVerify(token, new TextEncoder().encode(secret));
+    if (payload.admin !== "files") return new Response("Forbidden", { status: 403 });
+  } catch {
+    return new Response("invalid or expired token", { status: 401 });
+  }
+  const b = await req.json() as { op?: string; keys?: unknown };
+  const keys = Array.isArray(b.keys) ? b.keys.filter((k): k is string => typeof k === "string" && k.startsWith(PACK_PREFIX)).slice(0, 100) : [];
+  if (b.op === "head") {
+    const out: Record<string, number | null> = {};
+    for (const k of keys) out[k] = (await env.FILES.head(k))?.size ?? null;
+    return Response.json(out);
+  }
+  if (b.op === "delete") {
+    if (keys.length) await env.FILES.delete(keys);
+    return Response.json({ ok: true, deleted: keys.length });
+  }
+  return new Response("Bad request", { status: 400 });
+}
+
 export default {
   async fetch(req: Request, env: RoomEnv): Promise<Response> {
     const url = new URL(req.url);
@@ -385,6 +442,22 @@ export default {
       return serveFile(req, env, key);
     }
     if (req.method === "POST" && url.pathname === "/ink-admin") return inkAdmin(req, env);
+    if (req.method === "POST" && url.pathname === "/files-admin") return filesAdmin(req, env);
+    if (url.pathname.startsWith("/upload/")) {
+      const origin = req.headers.get("Origin");
+      if (req.method === "OPTIONS") {
+        return withCors(new Response(null, { status: 204, headers: {
+          "Access-Control-Allow-Methods": "PUT, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type",
+          "Access-Control-Max-Age": "86400",
+        } }), origin);
+      }
+      const key = decodeURIComponent(url.pathname.slice("/upload/".length));
+      if (req.method !== "PUT" || !/^[a-z0-9][a-z0-9/_.-]{0,200}$/.test(key) || key.includes("..")) {
+        return withCors(new Response("Bad request", { status: 400 }), origin);
+      }
+      return withCors(await uploadFile(req, env, key), origin);
+    }
     if ((req.method === "GET" || req.method === "HEAD") && url.pathname.startsWith("/media/")) {
       const name = decodeURIComponent(url.pathname.slice("/media/".length));
       if (!/^[a-z0-9][a-z0-9._-]{0,80}$/.test(name) || name.includes("..")) return new Response("Bad name", { status: 400 });

@@ -616,6 +616,7 @@ model YouthMajlisSession {
   updatedAt    DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
 
   assignments YouthMajlisAssignment[]
+  packs       YouthMajlisPack[]
 
   @@unique([moduleN, seq])
   @@index([date])
@@ -660,6 +661,29 @@ model YouthMajlisNote {
   moduleN   Int      @id
   data      Json     @default("{}")
   updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+}
+
+/// A prep pack PDF for a session; the file is in R2, not here (prisma/sql/024).
+model YouthMajlisPack {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sessionId  String   @db.Uuid
+  title      String
+  fileName   String
+  key        String   @unique
+  bytes      Int
+  ready      Boolean  @default(false)
+  uploadedBy String?  @db.Uuid
+  createdAt  DateTime @default(now()) @db.Timestamptz(6)
+
+  session YouthMajlisSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+}
+
+/// Prep pack links handed out per month, the free-tier guard (prisma/sql/024).
+model YouthMajlisPackReads {
+  month String @id
+  count Int    @default(0)
 }
 
 /// Files the portal hands out (the class notes PDF), behind its password (prisma/sql/011).

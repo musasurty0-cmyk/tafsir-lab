@@ -232,11 +232,95 @@ function SessionRow({ s, isNext, run }: { s: SessionView; isNext: boolean; run: 
           {s.takeaways.length > 0 && <span className="og-chip">{s.takeaways.length} takeaways</span>}
           {s.recordingUrl && <span className="og-chip">Recording</span>}
           {s.prep.length > 0 && <span className="og-chip">Prep pack</span>}
+          {s.packs.length > 0 && <span className="og-chip">{s.packs.length} PDF{s.packs.length === 1 ? "" : "s"}</span>}
           {!s.date && <span className="og-chip og-chip--warn">Needs a date</span>}
         </span>
         <span className="og-row-chev" aria-hidden>›</span>
       </button>
+      {open && <Packs s={s} run={run} />}
       {open && <SessionForm s={s} run={run} onDone={() => setOpen(false)} />}
+    </div>
+  );
+}
+
+const MAX_PACK = 40 * 1024 * 1024;
+const fmtSize = (b: number) => b < 1024 * 1024 ? `${Math.max(1, Math.round(b / 1024))} KB` : `${(b / 1024 / 1024).toFixed(1)} MB`;
+
+/** Sends the file straight to the file store, saying how far it has got. */
+function putFile(url: string, file: File, onProgress: (pct: number) => void): Promise<boolean> {
+  return new Promise((resolve) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("PUT", url);
+    xhr.setRequestHeader("Content-Type", "application/pdf");
+    xhr.upload.onprogress = (e) => { if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100)); };
+    xhr.onload = () => resolve(xhr.status >= 200 && xhr.status < 300);
+    xhr.onerror = () => resolve(false);
+    xhr.send(file);
+  });
+}
+
+/**
+ * A session's prep pack PDFs: what the cohort can read and download from the
+ * portal. The file goes from this browser straight to the private file store
+ * (lib/youth-majlis/packs), then is checked before anyone can see it.
+ */
+function Packs({ s, run }: { s: SessionView; run: (b: Record<string, unknown>, ok: string) => Promise<boolean> }) {
+  const [title, setTitle] = useState("");
+  const [progress, setProgress] = useState<number | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const picker = useRef<HTMLInputElement>(null);
+
+  const upload = async (file: File) => {
+    setErr(null);
+    if (file.type !== "application/pdf" && !/\.pdf$/i.test(file.name)) { setErr("Choose a PDF."); return; }
+    if (file.size > MAX_PACK) { setErr("Keep each PDF under 40 MB."); return; }
+    const name = title.trim() || file.name.replace(/\.pdf$/i, "");
+    setProgress(0);
+    const r = await fetch("/api/youth-majlis/organise", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "pack.begin", sessionId: s.id, title: name, fileName: file.name, bytes: file.size }),
+    }).catch(() => null);
+    const d = await r?.json().catch(() => null) as { id?: string; uploadUrl?: string; error?: string } | null;
+    if (!r?.ok || !d?.id || !d.uploadUrl) { setProgress(null); setErr(d?.error ?? "Couldn’t start the upload. Check your connection."); return; }
+    const sent = await putFile(d.uploadUrl, file, setProgress);
+    if (!sent) {
+      await run({ action: "pack.delete", id: d.id }, "The upload didn’t finish.");
+      setProgress(null); setErr("The upload didn’t finish. Check your connection and try again.");
+      return;
+    }
+    const ok = await run({ action: "pack.done", id: d.id }, `“${name}” is on the portal for the cohort.`);
+    setProgress(null);
+    if (ok) setTitle("");
+  };
+
+  return (
+    <div className="og-packs">
+      <p className="og-packs-h">Prep pack PDFs</p>
+      <p className="og-sub">Everyone in the cohort can read these on the portal or download them.</p>
+      {s.packs.length > 0 && (
+        <ul className="og-pack-list">
+          {s.packs.map((p) => (
+            <li key={p.id}>
+              <span className="og-pack-t"><b>{p.title}</b><span>{fmtSize(p.bytes)}</span></span>
+              <a className="og-link-btn" href={`/api/youth-majlis/pack/${p.id}`} target="_blank" rel="noopener">Open</a>
+              <button type="button" className="og-link-btn og-danger-btn"
+                      onClick={() => { if (confirm(`Delete “${p.title}”? The cohort will no longer be able to open it.`)) void run({ action: "pack.delete", id: p.id }, `“${p.title}” was deleted.`); }}>
+                Delete
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className="og-pack-add">
+        <input className="og-pack-title" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={120}
+               placeholder="Title, e.g. al-Ṣaff prep pack (optional)" aria-label="Title for the PDF" disabled={progress !== null} />
+        <input ref={picker} type="file" accept="application/pdf,.pdf" hidden
+               onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void upload(f); }} />
+        <button type="button" className="og-btn" disabled={progress !== null} onClick={() => picker.current?.click()}>
+          {progress === null ? "Upload a PDF" : progress < 100 ? `Uploading… ${progress}%` : "Checking…"}
+        </button>
+      </div>
+      {err && <p className="og-pack-err" role="alert">{err}</p>}
     </div>
   );
 }

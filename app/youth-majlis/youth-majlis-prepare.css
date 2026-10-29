@@ -56,6 +56,29 @@
 .y-prep-list li { position: relative; padding-left: 22px; font-size: 17px; line-height: 1.45; }
 .y-prep-list li::before { content: ""; position: absolute; left: 2px; top: 9px; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
 
+/* Prep pack PDFs: a row each, read in the browser or saved. */
+.y-packs { margin-top: 16px; display: flex; flex-direction: column; gap: 8px; }
+.y-prep-list + .y-packs { margin-top: 20px; }
+.y-packs li { display: flex; align-items: center; gap: 14px; padding: 12px 14px; border-radius: 16px; background: var(--panel); }
+.y-pack-icon { flex: none; color: var(--accent); }
+.y-pack-t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.y-pack-t b { font-size: 16px; font-weight: 600; line-height: 1.3; letter-spacing: -0.01em; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.y-pack-t small { font-size: 13px; color: var(--ink-3); }
+.y-pack-btn {
+  flex: none; height: 34px; padding: 0 14px; border-radius: 17px; display: inline-flex; align-items: center;
+  font-size: 14px; font-weight: 600; color: var(--accent); text-decoration: none;
+  background: color-mix(in oklch, var(--accent) 12%, transparent);
+  transition: transform 140ms ease, filter 140ms ease;
+}
+.y-pack-btn--fill { background: var(--accent); color: #fff; }
+.y-pack-btn:hover { filter: brightness(1.05); }
+.y-pack-btn:active { transform: scale(0.96); }
+@media (max-width: 560px) {
+  .y-packs li { flex-wrap: wrap; }
+  .y-pack-t { flex-basis: calc(100% - 40px); }
+  .y-pack-btn { flex: 1; justify-content: center; }
+}
+
 .y-assignments { margin-top: 14px; display: flex; flex-direction: column; gap: 14px; }
 .y-assignments li { padding: 18px; border-radius: 18px; background: var(--panel); }
 .y-assign-what { font-weight: 700; font-size: 17px; letter-spacing: -0.012em; }
