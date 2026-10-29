@@ -100,6 +100,7 @@ export class TafsirRoom extends YServer {
       uid:      req.headers.get("x-tl-uid") ?? "",
       name:     req.headers.get("x-tl-name") ?? "",
       canWrite: req.headers.get("x-tl-write") === "1",
+      canvasWrite: req.headers.get("x-tl-canvas") !== "0",
     };
     if (!me.uid) return new Response("Unauthorised", { status: 401 });
     const sql = this.inkSql();
@@ -238,11 +239,13 @@ async function inkGate(req: Request, lobby: Lobby, env: RoomEnv): Promise<Respon
     const { payload } = await jwtVerify(token, new TextEncoder().encode(secret));
     if (payload.room !== lobby.name || typeof payload.uid !== "string") return new Response("token is for a different page", { status: 401 });
     const headers = new Headers(req.headers);
-    for (const k of ["x-tl-uid", "x-tl-name", "x-tl-write"]) headers.delete(k);
+    for (const k of ["x-tl-uid", "x-tl-name", "x-tl-write", "x-tl-canvas"]) headers.delete(k);
     headers.set("x-tl-uid", payload.uid);
     headers.set("x-tl-name", typeof payload.name === "string" ? payload.name : "");
     // Every member writes (workspaces.service capabilitiesFor: writeContent).
     headers.set("x-tl-write", ["owner", "admin", "member"].includes(String(payload.role)) ? "1" : "0");
+    // With private boards, the shared board's Mushaf ink is the admins' alone.
+    headers.set("x-tl-canvas", payload.canvasWrite === false ? "0" : "1");
     return new Request(req, { headers });
   } catch {
     return new Response("invalid or expired token", { status: 401 });

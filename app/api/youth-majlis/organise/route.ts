@@ -159,11 +159,19 @@ export async function POST(req: NextRequest) {
               where: { workspaceId: cohortWorkspaceId, userId, role: { not: "owner" }, workspace: { ownerId: { not: userId } } },
             });
           } else {
+            /* Organisers are the shared workspace's admins: they write on its
+               shared Mushaf board and can see every student's own board. The
+               workspace's owner keeps that role whatever happens here. */
+            const wsRole = role === "organiser" ? "admin" : "member";
             await db.workspaceMember.upsert({
               where:  { workspaceId_userId: { workspaceId: cohortWorkspaceId, userId } },
-              create: { workspaceId: cohortWorkspaceId, userId, role: "member" },
+              create: { workspaceId: cohortWorkspaceId, userId, role: wsRole },
               update: {},
             }).catch(() => { /* workspace gone: ignore */ });
+            await db.workspaceMember.updateMany({
+              where: { workspaceId: cohortWorkspaceId, userId, role: { not: "owner" } },
+              data:  { role: wsRole },
+            });
           }
         }
         return NextResponse.json({ ok: true });

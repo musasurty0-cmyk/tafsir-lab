@@ -44,6 +44,14 @@ export async function wipeInk(pages: string[], author?: string): Promise<void> {
   }
 }
 
+/**
+ * The rooms of people's own Mushaf boards on these pages, in a workspace
+ * with private boards ("<pageId>.u.<userId>", lib/collab/ink-client
+ * boardRoom). Each is a room of its own, so a deletion wipes them by name.
+ */
+export const boardRooms = (pages: string[], users: string[]): string[] =>
+  pages.flatMap((p) => users.map((u) => `${p}.u.${u}`));
+
 /** Replace one author's ink on a page with a copy (the move off the database). */
 export function importInk(page: string, author: string, name: string, updated: number, strokes: object[]) {
   return call<{ ok: boolean; strokes: number }>({ op: "import", page, author, name, updated, strokes });

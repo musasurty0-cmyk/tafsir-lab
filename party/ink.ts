@@ -29,7 +29,11 @@ export interface InkSql {
 }
 
 /** Who is asking, from the verified token (see server.ts). */
-export interface InkUser { uid: string; name: string; canWrite: boolean }
+export interface InkUser {
+  uid: string; name: string; canWrite: boolean;
+  /** False on a shared board in a workspace with private boards: Mushaf ink there is the admins'. */
+  canvasWrite?: boolean;
+}
 
 export function ensureInk(sql: InkSql): void {
   sql.exec(`CREATE TABLE IF NOT EXISTS ink_stroke (
@@ -87,6 +91,7 @@ export function saveInk(sql: InkSql, me: InkUser, body: unknown): Response {
   if (!me.canWrite) return json(JSON.stringify({ error: "Read-only" }), 403);
   const b = (body ?? {}) as { strokes?: unknown; surface?: unknown; deletedIds?: unknown; base?: unknown };
   const surface = b.surface === "editor" ? "editor" : "canvas";
+  if (surface === "canvas" && me.canvasWrite === false) return json(JSON.stringify({ error: "Only organisers write on the shared board" }), 403);
   const base = typeof b.base === "string" ? b.base : null;
   const deleted = new Set(Array.isArray(b.deletedIds) ? b.deletedIds.filter((x): x is string => typeof x === "string") : []);
   const keep = (Array.isArray(b.strokes) ? b.strokes as { id?: unknown }[] : [])

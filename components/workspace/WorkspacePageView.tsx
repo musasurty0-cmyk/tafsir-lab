@@ -34,7 +34,7 @@ import ModeAPage from "./ModeAPage";
 import EditorToolbar from "./editor/EditorToolbar";
 import type { Editor } from "@tiptap/core";
 import { labMarkdownToTiptap } from "@/lib/lab-to-tiptap";
-import ModeBPage, { type PageUserPrefsData } from "./ModeBPage";
+import ModeBPage, { type PageUserPrefsData, type BoardsInfo } from "./ModeBPage";
 import WhiteboardPage from "./WhiteboardPage";
 import { EditorContextProvider } from "./editor/EditorContext";
 import TafsirDrawer from "./TafsirDrawer";
@@ -83,6 +83,8 @@ interface Props {
   /** An Arabic study workspace: the Mushaf opens first, and it colours the
    *  words you know and analyses an opened word (see ModeBPage `arabic`). */
   arabic?:       boolean;
+  /** Private Mushaf boards (Workspace.privateBoards); see ModeBPage. */
+  boards?:       BoardsInfo | null;
 }
 
 // ── Tweaks helpers ────────────────────────────────────────────────────────
@@ -105,6 +107,7 @@ function loadTweaks(): TweaksState {
 const KEEP_UNCONFIRMED_MS = 30_000;
 
 export default function WorkspacePageView({
+  boards = null,
   workspaceId,
   workspace,
   role,
@@ -643,6 +646,7 @@ export default function WorkspacePageView({
           onAyahSelect={handleAyahSelect}
           scrollToNoteId={selectedNoteId}
           arabic={arabic}
+          boards={boards}
         />
       </EditorContextProvider>
     );

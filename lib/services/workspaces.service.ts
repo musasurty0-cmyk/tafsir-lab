@@ -11,7 +11,7 @@
  */
 
 import { db } from "@/lib/db";
-import { wipeInk } from "@/lib/collab/ink-admin";
+import { boardRooms, wipeInk } from "@/lib/collab/ink-admin";
 import { log } from "./activity.service";
 import { randomBytes } from "crypto";
 
@@ -83,11 +83,11 @@ export function capabilitiesFor(role: MemberRole, membersCanManagePages = false)
 export async function getWorkspaceWithRole(
   workspaceId: string,
   userId: string
-): Promise<{ workspace: { id: string; name: string; type: string; kind: string; ownerId: string; membersCanManagePages: boolean }; role: MemberRole }> {
+): Promise<{ workspace: { id: string; name: string; type: string; kind: string; ownerId: string; membersCanManagePages: boolean; privateBoards: boolean }; role: MemberRole }> {
   const [workspace, membership] = await Promise.all([
     db.workspace.findUnique({
       where: { id: workspaceId },
-      select: { id: true, name: true, type: true, kind: true, ownerId: true, membersCanManagePages: true },
+      select: { id: true, name: true, type: true, kind: true, ownerId: true, membersCanManagePages: true, privateBoards: true },
     }),
     db.workspaceMember.findUnique({
       where: { workspaceId_userId: { workspaceId, userId } },
@@ -430,12 +430,15 @@ export async function leaveWorkspace(workspaceId: string, userId: string) {
 }
 
 export async function deleteWorkspace(workspaceId: string, userId: string) {
-  const { role } = await getWorkspaceWithRole(workspaceId, userId);
+  const { role, workspace } = await getWorkspaceWithRole(workspaceId, userId);
   if (role !== "owner") throw new WorkspaceError("Only the owner can delete the workspace", "FORBIDDEN");
   // Every page's ink is in its realtime room, out of the cascade's reach.
-  const pages = await db.page.findMany({ where: { workspaceSurah: { workspaceId } }, select: { id: true } });
+  const pages = (await db.page.findMany({ where: { workspaceSurah: { workspaceId } }, select: { id: true } })).map((p) => p.id);
+  const members = workspace.privateBoards
+    ? (await db.workspaceMember.findMany({ where: { workspaceId }, select: { userId: true } })).map((m) => m.userId)
+    : [];
   await db.workspace.delete({ where: { id: workspaceId } });
-  await wipeInk(pages.map((p) => p.id));
+  await wipeInk([...pages, ...boardRooms(pages, members)]);
 }
 
 export async function ensureInviteCode(workspaceId: string): Promise<string> {

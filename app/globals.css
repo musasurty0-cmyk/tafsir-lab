@@ -2555,6 +2555,29 @@ input, textarea { font: inherit; color: inherit; }
 }
 .study-bar-done:hover { opacity: 0.86; }
 
+/* Private Mushaf boards (Workspace.privateBoards): which board is open, in
+   the study bar. A segmented pair for a member; for an organiser, Shared and
+   a menu of the students' boards. */
+.board-switch { display: inline-flex; align-items: center; gap: 2px; padding: 2px; border-radius: 999px; background: var(--panel-2, var(--panel)); }
+.board-switch button, .board-switch-select {
+  appearance: none; border: 0; cursor: pointer; font: inherit; font-size: 12.5px; font-weight: 500;
+  color: var(--ink-3); background: transparent; padding: 5px 12px; border-radius: 999px;
+  transition: background var(--dur-hover) var(--ease-soft), color var(--dur-hover) var(--ease-soft);
+}
+.board-switch button[aria-pressed="true"], .board-switch-select[data-active="true"] {
+  background: var(--bg-elev); color: var(--ink); font-weight: 600; box-shadow: var(--shadow-sm);
+}
+.board-switch-select { max-width: 190px; text-overflow: ellipsis; padding-right: 12px; }
+.board-switch button:focus-visible, .board-switch-select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+/* Where there is nothing to write with: the board is someone else's to write on. */
+.board-readonly-note {
+  margin: 0; max-width: 180px; padding: 10px 12px; border-radius: 14px;
+  background: var(--bg-elev); box-shadow: var(--shadow-md);
+  font-size: 12.5px; line-height: 1.4; color: var(--ink-2);
+}
+.board-text { display: contents; }
+.board-text[data-locked="true"] .free-textbox { pointer-events: none; }
+
 /* The surah title is the door into Study Mode. */
 .qcf-surah-name--btn {
   appearance: none; border: 0; background: none; cursor: pointer;

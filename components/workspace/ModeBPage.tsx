@@ -36,6 +36,7 @@ import type { NoteData } from "./NoteCard";
 import QCFMushafPage from "./QCFMushafPage";
 import AnchoredNoteCard from "./AnchoredNoteCard";
 import FreeTextBox, { CARET_OFFSET, TEXTBOX_DEFAULT_WIDTH } from "./FreeTextBox";
+import { boardRoom } from "@/lib/collab/ink-client";
 import { OpenSelectionPrompt, NameSelectionPrompt } from "./SelectionDialogs";
 import SelectionList from "./SelectionList";
 import ConnectionsPanel from "./ConnectionsPanel";
@@ -141,6 +142,18 @@ interface Props {
    *  opened word's note space also shows its linguistic analysis, and the
    *  page can be practised. Absent everywhere else — Qurʾān study is as it was. */
   arabic?:          boolean;
+  /** Private Mushaf boards (Workspace.privateBoards, the Youth Majlis cohort).
+   *  Each member has their own board on this page, which only they write on;
+   *  the shared board is the admins' to write on; admins can open anyone's.
+   *  Absent in every other workspace, where the page has one board for all. */
+  boards?:          BoardsInfo | null;
+}
+
+export interface BoardsInfo {
+  me:       string;
+  admin:    boolean;
+  /** For admins: the members whose boards they can open. */
+  students: { id: string; name: string }[];
 }
 
 // ── Component ─────────────────────────────────────────────────────────────
@@ -157,7 +170,21 @@ export default function ModeBPage({
   onAyahSelect,
   scrollToNoteId,
   arabic = false,
+  boards = null,
 }: Props) {
+
+  /* ── Boards ─────────────────────────────────────────────────────────────
+     "shared", or the id of whoever's own board is open. A student starts on
+     their own board, the one they can write on; an organiser on the shared
+     one. The ink of a person's board is its own room (boardRoom), with no
+     live socket: strokes broadcast on the page's socket reach everyone on
+     the page, and a private board's must not. */
+  const [board, setBoard] = useState<string>(() => (boards && !boards.admin ? boards.me : "shared"));
+  const inkRoom = !boards || board === "shared" ? pageId : boardRoom(pageId, board);
+  const boardReadOnly = !!boards && (board === "shared" ? !boards.admin : board !== boards.me);
+  // Text on the Mushaf belongs to the shared board, and only admins add it.
+  const boardText = !boards || (board === "shared" && boards.admin);
+  const showTextBoxes = !boards || board === "shared";
 
   /* ── Segments ──────────────────────────────────────────────────────────
      A drag across ayat produces `range`; releasing it raises the contextual
@@ -1557,7 +1584,9 @@ export default function ModeBPage({
         })}
 
         {/* Free text boxes — EXCLUSIVE layers: normal mode shows page-level
-            boxes; word/ayah mode shows only the active layer's boxes */}
+            boxes; word/ayah mode shows only the active layer's boxes. With
+            private boards they are the shared board's, read-only to a member. */}
+        {showTextBoxes && <div className="board-text" data-locked={boards && !boards.admin ? "true" : undefined}>
         {canvasTextBoxes
           .filter((n) => {
             /* Scope to the Mushaf page it was written on — see canvas-scope.ts
@@ -1591,6 +1620,7 @@ export default function ModeBPage({
               onPersistTemp={persistTextBoxTemp}
             />
           ))}
+        </div>}
         </div>
         )}
       </div>
@@ -1602,17 +1632,17 @@ export default function ModeBPage({
           pointer path. Strokes are untouched on the server. */}
       {studyMode && <DrawingCanvas
         ref={drawingRef}
-        pageId={pageId}
+        pageId={inkRoom}
         mushafPage={currentMushafahPage}
-        tool={tool}
+        tool={boardReadOnly ? "hand" : !boardText && tool === "text" ? "hand" : tool}
         strokeColor={strokeColor}
         strokeWidth={strokeWidth}
         viewport={viewport}
-        roomSocket={roomSocket ?? null}
+        roomSocket={inkRoom === pageId ? roomSocket ?? null : null}
         activeAnchor={activeAnchorKey}
         onHistoryChange={handleHistory}
         onSaveStateChange={setSaveState}
-        onTextPlace={placeTextBox}
+        onTextPlace={boardText ? placeTextBox : undefined}
         eraserRadius={eraserSize}
         onAnchorsChange={setStrokeAnchors}
       />}
@@ -1805,6 +1835,9 @@ export default function ModeBPage({
           <span className="study-bar-label">
             Studying <b>{chapter?.name_simple ?? ""}</b>
           </span>
+          {boards && (
+            <BoardSwitch boards={boards} board={board} onChange={(b) => { setBoard(b); setTool("hand"); }} />
+          )}
           <button className="study-bar-done" onClick={exitStudy} title="Back to reading">
             Done
           </button>
@@ -1814,7 +1847,8 @@ export default function ModeBPage({
       {/* ── Vertical tool rail (left side) ── */}
       {studyMode && (
       <div className="study-rail-wrap" data-visible={studyVisible ? "true" : "false"}>
-      <CanvasToolRail
+      {!boardReadOnly && <CanvasToolRail
+        omitTools={boardText ? undefined : ["text"]}
         activeTool={tool}
         onToolChange={setTool}
         penColor={penColor}
@@ -1831,7 +1865,12 @@ export default function ModeBPage({
         onRedo={() => drawingRef.current?.redo()}
         saveState={saveState}
         onSave={() => { void drawingRef.current?.saveNow(); }}
-      />
+      />}
+      {boardReadOnly && (
+        <p className="board-readonly-note">
+          {board === "shared" ? "Only organisers write on the shared board." : "You’re looking at a student’s own board. Only they can write on it."}
+        </p>
+      )}
       </div>
       )}
 
@@ -1927,5 +1966,35 @@ export default function ModeBPage({
       {/* Word/ayah annotation now happens IN PLACE on this same canvas
           (exclusive anchor layers) — no separate screen/panel. */}
     </div>
+  );
+}
+
+/**
+ * Which Mushaf board is open, in a workspace with private boards: the
+ * shared one, your own, or (for organisers) any student's.
+ */
+function BoardSwitch({ boards, board, onChange }: { boards: BoardsInfo; board: string; onChange: (b: string) => void }) {
+  if (!boards.admin) {
+    return (
+      <span className="board-switch" role="group" aria-label="Which board">
+        <button type="button" aria-pressed={board === boards.me} onClick={() => onChange(boards.me)}>My board</button>
+        <button type="button" aria-pressed={board === "shared"} onClick={() => onChange("shared")}>Shared</button>
+      </span>
+    );
+  }
+  return (
+    <span className="board-switch" role="group" aria-label="Which board">
+      <button type="button" aria-pressed={board === "shared"} onClick={() => onChange("shared")}>Shared</button>
+      <select
+        className="board-switch-select"
+        data-active={board !== "shared" ? "true" : undefined}
+        value={board === "shared" ? "" : board}
+        onChange={(e) => onChange(e.target.value || "shared")}
+        aria-label="Open a student’s board"
+      >
+        <option value="">{boards.students.length ? "A student’s board…" : "No students yet"}</option>
+        {boards.students.map((st) => <option key={st.id} value={st.id}>{st.name}</option>)}
+      </select>
+    </span>
   );
 }

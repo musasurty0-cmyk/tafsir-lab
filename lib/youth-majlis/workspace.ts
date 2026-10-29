@@ -86,7 +86,7 @@ export async function createCohortWorkspace(organiserId: string): Promise<string
       if (ok) return ok.id;
     }
     const ws = await tx.workspace.create({
-      data: { name: "Youth Majlis Cohort", type: "group", kind: "study", ownerId: organiserId, membersCanManagePages: false },
+      data: { name: "Youth Majlis Cohort", type: "group", kind: "study", ownerId: organiserId, membersCanManagePages: false, privateBoards: true },
       select: { id: true },
     });
     await tx.workspaceMember.create({ data: { workspaceId: ws.id, userId: organiserId, role: "owner" } });

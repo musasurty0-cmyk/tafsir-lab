@@ -20,7 +20,7 @@
  */
 
 import { db } from "@/lib/db";
-import { wipeInk } from "@/lib/collab/ink-admin";
+import { boardRooms, wipeInk } from "@/lib/collab/ink-admin";
 import { getWorkspaceWithRole, isAdmin, canManagePages, MemberRole } from "./workspaces.service";
 
 // ── Error type ────────────────────────────────────────────────
@@ -325,9 +325,13 @@ export async function deletePage(
     throw new PageError("You don't have permission to delete pages", "FORBIDDEN");
   }
 
+  const members = workspace.privateBoards
+    ? (await db.workspaceMember.findMany({ where: { workspaceId: workspace.id }, select: { userId: true } })).map((m) => m.userId)
+    : [];
   await db.page.delete({ where: { id: pageId } });
-  // Its ink is in its realtime room, which the cascade above cannot reach.
-  await wipeInk([pageId]);
+  // Its ink is in its realtime room, which the cascade above cannot reach,
+  // and so is each member's own board on it.
+  await wipeInk([pageId, ...boardRooms([pageId], members)]);
 }
 
 // ─────────────────────────────────────────────────────────────

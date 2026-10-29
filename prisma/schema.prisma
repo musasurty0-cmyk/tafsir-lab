@@ -125,6 +125,11 @@ model Workspace {
   // rename, and delete pages. Default false = admins manage page structure.
   membersCanManagePages Boolean @default(false)
 
+  // Each member has their own Mushaf board per page, seen only by them and the
+  // admins; admins alone write on the shared one; no private text notes for
+  // members (prisma/sql/025, the Youth Majlis cohort).
+  privateBoards Boolean @default(false)
+
   owner       User              @relation("WorkspaceOwner", fields: [ownerId], references: [id])
   members     WorkspaceMember[]
   surahs      WorkspaceSurah[]

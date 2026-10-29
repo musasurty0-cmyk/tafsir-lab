@@ -54,7 +54,7 @@ export default async function PageViewPage({
     // Access control
     db.workspace.findUnique({
       where:  { id: workspaceId },
-      select: { id: true, name: true, type: true, kind: true, ownerId: true, membersCanManagePages: true },
+      select: { id: true, name: true, type: true, kind: true, ownerId: true, membersCanManagePages: true, privateBoards: true },
     }),
     db.workspaceMember.findUnique({
       where:  { workspaceId_userId: { workspaceId, userId } },
@@ -160,8 +160,22 @@ export default async function PageViewPage({
     ])
   );
 
+  /* Private Mushaf boards: everyone has their own, and admins can open any
+     member's (ModeBPage). The list is only loaded for an admin. */
+  const boards = workspace.privateBoards ? {
+    me: userId,
+    admin: isAdmin(role),
+    students: isAdmin(role)
+      ? (await db.workspaceMember.findMany({
+          where: { workspaceId, role: "member" },
+          select: { user: { select: { id: true, name: true } } },
+        })).map((m) => m.user).sort((a, b) => a.name.localeCompare(b.name))
+      : [],
+  } : null;
+
   return (
     <WorkspacePageView
+      boards={boards}
       workspaceId={workspaceId}
       workspace={workspace}
       role={role}

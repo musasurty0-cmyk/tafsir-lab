@@ -169,7 +169,8 @@ export async function joinCohort(userId: string): Promise<{ role: Role; workspac
   if (cohortWorkspaceId && row.role !== "left") {
     await db.workspaceMember.upsert({
       where: { workspaceId_userId: { workspaceId: cohortWorkspaceId, userId } },
-      create: { workspaceId: cohortWorkspaceId, userId, role: "member" },
+      // Organisers run the shared workspace; everyone else is a member of it.
+      create: { workspaceId: cohortWorkspaceId, userId, role: row.role === "organiser" ? "admin" : "member" },
       update: {},
     }).catch(() => { /* workspace gone: ignore */ });
   }

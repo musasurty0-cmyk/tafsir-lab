@@ -16,7 +16,7 @@
 import { randomUUID } from "crypto";
 import { cookies } from "next/headers";
 import { db } from "@/lib/db";
-import { wipeInk } from "@/lib/collab/ink-admin";
+import { boardRooms, wipeInk } from "@/lib/collab/ink-admin";
 import { createSession } from "@/lib/session";
 import * as WorkspacesService from "@/lib/services/workspaces.service";
 import * as PagesService from "@/lib/services/pages.service";
@@ -85,6 +85,10 @@ export async function deleteDemoUser(userId: string): Promise<boolean> {
   const otherPages = joined.length
     ? (await db.page.findMany({ where: { workspaceSurah: { workspaceId: { in: joined } } }, select: { id: true } })).map((p) => p.id)
     : [];
+  // Its own Mushaf boards, where a workspace it joined gives everyone one.
+  const boardPages = joined.length
+    ? (await db.page.findMany({ where: { workspaceSurah: { workspace: { id: { in: joined }, privateBoards: true } } }, select: { id: true } })).map((p) => p.id)
+    : [];
 
   try {
     await db.$transaction([
@@ -96,6 +100,7 @@ export async function deleteDemoUser(userId: string): Promise<boolean> {
     ]);
     await wipeInk(ownPages);
     await wipeInk(otherPages, userId);
+    await wipeInk(boardRooms(boardPages, [userId]));
     return true;
   } catch {
     return false;

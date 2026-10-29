@@ -44,7 +44,9 @@ export async function getCollabToken(pageId: string): Promise<string> {
 
   const inflight = (async () => {
     try {
-      const r = await fetch(`/api/pages/${pageId}/collab-token`, { credentials: "include" });
+      // A private Mushaf board's room ("<pageId>.u.<userId>") is asked for by its page.
+      const [page, board] = pageId.split(".u.");
+      const r = await fetch(`/api/pages/${page}/collab-token${board ? `?board=${encodeURIComponent(board)}` : ""}`, { credentials: "include" });
       if (!r.ok) return "";
       const { token } = await r.json() as { token?: string };
       return token ?? "";

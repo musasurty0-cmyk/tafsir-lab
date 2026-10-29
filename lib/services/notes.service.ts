@@ -191,7 +191,24 @@ export async function createNote(
     include: { workspaceSurah: { select: { workspaceId: true } } },
   });
   if (!page) throw new NoteError("Page not found", "NOT_FOUND");
-  await getWorkspaceWithRole(page.workspaceSurah.workspaceId, authorId);
+  const { workspace, role } = await getWorkspaceWithRole(page.workspaceSurah.workspaceId, authorId);
+
+  /* Private Mushaf boards (Workspace.privateBoards): text on the Mushaf
+     canvas belongs to the shared board, which is the admins' to write on, so
+     a member cannot add a text box there, and an admin's is locked to admins.
+     Text notes stay shared: a member's note is never private. */
+  const kind = String(input.noteType), anchor = String(input.anchorType);
+  const onMushaf = kind === "textbox" && anchor !== "editor" && anchor !== "whiteboard";
+  let visibility = input.visibility ?? "workspace";
+  let locked = false;
+  if (workspace.privateBoards) {
+    if (role === "member") {
+      if (onMushaf) throw new NoteError("Only organisers write on the shared board", "FORBIDDEN");
+      if (visibility === "private") visibility = "workspace";
+    } else if (onMushaf) {
+      locked = true;
+    }
+  }
 
   const note = await db.structuredNote.create({
     data: {
@@ -211,7 +228,8 @@ export async function createNote(
       offsetY: input.offsetY ?? 0,
       width: input.width ?? 280,
       height: input.height ?? null,
-      visibility: input.visibility ?? "workspace",
+      visibility,
+      isAdmin: locked,
     },
     // Include author so callers receive a fully-shaped NoteData without
     // a second round-trip (needed by the Mode A optimistic note creation).
@@ -277,8 +295,12 @@ export async function updateNoteGeometry(
   userId: string,
   patch: NoteGeometryPatch
 ) {
-  const { workspaceId } = await getNoteAndWorkspace(noteId);
-  await getWorkspaceWithRole(workspaceId, userId);
+  const { note, workspaceId } = await getNoteAndWorkspace(noteId);
+  const { role } = await getWorkspaceWithRole(workspaceId, userId);
+  // Moving or resizing is editing too.
+  if (note.isAdmin && role === "member") {
+    throw new NoteError("Cannot edit admin-locked notes", "FORBIDDEN");
+  }
 
   return db.structuredNote.update({
     where: { id: noteId },

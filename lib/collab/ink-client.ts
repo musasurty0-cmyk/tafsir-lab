@@ -10,11 +10,17 @@
  * needs a CORS preflight, so a save sent as the tab closes (keepalive) still
  * goes. The replies are the shapes the old /api/pages/[pageId]/drawings route
  * returned, so the code that merges them did not change.
+ *
+ * `pageId` may also name a private Mushaf board, "<pageId>.u.<userId>"
+ * (boardRoom): that board's own room, with its own token.
  */
 
 import { PARTYKIT_HOST } from "./config";
 import { getCollabToken, peekCollabToken } from "./collab-token";
 import type { InkSeen } from "@/lib/ink";
+
+/** The room of one person's own Mushaf board on a page (Workspace.privateBoards). */
+export const boardRoom = (pageId: string, userId: string) => `${pageId}.u.${userId}`;
 
 function roomUrl(pageId: string, q: URLSearchParams): string {
   const local = /^(localhost|127\.0\.0\.1)(:|$)/.test(PARTYKIT_HOST);
@@ -48,7 +54,7 @@ export async function saveInk(pageId: string, body: string, keepalive = false): 
     /* The page's first ink: mark it in the database, the one thing there
        that needs to know (a sūrah counts as started if it has ink). */
     res.clone().json()
-      .then((j: { first?: boolean }) => { if (j.first) fetch(`/api/pages/${pageId}/ink-mark`, { method: "POST" }).catch(() => {}); })
+      .then((j: { first?: boolean }) => { if (j.first) fetch(`/api/pages/${pageId.split(".u.")[0]}/ink-mark`, { method: "POST" }).catch(() => {}); })
       .catch(() => {});
   }
   return res;
