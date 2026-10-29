@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { makeOptions, bareWord, type DrillCard } from "./drill";
+import { makeOptions, bareWord, type DrillCard, checkTyped } from "./drill";
 
 const c = (id: string, english: string, arabic: string, lessonId = "L1", isSentence = false): DrillCard =>
   ({ id, lessonId, english, arabic, isSentence });
@@ -32,5 +32,22 @@ describe("makeOptions", () => {
     const o = makeOptions(pool[0], pool, "cloze");
     expect(o.find((x) => x.correct)?.text).toBe("أُذُنٌ");
     expect(bareWord("هَذَا أَنْفٌ")).toBe("أَنْفٌ");
+  });
+});
+
+describe("checkTyped", () => {
+  it("ignores harakat, hamza seats and tā' marbūṭa", () => {
+    expect(checkTyped("اذن", "هَذِهِ أُذُنٌ")).toBe("right");
+    expect(checkTyped("رُكْبَه", "هَذِهِ رُكْبَةٌ")).toBe("right");
+    expect(checkTyped("هذه ركبة", "هَذِهِ رُكْبَةٌ")).toBe("right");
+  });
+  it("lets the article and numerals go", () => {
+    expect(checkTyped("حقيبة", "الحَقِيبَةُ")).toBe("right");
+    expect(checkTyped("واحد وعشرون", "وَاحِدٌ وَعِشْرُونَ ٢١")).toBe("right");
+  });
+  it("calls one letter off close, and anything else wrong", () => {
+    expect(checkTyped("ركبت", "هَذِهِ رُكْبَةٌ")).toBe("close");
+    expect(checkTyped("قلم", "هَذَا قَلْبٌ")).toBe("wrong");
+    expect(checkTyped("", "هَذَا قَلْبٌ")).toBe("wrong");
   });
 });

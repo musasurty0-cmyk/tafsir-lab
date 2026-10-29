@@ -4,7 +4,7 @@
  *      → { cards, pool } — what to practise, and the words wrong answers
  *        are drawn from.
  * POST /api/workspaces/[workspaceId]/arabic/review
- *      Body: { answers: [{ cardId, correct, unlock? }] }
+ *      Body: { answers: [{ cardId, correct, unlock?, rating? }] }   rating: again | hard | good | easy
  *      → { [cardId]: { box, status } }
  */
 

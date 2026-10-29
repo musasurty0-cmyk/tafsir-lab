@@ -9,7 +9,8 @@
 
 import { foldArabic } from "./parse";
 
-export type Drill = "meaning" | "recall" | "listen" | "context" | "cloze";
+/** "type" and "flash" have no options: one is written, the other graded by hand. */
+export type Drill = "meaning" | "recall" | "type" | "flash" | "listen" | "context" | "cloze";
 
 export interface DrillCard {
   id: string; lessonId: string; english: string; arabic: string; isSentence: boolean;
@@ -21,7 +22,7 @@ const norm = (s: string) => s.toLowerCase().replace(/\s*\((m|f)\)\s*$/i, "").rep
 
 /** Arabic or English side, depending on what the question asks for. */
 export function answerSide(drill: Drill): "english" | "arabic" {
-  return drill === "recall" || drill === "cloze" ? "arabic" : "english";
+  return drill === "recall" || drill === "cloze" || drill === "type" ? "arabic" : "english";
 }
 
 /** "هَذِهِ أُذُنٌ" → "أُذُنٌ": the word alone, for filling a one-word gap. */
@@ -68,4 +69,41 @@ export function makeOptions(
     ...picked.map((c) => ({ id: c.id, text: text(c), correct: false })),
   ];
   return shuffle(options);
+}
+
+/* ── A written answer ──────────────────────────────────────────────────────
+   Checked on the letters: harakat, hamza seats, tā' marbūṭa, numerals and
+   punctuation don't count, and a word card's هَذَا / هَذِهِ is optional, as is
+   the article (the card is teaching the word, not the definite form). A
+   letter wrong or missing is "close": shown as nearly there, counted as
+   wrong, so it comes back. */
+
+export type Typed = "right" | "close" | "wrong";
+
+const letters = (s: string) => foldArabic(s)
+  .replace(/[^ء-ي\s]/g, "")
+  .replace(/\s+/g, " ")
+  .trim();
+const noArticle = (s: string) => s.split(" ").map((w) => w.replace(/^(و?)ال(?=\S{2})/, "$1")).join(" ");
+
+function distance(a: string, b: string): number {
+  const row = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    let prev = row[0]++;
+    for (let j = 1; j <= b.length; j++) {
+      const cur = row[j];
+      row[j] = Math.min(row[j] + 1, row[j - 1] + 1, prev + (a[i - 1] === b[j - 1] ? 0 : 1));
+      prev = cur;
+    }
+  }
+  return row[b.length];
+}
+
+export function checkTyped(input: string, arabic: string): Typed {
+  const got = noArticle(letters(input));
+  if (!got) return "wrong";
+  const wants = [...new Set([arabic, bareWord(arabic)].map((a) => noArticle(letters(a))))].filter(Boolean);
+  if (wants.includes(got)) return "right";
+  const near = wants.some((w) => w.replace(/ /g, "").length >= 4 && distance(got, w) <= (w.length >= 9 ? 2 : 1));
+  return near ? "close" : "wrong";
 }

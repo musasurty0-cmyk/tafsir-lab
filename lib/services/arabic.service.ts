@@ -13,7 +13,7 @@ import {
   numberLessons, foldArabic, lessonKind, cleanTitle, HAS_ARABIC,
   MAX_LESSONS, MAX_CARDS, MAX_FIELD, MAX_TITLE, type ParsedLesson,
 } from "@/lib/arabic/parse";
-import { nextBox, dueAfter, unlockBox, statusOf, ALMOST_FROM, LEARNT_FROM, type Status } from "@/lib/arabic/srs";
+import { nextBox, dueAfter, unlockBox, statusOf, ALMOST_FROM, LEARNT_FROM, type Rating, type Status } from "@/lib/arabic/srs";
 
 export class ArabicError extends Error {
   constructor(message: string, public readonly code: "NOT_FOUND" | "FORBIDDEN" | "INVALID") {
@@ -360,6 +360,8 @@ function shuffle<T>(xs: T[]): T[] {
 
 /**
  * Record answers. Right moves a card up a box, wrong drops it to the first.
+ * A flashcard graded by hand sends its grade too: hard keeps the box, easy
+ * jumps two (lib/arabic/srs).
  * Answering a card that was not yet due is extra practice: a right answer
  * does not move it (it would be learnt by cramming), but a wrong one does —
  * a miss is real news whenever it happens.
@@ -369,9 +371,16 @@ export async function recordAnswers(workspaceId: string, userId: string, raw: un
   if (!Array.isArray(raw) || raw.length === 0 || raw.length > 200) {
     throw new ArabicError("Send between 1 and 200 answers.", "INVALID");
   }
-  const answers = (raw as { cardId?: unknown; correct?: unknown; unlock?: unknown }[])
+  const RATINGS: Rating[] = ["again", "hard", "good", "easy"];
+  const answers = (raw as { cardId?: unknown; correct?: unknown; unlock?: unknown; rating?: unknown }[])
     .filter((a) => typeof a?.cardId === "string" && typeof a?.correct === "boolean")
-    .map((a) => ({ cardId: a.cardId as string, correct: a.correct as boolean, unlock: a.unlock === true }));
+    .map((a) => {
+      const correct = a.correct as boolean;
+      const graded = RATINGS.includes(a.rating as Rating) ? a.rating as Rating : null;
+      // A grade has to agree with right or wrong; one that doesn't is ignored.
+      const rating: Rating = graded && (graded === "again") === !correct ? graded : correct ? "good" : "again";
+      return { cardId: a.cardId as string, correct, rating, unlock: a.unlock === true };
+    });
   if (answers.length === 0) throw new ArabicError("No valid answers.", "INVALID");
 
   // Only cards in this workspace.
@@ -390,11 +399,14 @@ export async function recordAnswers(workspaceId: string, userId: string, raw: un
     if (!valid.has(a.cardId)) continue;
     const prev = known.get(a.cardId);
     let box: number;
-    if (!prev) box = a.unlock ? unlockBox(a.correct) : nextBox(0, a.correct ? "good" : "again");
+    if (!prev) box = a.unlock ? unlockBox(a.correct) : nextBox(0, a.rating);
     else if (!a.correct) box = nextBox(prev.box, "again");
     else if (prev.due.getTime() > now) box = prev.box;            // extra practice
-    else box = nextBox(prev.box, "good");
-    const unchanged = !!prev && box === prev.box && a.correct;
+    else box = nextBox(prev.box, a.rating);
+    // Extra practice keeps its date. Every answer to a due card sets a new
+    // one, even when the box is the same (hard, or already the top box), or
+    // the card would stay due for ever.
+    const unchanged = !!prev && a.correct && prev.due.getTime() > now;
     const due = unchanged ? prev!.due : dueAfter(box, now);
     const lapse = prev && !a.correct && prev.box >= LEARNT_FROM ? 1 : 0;
     known.set(a.cardId, { cardId: a.cardId, box, due });

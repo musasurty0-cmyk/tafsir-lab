@@ -17,7 +17,8 @@
  */
 
 export type Status = "unknown" | "learning" | "almost" | "learnt";
-export type Rating = "again" | "good" | "easy";
+/** How a flashcard was graded, as in Anki. A quiz answer is "good" when right and "again" when wrong. */
+export type Rating = "again" | "hard" | "good" | "easy";
 
 const MIN = 60_000;
 const DAY = 86_400_000;
@@ -37,9 +38,12 @@ export function statusOf(box: number | null | undefined): Status {
 /**
  * The next box after an answer. A miss always goes back to box 1 — the card
  * is now being learnt, not unknown — and comes back within the session.
+ * Hard keeps the card where it is, so it waits that box's time again rather
+ * than a longer one.
  */
 export function nextBox(box: number, rating: Rating): number {
   if (rating === "again") return 1;
+  if (rating === "hard") return Math.max(1, box);
   const step = rating === "easy" ? 2 : 1;
   return Math.min(TOP, Math.max(1, box) + step);
 }
@@ -56,4 +60,10 @@ export function dueAfter(box: number, now = Date.now()): Date {
  */
 export function unlockBox(correct: boolean): number {
   return correct ? 3 : 1;
+}
+
+/** "10m", "1d", "16d": how long a card would wait after this grade, for the grade's button. */
+export function waitLabel(box: number, rating: Rating): string {
+  const ms = WAIT[nextBox(box, rating)];
+  return ms < DAY ? `${Math.round(ms / MIN)}m` : `${Math.round(ms / DAY)}d`;
 }
