@@ -64,6 +64,7 @@
     "@types/pdf-parse": "^1.1.5",
     "firebase": "^12.12.1",
     "firebase-admin": "^13.8.0",
+    "ical.js": "^2.2.1",
     "jose": "^6.2.2",
     "lucide-react": "^0.468.0",
     "mupdf": "^1.28.0",

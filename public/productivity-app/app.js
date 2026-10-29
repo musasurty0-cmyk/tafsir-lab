@@ -293,6 +293,75 @@
       .catch(() => { setTimeout(() => loadingMonths.delete(ym), 30000); });
   }
 
+  /* Your Apple Calendar, shown beside the plan. TafsirLab reads it from the
+     link the Calendar app gives a shared calendar (the link stays on the
+     server) and hands back a month of events at a time. They are drawn, never
+     saved into the plan, so a change in the Calendar app shows up here and
+     nothing here can change it. */
+  const cal = { on: WEB && !!BOOT.calendar, months: new Map(), loading: new Set(), error: "", draft: "", formError: "", busy: false };
+  const CAL_STALE = 10 * 60_000;
+  function calMonth(ym) {
+    if (!cal.on || cal.loading.has(ym)) return;
+    cal.loading.add(ym);
+    const first = `${ym}-01`, next = isoOf(new Date(dateObj(first).getFullYear(), dateObj(first).getMonth() + 1, 1));
+    fetch(`${BOOT.calendarApi}?from=${addDays(first, -1)}&to=${addDays(next, 2)}`, { cache: "no-store" })
+      .then(async (r) => {
+        const j = await r.json().catch(() => ({}));
+        if (r.status === 401) return;
+        if (j.connected === false) { cal.on = false; cal.months.clear(); render(); return; }
+        if (j.error) {
+          if (cal.error !== j.error) toast(j.error);
+          cal.error = j.error;
+          if (!cal.months.has(ym)) cal.months.set(ym, { at: Date.now(), events: [] });
+          return;
+        }
+        cal.error = "";
+        cal.months.set(ym, { at: Date.now(), events: j.events || [] });
+        render();
+      })
+      .catch(() => { /* offline: try again on the next look */ })
+      .finally(() => cal.loading.delete(ym));
+  }
+  /** Ask again for any month read more than `age` ago; what's on screen stays until the answer comes. */
+  function calRefresh(age = CAL_STALE) {
+    if (!cal.on) return;
+    for (const [ym, m] of cal.months) if (Date.now() - m.at > age) calMonth(ym);
+  }
+  /** Minutes into a planner day (05:00 to 05:00) of a London time "YYYY-MM-DDTHH:MM". */
+  const calMin = (iso, t) => daysBetween(iso, t.slice(0, 10)) * 1440 + toMin(t.slice(11, 16));
+  /** The day's events: timed ones as minutes on its timeline, and the all-day ones. */
+  function calFor(iso) {
+    const out = { timed: [], allDay: [] };
+    if (!cal.on) return out;
+    const seen = new Set();
+    for (const ym of new Set([iso.slice(0, 7), addDays(iso, 1).slice(0, 7)])) {
+      const m = cal.months.get(ym);
+      if (!m) { calMonth(ym); continue; }
+      for (const ev of m.events) {
+        if (seen.has(ev.id)) continue;
+        if (ev.allDay) {
+          if (ev.start <= iso && iso < ev.end) { seen.add(ev.id); out.allDay.push({ ...ev, key: `cal:${iso}:${ev.id}` }); }
+          continue;
+        }
+        const s = Math.max(T0, calMin(iso, ev.start));
+        let e = Math.min(T1, calMin(iso, ev.end));
+        if (ev.end === ev.start) e = Math.min(T1, s + 15);      // a moment still gets a line
+        if (e <= s) continue;
+        seen.add(ev.id);
+        out.timed.push({ ...ev, key: `cal:${iso}:${ev.id}`, s, e });
+      }
+    }
+    out.timed.sort((a, b) => a.s - b.s);
+    return out;
+  }
+  function calFind(key) {
+    const iso = key.split(":")[1];
+    if (!/^\d{4}-\d\d-\d\d$/.test(iso || "")) return null;
+    const c = calFor(iso);
+    const ev = c.timed.find((x) => x.key === key) || c.allDay.find((x) => x.key === key);
+    return ev ? { ev, iso } : null;
+  }
+
   function isSchoolDay(iso) {
     const o = state.school && state.school[iso];
     if (o !== undefined) return o;
@@ -526,6 +595,7 @@
     window.addEventListener("pagehide", () => { if (pending) push(true); });
     // Back to this tab: take any newer copy saved from another device.
     document.addEventListener("visibilitychange", async () => {
+      if (document.visibilityState === "visible") calRefresh(2 * 60_000);
       if (document.visibilityState !== "visible" || pending || drag) return;
       try {
         const r = await fetch(BOOT.sync, { cache: "no-store" });
@@ -823,7 +893,8 @@
     } else {
       $("#day-title").innerHTML = `<b>${d.date === todayIso() ? "Today" : esc(d.weekday)}</b> <span>${d.date === todayIso() ? `${esc(d.weekday)} ` : ""}${dt.getDate()} ${MONTH(d.date)}${d.date.slice(0, 4) !== todayIso().slice(0, 4) ? ` ${d.date.slice(0, 4)}` : ""}</span>`;
       const tasks = dayTasks(d), done = tasks.filter((b) => b.done).length;
-      $("#day-sub").textContent = dayKind(d.date) + (tasks.length ? ` · ${done} of ${tasks.length} done` : " · A free day");
+      const allDay = calFor(d.date).allDay.map((x) => x.title);
+      $("#day-sub").textContent = dayKind(d.date) + (tasks.length ? ` · ${done} of ${tasks.length} done` : " · A free day") + (allDay.length ? ` · ${allDay.join(", ")}` : "");
     }
     document.querySelectorAll(".seg button").forEach((b) => b.setAttribute("aria-selected", b.dataset.view === ui.view));
     placeThumb();
@@ -890,6 +961,18 @@
     }).join("");
   }
 
+  /** An Apple Calendar event on the day's timeline: shown, selectable, never dragged. */
+  function extHTML(x, pos) {
+    const top = (x.s - T0) * PPM, h = Math.max(14, (x.e - x.s) * PPM - 2);
+    const w = 100 / pos.cols;
+    const cls = ["blk", "ext", h < 40 && "short"].filter(Boolean).join(" ");
+    return `<div class="${cls}" data-ext="${esc(x.key)}" data-s="${x.s}" data-e="${x.e}" data-cat="apple" aria-selected="${ui.sel === x.key}" tabindex="0"
+      style="top:${top}px;height:${h}px;left:calc(${w * pos.col}% + ${pos.col ? 3 : 0}px);width:calc(${w}% - ${pos.cols > 1 ? 3 : 0}px)">
+      <div class="blk-t">${esc(x.title)}</div>
+      <div class="blk-m">${clock(x.s)} – ${clock(x.e)}${x.location ? ` · ${esc(x.location)}` : ""}</div>
+    </div>`;
+  }
+
   function renderDay() {
     const d = day();
     const H = (T1 - T0) * PPM;
@@ -898,8 +981,11 @@
     for (let t = T0; t <= T1; t += 60) html += `<div class="hour" style="top:${(t - T0) * PPM}px"><span>${t === 720 ? "Noon" : clock(t)}</span></div>`;
     html += `<div class="lane">`;
     const boxes = d.blocks.filter((b) => !isBand(b));
-    const pos = layoutColumns(boxes);
+    // Calendar events share the columns, so one beside a block sits next to it rather than on it.
+    const ext = calFor(d.date).timed;
+    const pos = layoutColumns([...boxes, ...ext.map((x) => ({ id: x.key, start: raw(x.s), end: raw(x.e) }))]);
     for (const b of boxes) html += blockHTML(b, d, pos.get(b.id), hidden);
+    for (const x of ext) html += extHTML(x, pos.get(x.key));
     for (const b of d.blocks.filter((x) => isBand(x) && !hidden.has(x.id))) {
       const top = (toMin(b.start) - T0) * PPM, h = Math.max(13, dur(b) * PPM - 2);
       html += `<div class="band${b.done ? " done" : ""}" data-id="${b.id}" aria-selected="${ui.sel === b.id}" tabindex="0" style="top:${top}px;height:${h}px" title="${esc(b.note || "")}">
@@ -946,6 +1032,12 @@
           html += `<button type="button" class="wblk${b.done ? " done" : ""}${b.tentative ? " tentative" : ""}${b.cat === "routine" ? " quiet" : ""}" data-id="${b.id}" data-cat="${esc(b.cat)}" style="top:${top}px;height:${h}px" title="${esc(label)} · ${clock(toMin(b.start))}–${clock(toMin(b.end))}">${h >= 11 && k === tallest ? esc(label) : ""}</button>`;
         }
       }
+      for (const x of calFor(iso).timed) {
+        const h = Math.max(8, (x.e - x.s) * PPM_W - 2);
+        // Too narrow for columns here: an event over a block takes the right half, leaving the block's name readable.
+        const over = d.blocks.some((b) => !isBand(b) && toMin(b.start) < x.e && toMin(b.end) > x.s);
+        html += `<button type="button" class="wblk ext${over ? " half" : ""}" data-ext="${esc(x.key)}" data-cat="apple" style="top:${(x.s - T0) * PPM_W}px;height:${h}px" title="${esc(x.title)} · ${clock(x.s)}–${clock(x.e)}">${h >= 11 ? esc(x.title) : ""}</button>`;
+      }
       html += `</div>`;
     });
     html += `</div>`;
@@ -965,6 +1057,15 @@
   }
   function paintInspector() {
     const el = $("#inspector");
+    if (ui.sel === "settings:calendar") {
+      const typing = document.activeElement && document.activeElement.matches("[data-calurl]");
+      el.classList.add("is-open");
+      el.innerHTML = calendarPanelHTML();
+      if (typing) $("#inspector [data-calurl]")?.focus({ preventScroll: true });
+      return;
+    }
+    const ext = ui.sel && ui.sel.startsWith("cal:") && calFind(ui.sel);
+    if (ext) { el.classList.add("is-open"); el.innerHTML = extPanelHTML(ext); return; }
     const hit = ui.sel && findBlock(ui.sel);
     el.classList.toggle("is-open", !!hit);
     if (!hit) { el.innerHTML = glanceHTML(day()); return; }
@@ -1012,6 +1113,70 @@
         </div>
       </div>`;
   }
+  function extPanelHTML({ ev, iso }) {
+    const when = ev.allDay
+      ? (daysBetween(ev.start, ev.end) > 1 ? `${shortDate(ev.start)} to ${shortDate(addDays(ev.end, -1))}, all day` : `${weekdayLong(iso)} ${shortDate(iso)}, all day`)
+      : `${weekdayLong(ev.start.slice(0, 10))} ${shortDate(ev.start.slice(0, 10))}, ${ev.start.slice(11, 16)} to ${ev.end.slice(0, 10) !== ev.start.slice(0, 10) ? `${shortDate(ev.end.slice(0, 10))} ` : ""}${ev.end.slice(11, 16)}`;
+    return `
+      <header class="ins-bar"><span class="kind" data-cat="apple"><i></i>Apple Calendar</span>${CLOSE}</header>
+      <div class="ins-body">
+        <div class="ins-head">
+          <p class="ins-name ins-name-ro">${esc(ev.title)}</p>
+          <p class="ins-when">${esc(when)}</p>
+          ${ev.location ? `<p class="ins-aside">${esc(ev.location)}</p>` : ""}
+        </div>
+        <p class="foot foot-flat">From your Apple Calendar. Change it in the Calendar app and it shows here within a few minutes.</p>
+      </div>`;
+  }
+  function calendarPanelHTML() {
+    const steps = `<h4 class="group-label">On your iPhone</h4>
+        <ol class="steps">
+          <li>Open <b>Calendar</b> and tap <b>Calendars</b> at the bottom.</li>
+          <li>Tap the <b>ⓘ</b> beside the calendar you want here.</li>
+          <li>Turn on <b>Public Calendar</b>, tap <b>Share Link…</b>, then <b>Copy</b>.</li>
+        </ol>
+        <p class="foot foot-flat">On a Mac: in Calendar, Control-click the calendar, choose <b>Share Calendar…</b>, tick <b>Public Calendar</b> and copy the link.</p>`;
+    const form = `<form class="cal-form" data-calform>
+          <div class="group"><input class="cal-url" type="url" inputmode="url" autocomplete="off" autocapitalize="none" spellcheck="false" data-calurl placeholder="webcal://p…-caldav.icloud.com/published/…" value="${esc(cal.draft)}" aria-label="Calendar link"></div>
+          ${cal.formError ? `<p class="cal-err" role="alert">${esc(cal.formError)}</p>` : ""}
+          <button type="submit" class="btn-fill" ${cal.busy ? "disabled" : ""}>${cal.busy ? "Checking the link…" : "Show This Calendar"}</button>
+        </form>`;
+    return `
+      <header class="ins-bar"><span class="ins-title">Apple Calendar</span>${CLOSE}</header>
+      <div class="ins-body">
+        ${cal.on ? `
+        <div class="group">
+          <div class="row"><span class="h-name" data-cat="apple"><i class="h-dot"></i>Showing your calendar</span><span class="row-v">${cal.error ? "Not reachable" : "Connected"}</span></div>
+        </div>
+        ${cal.error ? `<p class="foot">${esc(cal.error)}</p>` : `<p class="foot">Its events appear in the day and week, beside your plan. Changes made in the Calendar app show here within a few minutes.</p>`}
+        <h4 class="group-label">Use a different calendar</h4>
+        ${form}
+        <div class="group"><button type="button" class="row row-btn danger" data-act="cal-off">Stop Showing It</button></div>` : `
+        <p class="cal-lede">Show the events from one of your Apple calendars here, beside your plan. You’ll only see them here: nothing you do in Productivity changes your calendar.</p>
+        ${steps}
+        <h4 class="group-label">Paste the link</h4>
+        ${form}
+        <p class="foot foot-flat">Anyone who has this link can see that calendar, so keep it to yourself. TafsirLab keeps it on the server and never shows it on a page.</p>`}
+      </div>`;
+  }
+  async function connectCalendar() {
+    const url = cal.draft.trim();
+    if (!url || cal.busy) return;
+    cal.busy = true; cal.formError = ""; renderInspector();
+    try {
+      const r = await fetch(BOOT.calendarApi, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url }) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) { cal.formError = j.error || "Couldn’t use that link."; return; }
+      cal.on = true; cal.error = ""; cal.draft = ""; cal.months.clear();
+      ui.sel = null;
+      toast(j.upcoming ? `Showing your Apple Calendar: ${j.upcoming} event${j.upcoming === 1 ? "" : "s"} in the next 30 days` : "Showing your Apple Calendar. Nothing on it in the next 30 days.");
+    } catch {
+      cal.formError = "Couldn’t reach TafsirLab. Check your connection.";
+    } finally {
+      cal.busy = false; render();
+    }
+  }
+
   /** Where a programme session sits: the course, and how far through it. */
   function trackHTML(b, d) {
     const t = TRACKS[b.track];
@@ -1043,6 +1208,11 @@
         ${prayers.length ? `<h4 class="group-label">Prayers</h4>
         <div class="group">${prayers.map((p) => `<button type="button" class="row prayer-row${p.done ? " done" : ""}" data-pray="${p.id}">
           <span class="pr-box">${TICK}</span><span class="pr-name">${esc(p.title)}</span><span class="row-v">${clock(toMin(p.start))}</span></button>`).join("")}</div>` : ""}
+        ${(() => {
+          const c = calFor(d.date), evs = [...c.allDay, ...c.timed];
+          return evs.length ? `<h4 class="group-label">Apple Calendar</h4>
+        <div class="group">${evs.map((x) => `<button type="button" class="row row-ext" data-ext="${esc(x.key)}"><span class="h-name" data-cat="apple"><i class="h-dot"></i>${esc(x.title)}</span><span class="row-v">${x.allDay ? "All day" : clock(x.s)}</span></button>`).join("")}</div>` : "";
+        })()}
         <h4 class="group-label">Plan</h4>
         <div class="group">${kinds.length ? kinds.map((c) => `<div class="row"><span class="h-name" data-cat="${c}"><i class="h-dot"></i>${CAT_LABEL[c]}</span><span class="row-v">${fmtDur(totals[c])}</span></div>`).join("")
           + (study ? `<div class="row row-total"><span>In all</span><span class="row-v">${fmtDur(study)}</span></div>` : "")
@@ -1201,6 +1371,7 @@
       toast("Saved a copy to your Downloads");
     }
     if (act === "import") $("#import-file").click();
+    if (act === "calendar" && WEB) { cal.formError = ""; ui.sel = "settings:calendar"; render(); setTimeout(() => $("#inspector [data-calurl]")?.focus({ preventScroll: true }), 60); }
     if (act === "reset" && confirm("Go back to the drafted timetable? Every change and tick you’ve made will be cleared.")) {
       mutate(() => { state = fresh(); genCache.clear(); ui.sel = null; });
       toast("Back to the draft", { label: "Undo", run: () => restore(undo, redo) });
@@ -1255,6 +1426,13 @@
       const hit = findBlock(open.dataset.open);
       if (hit.b.surah) openSurah(hit.b);
       else { ui.sel = hit.b.id; render(); $('#inspector [data-f="surah"]')?.focus({ preventScroll: true }); }
+      return;
+    }
+    const ex = e.target.closest("[data-ext]");
+    if (ex) {
+      const key = ex.dataset.ext;
+      if (ui.view === "week") { ui.view = "day"; ui.sel = key; goDate(key.split(":")[1], true); }
+      else { ui.sel = key; render(); }
       return;
     }
     const tick = e.target.closest(".tick");
@@ -1339,6 +1517,7 @@
   ins.addEventListener("input", (e) => {
     const t = e.target;
     if (t.matches("[data-daynote]")) { snapOnce(); day().note = t.value; save(); return; }
+    if (t.matches("[data-calurl]")) { cal.draft = t.value; if (cal.formError) { cal.formError = ""; t.closest("form")?.querySelector(".cal-err")?.remove(); } return; }
     const hit = ui.sel && findBlock(ui.sel); if (!hit) return;
     if (t.dataset.f === "title" || t.dataset.f === "note") {
       snapOnce();
@@ -1383,6 +1562,11 @@
       toast(`Moved to ${weekdayLong(to)} ${dateObj(to).getDate()}${n ? `; ${n} block${n === 1 ? "" : "s"} there moved later` : ""}`, { label: "Undo", run: () => restore(undo, redo) });
     }
   });
+  ins.addEventListener("submit", (e) => {
+    if (!e.target.matches("[data-calform]")) return;
+    e.preventDefault();
+    connectCalendar();
+  });
   ins.addEventListener("click", (e) => {
     const pray = e.target.closest("[data-pray]");
     if (pray) {
@@ -1391,9 +1575,20 @@
       if (hit.b.done) pop($(`#inspector [data-pray="${hit.b.id}"] .pr-box`));
       return;
     }
+    const ex = e.target.closest("[data-ext]");
+    if (ex) { ui.sel = ex.dataset.ext; render(); return; }
     const hit = ui.sel && findBlock(ui.sel);
     const act = e.target.closest("[data-act]")?.dataset.act; if (!act) return;
     if (act === "close") { ui.sel = null; render(); return; }
+    if (act === "cal-off") {
+      if (!confirm("Stop showing your Apple Calendar here? To show it again you’ll need its link.")) return;
+      fetch(BOOT.calendarApi, { method: "DELETE" }).then((r) => {
+        if (!r.ok) { toast("Couldn’t reach TafsirLab. Try again."); return; }
+        cal.on = false; cal.months.clear(); cal.error = ""; ui.sel = null; render();
+        toast("Your Apple Calendar is no longer shown here");
+      }).catch(() => toast("Couldn’t reach TafsirLab. Try again."));
+      return;
+    }
     if (act === "to-now") { $("#today").click(); return; }
     if (act === "school") {
       const iso = ui.date, on = !isSchoolDay(iso);
@@ -1433,7 +1628,7 @@
     else if (e.key === "ArrowRight") { e.preventDefault(); $("#next").click(); }
     else if (e.key === "Escape") { if (!menu.hidden) menu.hidden = true; else if (ui.sel) { ui.sel = null; render(); } }
     else if ((e.key === "Delete" || e.key === "Backspace") && ui.sel) { e.preventDefault(); deleteBlock(ui.sel); }
-    else if (e.key === "Enter" && target.closest(".blk, .band")) { ui.sel = target.closest(".blk, .band").dataset.id; render(); }
+    else if (e.key === "Enter" && target.closest(".blk, .band")) { const el = target.closest(".blk, .band"); ui.sel = el.dataset.id || el.dataset.ext; render(); }
     else if (e.key.toLowerCase() === "n") { e.preventDefault(); $("#add").click(); }
     else if (e.key.toLowerCase() === "t") $("#today").click();
     else if (e.key.toLowerCase() === "w") { ui.view = ui.view === "week" ? "day" : "week"; ui.sel = null; saveUi(); render(); scrollToStart(); }
@@ -1468,6 +1663,7 @@
     if (todayIso() !== lastDate) { lastDate = todayIso(); render(); return; }
     tickNow();
     remind();
+    if (document.visibilityState === "visible") calRefresh();
   }, 15_000);
 
   render();

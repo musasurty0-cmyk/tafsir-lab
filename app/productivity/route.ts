@@ -97,6 +97,8 @@ const APP = (boot: string) => `${head("Productivity")}
               <button type="button" role="menuitem" data-act="export">Save a Copy</button>
               <button type="button" role="menuitem" data-act="import">Open a Copy…</button>
               <hr>
+              <button type="button" role="menuitem" data-act="calendar">Apple Calendar…</button>
+              <hr>
               <button type="button" role="menuitem" data-act="lock">Lock on This Device</button>
               <button type="button" role="menuitem" data-act="reset" class="danger">Reset to the Draft…</button>
             </div>
@@ -148,6 +150,9 @@ export async function GET() {
     workspaces,
     signedIn: !!session,
     sync: "/api/productivity/state",
+    // Whether an Apple Calendar is linked; the link itself stays on the server.
+    calendar: !!row.calendarUrl,
+    calendarApi: "/api/productivity/calendar",
     open: "/productivity/open/",
   }).replace(/</g, "\\u003c");   // nothing in the data can close the script tag
   return html(APP(boot));

@@ -82,6 +82,7 @@
 [data-cat="routine"]     { --c: #8e8e93; }
 [data-cat="prayer"]      { --c: #e0a800; }
 [data-cat="islamic"]     { --c: #a2845e; }
+[data-cat="apple"]       { --c: #30b0c7; }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .pd [data-cat="arabic"]    { --c: #7d7aff; }
   :root:not([data-theme="light"]) .pd [data-cat="maths"]     { --c: #0a84ff; }
@@ -93,6 +94,7 @@
   :root:not([data-theme="light"]) .pd [data-cat="prayer"]    { --c: #ffd60a; }
   :root:not([data-theme="light"]) .pd [data-cat="routine"]   { --c: #98989d; }
   :root:not([data-theme="light"]) .pd [data-cat="islamic"]   { --c: #c4a47c; }
+  :root:not([data-theme="light"]) .pd [data-cat="apple"]     { --c: #40c8e0; }
 }
 .pd [data-cat] {
   --f: color-mix(in srgb, var(--c) 13%, var(--bg));
@@ -596,3 +598,25 @@ html:has(> body.pd), body.pd { overflow: hidden; overscroll-behavior: none; }
   .timeline { margin: 0; }
   .blk, .band { box-shadow: none; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
+
+/* ── Apple Calendar ──────────────────────────────────────
+   Events from the calendar sit among the blocks in their own colour. They
+   are only shown, so they carry no tick, no grip and no drag. */
+.blk.ext { padding-right: 10px; cursor: pointer; }
+.blk.ext::before { width: 2px; }
+.wblk.ext { cursor: pointer; z-index: 2; }
+.wblk.ext.half { left: 50%; box-shadow: -1.5px 0 0 var(--bg); }
+.row-ext { cursor: pointer; transition: background 140ms ease; }
+.row-ext:hover { background: var(--hover); }
+.row-ext .h-name { min-width: 0; flex: 1; }
+.row-ext .h-name, .row-ext .h-name * { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row-ext .h-dot { overflow: visible; }
+.ins-name-ro { margin: 0; overflow-wrap: anywhere; }
+.foot.foot-flat { margin: 0 4px 18px; }
+.cal-lede { margin: 0 4px 18px; line-height: 1.45; color: var(--ink-2, var(--ink)); }
+.steps { margin: 0 0 14px; padding: 10px 14px 10px 32px; background: var(--group); border-radius: 10px; line-height: 1.45; }
+.steps li + li { margin-top: 6px; }
+.steps li::marker { color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.cal-form { display: flex; flex-direction: column; }
+.cal-url { width: 100%; border: 0; outline: none; background: transparent; padding: 11px 12px; font-size: 12.5px; }
+.cal-err { margin: -10px 4px 14px; font-size: 12px; line-height: 1.4; color: var(--red); }

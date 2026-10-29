@@ -676,6 +676,8 @@ model ProductivityPlan {
   passwordHash String
   draft        Json
   state        Json?
+  /// An Apple Calendar shared by link, shown alongside the plan (prisma/sql/023).
+  calendarUrl  String?
   updatedAt    DateTime @default(now()) @updatedAt @db.Timestamptz(6)
 }
 
