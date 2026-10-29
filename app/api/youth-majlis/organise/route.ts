@@ -7,6 +7,7 @@
  *   assignment.save  set research for a session, for one student or several
  *   assignment.delete
  *   member.role      make someone an organiser, a student, or remove them
+ *   member.rename    change someone's name on their TafsirLab account
  *   settings.save    the announcement shown at the top of the portal
  *   cohort.create    make the shared cohort workspace
  *
@@ -19,7 +20,7 @@ import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { getSessionOrNull } from "@/lib/session";
 import { hasAccess } from "@/lib/youth-majlis/gate";
-import { isOrganiser, saveSettings } from "@/lib/youth-majlis/data";
+import { isOrganiser, saveSettings, getSettings } from "@/lib/youth-majlis/data";
 import { createCohortWorkspace } from "@/lib/youth-majlis/workspace";
 import { MODULES } from "@/lib/youth-majlis/content";
 
@@ -141,6 +142,33 @@ export async function POST(req: NextRequest) {
           if (!others) throw new Bad("You’re the only organiser. Make someone else an organiser first.");
         }
         await db.youthMajlisProgress.update({ where: { userId }, data: { role } });
+        /* Removed from the cohort is removed from its shared workspace too,
+           and put back on a restore. Whoever owns that workspace keeps it. */
+        const { cohortWorkspaceId } = await getSettings();
+        if (cohortWorkspaceId) {
+          if (role === "left") {
+            await db.workspaceMember.deleteMany({
+              where: { workspaceId: cohortWorkspaceId, userId, role: { not: "owner" }, workspace: { ownerId: { not: userId } } },
+            });
+          } else {
+            await db.workspaceMember.upsert({
+              where:  { workspaceId_userId: { workspaceId: cohortWorkspaceId, userId } },
+              create: { workspaceId: cohortWorkspaceId, userId, role: "member" },
+              update: {},
+            }).catch(() => { /* workspace gone: ignore */ });
+          }
+        }
+        return NextResponse.json({ ok: true });
+      }
+      case "member.rename": {
+        /* The account's own name, so it reads the same everywhere in
+           TafsirLab, not only here. Only for people in the cohort. */
+        const userId = uuid(b.userId);
+        const name = str(b.name, 80);
+        if (!name) throw new Bad("A name can’t be empty.");
+        const inCohort = await db.youthMajlisProgress.findUnique({ where: { userId }, select: { userId: true } });
+        if (!inCohort) throw new Bad("They aren’t in the cohort.");
+        await db.user.update({ where: { id: userId }, data: { name } });
         return NextResponse.json({ ok: true });
       }
       case "settings.save": {

@@ -125,6 +125,23 @@
 }
 .og-members li[data-left] { opacity: 0.5; }
 .og-member-name { font-weight: 600; }
+.og-member-edit {
+  justify-self: start; max-width: 100%; margin: -4px -8px; padding: 4px 8px; border-radius: 8px;
+  text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: text;
+  transition: background 140ms ease;
+}
+.og-member-edit:hover { background: var(--bg); }
+.og-member-input { margin: -4px -8px; padding: 4px 8px; border-radius: 8px; border: 0; font: inherit; font-weight: 600; color: inherit; background: var(--bg); outline: 2px solid var(--accent); min-width: 0; }
+.og-remove {
+  justify-self: center; width: 30px; height: 30px; border-radius: 50%;
+  display: grid; place-items: center; font-size: 19px; line-height: 1; color: var(--ink-3);
+  transition: background 140ms ease, color 140ms ease;
+}
+.og-remove:hover { background: color-mix(in oklab, var(--danger) 14%, transparent); color: var(--danger); }
+.og-removed { margin-top: 18px; }
+.og-removed summary { cursor: pointer; font-size: 14px; font-weight: 600; color: var(--ink-3); width: fit-content; }
+.og-removed .og-sub { margin-top: 8px; }
+.og-removed .og-members { margin-top: 10px; }
 .og-member-mail { color: var(--ink-3); font-size: 14px; overflow: hidden; text-overflow: ellipsis; }
 .og-members select { background: var(--bg); padding: 8px 10px; }
 
@@ -150,7 +167,7 @@
 @media (max-width: 720px) {
   .og-fields--4, .og-fields--2 { grid-template-columns: 1fr 1fr; }
   .og-assign > li:not(.og-empty) { grid-template-columns: 1fr; }
-  .og-members li { grid-template-columns: 1fr 140px; }
+  .og-members li { grid-template-columns: minmax(0, 1fr) 130px 34px; gap: 10px; }
   .og-member-mail { display: none; }
   .og-row-head { flex-wrap: wrap; gap: 6px 14px; }
 }

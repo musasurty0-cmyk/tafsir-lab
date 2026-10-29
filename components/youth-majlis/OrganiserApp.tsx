@@ -7,7 +7,7 @@
  * what for the next session, in counts only, never the writing itself.
  */
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { MemberView, SessionView, AssignmentView, Settings } from "@/lib/youth-majlis/data";
 
@@ -65,6 +65,7 @@ export default function OrganiserApp({
   };
 
   const active = members.filter((m) => m.role !== "left");
+  const removed = members.filter((m) => m.role === "left");
   const next = sessions.find((s) => s.id === nextId) ?? null;
 
   return (
@@ -146,25 +147,48 @@ export default function OrganiserApp({
       {/* ── Cohort ── */}
       <section className="og-sec" aria-labelledby="og-cohort">
         <h2 id="og-cohort" className="og-h">The cohort.</h2>
-        <p className="og-sub">Anyone who opens the portal signed in to TafsirLab joins as a student. Organisers can edit everything on this page.</p>
+        <p className="og-sub">Anyone who opens the portal signed in to TafsirLab joins as a student. Click a name to change it; it changes on their TafsirLab account too. Organisers can edit everything on this page.</p>
         <ul className="og-members">
-          {members.map((m) => (
-            <li key={m.userId} data-left={m.role === "left" ? "" : undefined}>
-              <span className="og-member-name">{m.name}</span>
+          {active.map((m) => (
+            <li key={m.userId}>
+              <MemberName member={m} run={run} />
               <span className="og-member-mail">{m.email}</span>
               <select
                 value={m.role}
                 aria-label={`Role for ${m.name}`}
-                onChange={(e) => run({ action: "member.role", userId: m.userId, role: e.target.value }, `${m.name} is now ${e.target.value === "left" ? "removed" : `a ${e.target.value}`}.`)}
+                onChange={(e) => run({ action: "member.role", userId: m.userId, role: e.target.value }, `${m.name} is now a ${e.target.value}.`)}
               >
                 <option value="student">Student</option>
                 <option value="organiser">Organiser</option>
-                <option value="left">Removed</option>
               </select>
-              {m.userId === meId && <span className="og-muted">you</span>}
+              {m.userId === meId ? <span className="og-muted">you</span> : (
+                <button type="button" className="og-remove" aria-label={`Remove ${m.name} from the cohort`} title="Remove from the cohort"
+                        onClick={() => run({ action: "member.role", userId: m.userId, role: "left" }, `${m.name} was removed. You can put them back under Removed.`)}>
+                  ×
+                </button>
+              )}
             </li>
           ))}
         </ul>
+        {removed.length > 0 && (
+          <details className="og-removed">
+            <summary>Removed ({removed.length})</summary>
+            <p className="og-sub">They can still open the portal, but they aren’t in the cohort, its readiness board or its shared workspace.</p>
+            <ul className="og-members">
+              {removed.map((m) => (
+                <li key={m.userId} data-left="">
+                  <span className="og-member-name">{m.name}</span>
+                  <span className="og-member-mail">{m.email}</span>
+                  <button type="button" className="og-link-btn"
+                          onClick={() => run({ action: "member.role", userId: m.userId, role: "student" }, `${m.name} is back in the cohort.`)}>
+                    Put back
+                  </button>
+                  <span />
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
       </section>
 
       {/* ── Settings ── */}
@@ -317,6 +341,40 @@ function SessionForm({ s, moduleN, run, onDone }: {
 }
 
 // ── Assignments ─────────────────────────────────────────────────────────────
+
+/** A member's name, which turns into a field when clicked. Enter saves, Escape leaves it. */
+function MemberName({ member, run }: {
+  member: MemberView; run: (body: Record<string, unknown>, ok: string) => Promise<boolean>;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(member.name);
+  const field = useRef<HTMLInputElement>(null);
+  useEffect(() => { if (editing) field.current?.select(); }, [editing]);
+
+  const save = async () => {
+    const name = value.trim();
+    if (!name || name === member.name) { setValue(member.name); setEditing(false); return; }
+    if (await run({ action: "member.rename", userId: member.userId, name }, `${member.name} is now ${name}.`)) setEditing(false);
+  };
+
+  if (!editing) {
+    return (
+      <button type="button" className="og-member-name og-member-edit" onClick={() => { setValue(member.name); setEditing(true); }}
+              title="Change their name">
+        {member.name}
+      </button>
+    );
+  }
+  return (
+    <input ref={field} className="og-member-input" value={value} maxLength={80} aria-label={`New name for ${member.name}`}
+           onChange={(e) => setValue(e.target.value)}
+           onBlur={() => void save()}
+           onKeyDown={(e) => {
+             if (e.key === "Enter") { e.preventDefault(); void save(); }
+             if (e.key === "Escape") { setValue(member.name); setEditing(false); }
+           }} />
+  );
+}
 
 function Assignments({ sessions, members, tabTitles, defaultSession, run }: {
   sessions: SessionView[]; members: MemberView[]; tabTitles: string[]; defaultSession: string | null;
