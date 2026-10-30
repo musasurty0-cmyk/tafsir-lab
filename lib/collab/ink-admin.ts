@@ -57,6 +57,15 @@ export function importInk(page: string, author: string, name: string, updated: n
   return call<{ ok: boolean; strokes: number }>({ op: "import", page, author, name, updated, strokes });
 }
 
+/**
+ * Forget these pages' live text, so each re-seeds from its database copy the
+ * next time it is opened. "busy" where someone has the page open: nothing
+ * is done there, and it must be tried again once they have left.
+ */
+export function resetDocs(pages: string[]) {
+  return call<Record<string, "reset" | "busy">>({ op: "doc-reset", pages });
+}
+
 /** What the rooms hold, per author: count, version and stroke ids in order. */
 export function inkSummary(pages: string[]) {
   return call<Record<string, { author: string; count: number; updated: number; ids: string }[]>>({ op: "summary", pages });

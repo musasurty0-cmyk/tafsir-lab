@@ -118,6 +118,23 @@ export class TafsirRoom extends YServer {
   }
 
   /** Admin (the app, via /ink-admin): replace an author's ink with a copy. */
+  /**
+   * Admin: forget the live document, so the next person to open the page
+   * seeds it from the database copy (PageEditor seeds an empty room). For
+   * when the app rewrites a page's saved text, e.g. tidying a paste. Refused
+   * while anyone is connected: emptying a document under an open editor
+   * would show it blank, and its next save would write that to the database.
+   */
+  async docReset(): Promise<"reset" | "busy"> {
+    if ([...this.getConnections()].length > 0) return "busy";
+    this.document.transact(() => {
+      const fragment = this.document.getXmlFragment("default");
+      if (fragment.length) fragment.delete(0, fragment.length);
+    });
+    await this.ctx.storage.delete("ydoc");
+    return "reset";
+  }
+
   async inkImport(author: string, name: string, updated: number, strokes: { id: string; surface?: string }[]): Promise<number> {
     const sql = this.inkSql();
     return this.ctx.storage.transactionSync(() => importInk(sql, author, name, updated, strokes));
@@ -268,6 +285,7 @@ function withCors(res: Response, origin: string | null): Response {
  *   { op: "wipe",    pages: string[], author?: string }  a deleted page, workspace or account
  *   { op: "import",  page, author, name, updated, strokes }  the copy from the database
  *   { op: "summary", pages: string[] }  what is stored, to check the copy
+ *   { op: "doc-reset", pages: string[] }  forget the live text, to re-seed from the database
  */
 async function inkAdmin(req: Request, env: RoomEnv): Promise<Response> {
   const secret = env.COLLAB_SECRET || env.SESSION_SECRET;
@@ -291,6 +309,11 @@ async function inkAdmin(req: Request, env: RoomEnv): Promise<Response> {
   if (b.op === "import" && b.page && b.author && Array.isArray(b.strokes)) {
     const n = await (await room(b.page)).inkImport(b.author, b.name ?? "", Number(b.updated) || Date.now(), b.strokes);
     return Response.json({ ok: true, strokes: n });
+  }
+  if (b.op === "doc-reset" && Array.isArray(b.pages)) {
+    const out: Record<string, string> = {};
+    for (const id of b.pages) out[id] = await (await room(id)).docReset();
+    return Response.json(out);
   }
   if (b.op === "summary" && Array.isArray(b.pages)) {
     const out: Record<string, unknown> = {};

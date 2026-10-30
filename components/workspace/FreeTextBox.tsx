@@ -23,6 +23,10 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Table from "@tiptap/extension-table";
+import TableRow from "@tiptap/extension-table-row";
+import TableCell from "@tiptap/extension-table-cell";
+import TableHeader from "@tiptap/extension-table-header";
 import { createPortal } from "react-dom";
 import { useEditor, EditorContent, type Editor } from "@tiptap/react";
 import { baseExtensions } from "./editor/sharedExtensions";
@@ -528,6 +532,12 @@ function RichBody({
         placeholder: "",
         workspaceId,
       }),
+      /* Tables, as the page itself has: a OneNote container often holds one,
+         and without these a box whose content has a table opened empty. */
+      Table.configure({ resizable: true, lastColumnResizable: true, allowTableNodeSelection: true }),
+      TableRow,
+      TableHeader,
+      TableCell,
 
       SlashCommandExtension.configure({
         suggestion: {
