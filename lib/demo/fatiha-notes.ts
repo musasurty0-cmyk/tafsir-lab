@@ -77,7 +77,7 @@ export function fatihaNotesDoc(): Node {
       p([
         text("Seven names, each naming a different ", undefined),
         text("function", ITALIC),
-        text(" the sūrah performs — how it opens, what it gathers, and what it does."),
+        text(" the sūrah performs: how it opens, what it gathers, and what it does."),
       ]),
       p([text("Type / to see what you can add to a note like this one.", muted(12))]),
       { type: "horizontalRule" },
@@ -126,7 +126,7 @@ export function fatihaNotesDoc(): Node {
           src: "Tafsīr al-Baghawī, 1:37",
         },
       ]),
-      p([text("The verse this name comes from is not in al-Fātiḥah at all — it is in al-Ḥijr. Worth linking the two:", undefined)]),
+      p([text("The verse this name comes from is not in al-Fātiḥah at all. It is in al-Ḥijr. Worth linking the two:", undefined)]),
       ayah("15:87"),
 
       ...section(4, "Al-Ḥamd", "الحمد", "It begins with the words al-ḥamdu lillāh.", [
@@ -149,7 +149,7 @@ export function fatihaNotesDoc(): Node {
           src: "Tafsīr Ibn Kathīr, 1:42",
         },
       ]),
-      p([text("Ibn Kathīr on the opening verse — the commentary this section rests on:", undefined)]),
+      p([text("Ibn Kathīr on the opening verse, the commentary this section rests on:", undefined)]),
       tafsir("1:1", "Tafsir Ibn Kathir", "en-tafisr-ibn-kathir"),
 
       ...section(6, "Ash-Shifāʾ", "الشفاء", "It heals, by Allah’s permission.", [
@@ -179,7 +179,7 @@ export function fatihaNotesDoc(): Node {
         type: "bulletList",
         content: [
           "Which names describe the sūrah’s place, and which describe its effect?",
-          "Al-Ḥijr 15:87 names it without naming it — worth a Connection.",
+          "Al-Ḥijr 15:87 names it without naming it. Worth a Connection.",
           "Aṣ-Ṣalāh and ar-Ruqyah both describe it by what it DOES, not what it contains.",
         ].map((s) => ({
           type: "listItem",
@@ -211,7 +211,7 @@ export const DEMO_CONNECTIONS = [
     sourceType: "ayah", sourceKey: "ayah:1:2",
     targetType: "ayah", targetKey: "ayah:1:5",
     name: "Praise answered by service",
-    commentary: "The half that is praise and the half that is petition — the hadith of the divided prayer turns on the move between them.",
+    commentary: "The half that is praise and the half that is petition: the hadith of the divided prayer turns on the move between them.",
     category: "Structural",
     tags: ["salah"],
   },

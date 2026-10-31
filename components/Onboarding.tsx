@@ -147,7 +147,7 @@ function CanvasDiagram() {
       <Tag x={130} y={130} tx={-4}  ty={80}  text="Write anywhere" anchor="end" />
       <Tag x={560} y={215} tx={640} ty={-2}  text="Room that never runs out" />
       <Tag x={680} y={150} tx={716} ty={250} text="Every tool, tuned" />
-      <Tag x={365} y={385} tx={-4}  ty={392} text="Pen, text, shapes" anchor="end" />
+      <Tag x={365} y={385} tx={-4}  ty={392} text="Pen, arrows, text" anchor="end" />
     </Frame>
   );
 }
@@ -156,21 +156,21 @@ function CanvasDiagram() {
 
 const SCREENS = [
   {
-    title:    "Your dashboard",
+    title:    "Your dashboard.",
     subtitle: "Lab AI, where you left off, and every workspace you keep.",
-    cta:      "See annotations →",
+    cta:      "Next",
     Diagram:  DashboardDiagram,
   },
   {
-    title:    "Annotations",
-    subtitle: "Attach a note to a whole page, a sūrah, a single āyah — or one word.",
-    cta:      "See the canvas →",
+    title:    "Notes on anything.",
+    subtitle: "Write on a whole page, a sūrah, a single āyah, or one word.",
+    cta:      "Next",
     Diagram:  AnnotationsDiagram,
   },
   {
-    title:    "The canvas",
-    subtitle: "Infinite space around the mushaf, with a pen, text, and shapes.",
-    cta:      "Start studying →",
+    title:    "Room to write.",
+    subtitle: "Every Mushaf page as it is printed, with space all round it for your pen, arrows and text.",
+    cta:      "Get started",
     Diagram:  CanvasDiagram,
   },
 ];

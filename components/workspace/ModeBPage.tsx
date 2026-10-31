@@ -816,6 +816,20 @@ export default function ModeBPage({
     window.setTimeout(() => setStudyMode(false), STUDY_EXIT_MS);
   }, []);
 
+  /* The tour (TourBubble) opens Study Mode to show its tools, and leaves it
+     when the visitor steps back to the plain Mushaf. */
+  const studyModeRef = useRef(studyMode);
+  useEffect(() => { studyModeRef.current = studyMode; }, [studyMode]);
+  useEffect(() => {
+    function onTourAction(e: Event) {
+      const action = (e as CustomEvent<string>).detail;
+      if (action === "study" && !studyModeRef.current) enterStudy();
+      if (action === "leave-study" && studyModeRef.current) exitStudy();
+    }
+    window.addEventListener("tl-tour-action", onTourAction);
+    return () => window.removeEventListener("tl-tour-action", onTourAction);
+  }, [enterStudy, exitStudy]);
+
   /** The object currently being studied, as a Connection endpoint key. */
   const currentObjectKey = useCallback((): string => {
     if (focusAnchor?.segmentId) return selectionKey(focusAnchor.segmentId);

@@ -8,7 +8,7 @@ const DONE_KEY = "tl-tutorial-done";
 
 export interface TourState {
   active:       boolean;
-  step:         number;       // 0=home  1=editor  2=canvas  3=split  4=tafsir  5=finale
+  step:         number;       // 0 on /home, 1 to 11 on the tutorial page, 12 the finale (STEPS in TourBubble)
   workspaceId?: string;       // tutorial workspace id
   pageId?:      string;       // tutorial page id
 }

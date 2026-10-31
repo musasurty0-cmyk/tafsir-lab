@@ -41,6 +41,11 @@ export function useSpotlightTarget(selector: string | null | undefined) {
       // (still mounting, or inside a collapsed panel) — treat as absent
       // rather than cutting a hole at 0,0.
       if (r.width === 0 || r.height === 0) { setRect(null); return; }
+      // Mounted but parked off screen (a closed drawer slides out to the
+      // right) is absent too: a ring around nothing visible points nowhere.
+      if (r.right <= 0 || r.bottom <= 0 || r.left >= window.innerWidth || r.top >= window.innerHeight) {
+        setRect(null); return;
+      }
       setRect({ x: r.left, y: r.top, w: r.width, h: r.height });
     };
 

@@ -471,11 +471,22 @@ export default function WorkspacePageView({
         setTafsirOpen(true);
       }
     }
+    /* Each tour step names the panels it shows, so the drawers open and close
+       with it in either direction. Formatting is only ever opened, and not
+       saved, so the tour never changes the visitor's own toolbar setting. */
+    function onTourPanels(e: Event) {
+      const p = (e as CustomEvent<{ tafsir: boolean; ai: boolean; formatting: boolean }>).detail;
+      setTafsirOpen(p.tafsir);
+      setAiOpen(p.ai);
+      if (p.formatting) setFormattingOpen(true);
+    }
     window.addEventListener("tl-tour-mode",   onTourMode);
     window.addEventListener("tl-tour-action", onTourAction);
+    window.addEventListener("tl-tour-panels", onTourPanels);
     return () => {
       window.removeEventListener("tl-tour-mode",   onTourMode);
       window.removeEventListener("tl-tour-action", onTourAction);
+      window.removeEventListener("tl-tour-panels", onTourPanels);
     };
   }, []);
 
