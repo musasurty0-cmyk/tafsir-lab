@@ -383,8 +383,11 @@ export default async function YouthMajlisPage({ searchParams }: { searchParams: 
               <p className="bk-hint">Tap to open · drag to turn</p>
             </div>
             <div>
-              <p className="y-kicker y-kicker--light" data-reveal>ʿIlmī</p>
+              <p className="y-kicker y-kicker--light" data-reveal>ʿIlmī · By invitation</p>
               <Words id="y-i-h" className="y-h2" text="Uṣūl al-Fiqh." />
+              {/* Advertised to everyone, offered to some: it should not read as a
+                  track every brother is about to join. */}
+              <p className="y-h2-sub" data-reveal>A deeper track that some of the cohort may be invited to: the principles behind Islamic rulings.</p>
               <div className="y-cta y-cta--left" data-reveal>
                 <IlmiEnter />
               </div>

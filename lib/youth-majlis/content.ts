@@ -159,7 +159,7 @@ export const MODULES: Module[] = [
 
 export const COHORT = [
   "Bilal", "Eissa", "Eesa", "Hadi", "Muhammed Kazim", "Yusuf", "Musa",
-  "Labeeb", "Omair", "Ayan", "Ayaan", "Ilyas", "Nur",
+  "Labeeb", "Omair", "Ayaan", "Ilyas",
 ];
 
 // ── ʿIlmī ──────────────────────────────────────────────────────────────────
