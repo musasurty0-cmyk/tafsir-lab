@@ -15601,3 +15601,114 @@ body {
 }
 .qcf-plate-study svg { flex: none; }
 .qcf-plate--btn:hover .qcf-plate-study { background: var(--accent-ink); }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Comfortable controls (31 Oct 2026)
+   Feedback: "most of the buttons are too small". Measured, they were: the
+   top bar at 28px with 13px labels, the formatting bar at 30px, the drawer's
+   selects at 21px, row actions at 22px, the breadcrumb menu at 20px, colour
+   swatches at 20px and a dismiss × at 18px. One floor now applies across
+   the workspace and dashboard: 36px for anything you click with a mouse,
+   44px on a touch screen (iPad and phone), which is Apple's tap target.
+   Icons grow with their buttons so a bigger box is not an emptier one.
+   min-width/min-height are used throughout, so nothing that was already
+   larger (a mobile rule, a wide label) shrinks.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Top bar */
+.tb-btn, .tb-share   { min-height: 36px; padding: 0 10px; font-size: 14px; border-radius: 9px; gap: 6px; }
+.tb-icon             { min-width: 36px; min-height: 36px; border-radius: 9px; }
+.mode-btn            { min-width: 38px; min-height: 36px; border-radius: 8px; }
+.tb-btn svg, .tb-icon svg, .mode-btn svg { width: 17px; height: 17px; }
+/* The breadcrumb is a path, not a row of buttons: taller to hit, same width. */
+.crumb               { padding: 7px 6px; border-radius: 7px; }
+.crumb-menu-btn      { min-width: 30px; min-height: 30px; border-radius: 7px; }
+.ws-switcher         { min-height: 36px; }
+.sidebar-head-btn    { min-width: 32px; min-height: 32px; border-radius: 8px; }
+
+/* Sidebar and rail */
+.rail-btn, .rail-logo, .rail-ws { min-width: 40px; min-height: 40px; border-radius: 11px; }
+.rail-btn svg        { width: 19px; height: 19px; }
+.tree-row-action-btn { min-width: 30px; min-height: 30px; border-radius: 7px; }
+.tree-row-link       { min-height: 36px; font-size: 14px; }
+.sidebar-footer-link { min-height: 38px; font-size: 13.5px; }
+
+/* Formatting bar */
+.et-btn              { min-width: 36px; min-height: 36px; border-radius: 9px; }
+.et-btn svg          { width: 17px; height: 17px; }
+.et-size-value       { min-width: 34px; min-height: 32px; font-size: 13px; }
+
+/* Page zoom (bottom of the page) and Mushaf zoom */
+.doc-zoom-reset,
+.doc-zoom button,
+.mode-b-zoom-btn     { min-width: 34px; min-height: 34px; font-size: 13px; border-radius: 9px; }
+
+/* Tafsīr drawer */
+.drawer-close        { min-width: 34px; min-height: 34px; border-radius: 9px; }
+.drawer-close svg    { width: 17px; height: 17px; }
+.drawer-tab          { min-height: 38px; font-size: 14px; padding-left: 12px; padding-right: 12px; }
+.drawer-ayah-btn     { min-width: 38px; min-height: 34px; font-size: 13px; border-radius: 9px; }
+.drawer-lang-select,
+.drawer-source-select { min-height: 32px; font-size: 13.5px; }
+
+/* Lab AI */
+.lab-icon, .lab-send { min-width: 36px; min-height: 36px; border-radius: 10px; }
+.lab-icon svg, .lab-send svg { width: 18px; height: 18px; }
+
+/* Study Mode */
+.study-bar-done      { min-height: 36px; padding-left: 16px; padding-right: 16px; font-size: 14px; border-radius: 10px; }
+.ctr-btn             { min-width: 40px; min-height: 40px; }
+.ctr-width-btn       { min-width: 38px; min-height: 36px; }
+.ctr-swatch          { min-width: 26px; min-height: 26px; }
+.mode-b-word-hint-dismiss { min-width: 28px; min-height: 28px; font-size: 15px; }
+
+/* Dashboard */
+.home-join-btn       { min-height: 38px; padding: 0 12px; font-size: 14px; border-radius: 10px; }
+.hw-ws-new-btn       { min-height: 36px; padding: 0 14px; font-size: 14px; border-radius: 10px; }
+.hw-ws-card-edit,
+.hw-ws-card-del      { min-width: 34px; min-height: 34px; border-radius: 9px; }
+.settings-cog        { min-width: 38px; min-height: 38px; }
+
+/* A finger needs more than a pointer: everything above reaches 44px. */
+@media (pointer: coarse) {
+  .tb-btn, .tb-share, .tb-icon, .mode-btn,
+  .rail-btn, .rail-logo, .rail-ws,
+  .et-btn, .drawer-close, .drawer-ayah-btn, .drawer-tab,
+  .lab-icon, .lab-send, .study-bar-done, .ctr-btn, .ctr-width-btn,
+  .mode-b-zoom-btn, .doc-zoom-reset, .doc-zoom button,
+  .hw-ws-new-btn, .hw-ws-card-edit, .hw-ws-card-del, .home-join-btn, .settings-cog,
+  .tree-row-link, .sidebar-footer-link {
+    min-height: 44px;
+  }
+  .tb-icon, .mode-btn, .rail-btn, .et-btn, .drawer-close, .lab-icon, .lab-send,
+  .ctr-btn, .mode-b-zoom-btn, .doc-zoom-reset, .doc-zoom button,
+  .hw-ws-card-edit, .hw-ws-card-del, .settings-cog {
+    min-width: 44px;
+  }
+  .tree-row-action-btn, .crumb-menu-btn, .sidebar-head-btn, .mode-b-word-hint-dismiss { min-width: 40px; min-height: 40px; }
+  .ctr-swatch          { min-width: 32px; min-height: 32px; }
+  .drawer-lang-select,
+  .drawer-source-select { min-height: 40px; font-size: 15px; }
+}
+
+/* A phone's top bar could not hold the labelled buttons at all: about 650px
+   of controls in a 319px bar, so Export, Listen and Bookmark sat off the
+   edge with no way to reach them. On a phone the buttons show their icons
+   alone (the words stay in the DOM for screen readers, with each title as
+   the tooltip) on a row of their own under the breadcrumb, which scrolls
+   sideways, fading at the edge, if it still does not fit. */
+@media (max-width: 720px) {
+  .topbar { flex-wrap: wrap; row-gap: 0; }
+  .topbar-actions {
+    flex: 1 0 100%; order: 10; min-width: 0;
+    margin-left: 0; padding-bottom: 4px; gap: 2px;
+    overflow-x: auto; scrollbar-width: none;
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 16px), transparent);
+            mask-image: linear-gradient(to right, #000 calc(100% - 16px), transparent);
+  }
+  .topbar-actions::-webkit-scrollbar { display: none; }
+  .topbar-actions > * { flex-shrink: 0; }
+  .topbar-actions .tb-divider { display: none; }
+  .topbar-actions .tb-btn { font-size: 0; gap: 0; min-width: 44px; padding: 0; justify-content: center; }
+  .topbar-actions .tb-btn svg { width: 20px; height: 20px; }
+}
