@@ -140,12 +140,29 @@ function buildPrompt(question: string, passages: Passage[], history: ChatTurn[])
 async function* streamOpenAICompatible(
   url: string, key: string, model: string,
   messages: { role: string; content: string }[],
+  /** Seconds this call may spend waiting out a rate limit. */
+  patience = 30,
 ): AsyncGenerator<string> {
-  const res = await fetch(url, {
+  /* A busy minute, not a failure. Groq's free tier is 8,000 tokens a minute
+     for everyone at once, so with a cohort asking together the third question
+     in a minute was refused (429) and the reader got a quote-only fallback
+     that read like the model declining. Nothing has been sent to the reader
+     yet at this point, so wait the time Groq names and try again, within a
+     budget that keeps well inside the route's 60s. */
+  const send = () => fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
     body: JSON.stringify({ model, messages, stream: true, temperature: 0.2, max_tokens: 900 }),
   });
+  let res = await send();
+  for (let waited = 0, tries = 0; res.status === 429 && tries < 4; tries++) {
+    const said = Number(res.headers.get("retry-after"));
+    const wait = Math.min(12, Number.isFinite(said) && said > 0 ? said : 2 + tries * 3);
+    if (waited + wait > patience) break;
+    await new Promise((r) => setTimeout(r, wait * 1000));
+    waited += wait;
+    res = await send();
+  }
   if (!res.ok || !res.body) throw new Error(`llm ${res.status}`);
 
   const reader = res.body.getReader();
@@ -278,6 +295,7 @@ A few sentences, conversational. No headings, no bullet lists, no citations.`;
 /** Route a finished message list to whichever provider is configured. */
 async function* dispatch(
   messages: { role: string; content: string }[],
+  patience = 30,
 ): AsyncGenerator<string> {
   const p = provider();
 
@@ -290,6 +308,7 @@ async function* dispatch(
       // corpus. The llama-3.x chat models this used to name were retired.
       process.env.GROQ_MODEL ?? "qwen/qwen3.8-27b",
       messages,
+      patience,
     );
     return;
   }
@@ -424,7 +443,9 @@ export async function isSmallTalk(
 
   try {
     let out = "";
-    for await (const piece of dispatch(messages)) {
+    /* No waiting here: a rate-limited classifier just searches (the safe
+       default), and the wait budget is kept for the answer itself. */
+    for await (const piece of dispatch(messages, 0)) {
       out += piece;
       if (out.length > 200) break;
     }

@@ -43,11 +43,30 @@ type RoomEnv = Env & { COLLAB_SECRET?: string; SESSION_SECRET?: string; FILES?: 
 /** Durable Object storage holds values up to 2 MB; keep clear of it. */
 const MAX_SNAPSHOT = 1_900_000;
 
+/** What a connection carries across hibernation, beside y-partyserver's own keys. */
+type ConnState = { tlApp?: boolean; tlPresence?: PresenceData } & Record<string, unknown>;
+const stateOf = (c: Connection) => (c.state ?? {}) as ConnState;
+
 export class TafsirRoom extends YServer {
-  /** Live presence per app-connection id */
-  private presence = new Map<string, PresenceData>();
-  /** Connection ids that have sent JSON — i.e. app sockets, not Yjs providers */
-  private appConns = new Set<string>();
+  /* Hibernation: between messages the room sleeps and is not billed. On the
+     free plan room time is a daily budget, and an awake room was charged for
+     every second a tab sat open on it. Nothing may live only in memory now,
+     because a sleeping room forgets it: presence and "this is an app socket"
+     ride on each connection's own state (which survives), the document is
+     reloaded by onLoad, and y-partyserver already keeps awareness the same
+     way. Its debounced save holds the room awake until it has run. */
+  static options = { hibernate: true };
+
+  /** Live presence, by connection id: read from the connections themselves. */
+  private presence(): Record<string, PresenceData> {
+    const out: Record<string, PresenceData> = {};
+    for (const c of this.getConnections()) { const p = stateOf(c).tlPresence; if (p) out[c.id] = p; }
+    return out;
+  }
+  /** Mark a connection as an app socket (it has sent JSON), with its presence if given. */
+  private markApp(c: Connection, presence?: PresenceData) {
+    c.setState((prev: unknown) => ({ ...((prev ?? {}) as ConnState), tlApp: true, ...(presence ? { tlPresence: presence } : {}) }));
+  }
 
   // ── Yjs persistence ─────────────────────────────────────────────────────────
 
@@ -71,7 +90,7 @@ export class TafsirRoom extends YServer {
   private sendToApp(payload: string, excludeId?: string) {
     for (const conn of this.getConnections()) {
       if (conn.id === excludeId) continue;
-      if (!this.appConns.has(conn.id)) continue;
+      if (!stateOf(conn).tlApp) continue;
       try { conn.send(payload); } catch { /* connection mid-close */ }
     }
   }
@@ -79,7 +98,7 @@ export class TafsirRoom extends YServer {
   private presenceSyncPayload(): string {
     return JSON.stringify({
       type:     "presence-sync",
-      presence: Object.fromEntries(this.presence),
+      presence: this.presence(),
     });
   }
 
@@ -166,18 +185,18 @@ export class TafsirRoom extends YServer {
     }
 
     // Any JSON message marks this connection as an app socket.
-    const isNewAppConn = !this.appConns.has(sender.id);
-    this.appConns.add(sender.id);
+    const isNewAppConn = !stateOf(sender).tlApp;
 
     // Heartbeat: the client pings periodically so it can detect a silently
     // dropped (half-open) connection when no pong comes back.
     if (msg.type === "ping") {
+      if (isNewAppConn) this.markApp(sender);
       try { sender.send(JSON.stringify({ type: "pong" })); } catch { /* ignore */ }
       return;
     }
 
     if (msg.type === "presence-update") {
-      this.presence.set(sender.id, msg.data);
+      this.markApp(sender, msg.data);
       // Full map to everyone (including sender — confirms registration).
       this.sendToApp(this.presenceSyncPayload());
       return;
@@ -186,6 +205,7 @@ export class TafsirRoom extends YServer {
     // A first-time app socket that opened with a stroke still deserves the
     // current presence map.
     if (isNewAppConn) {
+      this.markApp(sender);
       try { sender.send(this.presenceSyncPayload()); } catch { /* ignore */ }
     }
 
@@ -200,15 +220,10 @@ export class TafsirRoom extends YServer {
 
   onClose(conn: Connection, code: number, reason: string, wasClean: boolean) {
     super.onClose(conn, code, reason, wasClean); // drops its Yjs awareness
-    this.appConns.delete(conn.id);
-    if (this.presence.delete(conn.id)) {
+    // A closed connection is no longer listed, so it drops out of presence by itself.
+    if (stateOf(conn).tlPresence) {
       this.sendToApp(JSON.stringify({ type: "presence-leave", connectionId: conn.id }));
     }
-  }
-
-  onError(conn: Connection) {
-    this.appConns.delete(conn.id);
-    this.presence.delete(conn.id);
   }
 }
 

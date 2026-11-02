@@ -58,6 +58,7 @@ import TafsirVersePicker from "./TafsirVersePicker";
 import QuranSearch from "./QuranSearch";
 import { parseReference, parseRange, type SearchTarget } from "@/lib/quran-search";
 import { getCollabToken } from "@/lib/collab/collab-token";
+import { isLive, onLiveChange } from "@/lib/collab/liveness";
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
@@ -356,13 +357,13 @@ export default function PageEditor({
   // instance re-mounted in the meantime.
   useEffect(() => {
     mountedRef.current = true;
-    provider.connect();
+    if (isLive()) provider.connect();
 
     // Reconnect the Yjs socket promptly when an iPad tab is un-suspended —
     // otherwise the student writes into a disconnected doc until the
     // library's backoff timer fires.
     const onVisible = () => {
-      if (document.visibilityState !== "visible") return;
+      if (document.visibilityState !== "visible" || !isLive()) return;
       const p = provider as unknown as { wsconnected?: boolean; connect: () => void };
       if (p.wsconnected === false) {
         try { p.connect(); } catch { /* already connecting */ }
@@ -370,7 +371,16 @@ export default function PageEditor({
     };
     document.addEventListener("visibilitychange", onVisible);
 
+    /* Nobody at the tab: let the room go (lib/collab/liveness). Local edits
+       are kept by the provider and sent when it reconnects. */
+    const stopLive = onLiveChange((live) => {
+      if (!mountedRef.current) return;
+      if (live) { try { provider.connect(); } catch { /* already connecting */ } }
+      else provider.disconnect();
+    });
+
     return () => {
+      stopLive();
       document.removeEventListener("visibilitychange", onVisible);
       mountedRef.current = false;
       provider.disconnect();
@@ -392,13 +402,14 @@ export default function PageEditor({
     let firstOpen = true;
     const onSockOpen = () => {
       if (firstOpen) { firstOpen = false; return; } // ignore the initial connect
+      if (!isLive()) return;
       try { p.disconnect(); } catch { /* ignore */ }
       try { p.connect(); }    catch { /* ignore */ }
     };
     roomSocket?.addEventListener("open", onSockOpen);
 
     const iv = setInterval(() => {
-      if (document.visibilityState !== "visible") return;
+      if (document.visibilityState !== "visible" || !isLive()) return;
       if (p.wsconnected === false) { try { p.connect(); } catch { /* ignore */ } }
     }, 20000);
 

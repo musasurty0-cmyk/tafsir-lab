@@ -115,7 +115,7 @@ interface Props {
   /** Live collaborators — provided by WorkspacePageView via usePresence */
   presenceOthers?:    PresenceData[];
   /** Realtime room connection state — drives the Live indicator */
-  liveStatus?:        "connecting" | "connected" | "disconnected";
+  liveStatus?:        "connecting" | "connected" | "disconnected" | "paused";
   /** The page being viewed, so it can be bookmarked. Absent = no page open,
    *  and the control is not rendered rather than rendered inert. */
   activePageId?:      string | null;
@@ -213,10 +213,11 @@ export default function TopBar({
         <span className="live-pill" data-status={liveStatus} title={
           liveStatus === "connected"  ? "Real-time sync active"
         : liveStatus === "connecting" ? "Connecting to live session…"
+        : liveStatus === "paused"     ? "Paused while you are away. Live sync resumes as soon as you come back."
         :                               "Offline — changes save to the server but won't sync live"
         }>
           <span className="live-pill-dot" />
-          {liveStatus === "connected" ? "Live" : liveStatus === "connecting" ? "Connecting" : "Offline"}
+          {liveStatus === "connected" ? "Live" : liveStatus === "connecting" ? "Connecting" : liveStatus === "paused" ? "Paused" : "Offline"}
         </span>
       )}
       <PresenceBar others={presenceOthers} />

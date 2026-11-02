@@ -18,8 +18,10 @@ import { useEffect, useRef, useState } from "react";
 import PartySocket from "partysocket";
 import { PARTYKIT_HOST } from "./config";
 import { getCollabToken } from "./collab-token";
+import { isLive, onLiveChange } from "./liveness";
 
-export type RoomStatus = "connecting" | "connected" | "disconnected";
+/** "paused": closed on purpose because nobody is at the tab (lib/collab/liveness). */
+export type RoomStatus = "connecting" | "connected" | "disconnected" | "paused";
 
 export interface Room {
   socket:  PartySocket | null;
@@ -63,7 +65,7 @@ export function useRoom(pageId: string): Room {
     let lastRecv = Date.now();
 
     const onOpen  = () => { lastRecv = Date.now(); setStatus("connected"); setEpoch((e) => e + 1); };
-    const onClose = () => setStatus("disconnected");
+    const onClose = () => setStatus(isLive() ? "disconnected" : "paused");
     const onMsg   = () => { lastRecv = Date.now(); };
     s.addEventListener("open",    onOpen);
     s.addEventListener("close",   onClose);
@@ -75,7 +77,7 @@ export function useRoom(pageId: string): Room {
     // reconnect. This is what stops "sync worked, then quietly stopped until
     // a manual refresh" — the dead socket is now detected and replaced.
     const beat = setInterval(() => {
-      if (document.visibilityState !== "visible") return;
+      if (document.visibilityState !== "visible" || !isLive()) return;
       const now = Date.now();
       if (s.readyState === WebSocket.OPEN) {
         try { s.send(JSON.stringify({ type: "ping" })); } catch { /* ignore */ }
@@ -94,7 +96,7 @@ export function useRoom(pageId: string): Room {
     // student returns (e.g. after checking a translation app mid-lesson),
     // reconnect immediately instead of waiting for the backoff timer.
     const onVisible = () => {
-      if (document.visibilityState !== "visible") return;
+      if (document.visibilityState !== "visible" || !isLive()) return;
       if (s.readyState !== WebSocket.OPEN) {
         setStatus("connecting");
         try { s.reconnect(); } catch { /* already reconnecting */ }
@@ -102,7 +104,21 @@ export function useRoom(pageId: string): Room {
     };
     document.addEventListener("visibilitychange", onVisible);
 
+    // Let go of the room while nobody is here; take it back the moment they are.
+    const stopLive = onLiveChange((live) => {
+      if (live) {
+        lastRecv = Date.now();
+        setStatus("connecting");
+        try { s.reconnect(); } catch { /* already reconnecting */ }
+      } else {
+        s.close();
+        setStatus("paused");
+      }
+    });
+    if (!isLive()) { s.close(); setStatus("paused"); }
+
     return () => {
+      stopLive();
       clearInterval(beat);
       document.removeEventListener("visibilitychange", onVisible);
       s.removeEventListener("open",    onOpen);
