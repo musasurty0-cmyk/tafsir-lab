@@ -5057,6 +5057,14 @@ input, textarea { font: inherit; color: inherit; }
   padding-bottom: var(--canvas-runway);
   cursor: var(--cursor-text);
 }
+/* The far corner of the open canvas (PageEditor's extent): it is what makes
+   the page scroll on past its furthest box. Invisible, and never in the way. */
+.canvas-extent {
+  position: absolute;
+  width: 1px; height: 1px;
+  visibility: hidden;
+  pointer-events: none;
+}
 
 /* ── Block drag handle ──
    The ⋮⋮ grip beside the hovered block. Positioned by BlockHandle.tsx in
@@ -10457,8 +10465,46 @@ input, textarea { font: inherit; color: inherit; }
    it to Inter on <body>, which silently replaced the Calibri meant for notes.
    Carlito is loaded in app/layout.tsx for devices without Calibri. */
 body {
-  --font-body: "Calibri", var(--font-carlito, "Carlito"), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-body: "TL Arabic Notes", "Calibri", var(--font-carlito, "Carlito"), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
+/* Arabic in a note is set in the King Fahd Uthmanic face (the owner's rule for
+   all Arabic), for Arabic letters only: Latin falls through to Calibri.
+   Calibri's own Arabic exists only on Windows; on an iPad the fallback was the
+   system face, whose tall metrics pushed every line holding an Arabic word
+   apart from its neighbours. Here the face is enlarged to sit level with the
+   Latin x-height, and its line metrics are Calibri's, so an Arabic word inside
+   an English line leaves the line spacing exactly as it was. */
+@font-face {
+  font-family: "TL Arabic Notes";
+  src: url("/fonts/UthmanicHafs1Ver18.woff2") format("woff2");
+  font-display: swap;
+  size-adjust: 122%;
+  ascent-override: 62%;
+  descent-override: 21%;
+  line-gap-override: 0%;
+  unicode-range: U+0600-060B, U+060D-061A, U+061C-061E, U+0620-0669, U+066E-06D3, U+06D5-06FF,
+                 U+0750-077F, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF;
+}
+
+/* One line advance for every kind of body line. Paragraphs advanced 1.82 and
+   list items 1.7, so the rhythm changed each time a list began; lists also
+   carried 0.4em above and 0.8em below on top of any blank line, which is
+   where the uneven gaps came from. */
+.page-editor-content { line-height: 1.7; }
+.page-editor-content :is(p, li, blockquote, td, th) { line-height: 1.7; }
+.page-editor-content :is(ul, ol) { margin: 0.2em 0; }
+.page-editor-content li, .page-editor-content li + li { margin: 0.12em 0 0; }
+/* A line that is all Arabic gets room for its marks: the vowel signs stack
+   above and below, and at the Latin advance they touched the line above. */
+.page-editor-content :is(p, li, h2, h3)[dir="rtl"] { line-height: 2.05; }
+.page-editor-content blockquote[dir="rtl"] p { line-height: 2.05; }
+/* Italic Arabic is a forgery: the Uthmanic face has no italic, so the browser
+   slanted it (OneNote sets whole quotes in italic). Never synthesise one; the
+   Latin faces here all have true italics and are unaffected. */
+.page-editor-content, .free-textbox-text, .free-textbox-input { font-synthesis-style: none; }
+.free-textbox-text, .free-textbox-input { line-height: 1.7; }
+/* Headings keep their serif for Latin; Arabic in them takes the same face. */
+.page-editor-content :is(h1, h2, h3) { font-family: "TL Arabic Notes", var(--font-serif); }
 .page-editor-content,
 .free-textbox-input,
 .free-textbox .page-editor-content {

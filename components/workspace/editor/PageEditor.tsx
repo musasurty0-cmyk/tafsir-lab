@@ -262,6 +262,64 @@ export default function PageEditor({
     return () => document.removeEventListener("click", onDocClick);
   }, [createTempAt]);
 
+  // ── Open canvas past the furthest box (the OneNote model) ──────────────
+  /* The page used to end exactly at the edge of its furthest text box. A box
+     at the right could not be given a neighbour, and one placed at the edge
+     of the screen had nowhere further to go. Like OneNote, the page now always
+     reaches past whatever is on it: half a screen beyond the furthest box,
+     rightward and downward, recomputed as boxes are placed, dragged, widened,
+     or grow while typing. It never shrinks under the view, so moving a box
+     back does not yank away the part of the page you are looking at.
+     The extent is an invisible marker, not a width on the page: widening
+     .page-editor would also widen the main text column. */
+  const [extent, setExtent] = useState<{ w: number; h: number } | null>(null);
+  useEffect(() => {
+    const pe = pageEditorRef.current;
+    if (!pe) return;
+    const PARTS = ":scope > .free-textbox, :scope > .main-doc-container";
+    let raf = 0;
+    const measure = () => {
+      raf = 0;
+      const wrap = pe.closest(".doc-wrap") as HTMLElement | null;
+      const z = zoomAt(pe), pr = pe.getBoundingClientRect();
+      let right = 0, bottom = 0;
+      pe.querySelectorAll<HTMLElement>(PARTS).forEach((el) => {
+        const r = el.getBoundingClientRect();
+        right = Math.max(right, (r.right - pr.left) / z);
+        bottom = Math.max(bottom, (r.bottom - pr.top) / z);
+      });
+      const vw = (wrap?.clientWidth ?? 1200) / z, vh = (wrap?.clientHeight ?? 800) / z;
+      let w = right + Math.max(480, vw * 0.5), h = bottom + Math.max(360, vh * 0.5);
+      if (wrap) {
+        const wr = wrap.getBoundingClientRect();
+        w = Math.max(w, (wr.right - pr.left) / z);
+        h = Math.max(h, (wr.bottom - pr.top) / z);
+      }
+      w = Math.ceil(w); h = Math.ceil(h);
+      setExtent((cur) => (cur && Math.abs(cur.w - w) < 8 && Math.abs(cur.h - h) < 8 ? cur : { w, h }));
+    };
+    const schedule = () => { if (!raf) raf = requestAnimationFrame(measure); };
+    // Sizes come from a ResizeObserver; positions from the boxes themselves.
+    const ro = new ResizeObserver(schedule);
+    const observeAll = () => { ro.disconnect(); pe.querySelectorAll(PARTS).forEach((el) => ro.observe(el)); };
+    const mo = new MutationObserver(() => { observeAll(); schedule(); });
+    observeAll();
+    mo.observe(pe, { childList: true });
+    pe.addEventListener("tl:box-geometry", schedule);
+    window.addEventListener("resize", schedule);
+    schedule();
+    return () => {
+      ro.disconnect(); mo.disconnect();
+      pe.removeEventListener("tl:box-geometry", schedule);
+      window.removeEventListener("resize", schedule);
+      if (raf) cancelAnimationFrame(raf);
+    };
+  }, []);
+  // The main container moves by transform, which no observer sees either.
+  useEffect(() => {
+    pageEditorRef.current?.dispatchEvent(new CustomEvent("tl:box-geometry"));
+  }, [docOffset.x, docOffset.y]);
+
   // ── Yjs document + PartyKit provider ─────────────────────────────────
   // Created synchronously on first render so the Collaboration and
   // CollaborationCursor extensions receive a real document + provider at
@@ -805,6 +863,8 @@ export default function PageEditor({
           onPersistTemp={persistTemp}
         />
       ))}
+
+      {extent && <div className="canvas-extent" aria-hidden style={{ left: extent.w - 1, top: extent.h - 1 }} />}
 
       {/* Stylus ink — pen draws directly, no buttons, no mode switch.
           The tool pill appears only while annotating. */}

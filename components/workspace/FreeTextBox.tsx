@@ -127,11 +127,16 @@ export default function FreeTextBox({ note, startEditing = false, ayahInline = f
     const el = boxRef.current;
     if (!el || isTemp) return;
     let timer: ReturnType<typeof setTimeout> | null = null;
+    /* Compared with the width last SAVED, not the one the box loaded with: the
+       observer also fires as the box grows taller while typing, and against
+       the stale prop every keystroke after a resize sent the width again. */
+    let saved = note.width || TEXTBOX_DEFAULT_WIDTH;
     const ro = new ResizeObserver(() => {
       const w = Math.round(el.offsetWidth);
-      if (!w || Math.abs(w - (note.width || TEXTBOX_DEFAULT_WIDTH)) < 4) return;
+      if (!w || Math.abs(w - saved) < 4) return;
       if (timer) clearTimeout(timer);
       timer = setTimeout(() => {
+        saved = w;
         fetch(`/api/notes/${note.id}`, {
           method:  "PATCH",
           headers: { "Content-Type": "application/json" },
@@ -278,6 +283,13 @@ export default function FreeTextBox({ note, startEditing = false, ayahInline = f
 
   // Never leave a scroll loop running after the box goes away.
   useEffect(() => () => stopAuto(), []);
+
+  /* The page keeps open canvas beyond its furthest box (PageEditor's slack).
+     It has to hear when a box moves or widens, which no observer reports: a
+     ResizeObserver sees size, not position. So the box says so itself. */
+  useEffect(() => {
+    boxRef.current?.dispatchEvent(new CustomEvent("tl:box-geometry", { bubbles: true }));
+  }, [pos.x, pos.y, width]);
 
   // ── Render ──────────────────────────────────────────────────────────────
 
