@@ -49,6 +49,13 @@ function describe(type: string, key: string): string {
   return "Selection";
 }
 
+/* Drawn, not an emoji: it takes the card's colour and size like the rest of the UI. */
+const LinkIcon = () => (
+  <svg className="cxc-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <path d="M10 13a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07l-1.5 1.5" /><path d="M14 11a5 5 0 0 0-7.07 0l-3 3a5 5 0 0 0 7.07 7.07l1.5-1.5" />
+  </svg>
+);
+
 function ConnectionCard({ node, extension }: NodeViewProps) {
   const id = node.attrs.connectionId as string;
   const workspaceId = (extension.options as { workspaceId?: string }).workspaceId ?? "";
@@ -68,7 +75,7 @@ function ConnectionCard({ node, extension }: NodeViewProps) {
   if (state === "loading") {
     return (
       <NodeViewWrapper className="cxc cxc--loading" contentEditable={false}>
-        <span className="cxc-icon">🔗</span>
+        <LinkIcon />
         <span className="cxc-name">Loading Connection…</span>
       </NodeViewWrapper>
     );
@@ -79,19 +86,23 @@ function ConnectionCard({ node, extension }: NodeViewProps) {
        rendering an empty card that looks like a loading failure. */
     return (
       <NodeViewWrapper className="cxc cxc--missing" contentEditable={false}>
-        <span className="cxc-icon">🔗</span>
+        <LinkIcon />
         <span className="cxc-name">This Connection no longer exists</span>
       </NodeViewWrapper>
     );
   }
 
-  const other = describe(data.targetType, data.targetKey);
+  /* Both ends, in the order they were chosen. The card said only "Connected
+     to 61:14", so a reader could not tell what that was joined to; the
+     source is often not the āyah the note happens to sit beside. */
+  const from = describe(data.sourceType, data.sourceKey);
+  const to   = describe(data.targetType, data.targetKey);
 
   return (
     <NodeViewWrapper className="cxc" contentEditable={false}>
       <div className="cxc-head">
-        <span className="cxc-icon">🔗</span>
-        <span className="cxc-to">Connected to {other}</span>
+        <LinkIcon />
+        <span className="cxc-to">{from} <span aria-label="connected to">↔</span> {to}</span>
         {data.category && <span className="cxc-cat">{data.category}</span>}
       </div>
       <div className="cxc-name">{data.name}</div>
