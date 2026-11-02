@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { NodeViewWrapper, type NodeViewProps } from "@tiptap/react";
 import { TAFSIR_LANGUAGE_NAMES } from "@/lib/tafsir/spa5k-catalog";
 import { sanitizeTafsirHtml } from "@/lib/sanitize-html";
@@ -36,6 +36,12 @@ function loadSources(): Promise<SourceMeta[]> {
 
 // ── Component ──────────────────────────────────────────────────────────────
 
+/* A whole entry can be very long: Ibn Kathīr on 61:4 opens with the Sūrah's
+   introduction and ran to nearly two screens in the middle of a note, burying
+   the writing around it. Past this height the entry is folded, faded at the
+   foot, with a control to read the rest. Not stored: it opens per reader. */
+const FOLD_PX = 320;
+
 export default function TafsirBlockView({
   node,
   updateAttributes,
@@ -56,6 +62,19 @@ export default function TafsirBlockView({
   const [retryKey,   setRetryKey]   = useState(0);
   const [html,       setHtml]       = useState(contentHtml || "");
   const [sources,    setSources]    = useState<SourceMeta[]>([]);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [long, setLong] = useState(false);
+  const [open, setOpen] = useState(false);
+  useLayoutEffect(() => {
+    const el = contentRef.current;
+    if (!el) return;
+    // Fold only when there is a real amount more to read, not a line or two.
+    const check = () => setLong(el.scrollHeight > FOLD_PX + 120);
+    check();
+    const ro = new ResizeObserver(check);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [html, fetching]);
 
   useEffect(() => {
     let alive = true;
@@ -211,12 +230,20 @@ export default function TafsirBlockView({
 
           {!fetching && !fetchError && html && (
             <div
+              ref={contentRef}
               className="tafsir-block-content"
               dir="auto"
+              data-folded={long && !open ? "true" : "false"}
+              style={long && !open ? { maxHeight: FOLD_PX } : undefined}
               // Defense-in-depth: blocks persisted before server-side
               // sanitisation carry raw HTML in their attrs
               dangerouslySetInnerHTML={{ __html: sanitizeTafsirHtml(html) }}
             />
+          )}
+          {!fetching && !fetchError && long && (
+            <button type="button" className="tafsir-block-more" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
+              {open ? "Show less" : "Show all of it"}
+            </button>
           )}
         </div>
       </div>

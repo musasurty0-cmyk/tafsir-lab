@@ -904,7 +904,12 @@ function RichBody({
                       insertAyahInline(`${t.surah}:${t.ayah}`, range);
                     }
                   }}
-                  onCancel={() => setAyahSearch(null)}
+                  onCancel={() => {
+                    // Back out the "/ayah" it was opened from, and keep typing where you were.
+                    const { range } = ayahSearch;
+                    setAyahSearch(null);
+                    if (editor && !editor.isDestroyed) editor.chain().focus().deleteRange(range).run();
+                  }}
                 />
               </div>
             );
@@ -936,7 +941,11 @@ function RichBody({
               insertTafsirVerse(verseKey);
             }
           }}
-          onCancel={() => setVersePicker(null)}
+          onCancel={() => {
+            const { range } = versePicker;
+            setVersePicker(null);
+            if (editor && !editor.isDestroyed) editor.chain().focus().deleteRange(range).run();
+          }}
         />
       )}
     </>

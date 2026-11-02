@@ -65,6 +65,20 @@ export function normalizeLatin(s: string): string {
     .replace(/[^a-z0-9]/g, "");
 }
 
+/**
+ * A Surah name with the spelling choices taken out, so "saff", "Al-Saff" and
+ * "As-Saf" meet, as do "fatiha" and "Al-Fatihah", "yaseen" and "Ya-Sin". The
+ * stored names follow one transliteration and students write another: the
+ * cohort typed "saff" for their own Surah and got only As-Saffat. Drops the
+ * article, doubled letters, a closing h, and reads e as i.
+ */
+export function nameSkeleton(s: string): string {
+  let k = normalizeLatin(s);
+  const art = /^(al|as|an|at|ar|ash|ad|adh|az|aal|ad)(?=[a-z]{3})/.exec(k);
+  if (art) k = k.slice(art[0].length);
+  return k.replace(/e/g, "i").replace(/(.)\1+/g, "$1").replace(/h$/, "");
+}
+
 /** True when the string contains Arabic letters. */
 export const isArabic = (s: string) => /[ء-يٱ]/.test(s);
 
@@ -147,6 +161,12 @@ export function searchChapters(query: string, chapters: Chapter[]): ChapterHit[]
         if (f === qLatin)            score = Math.max(score, 95);
         else if (f.startsWith(qLatin)) score = Math.max(score, 80);
         else if (f.includes(qLatin))   score = Math.max(score, 55);
+        // The same name in another spelling, just below an exact match.
+        const fk = nameSkeleton(field), qk = nameSkeleton(q);
+        if (qk.length >= 3) {
+          if (fk === qk)               score = Math.max(score, 90);
+          else if (fk.startsWith(qk))  score = Math.max(score, 70);
+        }
       }
     }
 

@@ -5793,6 +5793,18 @@ input, textarea { font: inherit; color: inherit; }
 }
 .tafsir-block-content p { margin: 0 0 10px; }
 .tafsir-block-content p:last-child { margin-bottom: 0; }
+/* A long entry, folded: it fades out rather than stopping at a hard edge. */
+.tafsir-block-content[data-folded="true"] {
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(#000 calc(100% - 72px), transparent);
+          mask-image: linear-gradient(#000 calc(100% - 72px), transparent);
+}
+.tafsir-block-more {
+  margin-top: 6px; padding: 6px 10px; min-height: 36px;
+  border: none; border-radius: 8px; background: transparent;
+  font: 500 13.5px/1.2 var(--font-sans); color: var(--accent-ink); cursor: pointer;
+}
+.tafsir-block-more:hover { background: var(--accent-soft); }
 
 .tafsir-block-skeleton { display: flex; flex-direction: column; gap: 9px; padding: 4px 0; }
 .tafsir-skeleton-line {

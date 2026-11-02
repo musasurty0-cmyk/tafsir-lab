@@ -730,6 +730,15 @@ export default function PageEditor({
    
   }, [editor, ayahSearch]);
 
+  /* Backing out of a picker (Escape, Cancel) takes the "/ayah …" it was opened
+     from with it and puts the caret back where it was. Without this the
+     command stayed in the note as text, and focus was left on the page, so
+     everything typed next went nowhere. /link already worked this way. */
+  const cancelPicker = useCallback((range: { from: number; to: number }, close: () => void) => {
+    close();
+    if (editor && !editor.isDestroyed) editor.chain().focus().deleteRange(range).run();
+  }, [editor]);
+
   /* The āyah panel is a portal, so nothing unmounts it implicitly. /link's
      equivalent now lives inside useConnectionLink, with the state it resets. */
   useEffect(() => () => setAyahSearch(null), []);
@@ -931,7 +940,7 @@ export default function PageEditor({
                   currentSurah={studySurah}
                   ranges
                   onSelect={insertAyahTarget}
-                  onCancel={() => setAyahSearch(null)}
+                  onCancel={() => cancelPicker(ayahSearch.range, () => setAyahSearch(null))}
                 />
               </div>
             );
@@ -960,7 +969,7 @@ export default function PageEditor({
             <button className="tafsir-choice-btn" onClick={chooseTafsirPassage}>
               Choose a passage…
             </button>
-            <button className="tafsir-choice-cancel" onClick={() => setTafsirChoice(null)}>
+            <button className="tafsir-choice-cancel" onClick={() => cancelPicker(tafsirChoice.range, () => setTafsirChoice(null))}>
               Cancel
             </button>
           </div>,
@@ -981,7 +990,7 @@ export default function PageEditor({
             )).sort((a, b) => a - b)
           }
           onConfirm={insertTafsirVerse}
-          onCancel={() => setVersePicker(null)}
+          onCancel={() => cancelPicker(versePicker.range, () => setVersePicker(null))}
         />
       )}
     </div>

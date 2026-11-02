@@ -46,6 +46,7 @@ import { TextDirection } from "./TextDirection";
 import { ListItemWithHeading, PasteTidy } from "./PasteTidy";
 import { EmptyFirstLine } from "./EmptyFirstLine";
 import { TabKey } from "./TabKey";
+import { EmbedGuard } from "./EmbedGuard";
 
 export interface BaseEditorOptions {
   /**
@@ -95,6 +96,8 @@ export function baseExtensions(o: BaseEditorOptions): Extensions {
     EmptyFirstLine,
     // Tab writes a tab instead of sending focus out of the note.
     TabKey,
+    // One stray Backspace or Delete selects an embed rather than deleting it.
+    EmbedGuard,
 
     Underline,
     Highlight.configure({ multicolor: true }),
