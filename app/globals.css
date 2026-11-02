@@ -10496,13 +10496,16 @@ body {
 .page-editor-content li, .page-editor-content li + li { margin: 0.12em 0 0; }
 /* A line that is all Arabic gets room for its marks: the vowel signs stack
    above and below, and at the Latin advance they touched the line above. */
-.page-editor-content :is(p, li, h2, h3)[dir="rtl"] { line-height: 2.05; }
-.page-editor-content blockquote[dir="rtl"] p { line-height: 2.05; }
+/* .is-rtl is set by TextDirection from a line's letters, so a line typed in
+   Arabic (stored as dir="auto") counts as well as one pasted with dir="rtl". */
+.page-editor-content :is(p, h2, h3):is(.is-rtl, [dir="rtl"]) { line-height: 2.05; }
 /* Italic Arabic is a forgery: the Uthmanic face has no italic, so the browser
    slanted it (OneNote sets whole quotes in italic). Never synthesise one; the
    Latin faces here all have true italics and are unaffected. */
 .page-editor-content, .free-textbox-text, .free-textbox-input { font-synthesis-style: none; }
 .free-textbox-text, .free-textbox-input { line-height: 1.7; }
+/* A tab typed into a note is a modest indent, not the browser's 8 spaces. */
+.page-editor-content { tab-size: 4; }
 /* Headings keep their serif for Latin; Arabic in them takes the same face. */
 .page-editor-content :is(h1, h2, h3) { font-family: "TL Arabic Notes", var(--font-serif); }
 .page-editor-content,

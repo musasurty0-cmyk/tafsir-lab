@@ -45,6 +45,7 @@ import { ToggleListExtension } from "./ToggleListExtension";
 import { TextDirection } from "./TextDirection";
 import { ListItemWithHeading, PasteTidy } from "./PasteTidy";
 import { EmptyFirstLine } from "./EmptyFirstLine";
+import { TabKey } from "./TabKey";
 
 export interface BaseEditorOptions {
   /**
@@ -92,6 +93,8 @@ export function baseExtensions(o: BaseEditorOptions): Extensions {
     PasteTidy,
     // A blank first line can be deleted, so a title can reach the top.
     EmptyFirstLine,
+    // Tab writes a tab instead of sending focus out of the note.
+    TabKey,
 
     Underline,
     Highlight.configure({ multicolor: true }),

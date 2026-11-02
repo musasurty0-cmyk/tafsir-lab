@@ -23,6 +23,10 @@
  */
 
 import { Extension } from "@tiptap/core";
+import { Plugin, PluginKey } from "@tiptap/pm/state";
+import { Decoration, DecorationSet } from "@tiptap/pm/view";
+import type { Node as PMNode } from "@tiptap/pm/model";
+import { directionOf } from "@/lib/text-direction";
 
 /** Block types that carry their own direction. */
 const DIRECTIONAL_BLOCKS = [
@@ -65,6 +69,34 @@ export const TextDirection = Extension.create({
         },
       },
     ];
+  },
+
+  /* Arabic lines need more room between them than English ones (the vowel
+     signs stack above and below). A typed line is stored as dir="auto", so
+     CSS cannot tell it is Arabic: [dir="rtl"] misses it, and :dir(rtl) is
+     rewritten by the build into :lang() selectors that match nothing here.
+     So each line that reads right to left is marked with a class, worked out
+     from its letters on every change. Nothing is stored in the document. */
+  addProseMirrorPlugins() {
+    const key = new PluginKey("rtlLines");
+    const build = (doc: PMNode) => {
+      const decos: Decoration[] = [];
+      doc.descendants((node, pos) => {
+        if (!node.isTextblock) return true;
+        const dir = node.attrs.dir ?? directionOf(node.textContent);
+        if (dir === "rtl") decos.push(Decoration.node(pos, pos + node.nodeSize, { class: "is-rtl" }));
+        return false;
+      });
+      return DecorationSet.create(doc, decos);
+    };
+    return [new Plugin({
+      key,
+      state: {
+        init: (_, state) => build(state.doc),
+        apply: (tr, old) => (tr.docChanged ? build(tr.doc) : old),
+      },
+      props: { decorations: (state) => key.getState(state) },
+    })];
   },
 
   addCommands() {
