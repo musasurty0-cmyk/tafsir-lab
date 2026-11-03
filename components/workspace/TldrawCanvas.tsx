@@ -5,6 +5,7 @@ import "tldraw/tldraw.css";
 import { useState } from "react";
 import { ChevronLeft, ChevronRight, BookMarked } from "lucide-react";
 import type { Chapter, Verse } from "@/lib/types";
+import { plainTranslation } from "@/lib/quran-text";
 
 interface Props {
   chapter: Chapter;
@@ -113,7 +114,7 @@ export default function TldrawCanvas({ chapter, verses, onVerseClick }: Props) {
               {verses.map((verse) => {
                 const isCollapsed = collapsed.has(verse.verse_key);
                 const words = verse.words.filter((w) => w.char_type_name === "word");
-                const translation = verse.translations?.[0]?.text ?? "";
+                const translation = plainTranslation(verse.translations?.[0]?.text);
 
                 return (
                   <div

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { fetchQpcSurah } from "@/lib/quran-api";
+import { plainTranslation } from "@/lib/quran-text";
 
 /**
  * Verse TEXT search.
@@ -68,7 +69,7 @@ export async function GET(req: Request) {
         // Upstream marks matches with <em>; the UI does its own highlighting
         // from the normalised query, so the markup is stripped rather than
         // trusted and injected.
-        translation: item.translations?.[0]?.text?.replace(/<[^>]+>/g, "").trim(),
+        translation: plainTranslation(item.translations?.[0]?.text),
       }];
     });
 

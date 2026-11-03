@@ -25,6 +25,7 @@ import ProgressControl from "./ProgressControl";
 import NoteCard, { type NoteData } from "./NoteCard";
 import NoteCreator from "./NoteCreator";
 import { verseArabic } from "@/lib/quran-text";
+import { plainTranslation } from "@/lib/quran-text";
 
 // ── Icons ──────────────────────────────────────────────────────────────────
 
@@ -84,8 +85,7 @@ export default function AyahBlock({
 
   const [surahNum, ayahNum] = verse.verse_key.split(":").map(Number);
   const wordTokens = verse.words.filter((w) => w.char_type_name === "word");
-  const translation = verse.translations?.[0]?.text ?? "";
-  const translationClean = translation.replace(/<[^>]+>/g, "");
+  const translationClean = plainTranslation(verse.translations?.[0]?.text);
 
   const groupStatus = groupEntry?.status ?? null;
 

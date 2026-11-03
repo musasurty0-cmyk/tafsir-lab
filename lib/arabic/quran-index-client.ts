@@ -6,6 +6,7 @@
  */
 
 import type { QuranIndex } from "./quran-match";
+import { plainTranslation } from "@/lib/quran-text";
 
 let pending: Promise<QuranIndex | null> | null = null;
 
@@ -40,7 +41,7 @@ export function loadAyah(verseKey: string): Promise<Ayah | null> {
             isWord: w.char_type_name === "word",
             page: typeof w.v2_page === "number" ? w.v2_page : null,
           })),
-          translation: d.verse.translations?.[0]?.text?.replace(/<sup[^>]*>.*?<\/sup>/g, "").replace(/<[^>]+>/g, "").trim() ?? null,
+          translation: plainTranslation(d.verse.translations?.[0]?.text) || null,
         };
       })
       .catch(() => null);

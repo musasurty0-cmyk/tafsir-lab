@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { plainTranslation } from "@/lib/quran-text";
 
 /**
  * Every āyah of one surah, trimmed to what the picker shows.
@@ -45,8 +46,7 @@ export async function GET(
       // qpc, number included: the King Fahd face draws it as the āyah's
       // ornament (lib/quran-text).
       arabic: (v.text_qpc_hafs ?? "").trim(),
-      // Footnote markers are <sup> numbers; drop them whole, not just their tags.
-      translation: v.translations?.[0]?.text?.replace(/<sup[^>]*>.*?<\/sup>/g, "").replace(/<[^>]+>/g, "").trim(),
+      translation: plainTranslation(v.translations?.[0]?.text),
     }));
     return NextResponse.json({ verses });
   } catch (e) {

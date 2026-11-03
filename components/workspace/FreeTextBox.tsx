@@ -49,6 +49,7 @@ import type { NoteData } from "./NoteCard";
 import { StaticDoc, docIsEmpty } from "@/lib/prosemirror-static";
 import { announceFocus } from "./editor/blockFormat";
 import { verseArabic, withoutAyahNumber } from "@/lib/quran-text";
+import { plainTranslation } from "@/lib/quran-text";
 
 /** Default width for a freshly placed container — wide enough that the slash
  *  palette, ayah/tafsir search results and toolbars are comfortable without
@@ -786,7 +787,7 @@ function RichBody({
       .then(({ verse }: { verse: { text_uthmani?: string; text_qpc_hafs?: string; translations?: { text?: string }[] } }) => {
         // The reference closes it, so the āyah's own number goes.
         const ar = withoutAyahNumber(verseArabic(verse));
-        const tr = (verse.translations?.[0]?.text ?? "").replace(/<[^>]+>/g, "").trim();
+        const tr = plainTranslation(verse.translations?.[0]?.text);
         const content: object[] = [
           { type: "paragraph", content: ar ? [{ type: "text", text: `${ar} ﴿${verseKey}﴾` }] : [] },
         ];

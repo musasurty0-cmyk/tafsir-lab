@@ -9,6 +9,7 @@ import { formatPlainTafsir } from "@/lib/tafsir/format-content";
 import { useDismissable } from "@/lib/use-dismissable";
 import type { Verse } from "@/lib/types";
 import { verseArabic } from "@/lib/quran-text";
+import { plainTranslation } from "@/lib/quran-text";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -46,10 +47,6 @@ interface Props {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────
-
-function stripTags(html: string): string {
-  return html.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
-}
 
 const LS_SOURCE_KEY = "tl-tafsir-source";
 const LS_LANG_KEY   = "tl-tafsir-lang";
@@ -271,7 +268,7 @@ export default function TafsirDrawer({ open, verseKey, verses, onClose }: Props)
     /* Surah Info is NOT a tafsīr source: it describes the Surah as a whole
        rather than commenting on this āyah, so it gets its own section instead
        of being mixed into the commentary. */
-    { id: "info",         label: "Surah Info" },
+    { id: "info",         label: "Sūrah info" },
   ];
 
   /* Full-screen is a per-reader habit, not a per-session one: someone who
@@ -301,10 +298,9 @@ export default function TafsirDrawer({ open, verseKey, verses, onClose }: Props)
       <div className="drawer-head">
         <div className="drawer-head-text">
           <div className="drawer-head-title">{t("drawer.title")}</div>
-          {/* Source mode, then the reference: three quiet levels rather than a
-              modal title bar. Both truncate — source and Surah names are
-              arbitrarily long. */}
-          <div className="drawer-head-sub">{sourceName}</div>
+          {/* Then the reference. The source is not named here: the select
+              under the header already shows it, and the commentary opens with
+              its citation, so a third copy only pushed the text down. */}
           {activeAyah && (
             <div className="drawer-head-ref">Al-Qurʾān {activeAyah}</div>
           )}
@@ -419,7 +415,7 @@ export default function TafsirDrawer({ open, verseKey, verses, onClose }: Props)
               <p className="drawer-verse-arabic" dir="rtl" lang="ar">{verseArabic(activeVerse)}</p>
               {activeVerse.translations?.[0]?.text && (
                 <p className="drawer-verse-translation">
-                  {stripTags(activeVerse.translations[0].text)}
+                  {plainTranslation(activeVerse.translations[0].text)}
                 </p>
               )}
             </section>

@@ -17,7 +17,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { qcfFamily, loadQCFFontsFor } from "@/lib/qcf-font";
 import { qcfWords } from "@/lib/qcf-words";
-import { verseArabic, isQpcText } from "@/lib/quran-text";
+import { verseArabic, isQpcText, plainTranslation } from "@/lib/quran-text";
 import { NodeViewWrapper, type NodeViewProps } from "@tiptap/react";
 import { useEditorCtx } from "./EditorContext";
 import NoteCard from "../NoteCard";
@@ -77,10 +77,6 @@ function loadSurahRows(surah: number) {
  *  it; the passage stays in the Uthmani text face, which needs none. */
 const RUN_GLYPH_MAX = 40;
 
-/** Translation HTML as plain text. Footnote markers go first, whole: they are
- *  <sup> numbers, and stripping only the tags left "Allāh1" in the sentence. */
-const plain = (html: string | undefined) =>
-  (html ?? "").replace(/<sup[^>]*>.*?<\/sup>/g, "").replace(/<[^>]+>/g, "").trim();
 
 const arabicDigits = (n: number) => String(n).replace(/\d/g, (d) => "٠١٢٣٤٥٦٧٨٩"[Number(d)]);
 
@@ -143,9 +139,13 @@ export default function AyahBlockView({
       /* Written when missing, and rewritten once when it is in the old
          Uthmani encoding (lib/quran-text), by whoever can edit. */
       if ((!arabicText || !isQpcText(arabicText)) && verses.length && editor.isEditable) {
-        updateAttributes({
-          arabicText:      verses.map((v) => (isQpcText(v.ar) ? v.ar : `${v.ar} ﴿${arabicDigits(v.ayah)}﴾`)).join(" "),
-          translationText: verses.map((v) => `(${v.ayah}) ${v.tr}`).join(" "),
+        // Not from inside the effect: see writeBack below.
+        queueMicrotask(() => {
+          if (!live) return;
+          updateAttributes({
+            arabicText:      verses.map((v) => (isQpcText(v.ar) ? v.ar : `${v.ar} ﴿${arabicDigits(v.ayah)}﴾`)).join(" "),
+            translationText: verses.map((v) => `(${v.ayah}) ${v.tr}`).join(" "),
+          });
         });
       }
     };
@@ -154,7 +154,7 @@ export default function AyahBlockView({
       done(pre.map((v, i) => ({
         ayah: ayahNumber + i,
         ar:   verseArabic(v!),
-        tr:   plain(v!.translations?.[0]?.text),
+        tr:   plainTranslation(v!.translations?.[0]?.text),
       })));
     } else {
       loadSurahRows(surahNumber)
@@ -235,38 +235,48 @@ export default function AyahBlockView({
     if (!refresh) setFetching(true);
     setFetchError(null);
 
+    /* `live` guards the write in particular. This is a TipTap node view, and
+       the write goes back into the document: if the block was deleted, or the
+       reader navigated away, before it lands, it targets a node position that
+       no longer exists. A display-only stale update would merely look wrong;
+       this one throws.
+
+       And it is queued, never made from the effect itself: the transaction
+       re-renders node views, TipTap mounts their React roots with flushSync,
+       and React refuses that in the middle of its own commit. */
+    let live = true;
+    const writeBack = (ar: string, tr: string) => {
+      if (!editor.isEditable || !isQpcText(ar)) return;
+      queueMicrotask(() => {
+        if (live) updateAttributes(refresh ? { arabicText: ar } : { arabicText: ar, translationText: tr });
+      });
+    };
+
     // Check the pre-loaded verses for the current surah first (instant).
     const preloaded = ctx.verses.find((v) => v.verse_key === verseKey);
     if (preloaded) {
       const ar = verseArabic(preloaded);
-      const tr = plain(preloaded.translations?.[0]?.text);
+      const tr = plainTranslation(preloaded.translations?.[0]?.text);
       // Update local display state immediately (synchronous, no TipTap lag).
       setDisplayArabic(ar);
       if (!refresh) setDisplayTranslation(tr);
-      // Persist into TipTap attrs for future renders / DB save (async, that's fine).
-      if (editor.isEditable && isQpcText(ar)) updateAttributes(refresh ? { arabicText: ar } : { arabicText: ar, translationText: tr });
+      // Persist into TipTap attrs for future renders / DB save.
+      writeBack(ar, tr);
       setFetching(false);
-      return;
+      return () => { live = false; };
     }
 
-    /* Cross-surah verse: fetch from the server proxy.
-
-       `live` guards updateAttributes() in particular. This is a TipTap node
-       view, and the success path writes back into the document — if the block
-       was deleted, or the reader navigated away, while the request was in
-       flight, that write targets a node position that no longer exists. A
-       display-only stale update would merely look wrong; this one throws. */
-    let live = true;
+    // Cross-surah verse: fetch from the server proxy.
     const urlKey = verseKey.replace(":", "_");
     fetch(`/api/ayah/${urlKey}`)
       .then((r) => (r.ok ? r.json() : Promise.reject(r.statusText)))
       .then(({ verse }) => {
         if (!live) return;
         const ar = verseArabic(verse);
-        const tr = plain(verse.translations?.[0]?.text as string | undefined);
+        const tr = plainTranslation(verse.translations?.[0]?.text as string | undefined);
         setDisplayArabic(ar);
         if (!refresh) setDisplayTranslation(tr);
-        if (editor.isEditable && isQpcText(ar)) updateAttributes(refresh ? { arabicText: ar } : { arabicText: ar, translationText: tr });
+        writeBack(ar, tr);
       })
       .catch(() => { if (live && !refresh) setFetchError("Could not load this verse."); })
       .finally(() => { if (live) setFetching(false); });

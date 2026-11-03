@@ -31,3 +31,10 @@ export function withoutAyahNumber(text: string): string {
 export function isQpcText(text: string | null | undefined): boolean {
   return !!text && / [٠-٩]+/.test(text);
 }
+
+/** A translation's HTML as plain text. Footnote markers go first, whole: they
+ *  are <sup> numbers, and stripping only the tags left "Allāh,1" in the
+ *  sentence. */
+export function plainTranslation(html: string | null | undefined): string {
+  return (html ?? "").replace(/<sup[^>]*>.*?<\/sup>/g, "").replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
+}
