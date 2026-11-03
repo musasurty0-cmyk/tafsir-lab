@@ -76,15 +76,27 @@ export const TextDirection = Extension.create({
      CSS cannot tell it is Arabic: [dir="rtl"] misses it, and :dir(rtl) is
      rewritten by the build into :lang() selectors that match nothing here.
      So each line that reads right to left is marked with a class, worked out
-     from its letters on every change. Nothing is stored in the document. */
+     from its letters on every change, and each line without a stored
+     direction is given the computed one. Nothing is stored in the document. */
   addProseMirrorPlugins() {
     const key = new PluginKey("rtlLines");
     const build = (doc: PMNode) => {
       const decos: Decoration[] = [];
       doc.descendants((node, pos) => {
         if (!node.isTextblock) return true;
-        const dir = node.attrs.dir ?? directionOf(node.textContent);
-        if (dir === "rtl") decos.push(Decoration.node(pos, pos + node.nodeSize, { class: "is-rtl" }));
+        const stored = node.attrs.dir as string | null | undefined;
+        const dir = stored ?? directionOf(node.textContent);
+        /* A typed line is stored as dir="auto", and "auto" is the browser's
+           first-strong-letter rule: a gloss that opens with the Arabic it
+           explains ("كَأَنَّهُم بُنْيَانٌ مَّرْصُوصٌ: like a structure…") was
+           laid out right to left, colon on the wrong side. So a line with no
+           direction of its own is given the one its letters say, and stays
+           on auto only when they are evenly split. Always set, never
+           dropped, so ProseMirror never strips the attribute. */
+        const attrs: Record<string, string> = {};
+        if (stored === null) attrs.dir = dir ?? "auto";
+        if (dir === "rtl") attrs.class = "is-rtl";
+        if (attrs.dir || attrs.class) decos.push(Decoration.node(pos, pos + node.nodeSize, attrs));
         return false;
       });
       return DecorationSet.create(doc, decos);

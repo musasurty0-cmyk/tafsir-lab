@@ -1717,11 +1717,13 @@ export default function ModeBPage({
       {focusAnchor && (
         <div className="anchor-session-chip">
           <span className="anchor-session-label">
+            {/* What, then where, the "where" set as the study bar sets its
+                sūrah: "Word notes 1:2", the reference in the ink colour. */}
             {focusAnchor.segmentId
-              ? `Selection · ${focusAnchor.segmentLabel ?? ""}`
+              ? <><span className="anchor-session-kind">Selection </span><b>{focusAnchor.segmentLabel ?? ""}</b></>
               : focusAnchor.wordPos != null
-              ? `Word notes · ${focusAnchor.verseKey}`
-              : `Ayah notes · ${focusAnchor.verseKey}`}
+              ? <><span className="anchor-session-kind">Word notes </span><b>{focusAnchor.verseKey}</b></>
+              : <><span className="anchor-session-kind">Āyah notes </span><b>{focusAnchor.verseKey}</b></>}
           </span>
 
           {!focusAnchor.segmentId && (
@@ -1729,16 +1731,16 @@ export default function ModeBPage({
               <button
                 aria-pressed={ayahView === "page"}
                 onClick={() => chooseAyahView("page")}
-                title="Show the ayah in the page, with the rest of the surah"
+                title="Show the āyah in the page, with the rest of the sūrah"
               >
                 In page
               </button>
               <button
                 aria-pressed={ayahView === "alone"}
                 onClick={() => chooseAyahView("alone")}
-                title="Show just this ayah"
+                title="Show just this āyah"
               >
-                Ayah alone
+                Āyah alone
               </button>
             </span>
           )}

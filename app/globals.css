@@ -16034,3 +16034,79 @@ body {
 }
 /* A shortcut hint means nothing without a keyboard. */
 @media (pointer: coarse) { .sidebar-search-kbd { display: none; } }
+
+/* The tafsīr card's header gives way inside the card. The source picker is as
+   wide as its longest option (up to 240px), and on a phone that pushed the
+   delete button out past the card's right edge. Now the picker shrinks
+   (the name ellipsises) and the button stays put. */
+.tafsir-block-head { gap: 8px; }
+.tafsir-block-meta { min-width: 0; flex: 0 1 auto; }
+.tafsir-block-meta > * { flex: none; }
+.tafsir-block-meta > .tafsir-block-source-select { flex: 0 1 auto; min-width: 0; text-overflow: ellipsis; }
+.tafsir-block-tool { flex: none; }
+
+/* A line whose letters settle its direction now carries it as dir="ltr" or
+   "rtl" (TextDirection's decoration). `plaintext` above would ignore that
+   and go back to the first strong letter, which is what laid out
+   "كَأَنَّهُم بُنْيَانٌ مَّرْصُوصٌ: like a structure joined firmly" right to
+   left. Isolate is what an element with a dir gets by default. Lines left on
+   dir="auto" (evenly mixed) keep plaintext. */
+.page-editor-content :is(p, h1, h2, h3, li, blockquote):is([dir="ltr"], [dir="rtl"]) {
+  unicode-bidi: isolate;
+}
+
+/* ═══ The layer bar (Word notes, Āyah notes, Selection) ════════════════════
+   Was an outlined pill holding an outlined pill toggle and an outlined
+   Connections pill: three hairline capsules, the look the house rules ban.
+   Now the same object as the study bar it replaces while a layer is open: a
+   solid floating bar, no outline, the reference in the ink colour, the view
+   switch's filled segmented control, a plain icon button, one solid Done. */
+.anchor-session-chip {
+  gap: 10px;
+  padding: 5px 5px 5px 14px;
+  background: var(--float-bg);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
+  border: 0; border-radius: 14px;
+  box-shadow: var(--float-shadow);
+}
+.anchor-session-label { font-size: 13px; font-weight: 400; color: var(--ink-3); }
+.anchor-session-label b { font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
+.anchor-session-view {
+  padding: 3px; gap: 2px;
+  border-radius: 10px; background: var(--hover);
+}
+.anchor-session-view button {
+  font-size: 13px; font-weight: 500; color: var(--ink-2);
+  height: 28px; padding: 0 11px; border-radius: 7px;
+}
+.anchor-session-view button:hover:not([aria-pressed="true"]) { color: var(--ink); background: color-mix(in oklch, var(--ink) 6%, transparent); }
+.anchor-session-view button[aria-pressed="true"] {
+  background: var(--bg-elev); color: var(--ink); font-weight: 500;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+.anchor-session-conn {
+  border: 0; height: 34px; min-width: 34px; padding: 0 9px; margin: 0;
+  border-radius: 9px; font-size: 13px; font-weight: 500; color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+.anchor-session-conn:hover { background: var(--hover); color: var(--ink); }
+.anchor-session-done {
+  height: 34px; padding: 0 16px; border-radius: 10px;
+  background: var(--accent); color: #fff;
+  font-size: 13px; font-weight: 600;
+}
+.anchor-session-view button:focus-visible,
+.anchor-session-conn:focus-visible,
+.anchor-session-done:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (pointer: coarse) {
+  .anchor-session-view button { height: 34px; }
+  .anchor-session-conn, .anchor-session-done { height: 40px; }
+}
+@media (max-width: 720px) {
+  .anchor-session-chip { padding: 4px 4px 4px 12px; gap: 6px; }
+  .anchor-session-view button { padding: 0 9px; }
+}
+/* On a phone the reference is what fits and what matters; the kind of note
+   is plain from the highlighted word or āyah under it. */
+@media (max-width: 720px) { .anchor-session-kind { display: none; } }

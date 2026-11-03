@@ -10,6 +10,10 @@ describe("directionOf", () => {
     expect(directionOf("الرحمن is one of the names of Allah used throughout this sūrah")).toBe("ltr");
     expect(directionOf("1. وعِبَادُ الرَّحْمَٰنِ الَّذِينَ يَمْشُونَ عَلَى الْأَرْضِ (25:63)")).toBe("rtl");
   });
+  it("counts letters, not the vowel marks on them", () => {
+    expect(directionOf("كَأَنَّهُم بُنْيَانٌ مَّرْصُوصٌ: like a structure joined firmly")).toBe("ltr");
+    expect(directionOf("يُحِبُّ ٱلَّذِينَ يُقَٰتِلُونَ فِى سَبِيلِهِۦ صَفًّا: in rows")).toBe("rtl");
+  });
   it("leaves a genuinely mixed or letterless line to the browser", () => {
     expect(directionOf("Allah الله")).toBeNull();
     expect(directionOf("25:63–77")).toBeNull();
