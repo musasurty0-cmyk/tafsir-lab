@@ -5338,6 +5338,13 @@ input, textarea { font: inherit; color: inherit; }
 }
 .page-editor-content blockquote p { margin-bottom: 0.2em; }
 .page-editor-content blockquote p:last-child { margin-bottom: 0; }
+/* A quote whose every line is Arabic reads right to left, bar and all. The
+   direction is decided per paragraph (TextDirection), so the blockquote itself
+   stayed ltr and put the Arabic's bar on the wrong side. A mixed quote keeps
+   the page's direction. */
+.page-editor-content blockquote:has(> p.is-rtl):not(:has(> p:not(.is-rtl))) {
+  direction: rtl;
+}
 
 /* Task lists */
 .page-editor-content ul[data-type="taskList"] {
