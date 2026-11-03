@@ -5247,10 +5247,23 @@ input, textarea { font: inherit; color: inherit; }
   z-index: 6;
 }
 .main-doc-bar:active { cursor: var(--cursor-grabbing); }
-.main-doc-container:hover .main-doc-bar,
-.main-doc-container:focus-within .main-doc-bar {
-  opacity: 1;
-  pointer-events: auto;
+/* Hover only. The editor focuses itself when a page opens, so showing this on
+   focus as well framed every note from the moment it loaded. */
+@media (hover: hover) {
+  .main-doc-container:hover .main-doc-bar {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+/* No pointer to hover with: an iPad keeps the grip, without the frame, while
+   the note is being written in. A tap would otherwise leave :hover stuck on. */
+@media (hover: none) and (min-width: 721px) {
+  .main-doc-container:focus-within .main-doc-bar {
+    opacity: 1;
+    pointer-events: auto;
+    background: transparent;
+    border: 0;
+  }
 }
 
 /* The ProseMirror contenteditable region — this IS the page's default
@@ -5269,9 +5282,8 @@ input, textarea { font: inherit; color: inherit; }
   color: var(--ink);
 }
 
-.page-editor-content:hover,
-.page-editor-content:focus-within {
-  border-color: var(--line);
+@media (hover: hover) {
+  .page-editor-content:hover { border-color: var(--line); }
 }
 
 /* Paragraph — generous spacing makes prose breathe */
@@ -15989,6 +16001,8 @@ body {
 @media (max-width: 720px) {
   .doc { width: auto; }
   .doc-title { overflow-wrap: anywhere; }
+  /* It sat on the text being read, and the phone zooms by pinching. */
+  .doc-zoom { display: none; }
 }
 
 /* The floating view switch gives way to the panels that open on the right:

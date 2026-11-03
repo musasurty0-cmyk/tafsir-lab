@@ -156,6 +156,8 @@ export default function ModeAPage({
   const [docZoom, setDocZoom] = useState(1);
   useEffect(() => {
     try {
+      // A phone has no zoom control, so it must not open on one it can't undo.
+      if (window.matchMedia("(max-width: 720px)").matches) return;
       const v = parseFloat(localStorage.getItem("tl-editor-zoom") ?? "");
       if (Number.isFinite(v) && v >= 0.2 && v <= 3) setDocZoom(v);
     } catch { /* ignore */ }
