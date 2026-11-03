@@ -599,6 +599,8 @@ input, textarea { font: inherit; color: inherit; }
    capped it at the viewport width, so there was never anything to the right
    to scroll to — the editor grew downward forever and stopped dead sideways. */
 .doc-wrap {
+  /* The column's measure is capped at this box's width (.doc > *). */
+  container: docwrap / inline-size;
   flex: 1; width: 100%;
   display: block;
   padding: 0 48px;
@@ -636,6 +638,12 @@ input, textarea { font: inherit; color: inherit; }
    measure — an expandable sheet must not mean unbounded line length. */
 .doc > * {
   max-width: var(--canvas-max);
+  /* Never wider than what is on screen. Prose's max-content is its unwrapped
+     length, so any long paragraph sized the column to the full measure: 860px
+     in a 600px iPad pane or a 350px split half, the right of every line cut
+     off and right-aligned Arabic gone entirely. The sheet still widens for a
+     wide table or a dragged box, which overflow the column, not set it. */
+  max-width: min(var(--canvas-max), 100cqi);
   margin-inline: 0;
 }
 

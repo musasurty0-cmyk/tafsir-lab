@@ -723,6 +723,9 @@ export default function ModeBPage({
     return { x: Math.round((w - MUSHAF_CARD_WIDTH * zoom) / 2), y: w < 720 ? 128 : 60, zoom };
   }, [centeredX]);
 
+  /** The home view last set without the reader asking (see the resize effect). */
+  const homeSetRef = useRef<CanvasViewport | null>(null);
+
   // Centre the page on first load, unless there is a saved view that still
   // fits this screen. One saved on a desktop is per page, not per device, and
   // at 100% it would open a phone with the page hanging off the edge.
@@ -730,9 +733,29 @@ export default function ModeBPage({
     const saved = userPrefs?.canvasViewport;
     const w = containerRef.current?.getBoundingClientRect().width ?? 800;
     if (saved && MUSHAF_CARD_WIDTH * saved.zoom <= w) return; // honour saved position
-    setViewport(homeView());
+    const home = homeView();
+    homeSetRef.current = home;
+    setViewport(home);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // run once after first paint
+
+  /* The board's width can change under a view nobody has touched yet: Split
+     opening with the sidebar still sliding away, a window resized, an iPad
+     turned. A home view computed for the narrower board stayed at its small
+     zoom, so it follows the width until the reader pans or zooms. */
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(() => {
+      const was = homeSetRef.current, v = viewportRef.current;
+      if (!was || v.x !== was.x || v.y !== was.y || v.zoom !== was.zoom) { homeSetRef.current = null; return; }
+      const home = homeView();
+      homeSetRef.current = home;
+      setViewport(home);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [homeView]);
 
   // ── Drawing tool + per-tool colour/width settings ────────────────────
   const [tool,     setTool]     = useState<DrawTool>("hand");

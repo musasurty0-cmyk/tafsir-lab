@@ -379,6 +379,17 @@ export default function WorkspacePageView({
     setSidebarCollapsed(isPhone() || localStorage.getItem("tl-sidebar-collapsed") === "1");
   }, []);
 
+  /* Split halves what the sidebar leaves. On a portrait iPad that was 347px
+     a side, the muṣḥaf at 45% and the notes a column of a few words, so
+     entering Split there puts the sidebar away, the way an iPad app hides its
+     own. Only on the way in, and not saved: leaving Split, or opening the
+     sidebar again, is the reader's call. */
+  const prevMode = useRef(mode);
+  useEffect(() => {
+    if (mode === "split" && prevMode.current !== "split" && window.innerWidth < 1200) setSidebarCollapsed(true);
+    prevMode.current = mode;
+  }, [mode]);
+
   const toggleSidebar = useCallback(() => {
     setSidebarCollapsed((prev) => {
       const next = !prev;
