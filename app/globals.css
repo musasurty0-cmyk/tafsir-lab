@@ -16013,3 +16013,24 @@ body {
    only the first frame, during any delay, then lets the declared values rule. */
 .mode-float,
 .study-bar { animation-fill-mode: backwards; }
+
+/* Workspace home on a phone: the rail down the left and 56px of padding on
+   each side left the sūrah grid 222px of a 390px screen. The rail becomes a
+   bar along the bottom (thumb reach, as the app's own sidebar does) and the
+   content takes the width. */
+@media (max-width: 720px) {
+  .workspace-home { grid-template-columns: minmax(0, 1fr); }
+  .workspace-home > .rail {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+    flex-direction: row; justify-content: center; gap: 12px;
+    padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0px));
+    border-right: 0; border-top: 1px solid var(--line);
+    overflow-x: auto; scrollbar-width: none;
+  }
+  .workspace-home > .rail .rail-logo { margin-bottom: 0; flex: none; }
+  .workspace-home > .rail > * { flex: none; }
+  .workspace-home > .rail .rail-btn[data-active="true"]::before { display: none; }
+  .workspace-home-content { padding: 28px 16px calc(96px + env(safe-area-inset-bottom, 0px)); }
+}
+/* A shortcut hint means nothing without a keyboard. */
+@media (pointer: coarse) { .sidebar-search-kbd { display: none; } }
