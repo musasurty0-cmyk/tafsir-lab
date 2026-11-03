@@ -335,7 +335,6 @@ export default function CanvasToolRail({
 
   // ── Timer helpers ───────────────────────────────────────────────────────
 
-  const isFirstRender = useRef(true);
   const railRef       = useRef<HTMLDivElement>(null);
 
   /* Folded: the rail shrinks to the tool in hand and undo, for writing with
@@ -383,17 +382,12 @@ export default function CanvasToolRail({
 
   useDismissable(() => setPopoverOpen(false), popoverOpen);
 
-  // When activeTool changes externally (keyboard shortcut etc.), update popover
-  useEffect(() => {
-    if (isFirstRender.current) { isFirstRender.current = false; return; }
-    if (activeTool === "pen" || activeTool === "highlight" ||
-        (activeTool === "eraser" && eraserHasPopover)) {
-      setPopoverOpen(true);
-    } else {
-      setPopoverOpen(false);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTool]);
+  /* The palette opens only when you pick a tool on the rail (selectTool,
+     below). It used to open on ANY change of tool, so opening a word's notes,
+     which hands you the pen, spread the colours and sizes over the page you
+     had just tapped, every time. A tool chosen some other way, by a shortcut
+     or by the canvas, arrives with its palette shut; a change to a tool with
+     no palette still closes it (the effect further down). */
 
   // ── Colour / size handlers ──────────────────────────────────────────────
 

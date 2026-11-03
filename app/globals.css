@@ -10300,9 +10300,14 @@ input, textarea { font: inherit; color: inherit; }
 /* Canvas tools: the pen family is the one place where knowing which tool is
    armed at a glance genuinely matters. Colour appears only when ACTIVE, so an
    idle rail stays quiet. */
-.ctr-btn[data-active="true"][data-tool="pen"]       { color: var(--icon-pen); }
-.ctr-btn[data-active="true"][data-tool="highlight"] { color: var(--icon-mark); }
-.ctr-btn[data-active="true"][data-tool="eraser"]    { color: var(--icon-erase); }
+/* On a tint of its own colour, not the accent: an ink-blue or marker-amber
+   glyph on the green active fill all but vanished. */
+.ctr-btn[data-active="true"][data-tool="pen"],
+.ctr-btn[data-active="true"][data-tool="pen"]:hover:not(:disabled)       { color: var(--icon-pen);   background: color-mix(in oklch, var(--icon-pen) 16%, var(--bg-elev)); }
+.ctr-btn[data-active="true"][data-tool="highlight"],
+.ctr-btn[data-active="true"][data-tool="highlight"]:hover:not(:disabled) { color: oklch(0.5 0.12 75); background: color-mix(in oklch, var(--icon-mark) 24%, var(--bg-elev)); }
+.ctr-btn[data-active="true"][data-tool="eraser"],
+.ctr-btn[data-active="true"][data-tool="eraser"]:hover:not(:disabled)    { color: var(--icon-erase); background: color-mix(in oklch, var(--icon-erase) 16%, var(--bg-elev)); }
 
 /* Reference surfaces: the Tafsīr drawer toggle and āyah blocks read as
    "scripture and commentary" rather than as generic panels. */
@@ -15982,3 +15987,29 @@ body {
   .canvas-area:has(.lab) > .mode-float,
   .canvas-area:has(.lab) > .sidebar-expand-btn { opacity: 0; pointer-events: none; }
 }
+
+/* While a word, āyah or Selection layer is open, its chip is the one control
+   at the top: its Done is the way out. The view switch and the study bar's
+   own Done (a second Done, ending something else) step back until it closes;
+   they also covered the chip, on a phone almost all of it. */
+.canvas-area:has(.anchor-session-chip) > .mode-float,
+.canvas-area:has(.anchor-session-chip) .study-bar { opacity: 0; pointer-events: none; }
+.anchor-session-conn { display: inline-flex; align-items: center; gap: 5px; }
+@media (max-width: 720px) {
+  .anchor-session-chip {
+    left: 8px; right: 8px; transform: none;
+    max-width: none; justify-content: space-between;
+    gap: 6px; padding: 4px 4px 4px 12px;
+    /* Under the sidebar button. Opacity-only entrance: chip-in's keyframes
+       end on translateX(-50%), which would undo the full-width placement. */
+    top: 58px;
+    animation-name: ov-rail-in;
+  }
+  .anchor-session-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}
+/* Entrance animations that end on opacity 1 with `both` fill PIN opacity at
+   1 for good: nothing that later sets opacity (a hide rule, the study bar's
+   own data-visible="false" fade-out) can take effect. Backwards fill holds
+   only the first frame, during any delay, then lets the declared values rule. */
+.mode-float,
+.study-bar { animation-fill-mode: backwards; }

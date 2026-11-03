@@ -18,7 +18,7 @@ import {
   useRef, useState,
 } from "react";
 import { createPortal } from "react-dom";
-import { ChevronLeft, ChevronRight, Minus, Plus, RotateCw } from "lucide-react";
+import { ChevronLeft, ChevronRight, Link2, Minus, Plus, RotateCw } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { pushWithSplash } from "@/lib/nav-splash";
 import { useArabicWords, useMorph, usePageWords } from "./arabic/useArabicWords";
@@ -1765,8 +1765,9 @@ export default function ModeBPage({
             className="anchor-session-conn"
             onClick={() => setConnFor(currentObjectKey())}
             title="Connections involving this passage"
+            aria-label={`Connections involving this passage: ${connCounts[currentObjectKey()] ?? 0}`}
           >
-            🔗 {connCounts[currentObjectKey()] ?? 0}
+            <Link2 size={14} aria-hidden /> {connCounts[currentObjectKey()] ?? 0}
           </button>
 
           <button
