@@ -346,7 +346,13 @@ export default function CanvasToolRail({
   const [folded, setFolded]   = useState(false);
   const [settled, setSettled] = useState(false);
   useEffect(() => {
-    try { if (foldable && localStorage.getItem(RAIL_FOLDED_KEY) === "1") setFolded(true); } catch {}
+    /* Until you choose, a phone starts folded: open, the rail is a third of
+       a 390px board and sits over the page you came to write on. */
+    try {
+      const saved = localStorage.getItem(RAIL_FOLDED_KEY);
+      const phone = window.matchMedia("(max-width: 720px)").matches;
+      if (foldable && (saved === "1" || (saved == null && phone))) setFolded(true);
+    } catch {}
     const id = setTimeout(() => setSettled(true), 50);
     return () => clearTimeout(id);
   }, [foldable]);

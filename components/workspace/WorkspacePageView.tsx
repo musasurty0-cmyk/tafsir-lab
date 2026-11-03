@@ -25,7 +25,7 @@ import type { ProgressStatus } from "@/lib/services/progress.service";
 import type { NoteData } from "./NoteCard";
 import type { ViewMode } from "./TopBar";
 import Rail from "./Rail";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, PanelLeftOpen } from "lucide-react";
 import WorkspaceSidebar from "./WorkspaceSidebar";
 import TopBar from "./TopBar";
 import ScriptView from "./ScriptView";
@@ -105,6 +105,12 @@ function loadTweaks(): TweaksState {
  *  returned it yet. Long enough to outlast a read-after-write race,
  *  short enough that a page deleted elsewhere still disappears. */
 const KEEP_UNCONFIRMED_MS = 30_000;
+
+/** The width at which the workspace sidebar becomes a drawer (see the
+ *  phone rules in globals.css). */
+function isPhone() {
+  return typeof window !== "undefined" && window.matchMedia("(max-width: 720px)").matches;
+}
 
 export default function WorkspacePageView({
   boards = null,
@@ -367,13 +373,17 @@ export default function WorkspacePageView({
   // Hydrate tweaks + sidebar state after mount.
   useEffect(() => {
     setTweaks(loadTweaks());
-    setSidebarCollapsed(localStorage.getItem("tl-sidebar-collapsed") === "1");
+    /* On a phone the sidebar is a drawer over the page, so it starts shut
+       whatever the desktop preference says: open, it covered all but 60px of
+       a 390px screen and the note could not be reached. */
+    setSidebarCollapsed(isPhone() || localStorage.getItem("tl-sidebar-collapsed") === "1");
   }, []);
 
   const toggleSidebar = useCallback(() => {
     setSidebarCollapsed((prev) => {
       const next = !prev;
-      localStorage.setItem("tl-sidebar-collapsed", next ? "1" : "0");
+      // The drawer's state on a phone is not the desktop preference.
+      if (!isPhone()) localStorage.setItem("tl-sidebar-collapsed", next ? "1" : "0");
       return next;
     });
   }, []);
@@ -499,6 +509,8 @@ export default function WorkspacePageView({
   };
 
   const handlePageSelect = (pageId: string) => {
+    // A drawer closes once you have picked from it.
+    if (isPhone()) setSidebarCollapsed(true);
     pushWithSplash(router, `/workspaces/${workspaceId}/surahs/${surahNumber}/pages/${pageId}`);
   };
 
@@ -744,6 +756,11 @@ export default function WorkspacePageView({
         collapsed={sidebarCollapsed}
         onToggleCollapse={toggleSidebar}
       />
+      {/* Phone only (the stylesheet hides it elsewhere): the page behind the
+          open drawer, which closes it when tapped. */}
+      {!sidebarCollapsed && (
+        <button className="sidebar-scrim" onClick={toggleSidebar} aria-label="Close the sidebar" />
+      )}
 
       <div className="canvas-area">
         {sidebarCollapsed && (
@@ -751,8 +768,10 @@ export default function WorkspacePageView({
             className="sidebar-expand-btn"
             onClick={toggleSidebar}
             title="Expand sidebar"
+            aria-label="Open the sidebar"
           >
-            <ChevronRight size={14} />
+            <ChevronRight size={14} className="sidebar-expand-chev" />
+            <PanelLeftOpen size={19} className="sidebar-expand-menu" />
           </button>
         )}
         <TopBar

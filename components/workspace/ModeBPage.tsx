@@ -578,7 +578,7 @@ export default function ModeBPage({
   useEffect(() => {
     if (!focusAnchor) return;
     setTool("pen");
-    const next: CanvasViewport = { x: centeredX(1), y: 40, zoom: 1 };
+    const next: CanvasViewport = homeView();
     setCameraAnim(true);
     setViewport(next);
     patchViewport(next);
@@ -600,7 +600,7 @@ export default function ModeBPage({
     if (isolateAyah == null) {
       // Back to the page -- but only when switching views mid-session.
       // Closing the layer leaves the camera where the reader put it.
-      if (was != null && focusAnchor) tweenTo({ x: centeredX(1), y: 40, zoom: 1 });
+      if (was != null && focusAnchor) tweenTo(homeView());
       return;
     }
     const sinceOpen = performance.now() - focusOpenedAtRef.current;
@@ -709,11 +709,28 @@ export default function ModeBPage({
     return Math.max(20, Math.round((containerW - MUSHAF_CARD_WIDTH * zoom) / 2));
   }, []);
 
-  // Centre the page on first load (if no saved viewport) (fix #2)
+  /* The page, whole and centred: 100%, or as near it as the board's width
+     allows. A phone's board is under 400px and the page is 720, so "100%,
+     centred" left most of it off the right edge, and the reader had to find
+     the zoom-out button before reading a word. Lower on a narrow screen, so
+     the page clears the view switch and the study bar stacked in the corner,
+     which take the full width there. */
+  const homeView = useCallback((): CanvasViewport => {
+    const el = containerRef.current;
+    const w = el ? el.getBoundingClientRect().width : 800;
+    const zoom = Math.min(1, Math.max(ZOOM_MIN, (w - 24) / MUSHAF_CARD_WIDTH));
+    if (zoom === 1) return { x: centeredX(1), y: 40, zoom: 1 };
+    return { x: Math.round((w - MUSHAF_CARD_WIDTH * zoom) / 2), y: w < 720 ? 128 : 60, zoom };
+  }, [centeredX]);
+
+  // Centre the page on first load, unless there is a saved view that still
+  // fits this screen. One saved on a desktop is per page, not per device, and
+  // at 100% it would open a phone with the page hanging off the edge.
   useLayoutEffect(() => {
-    if (userPrefs?.canvasViewport) return; // honour saved position
-    const x = centeredX(1);
-    setViewport({ x, y: 40, zoom: 1 });
+    const saved = userPrefs?.canvasViewport;
+    const w = containerRef.current?.getBoundingClientRect().width ?? 800;
+    if (saved && MUSHAF_CARD_WIDTH * saved.zoom <= w) return; // honour saved position
+    setViewport(homeView());
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // run once after first paint
 
@@ -1893,7 +1910,7 @@ export default function ModeBPage({
         <button className="mode-b-zoom-btn" title="Zoom out" aria-label="Zoom out" onClick={() => zoomByStep(1 / ZOOM_BUTTON_STEP)}><Minus size={13} /></button>
         <span className="mode-b-zoom-label">{Math.round(viewport.zoom * 100)}%</span>
         <button className="mode-b-zoom-btn" title="Zoom in" aria-label="Zoom in" onClick={() => zoomByStep(ZOOM_BUTTON_STEP)}><Plus size={13} /></button>
-        <button className="mode-b-zoom-btn mode-b-zoom-reset" title="Reset view" aria-label="Reset view" onClick={() => tweenTo({ x: centeredX(1), y: 40, zoom: 1 })}><RotateCw size={12} /></button>
+        <button className="mode-b-zoom-btn mode-b-zoom-reset" title="Reset view" aria-label="Reset view" onClick={() => tweenTo(homeView())}><RotateCw size={12} /></button>
       </div>
 
       {/* ── Page turner, bottom centre of the canvas ──

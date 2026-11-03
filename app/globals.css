@@ -15907,3 +15907,60 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .canvas-tool-rail[data-settled="true"] .ctr-fold { transition: opacity 0.12s linear; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   The study page on a phone.
+   The desktop grid (rail 56 + sidebar 272 + page) left a 390px phone 60px of
+   note. Below 720px the page takes the whole width and the rail and sidebar
+   become one drawer over it, opened from the top-left corner and closed by
+   the scrim, by the sidebar's own collapse arrow, or by picking a page.
+   ═══════════════════════════════════════════════════════════════════════════ */
+.sidebar-scrim { display: none; }
+.sidebar-expand-menu { display: none; }
+@media (max-width: 720px) {
+  .workspace-page { grid-template-columns: minmax(0, 1fr) !important; }
+  .workspace-page > .rail,
+  .workspace-page > .sidebar {
+    position: fixed; top: 0; bottom: 0; z-index: 70;
+    transition: transform 0.38s var(--ease-overlay);
+  }
+  .workspace-page > .rail { left: 0; width: var(--rail); }
+  .workspace-page > .sidebar {
+    left: var(--rail);
+    width: min(300px, calc(100vw - var(--rail) - 44px));
+    box-shadow: var(--shadow-lg);
+  }
+  .workspace-page:has(> .sidebar--collapsed) > .rail { transform: translateX(-100%); }
+  .workspace-page > .sidebar--collapsed { transform: translateX(calc(-100% - var(--rail) - 24px)); }
+  .sidebar-scrim {
+    display: block;
+    position: fixed; inset: 0; z-index: 69;
+    background: rgba(0, 0, 0, 0.28);
+    border: 0; padding: 0;
+    animation: ov-rail-in 0.24s var(--ease-soft) both;
+  }
+  /* Top left, a full-size target, in every view. */
+  .sidebar-expand-btn {
+    top: 6px; bottom: auto; left: 6px;
+    width: 44px; height: 44px;
+    border-radius: 12px; border: 0;
+    background: transparent;
+    z-index: 45;
+  }
+  .sidebar-expand-chev { display: none; }
+  .sidebar-expand-menu { display: block; }
+  .canvas-area:has(> .sidebar-expand-btn) .topbar { padding-left: 54px; }
+  .canvas-area:has(> .sidebar-expand-btn) .topbar-zone--float + .mode-float,
+  .canvas-area:has(> .sidebar-expand-btn) .mode-float { right: 8px; }
+}
+@media (max-width: 720px) and (prefers-reduced-motion: reduce) {
+  .workspace-page > .rail, .workspace-page > .sidebar { transition: none; }
+}
+/* The sheet sizes to its widest line (width: max-content), and on a phone the
+   widest line is the title, set on one line at display size: 448px on a 390px
+   screen, so every paragraph ran off the right edge with it. A phone's sheet
+   is the screen; a genuinely wide table still scrolls on its own. */
+@media (max-width: 720px) {
+  .doc { width: auto; }
+  .doc-title { overflow-wrap: anywhere; }
+}
