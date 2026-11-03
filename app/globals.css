@@ -15964,3 +15964,21 @@ body {
   .doc { width: auto; }
   .doc-title { overflow-wrap: anywhere; }
 }
+
+/* The floating view switch gives way to the panels that open on the right:
+   the docked assistant and the Tafsīr drawer would otherwise have it sitting
+   on their headers and close buttons. It moves left of them; over a
+   full-width drawer (expanded, or any drawer on a phone) it steps aside. */
+.mode-float { transition: right 0.38s var(--ease-overlay), opacity 0.2s var(--ease-soft); }
+.canvas-area:has(.lab) > .mode-float { right: calc(max(300px, min(420px, 38vw)) + 16px); }
+.canvas-area:has(.drawer-overlay[data-open="true"]) > .mode-float { right: calc(var(--drawer) + 16px); }
+.canvas-area:has(.drawer-overlay[data-open="true"][data-expanded="true"]) > .mode-float,
+.canvas-area:has(.drawer-overlay[data-open="true"][data-expanded="true"]) > .sidebar-expand-btn {
+  opacity: 0; pointer-events: none;
+}
+@media (max-width: 720px) {
+  .canvas-area:has(.drawer-overlay[data-open="true"]) > .mode-float,
+  .canvas-area:has(.drawer-overlay[data-open="true"]) > .sidebar-expand-btn,
+  .canvas-area:has(.lab) > .mode-float,
+  .canvas-area:has(.lab) > .sidebar-expand-btn { opacity: 0; pointer-events: none; }
+}
