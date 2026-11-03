@@ -7898,18 +7898,20 @@ input, textarea { font: inherit; color: inherit; }
   display: flex; align-items: center; gap: 8px;
   padding: 13px 16px; border-bottom: 1px solid var(--line);
 }
-.cxp-title { font-size: 13.5px; font-weight: 600; color: var(--ink); display: flex; align-items: center; gap: 7px; }
+.cxp-title { font-size: 15px; font-weight: 600; color: var(--ink); display: flex; align-items: baseline; gap: 7px; min-width: 0; }
+.cxp-of { font-size: 13px; font-weight: 400; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cxp-count {
   font-size: 11px; font-weight: 600; color: var(--ink-3);
   background: var(--panel); border-radius: 999px; padding: 1px 8px;
 }
 .cxp-close {
   margin-inline-start: auto; border: 0; background: none; cursor: pointer;
-  width: 26px; height: 26px; border-radius: 6px; color: var(--ink-3);
+  width: 32px; height: 32px; border-radius: 8px; color: var(--ink-3);
+  display: grid; place-items: center; flex-shrink: 0;
 }
 .cxp-close:hover { background: var(--hover); color: var(--ink); }
 
-.cxp-empty { padding: 22px 16px; font-size: 12.5px; color: var(--ink-4); line-height: 1.6; }
+.cxp-empty { padding: 22px 16px; font-size: 13.5px; color: var(--ink-3); line-height: 1.6; }
 .cxp-empty code {
   font-family: var(--font-mono); font-size: 11.5px;
   background: var(--panel); padding: 1px 5px; border-radius: 4px;
@@ -15991,6 +15993,10 @@ body {
   .canvas-area:has(.lab) > .mode-float,
   .canvas-area:has(.lab) > .sidebar-expand-btn { opacity: 0; pointer-events: none; }
 }
+/* The Connections sheet is modal, but it is drawn inside the canvas's stacking
+   context, so the phone's sidebar button sat on top of its title. */
+.canvas-area:has(.cxp-scrim) > .sidebar-expand-btn,
+.canvas-area:has(.cxp-scrim) > .mode-float { opacity: 0; pointer-events: none; }
 
 /* While a word, āyah or Selection layer is open, its chip is the one control
    at the top: its Done is the way out. The view switch and the study bar's

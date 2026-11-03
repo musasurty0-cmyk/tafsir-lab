@@ -1840,7 +1840,7 @@ export default function ModeBPage({
         <ConnectionsPanel
           workspaceId={workspaceId}
           objectKey={connFor}
-          surahName={(n) => (n === surahNo ? chapter.name_simple : `Surah ${n}`)}
+          surahName={(n) => (n === surahNo ? chapter.name_simple : `Sūrah ${n}`)}
           selectionName={(id) => segments.find((x) => x.id === id)?.name}
           onClose={() => setConnFor(null)}
           onOpenObject={(key, type) => {

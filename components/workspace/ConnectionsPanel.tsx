@@ -13,6 +13,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { X } from "lucide-react";
 import { otherEnd, parseObjectKey, type ObjectType } from "@/lib/quran-objects";
 
 export interface ConnectionRow {
@@ -40,7 +41,7 @@ interface Props {
 }
 
 const KIND: Record<string, string> = {
-  ayah: "Āyah", selection: "Selection", surah: "Surah",
+  ayah: "Āyah", selection: "Selection", surah: "Sūrah",
 };
 
 export default function ConnectionsPanel({
@@ -83,10 +84,10 @@ export default function ConnectionsPanel({
     const ref = parseObjectKey(key);
     if (!ref) return key;
     if (ref.type === "ayah") {
-      const n = surahName?.(ref.surah!) ?? `Surah ${ref.surah}`;
+      const n = surahName?.(ref.surah!) ?? `Sūrah ${ref.surah}`;
       return `${n} ${ref.surah}:${ref.ayah}`;
     }
-    if (ref.type === "surah") return surahName?.(ref.surah!) ?? `Surah ${ref.surah}`;
+    if (ref.type === "surah") return surahName?.(ref.surah!) ?? `Sūrah ${ref.surah}`;
     return selectionName?.(ref.id!) ?? "Selection";
   }, [surahName, selectionName]);
 
@@ -122,11 +123,13 @@ export default function ConnectionsPanel({
     <div className="cxp-scrim" onPointerDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <aside className="cxp" role="dialog" aria-label="Connections">
         <header className="cxp-head">
+          {/* Which passage these are for: the panel covers the chip that said. */}
           <span className="cxp-title">
             Connections
-            {state === "ready" && <span className="cxp-count">{rows.length}</span>}
+            {state === "ready" && rows.length > 0 && <span className="cxp-count">{rows.length}</span>}
+            <span className="cxp-of">{describe(parseObjectKey(objectKey)?.type ?? "", objectKey)}</span>
           </span>
-          <button className="cxp-close" onClick={onClose} title="Close">✕</button>
+          <button className="cxp-close" onClick={onClose} title="Close" aria-label="Close Connections"><X size={16} /></button>
         </header>
 
         {state === "loading" && <div className="cxp-empty">Loading…</div>}
@@ -146,7 +149,7 @@ export default function ConnectionsPanel({
         {/* ── Detail ── */}
         {detail ? (
           <div className="cxp-detail">
-            <button className="cxp-back" onClick={() => setOpenId(null)}>‹ All Connections</button>
+            <button className="cxp-back" onClick={() => setOpenId(null)}>‹ All connections</button>
 
             {editing === detail.conn.id ? (
               <>
