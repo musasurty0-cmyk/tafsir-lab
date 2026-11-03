@@ -28,8 +28,8 @@ async function _fetchVerses(surahId: number): Promise<Verse[]> {
     language: "en",
     words: "true",
     translations: "20",
-    fields: "text_uthmani,page_number",
-    word_fields: "text_uthmani,transliteration",
+    fields: "text_uthmani,text_qpc_hafs,page_number",
+    word_fields: "text_uthmani,text_qpc_hafs,transliteration",
     per_page: "286", // max per page — avoids pagination for all but Al-Baqarah
     page: "1",
   });
@@ -65,7 +65,8 @@ function slimWord(w: Word): Word {
     position:        w.position,
     audio_url:       w.audio_url,
     char_type_name:  w.char_type_name,
-    text:            w.text,
+    /* What the King Fahd face is built for (lib/quran-text). */
+    text:            (w as Word & { text_qpc_hafs?: string }).text_qpc_hafs || w.text,
     transliteration: { text: w.transliteration?.text },
     translation:     { text: w.translation?.text, language_name: w.translation?.language_name },
   };
@@ -77,6 +78,7 @@ function slimVerse(v: Verse): Verse {
     verse_number: v.verse_number,
     verse_key:    v.verse_key,
     text_uthmani: v.text_uthmani,
+    text_qpc_hafs: v.text_qpc_hafs,
     page_number:  v.page_number,
     words:        (v.words ?? []).map(slimWord),
     translations: (v.translations ?? []).map((t) => ({ resource_id: t.resource_id, text: t.text })),
@@ -101,7 +103,9 @@ export const fetchChapter = unstable_cache(
 
 export const fetchVerses = unstable_cache(
   _fetchVerses,
-  ["quran-verses"],
+  // v2: verses carry text_qpc_hafs. A new key, so day-old entries without it
+  // are not served for another 24 hours.
+  ["quran-verses-v2"],
   { revalidate: 86400, tags: ["quran"] }
 );
 
@@ -109,7 +113,7 @@ export async function fetchWordDetails(wordKey: string) {
   // wordKey format: "surahId:verseId:wordPosition"
   const [surahId, verseId, position] = wordKey.split(":").map(Number);
   const res = await fetch(
-    `${BASE}/verses/by_key/${surahId}:${verseId}?language=en&words=true&translations=20&fields=text_uthmani&word_fields=text_uthmani,transliteration`,
+    `${BASE}/verses/by_key/${surahId}:${verseId}?language=en&words=true&translations=20&fields=text_uthmani,text_qpc_hafs&word_fields=text_uthmani,text_qpc_hafs,transliteration`,
     { next: { revalidate: 86400 } }
   );
   if (!res.ok) throw new Error(`word fetch failed: ${res.status}`);
@@ -118,3 +122,21 @@ export async function fetchWordDetails(wordKey: string) {
   const word = verse.words?.[position - 1];
   return { verse, word };
 }
+
+/* A sūrah's āyāt in qpc_hafs, keyed "s:a": for responses that carry some
+   other encoding (search hits) and must show the one the King Fahd face is
+   built for (lib/quran-text). About 30 KB a sūrah, shared and cached a day. */
+async function _fetchQpcSurah(surah: number): Promise<Record<string, string>> {
+  const res = await fetch(`${BASE}/quran/verses/qpc_hafs?chapter_number=${surah}`, {
+    next: { revalidate: 86400 },
+  });
+  if (!res.ok) throw new Error(`qpc ${surah} fetch failed: ${res.status}`);
+  const data = await res.json() as { verses?: { verse_key: string; text_qpc_hafs: string }[] };
+  return Object.fromEntries((data.verses ?? []).map((v) => [v.verse_key, v.text_qpc_hafs]));
+}
+
+export const fetchQpcSurah = unstable_cache(
+  _fetchQpcSurah,
+  ["quran-qpc-surah"],
+  { revalidate: 86400, tags: ["quran"] }
+);

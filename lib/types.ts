@@ -22,7 +22,7 @@ export interface Word {
   position: number;
   audio_url: string | null;
   char_type_name: "word" | "end" | "pause";
-  text: string;              // Arabic display text
+  text: string;              // Arabic display text, qpc_hafs (lib/quran-text)
   transliteration: { text: string };
   translation: WordTranslation;
 }
@@ -31,7 +31,8 @@ export interface Verse {
   id: number;
   verse_number: number;
   verse_key: string;          // "1:1"
-  text_uthmani: string;
+  text_uthmani: string;       // searched, never shown (see lib/quran-text)
+  text_qpc_hafs?: string;     // shown: the King Fahd face's own encoding
   page_number: number;        // Mushaf page number (1-604)
   words: Word[];
   translations: { resource_id: number; text: string }[];

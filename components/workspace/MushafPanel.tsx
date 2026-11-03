@@ -48,7 +48,7 @@ export default function MushafPanel({ chapter, verses, onVerseClick }: Props) {
             color: "var(--ink-2)",
             marginBottom: 8,
           }}>
-            بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ
+            بِسۡمِ ٱللَّهِ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ
           </div>
         )}
 

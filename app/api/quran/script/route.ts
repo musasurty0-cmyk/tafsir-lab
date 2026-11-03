@@ -28,7 +28,9 @@ export type ScriptId = typeof SCRIPTS[number]["id"];
 
 /** Upstream path and field for each of ours. */
 const UPSTREAM: Record<ScriptId, { path: string; field: string }> = {
-  uthmani: { path: "uthmani",         field: "text_uthmani" },
+  /* qpc_hafs, the King Fahd face's own encoding of the Uthmani text; each
+     āyah ends with its number, which the face draws as the ornament. */
+  uthmani: { path: "qpc_hafs",        field: "text_qpc_hafs" },
 };
 
 export interface Segment { text: string; rule?: string }

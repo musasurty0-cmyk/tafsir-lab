@@ -26,7 +26,7 @@ export async function GET(
     const p = new URLSearchParams({
       language: "en",
       translations: "20",
-      fields: "text_uthmani",
+      fields: "text_qpc_hafs",
       per_page: "286",           // longest surah, so never paginates
       page: "1",
     });
@@ -39,10 +39,12 @@ export async function GET(
     }
     const data = await res.json();
     const verses: AyahRow[] = (data.verses ?? []).map((v: {
-      verse_number: number; text_uthmani?: string; translations?: { text?: string }[];
+      verse_number: number; text_qpc_hafs?: string; translations?: { text?: string }[];
     }) => ({
       ayah: v.verse_number,
-      arabic: v.text_uthmani ?? "",
+      // qpc, number included: the King Fahd face draws it as the āyah's
+      // ornament (lib/quran-text).
+      arabic: (v.text_qpc_hafs ?? "").trim(),
       // Footnote markers are <sup> numbers; drop them whole, not just their tags.
       translation: v.translations?.[0]?.text?.replace(/<sup[^>]*>.*?<\/sup>/g, "").replace(/<[^>]+>/g, "").trim(),
     }));

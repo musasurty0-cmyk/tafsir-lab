@@ -92,12 +92,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        {/* Amiri Quran — editor Arabic text */}
-        <link
-          href="https://fonts.googleapis.com/css2?family=Amiri+Quran&display=swap"
-          rel="stylesheet"
-        />
-        {/* Scheherazade New — Uthmanic Hafs canvas font */}
+        {/* Scheherazade New: the fallback while the King Fahd face (public/fonts)
+            loads. Amiri Quran went when all Arabic moved to that face. */}
         <link
           href="https://fonts.googleapis.com/css2?family=Scheherazade+New:wght@400;700&display=swap"
           rel="stylesheet"

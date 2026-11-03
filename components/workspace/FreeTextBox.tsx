@@ -48,6 +48,7 @@ import { useEditorCtxOptional } from "./editor/EditorContext";
 import type { NoteData } from "./NoteCard";
 import { StaticDoc, docIsEmpty } from "@/lib/prosemirror-static";
 import { announceFocus } from "./editor/blockFormat";
+import { verseArabic, withoutAyahNumber } from "@/lib/quran-text";
 
 /** Default width for a freshly placed container — wide enough that the slash
  *  palette, ayah/tafsir search results and toolbars are comfortable without
@@ -782,8 +783,9 @@ function RichBody({
 
     fetch(`/api/ayah/${verseKey.replace(":", "_")}`)
       .then((r) => (r.ok ? r.json() : Promise.reject()))
-      .then(({ verse }: { verse: { text_uthmani?: string; translations?: { text?: string }[] } }) => {
-        const ar = (verse.text_uthmani ?? "").trim();
+      .then(({ verse }: { verse: { text_uthmani?: string; text_qpc_hafs?: string; translations?: { text?: string }[] } }) => {
+        // The reference closes it, so the āyah's own number goes.
+        const ar = withoutAyahNumber(verseArabic(verse));
         const tr = (verse.translations?.[0]?.text ?? "").replace(/<[^>]+>/g, "").trim();
         const content: object[] = [
           { type: "paragraph", content: ar ? [{ type: "text", text: `${ar} ﴿${verseKey}﴾` }] : [] },
@@ -813,7 +815,7 @@ function RichBody({
       .then(({ verses }: { verses: { ayah: number; arabic: string; translation?: string }[] }) => {
         const run = verses.filter((v) => v.ayah >= from && v.ayah <= to);
         if (!run.length) throw new Error("empty");
-        const ar = run.map((v) => `${v.arabic.trim()} ﴿${surah}:${v.ayah}﴾`).join(" ");
+        const ar = run.map((v) => `${withoutAyahNumber(v.arabic)} ﴿${surah}:${v.ayah}﴾`).join(" ");
         const content: object[] = [{ type: "paragraph", content: [{ type: "text", text: ar }] }];
         for (const v of run) {
           if (v.translation) content.push({ type: "paragraph", content: [{ type: "text", text: `(${v.ayah}) ${v.translation}` }] });

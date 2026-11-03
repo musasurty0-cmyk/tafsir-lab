@@ -8,6 +8,7 @@ import { sanitizeTafsirHtml } from "@/lib/sanitize-html";
 import { formatPlainTafsir } from "@/lib/tafsir/format-content";
 import { useDismissable } from "@/lib/use-dismissable";
 import type { Verse } from "@/lib/types";
+import { verseArabic } from "@/lib/quran-text";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -415,7 +416,7 @@ export default function TafsirDrawer({ open, verseKey, verses, onClose }: Props)
           {/* Verse preview */}
           {activeVerse && (
             <section className="drawer-verse" aria-label="Ayah">
-              <p className="drawer-verse-arabic" dir="rtl" lang="ar">{activeVerse.text_uthmani}</p>
+              <p className="drawer-verse-arabic" dir="rtl" lang="ar">{verseArabic(activeVerse)}</p>
               {activeVerse.translations?.[0]?.text && (
                 <p className="drawer-verse-translation">
                   {stripTags(activeVerse.translations[0].text)}

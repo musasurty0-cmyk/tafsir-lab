@@ -96,7 +96,7 @@ export default function Book3D({ compact = false }: { compact?: boolean }) {
         >
           {/* The first page, under the cover. */}
           <div className="bk-face bk-firstpage" aria-hidden>
-            <span className="bk-fp-bism" lang="ar" dir="rtl">بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ</span>
+            <span className="bk-fp-bism" lang="ar" dir="rtl">بِسۡمِ ٱللَّهِ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ</span>
             <span className="bk-fp-ch">Chapter One</span>
             <span className="bk-fp-title">Introduction to Uṣūl al-Fiqh</span>
             <span className="bk-fp-rule" />

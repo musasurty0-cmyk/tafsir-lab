@@ -82,13 +82,14 @@
   --font-sans:     "Calibri", "Carlito", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-serif:    "Source Serif 4", Georgia, serif;
   --font-mono:     "JetBrains Mono", ui-monospace, monospace;
-  --font-arabic:   "Amiri Quran", "Amiri", serif;
-  /* Uthmanic Hafs — used for Mushaf canvas only */
-  /* Uthmani script for embedded āyāt. The King Fahd Complex face is not
-     redistributable, so this is the closest available Uthmani-style Naskh
-     already loaded; drop the KFGQPC file into public/fonts and add it to the
-     head of this stack to use the real thing. */
-  --font-uthmanic: "KFGQPC Uthmanic Script HAFS", "Scheherazade New", "Amiri Quran", "Amiri", serif;
+  /* All Arabic is set in the King Fahd Complex's Uthmanic Hafs face
+     ("TL Uthmanic Hafs", public/fonts, declared further down), the owner's
+     rule. Qur'anic text must reach it in Quran.com's text_qpc_hafs encoding
+     (lib/quran-text). Amiri Quran, the face this used to be, misplaces the
+     vowel marks at size. Scheherazade New covers the moment before the file
+     arrives. */
+  --font-arabic:   "TL Uthmanic Hafs", "Scheherazade New", serif;
+  --font-uthmanic: "TL Uthmanic Hafs", "Scheherazade New", serif;
 
   --row-h:        32px;
   /* ── Reading typography scale ─────────────────────────────────────────
@@ -1122,7 +1123,7 @@ input, textarea { font: inherit; color: inherit; }
   transition: background .1s;
 }
 .wbw-cell:hover { background: var(--hover); }
-.wbw-ar { font-family: var(--font-arabic); font-size: 19px; direction: rtl; color: var(--ink); }
+.wbw-ar { font-family: var(--font-arabic); font-size: 23px; line-height: 1.7; direction: rtl; color: var(--ink); }
 .wbw-tr { font-family: var(--font-mono); font-size: 9.5px; color: var(--ink-4); letter-spacing: 0.02em; }
 .wbw-en { font-family: var(--font-serif); font-size: 11px; color: var(--ink-2); }
 
@@ -1230,7 +1231,7 @@ input, textarea { font: inherit; color: inherit; }
   cursor: default; transition: background .1s;
 }
 .word-chip:hover { background: var(--hover); }
-.word-chip-ar { font-family: var(--font-arabic); font-size: 17px; direction: rtl; color: var(--ink); }
+.word-chip-ar { font-family: var(--font-arabic); font-size: 20px; direction: rtl; color: var(--ink); }
 .word-chip-tr { font-family: var(--font-mono); font-size: 9px; color: var(--ink-4); letter-spacing: 0.03em; }
 .word-chip-en { font-family: var(--font-sans); font-size: 10px; color: var(--ink-3); }
 
@@ -2989,7 +2990,7 @@ input, textarea { font: inherit; color: inherit; }
 /* Name cartouche — rectangular, no border-radius, like a real Mushaf header */
 .mushaf-surah-name {
   display: inline-block;
-  font-family: "Amiri Quran", "Amiri", serif;
+  font-family: var(--font-arabic);
   font-size: 21px;
   color: oklch(0.20 0.04 60);
   border-top: 1.5px solid oklch(0.68 0.04 68);
@@ -3000,7 +3001,7 @@ input, textarea { font: inherit; color: inherit; }
 }
 /* Basmala — large, centred, own breathing room */
 .mushaf-basmala {
-  font-family: "Amiri Quran", "Amiri", serif;
+  font-family: var(--font-arabic);
   font-size: 27px;
   line-height: 1.9;
   color: oklch(0.10 0.014 60);
@@ -3011,7 +3012,7 @@ input, textarea { font: inherit; color: inherit; }
 
 /* ── Flowing text body ── */
 .mushaf-text {
-  font-family: "Amiri Quran", "Amiri", serif;
+  font-family: var(--font-arabic);
   font-size: 30px;
   /*
    * Line-height 2.15: gives Arabic diacritics room to breathe
@@ -3117,7 +3118,7 @@ input, textarea { font: inherit; color: inherit; }
  */
 .mushaf-ayah-end {
   display: inline;
-  font-family: "Amiri Quran", "Amiri", serif;
+  font-family: var(--font-arabic);
   font-size: 0.80em;
   color: oklch(0.38 0.07 55);    /* warm umber — same family as the ink */
   cursor: pointer;
@@ -3368,7 +3369,7 @@ input, textarea { font: inherit; color: inherit; }
 }
 
 .qcf-basmala {
-  font-family: "Amiri Quran", "Amiri", serif;
+  font-family: var(--font-arabic);
   font-size:   28px;
   line-height: 1.7;
   color:       var(--paper-ink);
@@ -4366,7 +4367,7 @@ input, textarea { font: inherit; color: inherit; }
 }
 
 .fa-label-ar {
-  font-family: "Amiri Quran", serif;
+  font-family: var(--font-arabic);
   font-size: 1.15rem;
   color: var(--ink);
 }
@@ -4569,7 +4570,7 @@ input, textarea { font: inherit; color: inherit; }
   position: relative;
   transform: translate(-50%, -50%);
 
-  font-family: "Amiri Quran", serif;
+  font-family: var(--font-arabic);
   font-size: 2.8rem;
   line-height: 2.5;
   text-align: center;
@@ -6931,7 +6932,7 @@ input, textarea { font: inherit; color: inherit; }
   --bt-acc:     oklch(0.72 0.14 155);
   --bt-display: "Spectral", Georgia, serif;
   --bt-body:    "Sora", system-ui, sans-serif;
-  --bt-arabic:  "Scheherazade New", "Amiri Quran", "Amiri", serif;
+  --bt-arabic:  var(--font-arabic);
 
   height: 100vh; height: 100dvh;
   display: flex;
@@ -7208,7 +7209,7 @@ input, textarea { font: inherit; color: inherit; }
   overflow: hidden;
 }
 .bt-ar-line {
-  font-family: "Scheherazade New", "Amiri Quran", "Amiri", serif;
+  font-family: var(--font-arabic);
   font-size: clamp(1rem, 2vw, 1.45rem);
   line-height: 2.1;
   color: oklch(0.28 0.012 80);
@@ -8505,7 +8506,7 @@ input, textarea { font: inherit; color: inherit; }
   --lp-line:      oklch(0.93 0.005 80 / 0.1);
   --lp-accent:    oklch(0.72 0.14 155);
   --lp-accent-2:  oklch(0.58 0.12 155);
-  --lp-arabic:    "Scheherazade New", "Amiri Quran", "Amiri", serif;
+  --lp-arabic:    var(--font-arabic);
   --lp-display:   "Spectral", Georgia, serif;
   --lp-body:      "Sora", system-ui, sans-serif;
 
@@ -14243,7 +14244,7 @@ body {
   unicode-range: U+0600-060B, U+060D-061A, U+061C-061E, U+0620-0669, U+066E-06D3, U+06D5-06FF,
                  U+0750-077F, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF, U+200C-200F;
 }
-:root { --font-kfgqpc: "TL Uthmanic Hafs", "Scheherazade New", "Amiri", serif; }
+:root { --font-kfgqpc: "TL Uthmanic Hafs", "Scheherazade New", serif; }
 
 /* ═══ al-Arbaʿūn an-Nawawiyya: the shelf ═════════════════════════════════
    A bookshelf, not a carousel: cards of one size, flat, side by side, the

@@ -6,7 +6,7 @@
  * when a verse is embedded in the free editor (Mode A).
  *
  * verseKey format in the URL: "2_255" (colon replaced by underscore).
- * Returns: { verse: { verse_key, text_uthmani, translations: [{ text }], words: [...] } }
+ * Returns: { verse: { verse_key, text_uthmani, text_qpc_hafs (the one to show), translations: [{ text }], words: [...] } }
  *
  * Words carry code_v2 and v2_page as well as text, so an ayah block can render
  * in the mushaf faces — those glyph codes are meaningless without the page
@@ -30,7 +30,7 @@ export async function GET(
     const url =
       `${BASE}/verses/by_key/${apiKey}` +
       `?language=en&words=true&translations=20` +
-      `&fields=text_uthmani` +
+      `&fields=text_uthmani,text_qpc_hafs` +
       `&word_fields=text_uthmani,text_qpc_hafs,transliteration,code_v2,v2_page`;
 
     const res = await fetch(url, { next: { revalidate: 86400 } });

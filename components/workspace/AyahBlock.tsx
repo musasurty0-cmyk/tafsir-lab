@@ -24,6 +24,7 @@ import type { MemberRole } from "@/lib/services/workspaces.service";
 import ProgressControl from "./ProgressControl";
 import NoteCard, { type NoteData } from "./NoteCard";
 import NoteCreator from "./NoteCreator";
+import { verseArabic } from "@/lib/quran-text";
 
 // ── Icons ──────────────────────────────────────────────────────────────────
 
@@ -135,7 +136,7 @@ export default function AyahBlock({
       </div>
 
       {/* ── Arabic ── */}
-      <div className="verse-arabic">{verse.text_uthmani}</div>
+      <div className="verse-arabic">{verseArabic(verse)}</div>
 
       {/* ── Word chips — informational, not interactive ── */}
       {wordTokens.length > 0 && (

@@ -74,7 +74,7 @@ export default function MushafCard({
         {/* Basmala — shown for every surah except At-Tawbah (surah 9) */}
         {chapter.bismillah_pre && (
           <div className="mushaf-basmala" dir="rtl">
-            بِسۡمِ ٱللَّهِ ٱلرَّحۡمَـٰنِ ٱلرَّحِيمِ
+            بِسۡمِ ٱللَّهِ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ
           </div>
         )}
       </div>

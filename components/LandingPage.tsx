@@ -80,7 +80,7 @@ export default function LandingPage() {
       <section className="lp-hero">
         {/* Decorative watermark */}
         <span className="lp-bismillah" aria-hidden="true">
-          بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
+          بِسۡمِ ٱللَّهِ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ
         </span>
 
         <div className="lp-hero-inner">

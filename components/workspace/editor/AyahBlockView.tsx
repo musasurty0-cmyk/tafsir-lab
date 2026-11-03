@@ -17,6 +17,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { qcfFamily, loadQCFFontsFor } from "@/lib/qcf-font";
 import { qcfWords } from "@/lib/qcf-words";
+import { verseArabic, isQpcText } from "@/lib/quran-text";
 import { NodeViewWrapper, type NodeViewProps } from "@tiptap/react";
 import { useEditorCtx } from "./EditorContext";
 import NoteCard from "../NoteCard";
@@ -139,9 +140,11 @@ export default function AyahBlockView({
     const done = (verses: RunVerse[]) => {
       if (!live) return;
       setRun(verses);
-      if (!arabicText && verses.length) {
+      /* Written when missing, and rewritten once when it is in the old
+         Uthmani encoding (lib/quran-text), by whoever can edit. */
+      if ((!arabicText || !isQpcText(arabicText)) && verses.length && editor.isEditable) {
         updateAttributes({
-          arabicText:      verses.map((v) => `${v.ar} ﴿${arabicDigits(v.ayah)}﴾`).join(" "),
+          arabicText:      verses.map((v) => (isQpcText(v.ar) ? v.ar : `${v.ar} ﴿${arabicDigits(v.ayah)}﴾`)).join(" "),
           translationText: verses.map((v) => `(${v.ayah}) ${v.tr}`).join(" "),
         });
       }
@@ -150,7 +153,7 @@ export default function AyahBlockView({
     if (pre.every(Boolean)) {
       done(pre.map((v, i) => ({
         ayah: ayahNumber + i,
-        ar:   v!.text_uthmani.trim(),
+        ar:   verseArabic(v!),
         tr:   plain(v!.translations?.[0]?.text),
       })));
     } else {
@@ -222,20 +225,26 @@ export default function AyahBlockView({
   // ── Fetch verse data if not yet cached ────────────────────────────────
   useEffect(() => {
     if (isRun) return;      // a selection reads its verses above
-    if (arabicText) return; // already populated — nothing to do
-    setFetching(true);
+    if (arabicText && isQpcText(arabicText)) return; // already populated — nothing to do
+    /* Text saved before the switch to the King Fahd face is in the Uthmani
+       encoding, which that face mis-draws (lib/quran-text). It cannot be
+       converted letter for letter, so the āyah is looked up again by its key
+       and the new text written back. The old text stays on screen meanwhile,
+       and stays if the lookup fails: a refresh is not worth an error. */
+    const refresh = !!arabicText;
+    if (!refresh) setFetching(true);
     setFetchError(null);
 
     // Check the pre-loaded verses for the current surah first (instant).
     const preloaded = ctx.verses.find((v) => v.verse_key === verseKey);
     if (preloaded) {
-      const ar = preloaded.text_uthmani;
+      const ar = verseArabic(preloaded);
       const tr = plain(preloaded.translations?.[0]?.text);
       // Update local display state immediately (synchronous, no TipTap lag).
       setDisplayArabic(ar);
-      setDisplayTranslation(tr);
+      if (!refresh) setDisplayTranslation(tr);
       // Persist into TipTap attrs for future renders / DB save (async, that's fine).
-      updateAttributes({ arabicText: ar, translationText: tr });
+      if (editor.isEditable && isQpcText(ar)) updateAttributes(refresh ? { arabicText: ar } : { arabicText: ar, translationText: tr });
       setFetching(false);
       return;
     }
@@ -253,13 +262,13 @@ export default function AyahBlockView({
       .then((r) => (r.ok ? r.json() : Promise.reject(r.statusText)))
       .then(({ verse }) => {
         if (!live) return;
-        const ar = verse.text_uthmani as string;
+        const ar = verseArabic(verse);
         const tr = plain(verse.translations?.[0]?.text as string | undefined);
         setDisplayArabic(ar);
-        setDisplayTranslation(tr);
-        updateAttributes({ arabicText: ar, translationText: tr });
+        if (!refresh) setDisplayTranslation(tr);
+        if (editor.isEditable && isQpcText(ar)) updateAttributes(refresh ? { arabicText: ar } : { arabicText: ar, translationText: tr });
       })
-      .catch(() => { if (live) setFetchError("Could not load this verse."); })
+      .catch(() => { if (live && !refresh) setFetchError("Could not load this verse."); })
       .finally(() => { if (live) setFetching(false); });
     return () => { live = false; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -449,7 +458,9 @@ export default function AyahBlockView({
                   : run.map((v) => (
                       <span key={v.ayah}>
                         {v.ar}
-                        <span className="ayah-block-mark">﴿{arabicDigits(v.ayah)}﴾</span>{" "}
+                        {/* qpc text closes with its own number, drawn as the
+                            ornament; only older text needs one added. */}
+                        {!isQpcText(v.ar) && <span className="ayah-block-mark">﴿{arabicDigits(v.ayah)}﴾</span>}{" "}
                       </span>
                     ))}
               </div>

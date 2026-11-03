@@ -448,7 +448,7 @@ function QCFMushafPage({
                 <>
                   <span className="qcf-rule" aria-hidden />
                   <span className="qcf-bar-basmala" dir="rtl">
-                    بِسۡمِ ٱللَّهِ ٱلرَّحۡمَـٰنِ ٱلرَّحِيمِ
+                    بِسۡمِ ٱللَّهِ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ
                   </span>
                   <span className="qcf-rule" aria-hidden />
                 </>

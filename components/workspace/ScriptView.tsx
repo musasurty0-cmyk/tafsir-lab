@@ -77,7 +77,8 @@ export default function ScriptView({ surah, onVerseClick }: Props) {
                   ? <span key={i} className="sv-rule" data-rule={s.rule}>{s.text}</span>
                   : <span key={i}>{s.text}</span>,
               )}
-              <span className="sv-num" dir="ltr">{v.verseKey.split(":")[1]}</span>
+              {/* No number of its own: the text ends with the āyah's
+                  number, which the King Fahd face draws as its ornament. */}
             </p>
           ))}
         </div>

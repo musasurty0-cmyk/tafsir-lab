@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { fetchQpcSurah } from "@/lib/quran-api";
 
 /**
  * Verse TEXT search.
@@ -70,6 +71,14 @@ export async function GET(req: Request) {
         translation: item.translations?.[0]?.text?.replace(/<[^>]+>/g, "").trim(),
       }];
     });
+
+    /* Search hits carry Quran.com's search text, not the encoding the King
+       Fahd face is built for; swap in qpc by key (lib/quran-text). A sūrah
+       that fails to load keeps its hit's own text. */
+    const surahs = [...new Set(results.map((r) => r.surah))];
+    const qpc = await Promise.all(surahs.map((n) => fetchQpcSurah(n).catch(() => ({} as Record<string, string>))));
+    const byKey: Record<string, string> = Object.assign({}, ...qpc);
+    for (const r of results) if (byKey[r.verseKey]) r.arabic = byKey[r.verseKey];
 
     return NextResponse.json({ results });
   } catch (e) {

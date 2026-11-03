@@ -106,7 +106,7 @@ export default function TldrawCanvas({ chapter, verses, onVerseClick }: Props) {
                   marginBottom: 6,
                   color: "var(--ink-2)",
                 }}>
-                  بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ
+                  بِسۡمِ ٱللَّهِ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ
                 </div>
               )}
 
