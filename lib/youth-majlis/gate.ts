@@ -14,10 +14,17 @@
  * SHA-256 digests: this repository is public, so a password written here in
  * plain text would be readable by anyone. Compared case-insensitively: a phone
  * capitalises the first letter of whatever is typed into a field.
+ *
+ * A demo guest never gets in, password or not: the circle is closed, and a
+ * browser that already holds the gate cookie must not carry a demo through it.
+ * Every page and route of the portal asks hasAccess, so this is the one place
+ * that has to know. It reads the account, not the readable tl-demo cookie.
  */
 
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
+import { isDemoUser } from "@/lib/demo/identity";
+import { getSessionOrNull } from "@/lib/session";
 
 export type GateArea = "majlis" | "ilmi";
 
@@ -59,7 +66,14 @@ function same(a: string, b: string): boolean {
 export async function hasAccess(area: GateArea): Promise<boolean> {
   const jar = await cookies();
   const v = jar.get(COOKIE[area])?.value;
-  return !!v && same(v, token(area));
+  if (!v || !same(v, token(area))) return false;
+  return !(await isDemoVisitor());
+}
+
+/** Is the signed-in visitor a demo guest? */
+export async function isDemoVisitor(): Promise<boolean> {
+  const session = await getSessionOrNull();
+  return !!session && isDemoUser(session.userId);
 }
 
 /** Check a typed password; on success, remember the visitor. */

@@ -8,6 +8,7 @@
  */
 
 import { db } from "@/lib/db";
+import { isDemoUser } from "@/lib/demo/identity";
 import { MODULES, QUESTIONS, TAB_TITLES } from "@/lib/youth-majlis/content";
 
 // ── Dates (UK) ─────────────────────────────────────────────────────────────
@@ -153,9 +154,12 @@ export type Role = "student" | "organiser" | "left";
 /**
  * A signed-in visitor through the gate is in the cohort. Never demotes.
  * Null when the account behind the session no longer exists (a closed demo
- * whose cookie outlived it): such a visitor is treated as signed out.
+ * whose cookie outlived it): such a visitor is treated as signed out. Null for
+ * a demo guest too: the gate already turns one away, and nothing else may put
+ * one on the cohort's list or in its shared workspace.
  */
 export async function joinCohort(userId: string): Promise<{ role: Role; workspaceId: string | null } | null> {
+  if (await isDemoUser(userId)) return null;
   const row = await db.youthMajlisProgress.upsert({
     where: { userId }, create: { userId }, update: {},
     select: { role: true, workspaceId: true },

@@ -114,6 +114,8 @@
 .y-field button:active { transform: translateY(-50%) scale(0.92); }
 .y-field button:disabled { opacity: 0.25; cursor: default; }
 .y-gate-err { min-height: 22px; margin-top: 12px; font-size: 14px; color: var(--danger); }
+.y-gate-back { margin-top: 28px; font-size: 16px; font-weight: 500; color: var(--accent); }
+.y-gate-back:hover { text-decoration: underline; }
 .y-gate-foot { margin-top: 48px; font-size: 12px; color: var(--ink-3); }
 .y-gate-book {
   width: 56px; height: 80px; border-radius: 2px 5px 5px 2px;

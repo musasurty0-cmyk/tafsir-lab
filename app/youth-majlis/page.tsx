@@ -22,7 +22,7 @@ import Motion from "@/components/youth-majlis/Motion";
 import JourneyRail, { type TileState } from "@/components/youth-majlis/JourneyRail";
 import QuestionExplorer from "@/components/youth-majlis/QuestionExplorer";
 import IlmiEnter from "@/components/youth-majlis/IlmiEnter";
-import { hasAccess } from "@/lib/youth-majlis/gate";
+import { hasAccess, isDemoVisitor } from "@/lib/youth-majlis/gate";
 import { modulesWithNotes } from "@/lib/youth-majlis/notes";
 import { getSessionOrNull } from "@/lib/session";
 import {
@@ -68,6 +68,17 @@ function Words({ text, className, id, as: Tag = "h2" }: {
    with their research and how far they've got (counts, as the organise page
    already shows), to check what they've set before anyone else sees it. */
 export default async function YouthMajlisPage({ searchParams }: { searchParams: Promise<{ as?: string }> }) {
+  if (await isDemoVisitor()) {
+    return (
+      <main className="y-gate">
+        <span className="y-mark" aria-hidden>T</span>
+        <h1 className="y-gate-h">Youth Majlis.</h1>
+        <p className="y-gate-sub">A closed study circle, so it isn’t part of the demo.</p>
+        <Link href="/home" className="y-gate-back">Back to your workspace</Link>
+      </main>
+    );
+  }
+
   if (!(await hasAccess("majlis"))) {
     return (
       <Gate

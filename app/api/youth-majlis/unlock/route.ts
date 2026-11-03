@@ -6,9 +6,13 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { hasAccess, lock, unlock, type GateArea } from "@/lib/youth-majlis/gate";
+import { hasAccess, isDemoVisitor, lock, unlock, type GateArea } from "@/lib/youth-majlis/gate";
 
 export async function POST(req: NextRequest) {
+  if (await isDemoVisitor()) {
+    return NextResponse.json({ error: "Youth Majlis isn’t part of the demo." }, { status: 403 });
+  }
+
   const body = await req.json().catch(() => null) as { area?: unknown; password?: unknown } | null;
   const area: GateArea = body?.area === "ilmi" ? "ilmi" : "majlis";
   const typed = typeof body?.password === "string" ? body.password.slice(0, 200) : "";

@@ -22,8 +22,9 @@ import * as WorkspacesService from "@/lib/services/workspaces.service";
 import * as PagesService from "@/lib/services/pages.service";
 import { createConnection } from "@/lib/services/connections.service";
 import { fatihaNotesDoc, DEMO_CONNECTIONS } from "@/lib/demo/fatiha-notes";
+import { DEMO_DOMAIN, isDemoEmail } from "@/lib/demo/identity";
 
-export const DEMO_DOMAIN = "demo.tafsirlab.local";
+export { DEMO_DOMAIN, isDemoEmail };
 
 /** Global ceiling, independent of the per-IP limit. Survives serverless, where
  *  an in-memory counter does not. */
@@ -48,8 +49,6 @@ export class DemoBusyError extends Error {
 /** A readable, non-secret flag telling the browser this is a demo, so it can
  *  check in and say goodbye. The session itself stays in the httpOnly cookie. */
 export const DEMO_FLAG = "tl-demo";
-
-export const isDemoEmail = (email: string) => email.endsWith(`@${DEMO_DOMAIN}`);
 
 /**
  * Delete a demo account and everything it made.

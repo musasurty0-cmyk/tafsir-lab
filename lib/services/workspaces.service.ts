@@ -12,6 +12,8 @@
 
 import { db } from "@/lib/db";
 import { boardRooms, wipeInk } from "@/lib/collab/ink-admin";
+import { isDemoUser } from "@/lib/demo/identity";
+import { getSettings } from "@/lib/youth-majlis/data";
 import { log } from "./activity.service";
 import { randomBytes } from "crypto";
 
@@ -372,6 +374,10 @@ export async function joinByInviteCode(code: string, userId: string) {
   const workspace = await db.workspace.findUnique({ where: { inviteCode: code } });
   if (!workspace) throw new WorkspaceError("Invalid invite code", "NOT_FOUND");
   if (workspace.type !== "group") throw new WorkspaceError("This workspace is private", "FORBIDDEN");
+  // The Youth Majlis cohort's workspace is closed to demo guests, invite or not.
+  if (workspace.id === (await getSettings()).cohortWorkspaceId && await isDemoUser(userId)) {
+    throw new WorkspaceError("This workspace is private", "FORBIDDEN");
+  }
 
   const existing = await db.workspaceMember.findUnique({
     where: { workspaceId_userId: { workspaceId: workspace.id, userId } },
