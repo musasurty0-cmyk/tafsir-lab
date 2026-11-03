@@ -10729,11 +10729,18 @@ body {
    Overlays the editor exactly and is never interactive — the real editor
    underneath keeps every click, so a caret placed before sync lands in the
    real document. Removed the instant the collab provider reports synced. */
+/* As tall as the note, not the box it sits in. That box holds the editor, which
+   is one empty line until Yjs arrives, so inset:0 with overflow:hidden cut the
+   note off at its first few lines: until the sync on a slow connection, and for
+   good if the realtime server is down, when it looked like lost writing. */
 .page-editor-prepaint {
   position: absolute;
-  inset: 0;
+  inset: 0 0 auto;
   pointer-events: none;
-  overflow: hidden;
+}
+/* The empty editor underneath would write its prompt over the note. */
+.main-doc-container:has(> .page-editor-prepaint) .ProseMirror :is(.is-empty, .is-editor-empty)::before {
+  content: none;
 }
 
 /* Reading size reaches the sūrah list too.

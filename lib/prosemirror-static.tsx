@@ -103,7 +103,7 @@ function renderNode(node: PMNode, key: React.Key): React.ReactNode {
           <div>{kids}</div>
         </li>
       );
-    case "blockquote":  return <blockquote key={key} style={style}>{kids}</blockquote>;
+    case "blockquote":  return <blockquote key={key} dir="auto" style={style}>{kids}</blockquote>;
     case "codeBlock":   return <pre key={key}><code>{kids}</code></pre>;
     case "horizontalRule": return <hr key={key} />;
 
