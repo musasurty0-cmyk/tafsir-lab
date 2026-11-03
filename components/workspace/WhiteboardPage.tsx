@@ -481,16 +481,16 @@ export default function WhiteboardPage({
         <div className="whiteboard-hint" aria-hidden>
           <p className="whiteboard-hint-title">Blank whiteboard</p>
           <p className="whiteboard-hint-body">
-            Pick the <strong>Text</strong> tool and click to drop a note — then type
+            Pick the <strong>Text</strong> tool and click to drop a note, then type
             <code> /ayah 2:255</code> or <code> /tabari</code> to pull in verses &amp; tafsīr.
             Use the <strong>pen</strong> to annotate around them.
           </p>
           {/* The canvas is not the only way to write here. Said plainly because
               the instruction above reads as the whole story otherwise, and the
-              document surface is a click away in the bar above. */}
+              document surface is a click away in the view switch. */}
           <p className="whiteboard-hint-body">
-            Writing prose instead? Switch to <strong>notes</strong> in the bar above
-            for a plain document — same slash commands, no surah required.
+            Writing prose instead? Switch to <strong>Notes</strong> at the top right
+            for a plain document, with the same slash commands.
           </p>
         </div>
       )}

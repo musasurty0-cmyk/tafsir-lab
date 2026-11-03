@@ -15770,3 +15770,140 @@ body {
   .topbar-actions .tb-btn { font-size: 0; gap: 0; min-width: 44px; padding: 0; justify-content: center; }
   .topbar-actions .tb-btn svg { width: 20px; height: 20px; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   The view switch — Notes, Mushaf, Split, Board.
+   Four bare 17px glyphs were the owner's "too small to switch between board
+   and editor". Now a segmented control: a filled tray, the current view
+   raised on it, each view named. Scoped to .mode-toggle so the other
+   .mode-btn users (the board shell's import and bookmark) keep their shape.
+   ═══════════════════════════════════════════════════════════════════════════ */
+.mode-toggle {
+  background: var(--hover);
+  padding: 3px;
+  border-radius: 12px;
+  gap: 2px;
+  flex: none;
+}
+.mode-toggle .mode-btn {
+  width: auto;
+  min-width: 0;
+  height: 34px; min-height: 34px;
+  padding: 0 12px 0 10px;
+  gap: 7px;
+  border-radius: 9px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+.mode-toggle .mode-btn svg { width: 18px; height: 18px; flex: none; }
+.mode-toggle .mode-btn:hover:not([data-active="true"]) {
+  background: color-mix(in oklch, var(--ink) 6%, transparent);
+  color: var(--ink);
+}
+.mode-toggle .mode-btn[data-active="true"] {
+  background: var(--bg-elev);
+  color: var(--ink);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+.mode-toggle .mode-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* The bar answers to its OWN width, not the window's: with the sidebar open
+   an iPad in portrait gives it under 700px, and the actions ran off the right
+   edge (Ask, Export, Listen and Bookmark could not be reached at all) while
+   every viewport query still thought it was on a tablet. */
+.topbar-zone { container: topbar / inline-size; }
+/* Tight: only the current view keeps its name (the others are still a tap
+   away, and the label that matters, where you are, stays), and the actions
+   show their icons. */
+@container topbar (max-width: 1040px) {
+  .topbar .mode-toggle .mode-btn:not([data-active="true"]) { padding: 0 10px; }
+  .topbar .mode-toggle .mode-btn:not([data-active="true"]) .mode-btn-label { display: none; }
+  .topbar-actions .tb-btn { font-size: 0; gap: 0; padding: 0; min-width: 36px; justify-content: center; }
+  .topbar-actions .tb-btn svg { width: 17px; height: 17px; }
+}
+/* Tighter still: the phone layout, actions on a row of their own under the
+   breadcrumb, scrolling sideways if they must. */
+@container topbar (max-width: 780px) {
+  .topbar { flex-wrap: wrap; row-gap: 0; }
+  .topbar-actions {
+    flex: 1 0 100%; order: 10; min-width: 0;
+    margin-left: 0; padding-bottom: 4px; gap: 2px;
+    overflow-x: auto; scrollbar-width: none;
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 16px), transparent);
+            mask-image: linear-gradient(to right, #000 calc(100% - 16px), transparent);
+  }
+  .topbar-actions::-webkit-scrollbar { display: none; }
+  .topbar-actions > * { flex-shrink: 0; }
+}
+@container topbar (max-width: 780px) {
+  @media (pointer: coarse) { .topbar-actions .tb-btn { min-width: 44px; } }
+}
+@media (pointer: coarse) {
+  .mode-toggle .mode-btn { min-height: 40px; height: 40px; padding: 0 14px 0 12px; }
+  .mode-toggle { border-radius: 14px; }
+  .mode-toggle .mode-btn { border-radius: 11px; }
+}
+
+/* Over the Mushaf and the board, where the bar hides. Top right of the
+   surface, under the bar (z 40), so the bar covers it as it slides in. */
+.mode-float {
+  position: absolute;
+  top: 12px; right: 16px;
+  z-index: 35;
+  border-radius: 14px;
+  background: var(--bg-elev);
+  box-shadow: var(--shadow-lg);
+  animation: ov-rail-in var(--dur-overlay) var(--ease-overlay) both;
+}
+/* The study bar (Studying… / Done, and the board switch) lived in this same
+   corner. It steps down under the switch rather than being covered by it. */
+.canvas-area:has(> .mode-float) .study-bar { top: 64px; }
+@media (pointer: coarse) { .canvas-area:has(> .mode-float) .study-bar { top: 70px; } }
+@media (max-width: 720px) {
+  .mode-float { top: 8px; right: 8px; }
+  .mode-float .mode-btn:not([data-active="true"]) .mode-btn-label { display: none; }
+}
+
+/* Secondary bar actions show their icon alone; the title names them. Their
+   words were what pushed the breadcrumb down to "T... / Al-F...". */
+.tb-btn--icon {
+  font-size: 0; gap: 0;
+  padding: 0; min-width: 36px;
+  justify-content: center;
+}
+.tb-btn--icon svg { width: 17px; height: 17px; }
+@media (pointer: coarse) { .tb-btn--icon { min-width: 44px; } }
+
+/* ── The tool rail folds ──
+   Down to the tool in hand and undo, so a page can be written on with the
+   whole of it in view. Each half is a one-row grid whose track runs between
+   1fr and 0fr, which animates the height without measuring it. `clip` rather
+   than `hidden` so focus rings and hover shadows can spill a few pixels. */
+.ctr-fold {
+  display: grid;
+  grid-template-rows: 1fr;
+  width: 100%;
+  opacity: 1;
+}
+.ctr-fold[data-open="false"] { grid-template-rows: 0fr; opacity: 0; }
+.canvas-tool-rail[data-settled="true"] .ctr-fold {
+  transition: grid-template-rows 0.42s cubic-bezier(0.32, 0.72, 0, 1),
+              opacity 0.24s var(--ease-soft);
+}
+.ctr-fold-inner {
+  min-height: 0;
+  overflow: clip;
+  overflow-clip-margin: 6px;
+  display: flex; flex-direction: column; align-items: center;
+  gap: 2px;
+}
+/* An empty fold still takes a gap in the rail; cancel it. */
+.ctr-fold[data-open="false"] { margin-top: -2px; }
+.ctr-fold-btn { color: var(--ink-4); }
+.ctr-fold-btn:hover:not(:disabled) { color: var(--ink); }
+.canvas-tool-rail[data-folded="true"] .ctr-fold-btn { color: var(--ink-3); }
+@media (prefers-reduced-motion: reduce) {
+  .canvas-tool-rail[data-settled="true"] .ctr-fold { transition: opacity 0.12s linear; }
+}

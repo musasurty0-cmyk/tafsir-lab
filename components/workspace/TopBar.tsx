@@ -13,11 +13,12 @@
  * button-collapse did) silently destroyed that slot.
  *
  * Breadcrumbs are clickable Links.
- * Mode toggle: Editor | Canvas | Split.
+ * View switch: Notes | Mushaf | Split | Board (ModeSwitch, below).
  */
 
 import Link from "next/link";
 import SurahCrumbMenu from "./SurahCrumbMenu";
+import type { ReactElement } from "react";
 import type { Chapter } from "@/lib/types";
 import PresenceBar from "./PresenceBar";
 import BookmarkButton from "@/components/BookmarkButton";
@@ -158,6 +159,7 @@ export default function TopBar({
   const autoHide = mode === "canvas" || mode === "board";
 
   return (
+    <>
     <div className={`topbar-zone${autoHide ? " topbar-zone--float" : ""}`}>
       {/* The strip that stands in for the bar while it is hidden — a few
           pixels of the top edge that stay under the pointer at all times.
@@ -224,47 +226,7 @@ export default function TopBar({
 
       {/* ── Actions ── */}
       <div className="topbar-actions">
-        {/* Mode toggle */}
-        <div className="mode-toggle" role="group" aria-label="View mode">
-          <button
-            className="mode-btn"
-            data-active={mode === "editor" ? "true" : "false"}
-            onClick={() => mode !== "editor" && onSetMode("editor")}
-            title="Document view"
-            aria-label="Document view"
-          >
-            <KeyboardIcon />
-          </button>
-          <button
-            className="mode-btn"
-            data-active={mode === "canvas" ? "true" : "false"}
-            onClick={() => mode !== "canvas" && onSetMode("canvas")}
-            title="Spatial canvas"
-            aria-label="Spatial canvas"
-          >
-            <PenIcon />
-          </button>
-          <button
-            className="mode-btn mode-btn--split"
-            data-active={mode === "split" ? "true" : "false"}
-            onClick={() => mode !== "split" && onSetMode("split")}
-            title="Split — Editor + Canvas"
-            aria-label="Split — Editor + Canvas"
-          >
-            <SplitIcon />
-          </button>
-          {!hideBoard && (
-            <button
-              className="mode-btn"
-              data-active={mode === "board" ? "true" : "false"}
-              onClick={() => mode !== "board" && onSetMode("board")}
-              title="Whiteboard — blank scratch canvas"
-              aria-label="Whiteboard — blank scratch canvas"
-            >
-              <BoardIcon />
-            </button>
-          )}
-        </div>
+        <ModeSwitch mode={mode} onSetMode={onSetMode} hideBoard={hideBoard} />
 
         {/* Formatting toggle — only in editor / split mode */}
         {mode !== "canvas" && mode !== "board" && mode !== "read" && (
@@ -307,7 +269,7 @@ export default function TopBar({
 
         {onExport && (
           <button
-            className="tb-btn"
+            className="tb-btn tb-btn--icon"
             onClick={onExport}
             title="Download this page as Markdown"
             aria-label="Download this page as Markdown"
@@ -323,6 +285,7 @@ export default function TopBar({
             pageId={activePageId}
             label={activePageTitle ?? chapter.name_simple}
             surahNumber={surahNumber}
+            className="tb-btn tb-btn--icon"
           />
         )}
 
@@ -332,6 +295,48 @@ export default function TopBar({
             divider went with them so the bar does not end on a separator. */}
       </div>
       </div>
+    </div>
+
+    {/* On the drawing surfaces the bar hides, and with it the only way back to
+        the notes: a 10px strip at the top edge that a finger cannot hover. The
+        switch stays on the board instead, under the bar, so the bar covers it
+        when it slides in and the two never show at once. */}
+    {autoHide && (
+      <div className="mode-float">
+        <ModeSwitch mode={mode} onSetMode={onSetMode} hideBoard={hideBoard} />
+      </div>
+    )}
+    </>
+  );
+}
+
+/* Labelled, because four bare glyphs read as decoration: "the buttons to
+   switch between board and editor are too small" was the owner's report. A
+   filled tray with the current view raised on it, as in a segmented control. */
+const MODES: { id: ViewMode; label: string; title: string; Icon: (p: { size?: number }) => ReactElement; className?: string }[] = [
+  { id: "editor", label: "Notes",  title: "Notes: the typed document",            Icon: KeyboardIcon },
+  { id: "canvas", label: "Mushaf", title: "Mushaf: write on the page itself",     Icon: PenIcon },
+  { id: "split",  label: "Split",  title: "Split: notes beside the Mushaf",       Icon: SplitIcon, className: "mode-btn--split" },
+  { id: "board",  label: "Board",  title: "Board: a blank whiteboard",            Icon: BoardIcon },
+];
+
+function ModeSwitch({ mode, onSetMode, hideBoard }: { mode: ViewMode; onSetMode: (m: ViewMode) => void; hideBoard: boolean }) {
+  return (
+    <div className="mode-toggle" role="group" aria-label="View">
+      {MODES.filter((m) => !(hideBoard && m.id === "board")).map(({ id, label, title, Icon, className }) => (
+        <button
+          key={id}
+          className={`mode-btn${className ? " " + className : ""}`}
+          data-active={mode === id ? "true" : "false"}
+          aria-pressed={mode === id}
+          onClick={() => mode !== id && onSetMode(id)}
+          title={title}
+          aria-label={label}
+        >
+          <Icon />
+          <span className="mode-btn-label">{label}</span>
+        </button>
+      ))}
     </div>
   );
 }

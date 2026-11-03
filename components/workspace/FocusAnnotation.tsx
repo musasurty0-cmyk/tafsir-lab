@@ -659,6 +659,7 @@ export default function FocusAnnotation({
         <div className="fa-rail">
           <CanvasToolRail
             omitTools={["lasso"]}
+            foldable={false}
             activeTool={tool}
             onToolChange={setTool}
             penColor={penColor}

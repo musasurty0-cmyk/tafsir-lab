@@ -228,19 +228,23 @@ export default function WhiteboardShell({
               className="mode-btn"
               data-active={view === "canvas" ? "true" : "false"}
               onClick={() => view !== "canvas" && chooseView("canvas")}
-              title="Canvas — draw and place notes freely"
-              aria-label="Canvas view"
+              title="Board: draw and place notes freely"
+              aria-label="Board"
+              aria-pressed={view === "canvas"}
             >
               <CanvasIcon />
+              <span className="mode-btn-label">Board</span>
             </button>
             <button
               className="mode-btn"
               data-active={view === "notes" ? "true" : "false"}
               onClick={() => view !== "notes" && chooseView("notes")}
-              title="Notes — write a document"
-              aria-label="Notes view"
+              title="Notes: write a document"
+              aria-label="Notes"
+              aria-pressed={view === "notes"}
             >
               <NotesIcon />
+              <span className="mode-btn-label">Notes</span>
             </button>
           </div>
 

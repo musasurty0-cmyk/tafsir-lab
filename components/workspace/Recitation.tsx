@@ -92,10 +92,10 @@ export default function Recitation({ surah, surahName, ayah }: Props) {
   return (
     <>
       <button
-        className="tb-btn"
+        className="tb-btn tb-btn--icon"
         data-active={open ? "true" : "false"}
         onClick={() => setOpen((v) => !v)}
-        title="Recitation"
+        title="Listen to the recitation"
         aria-label="Recitation"
       >
         <Volume2 size={16} aria-hidden /> Listen

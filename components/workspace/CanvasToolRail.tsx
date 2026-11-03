@@ -185,6 +185,20 @@ const SaveIcon = ({ state }: { state: SaveState }) => (
   </svg>
 );
 
+/* Chevrons meeting in the middle, and parting. The rail is centred on the
+   board's height, so it does fold toward its middle and open from it. */
+const FoldIcon = ({ open }: { open: boolean }) => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    {open
+      ? <><polyline points="7 4 12 9 17 4"/><polyline points="7 20 12 15 17 20"/></>
+      : <><polyline points="7 9 12 4 17 9"/><polyline points="7 15 12 20 17 15"/></>}
+  </svg>
+);
+
+/** localStorage key remembering whether the rail is folded away */
+export const RAIL_FOLDED_KEY = "tl-rail-folded";
+
 const SAVE_TITLE: Record<SaveState, string> = {
   saved:   "All changes saved  ⌘S",
   unsaved: "Unsaved changes — save now  ⌘S",
@@ -252,6 +266,10 @@ interface Props {
    *  canvas rather than DrawingCanvas, so it has no lasso to offer, and a
    *  button that selects a tool nothing handles is worse than no button. */
   omitTools?:             DrawTool[];
+  /** Offer to fold the rail down to the tool in hand. Off where the rail sits
+   *  in a column of its own (the Word notes overlay), which it would leave
+   *  empty. */
+  foldable?:              boolean;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────
@@ -267,6 +285,7 @@ export default function CanvasToolRail({
   onClear,
   saveState = "saved", onSave,
   omitTools,
+  foldable = true,
 }: Props) {
 
   const tools = omitTools?.length
@@ -318,6 +337,25 @@ export default function CanvasToolRail({
 
   const isFirstRender = useRef(true);
   const railRef       = useRef<HTMLDivElement>(null);
+
+  /* Folded: the rail shrinks to the tool in hand and undo, for writing with
+     the whole page in view. Remembered per device, like the pen width. Read
+     in an effect, not during render, so the server's HTML (always open) and
+     the first client render agree; `settled` holds the fold's transition
+     back until then, so a rail that loads folded does not animate shut. */
+  const [folded, setFolded]   = useState(false);
+  const [settled, setSettled] = useState(false);
+  useEffect(() => {
+    try { if (foldable && localStorage.getItem(RAIL_FOLDED_KEY) === "1") setFolded(true); } catch {}
+    const id = setTimeout(() => setSettled(true), 50);
+    return () => clearTimeout(id);
+  }, [foldable]);
+  const isFolded = foldable && folded;
+  function toggleFold() {
+    const next = !isFolded;
+    setFolded(next);
+    try { localStorage.setItem(RAIL_FOLDED_KEY, next ? "1" : "0"); } catch {}
+  }
 
   /* The palette used to close itself 1.25s after you stopped touching it,
      which is what "it disappears randomly" was. A menu should close because
@@ -428,82 +466,133 @@ export default function CanvasToolRail({
     <div
       ref={railRef}
       className="canvas-tool-rail"
+      data-folded={isFolded ? "true" : "false"}
+      data-settled={settled ? "true" : "false"}
       onPointerDown={(e) => e.stopPropagation()}
       onPointerUp={(e) => e.stopPropagation()}
     >
 
-      {/* ── Tool buttons ── */}
-      {tools.map(({ id, Icon, title }) => (
-        <button
-          key={id}
-          className="ctr-btn"
-          /* Lets the stylesheet tint the ACTIVE tool by purpose (ink, marker,
-             eraser) without the rail knowing anything about colour. */
-          data-tool={id}
-          data-active={activeTool === id ? "true" : "false"}
-          title={title}
-          onClick={onTap(() => selectTool(id))}
-          onPointerUp={penTap(() => selectTool(id))}
-        >
-          <Icon />
-          {id === "pen" && (
-            <span className="ctr-color-dot" style={{ background: penColor }} />
-          )}
-          {id === "highlight" && (
-            <span className="ctr-color-dot" style={{ background: highlightColor }} />
-          )}
-        </button>
-      ))}
-
-      <div className="ctr-sep" />
-
-      {/* ── Undo / redo ── */}
-      <button
-        className="ctr-btn"
-        title="Undo  ⌘Z"
-        onClick={onTap(onUndo)}
-        onPointerUp={penTap(onUndo)}
-        disabled={!canUndo}
-      >
-        <UndoIcon />
-      </button>
-      <button
-        className="ctr-btn"
-        title="Redo  ⌘⇧Z"
-        onClick={onTap(onRedo)}
-        onPointerUp={penTap(onRedo)}
-        disabled={!canRedo}
-      >
-        <RedoIcon />
-      </button>
-
-      {/* ── Save ── always pressable: on "saved" it simply confirms. */}
-      {onSave && (
-        <button
-          className="ctr-btn ctr-save"
-          data-save={saveState}
-          title={SAVE_TITLE[saveState]}
-          aria-label={SAVE_TITLE[saveState]}
-          onClick={onTap(onSave)}
-          onPointerUp={penTap(onSave)}
-        >
-          <SaveIcon state={saveState} />
-        </button>
+      {/* ── Folded: the tool in hand and undo ── */}
+      {foldable && (
+        <div className="ctr-fold" data-open={isFolded ? "true" : "false"} inert={!isFolded}>
+          <div className="ctr-fold-inner">
+            {tools.filter((t) => t.id === activeTool).map(({ id, Icon, title }) => (
+              <button
+                key={id}
+                className="ctr-btn"
+                data-tool={id}
+                data-active="true"
+                title={title}
+                onClick={onTap(() => selectTool(id))}
+                onPointerUp={penTap(() => selectTool(id))}
+              >
+                <Icon />
+                {id === "pen" && <span className="ctr-color-dot" style={{ background: penColor }} />}
+                {id === "highlight" && <span className="ctr-color-dot" style={{ background: highlightColor }} />}
+              </button>
+            ))}
+            <button
+              className="ctr-btn"
+              title="Undo  ⌘Z"
+              onClick={onTap(onUndo)}
+              onPointerUp={penTap(onUndo)}
+              disabled={!canUndo}
+            >
+              <UndoIcon />
+            </button>
+          </div>
+        </div>
       )}
 
-      {/* ── Clear all (optional) ── */}
-      {onClear && (
-        <>
+      <div className="ctr-fold" data-open={isFolded ? "false" : "true"} inert={isFolded}>
+        <div className="ctr-fold-inner">
+          {/* ── Tool buttons ── */}
+          {tools.map(({ id, Icon, title }) => (
+            <button
+              key={id}
+              className="ctr-btn"
+              /* Lets the stylesheet tint the ACTIVE tool by purpose (ink, marker,
+                 eraser) without the rail knowing anything about colour. */
+              data-tool={id}
+              data-active={activeTool === id ? "true" : "false"}
+              title={title}
+              onClick={onTap(() => selectTool(id))}
+              onPointerUp={penTap(() => selectTool(id))}
+            >
+              <Icon />
+              {id === "pen" && (
+                <span className="ctr-color-dot" style={{ background: penColor }} />
+              )}
+              {id === "highlight" && (
+                <span className="ctr-color-dot" style={{ background: highlightColor }} />
+              )}
+            </button>
+          ))}
+
           <div className="ctr-sep" />
+
+          {/* ── Undo / redo ── */}
           <button
-            className="ctr-btn ctr-btn--danger"
-            title="Clear all strokes"
-            onClick={onTap(onClear)}
-            onPointerUp={penTap(onClear)}
+            className="ctr-btn"
+            title="Undo  ⌘Z"
+            onClick={onTap(onUndo)}
+            onPointerUp={penTap(onUndo)}
+            disabled={!canUndo}
           >
-            <ClearIcon />
+            <UndoIcon />
           </button>
-        </>
+          <button
+            className="ctr-btn"
+            title="Redo  ⌘⇧Z"
+            onClick={onTap(onRedo)}
+            onPointerUp={penTap(onRedo)}
+            disabled={!canRedo}
+          >
+            <RedoIcon />
+          </button>
+
+          {/* ── Save ── always pressable: on "saved" it simply confirms. */}
+          {onSave && (
+            <button
+              className="ctr-btn ctr-save"
+              data-save={saveState}
+              title={SAVE_TITLE[saveState]}
+              aria-label={SAVE_TITLE[saveState]}
+              onClick={onTap(onSave)}
+              onPointerUp={penTap(onSave)}
+            >
+              <SaveIcon state={saveState} />
+            </button>
+          )}
+
+          {/* ── Clear all (optional) ── */}
+          {onClear && (
+            <>
+              <div className="ctr-sep" />
+              <button
+                className="ctr-btn ctr-btn--danger"
+                title="Clear all strokes"
+                onClick={onTap(onClear)}
+                onPointerUp={penTap(onClear)}
+              >
+                <ClearIcon />
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {foldable && (
+        <button
+          className="ctr-btn ctr-fold-btn"
+          title={isFolded ? "Show all tools" : "Fold the tools away"}
+          aria-label={isFolded ? "Show all tools" : "Fold the tools away"}
+          aria-expanded={!isFolded}
+          onClick={onTap(toggleFold)}
+          onPointerUp={penTap(toggleFold)}
+        >
+          <FoldIcon open={!isFolded} />
+        </button>
       )}
 
       {/* ── Colour + size popover ─────────────────────────────────────────
