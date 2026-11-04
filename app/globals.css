@@ -4202,7 +4202,7 @@ input, textarea { font: inherit; color: inherit; }
   /* The rail is a column, so its separator lies across it. The one place the
      rail is still a row — the docked rail on a narrow screen — flips this
      back in its own media query. */
-  width: 20px;
+  width: 26px;
   height: 1px;
   background: var(--line);
   margin: 4px 0;
@@ -4213,10 +4213,10 @@ input, textarea { font: inherit; color: inherit; }
 /* ── Colour indicator dot (pen / highlight icons) ── */
 .ctr-color-dot {
   position: absolute;
-  bottom: 5px;
-  right: 5px;
-  width: 7px;
-  height: 7px;
+  bottom: 6px;
+  right: 6px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   border: 1.5px solid rgba(255, 255, 255, 0.92);
   box-shadow: 0 0 0 0.75px rgba(0, 0, 0, 0.18);
@@ -15760,9 +15760,9 @@ body {
 
 /* Study Mode */
 .study-bar-done      { min-height: 36px; padding-left: 16px; padding-right: 16px; font-size: 14px; border-radius: 10px; }
-.ctr-btn             { min-width: 40px; min-height: 40px; }
-.ctr-width-btn       { min-width: 38px; min-height: 36px; }
-.ctr-swatch          { min-width: 26px; min-height: 26px; }
+.ctr-btn             { min-width: 44px; min-height: 44px; }
+.ctr-width-btn       { min-width: 40px; min-height: 38px; }
+.ctr-swatch          { min-width: 28px; min-height: 28px; }
 .mode-b-word-hint-dismiss { min-width: 28px; min-height: 28px; font-size: 15px; }
 
 /* Dashboard */
@@ -15789,9 +15789,16 @@ body {
     min-width: 44px;
   }
   .tree-row-action-btn, .crumb-menu-btn, .sidebar-head-btn, .mode-b-word-hint-dismiss { min-width: 40px; min-height: 40px; }
+  .ctr-btn             { min-width: 48px; min-height: 48px; }
   .ctr-swatch          { min-width: 32px; min-height: 32px; }
   .drawer-lang-select,
   .drawer-source-select { min-height: 40px; font-size: 15px; }
+}
+
+/* Twelve buttons down the side must still fit a short window: a small laptop,
+   or a tablet or phone turned on its side. */
+@media (max-height: 680px) {
+  .ctr-btn { min-width: 38px; min-height: 38px; }
 }
 
 /* A phone's top bar could not hold the labelled buttons at all: about 650px

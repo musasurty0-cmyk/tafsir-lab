@@ -84,7 +84,7 @@ export const PEN_SIZE_KEY            = "tl-pen-size";
 // ── Icons ─────────────────────────────────────────────────────────────────
 
 const HandIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
     stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
     <path d="M18 11V6a2 2 0 0 0-4 0v0M14 10V4a2 2 0 0 0-4 0v2M10 10.5V6a2 2 0 0 0-4 0v8"/>
     <path d="M18 11a2 2 0 1 1 4 0v3a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/>
@@ -92,7 +92,7 @@ const HandIcon = () => (
 );
 
 const PenIcon = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+  <svg width="19" height="19" viewBox="0 0 24 24" fill="none"
     stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
     <line x1="18" y1="2" x2="22" y2="6"/>
     <path d="M7.5 20.5 19 9l-4-4L3.5 16.5 2 22z"/>
@@ -100,7 +100,7 @@ const PenIcon = () => (
 );
 
 const HighlighterIcon = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+  <svg width="19" height="19" viewBox="0 0 24 24" fill="none"
     stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
     <path d="m9 11-6 6v3h9l3-3"/>
     <path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/>
@@ -108,7 +108,7 @@ const HighlighterIcon = () => (
 );
 
 const ArrowIcon = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+  <svg width="19" height="19" viewBox="0 0 24 24" fill="none"
     stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
     <line x1="5" y1="19" x2="19" y2="5"/>
     <polyline points="9 5 19 5 19 15"/>
@@ -116,7 +116,7 @@ const ArrowIcon = () => (
 );
 
 const EraserIcon = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+  <svg width="19" height="19" viewBox="0 0 24 24" fill="none"
     stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
     <path d="M20 20H7L3 16a2 2 0 0 1 0-2.83l10-10a2 2 0 0 1 2.83 0L21 8.17a2 2 0 0 1 0 2.83z"/>
     <line x1="7" y1="20" x2="7.01" y2="20"/>
@@ -126,7 +126,7 @@ const EraserIcon = () => (
 /* A dashed loop with the ink it has caught. Dashes say "selection" in every
    drawing tool there is, and they are what the canvas actually draws. */
 const LassoIcon = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+  <svg width="19" height="19" viewBox="0 0 24 24" fill="none"
     stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
     <path d="M12 4c4.4 0 8 2.5 8 5.5S16.4 15 12 15s-8-2.5-8-5.5a4.6 4.6 0 0 1 1.5-3.2"
       strokeDasharray="3.4 2.6"/>
@@ -136,7 +136,7 @@ const LassoIcon = () => (
 );
 
 const TextIcon = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+  <svg width="19" height="19" viewBox="0 0 24 24" fill="none"
     stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
     <polyline points="4 7 4 4 20 4 20 7"/>
     <line x1="9" y1="20" x2="15" y2="20"/>
@@ -145,7 +145,7 @@ const TextIcon = () => (
 );
 
 const UndoIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
     stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
     <path d="M3 7v6h6"/>
     <path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/>
@@ -153,7 +153,7 @@ const UndoIcon = () => (
 );
 
 const RedoIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
     stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
     <path d="M21 7v6h-6"/>
     <path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3L21 13"/>
@@ -161,7 +161,7 @@ const RedoIcon = () => (
 );
 
 const ClearIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
     stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
     <polyline points="3 6 5 6 21 6"/>
     <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
@@ -172,7 +172,7 @@ const ClearIcon = () => (
    something is waiting or on its way, and a bang when the server refused.
    The outline never changes, so the button stays findable in every state. */
 const SaveIcon = ({ state }: { state: SaveState }) => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
     stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
     <path d="M17.5 19H7a5 5 0 1 1 .9-9.92A6 6 0 0 1 19.5 11 4 4 0 0 1 17.5 19z"/>
     {state === "saved" && <polyline points="9.2 13.6 11.4 15.8 15.2 11.6"/>}
@@ -188,7 +188,7 @@ const SaveIcon = ({ state }: { state: SaveState }) => (
 /* Chevrons meeting in the middle, and parting. The rail is centred on the
    board's height, so it does fold toward its middle and open from it. */
 const FoldIcon = ({ open }: { open: boolean }) => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+  <svg width="19" height="19" viewBox="0 0 24 24" fill="none"
     stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
     {open
       ? <><polyline points="7 4 12 9 17 4"/><polyline points="7 20 12 15 17 20"/></>
