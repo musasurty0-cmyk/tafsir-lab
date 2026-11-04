@@ -1953,7 +1953,7 @@ export default function ModeBPage({
               title="Previous page (←)"
               aria-label="Previous page"
             >
-              <ChevronLeft size={16} strokeWidth={2.2} />
+              <ChevronLeft size={22} strokeWidth={2.2} />
             </button>
             <span className="mode-b-pager-label" aria-live="polite">
               Page {currentMushafahPage}
@@ -1966,7 +1966,7 @@ export default function ModeBPage({
               title="Next page (→)"
               aria-label="Next page"
             >
-              <ChevronRight size={16} strokeWidth={2.2} />
+              <ChevronRight size={22} strokeWidth={2.2} />
             </button>
           </div>
         );
@@ -1986,7 +1986,7 @@ export default function ModeBPage({
             title="Previous Mushaf page"
             aria-label="Previous page"
           >
-            ‹
+            <ChevronLeft size={18} strokeWidth={2.2} />
           </button>
           <div className="tb-page-nav-info">
             <span className="tb-page-nav-page">Page {currentMushafahPage}</span>
@@ -2004,7 +2004,7 @@ export default function ModeBPage({
             title="Next Mushaf page"
             aria-label="Next page"
           >
-            ›
+            <ChevronRight size={18} strokeWidth={2.2} />
           </button>
         </div>
       ), navSlot)}

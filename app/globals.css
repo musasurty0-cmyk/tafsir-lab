@@ -3187,10 +3187,9 @@ input, textarea { font: inherit; color: inherit; }
 }
 .tb-page-nav-btn {
   background: none; border: none; cursor: pointer;
-  width: 22px; height: 22px; border-radius: 5px;
+  width: 30px; height: 30px; border-radius: 8px;
   display: flex; align-items: center; justify-content: center;
-  font-size: 16px; line-height: 1;
-  color: var(--ink-3);
+  color: var(--ink-2);
   transition: background var(--dur-hover) var(--ease-soft),
               color      var(--dur-hover) var(--ease-soft);
 }
@@ -3199,7 +3198,7 @@ input, textarea { font: inherit; color: inherit; }
 .tb-page-nav-info {
   display: flex; align-items: center; gap: 5px;
   padding: 0 6px;
-  font-size: 12.5px;
+  font-size: 13.5px;
   white-space: nowrap;
 }
 .tb-page-nav-page  { color: var(--ink); font-weight: 500; }
@@ -14579,17 +14578,17 @@ body {
   position: absolute; left: 50%; bottom: 20px; z-index: 9;
   transform: translateX(-50%);
   display: inline-flex; align-items: center; gap: 2px;
-  padding: 4px;
+  padding: 5px;
   background: var(--float-bg);
   -webkit-backdrop-filter: saturate(180%) blur(20px);
   backdrop-filter: saturate(180%) blur(20px);
-  border-radius: 13px;
+  border-radius: 17px;
   box-shadow: var(--float-shadow);
   user-select: none;
 }
 .mode-b-pager-btn {
-  width: 34px; height: 34px; display: grid; place-items: center;
-  border-radius: 9px; color: var(--ink-2);
+  width: 46px; height: 46px; display: grid; place-items: center;
+  border-radius: 12px; color: var(--ink-2);
   transition: background var(--dur-hover, 120ms) ease, color var(--dur-hover, 120ms) ease;
 }
 .mode-b-pager-btn:hover:not(:disabled) { background: var(--hover); color: var(--ink); }
@@ -14597,22 +14596,33 @@ body {
 .mode-b-pager-btn:disabled { color: var(--ink-4); opacity: 0.45; cursor: default; }
 .mode-b-pager-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .mode-b-pager-label {
-  min-width: 112px; padding: 0 6px;
-  display: inline-flex; align-items: baseline; justify-content: center; gap: 7px;
-  font-size: 13px; font-weight: 600; color: var(--ink);
+  min-width: 140px; padding: 0 8px;
+  display: inline-flex; align-items: baseline; justify-content: center; gap: 8px;
+  font-size: 15.5px; font-weight: 600; color: var(--ink);
   font-variant-numeric: tabular-nums; white-space: nowrap;
 }
-.mode-b-pager-of { font-size: 12px; font-weight: 500; color: var(--ink-3); }
+.mode-b-pager-of { font-size: 13.5px; font-weight: 500; color: var(--ink-3); }
 /* The word-tap hint shared this spot; it now sits just above the turner. */
-.mode-b-word-hint { bottom: 70px; }
+.mode-b-word-hint { bottom: 86px; }
 @media (max-width: 720px) {
   /* No room side by side: zoom steps up above the turner, and the turner
      drops its "n of N" to stay compact. */
-  .mode-b-zoom-controls { bottom: calc(74px + env(safe-area-inset-bottom, 0px)); }
+  .mode-b-zoom-controls { bottom: calc(90px + env(safe-area-inset-bottom, 0px)); }
   .mode-b-pager { bottom: calc(20px + env(safe-area-inset-bottom, 0px)); }
   .mode-b-pager-of { display: none; }
-  .mode-b-pager-label { min-width: 84px; }
-  .mode-b-word-hint { bottom: 124px; }
+  .mode-b-pager-label { min-width: 96px; }
+  .mode-b-word-hint { bottom: 140px; }
+}
+/* The same goes for any narrow Mushaf pane, which is Split on a laptop or an
+   iPad: the window is wide, but the turner and zoom have only the pane. */
+.mode-b-canvas { container: mushafpane / inline-size; }
+@container mushafpane (max-width: 700px) {
+  .mode-b-zoom-controls:has(+ .mode-b-pager) { bottom: calc(90px + env(safe-area-inset-bottom, 0px)); }
+  .mode-b-word-hint { bottom: 140px; }
+}
+@container mushafpane (max-width: 420px) {
+  .mode-b-pager-of { display: none; }
+  .mode-b-pager-label { min-width: 96px; }
 }
 
 /* ── New workspace sheet (27 Oct 2026) ──────────────────────────────────────
@@ -15791,6 +15801,8 @@ body {
   .tree-row-action-btn, .crumb-menu-btn, .sidebar-head-btn, .mode-b-word-hint-dismiss { min-width: 40px; min-height: 40px; }
   .ctr-btn             { min-width: 48px; min-height: 48px; }
   .ctr-swatch          { min-width: 32px; min-height: 32px; }
+  .mode-b-pager-btn    { width: 50px; height: 50px; }
+  .tb-page-nav-btn     { width: 36px; height: 36px; }
   .drawer-lang-select,
   .drawer-source-select { min-height: 40px; font-size: 15px; }
 }
