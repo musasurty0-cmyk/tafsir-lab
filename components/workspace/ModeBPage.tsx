@@ -588,12 +588,14 @@ export default function ModeBPage({
   }, [onAyahSelect]);
 
   const closeFocus = useCallback(() => setFocusAnchor(null), []);
+  /** True while the open layer is moving to the next ayah, not opening afresh. */
+  const steppingRef = useRef(false);
 
 
   // Entering a layer: smooth-animate the camera back to the centred page
   // (never restore old zoom/pan) and auto-activate the Pen.
   useEffect(() => {
-    if (!focusAnchor) return;
+    if (!focusAnchor || steppingRef.current) return;
     setTool("pen");
     const next: CanvasViewport = homeView();
     setCameraAnim(true);
@@ -1099,7 +1101,7 @@ export default function ModeBPage({
      reset buttons; the wheel and pinch stay direct, because a tween on a
      continuous gesture reads as lag. */
   const tweenRef = useRef<number>(0);
-  const tweenTo = useCallback((target: CanvasViewport) => {
+  const tweenTo = useCallback((target: CanvasViewport, remember = true) => {
     if (tweenRef.current) cancelAnimationFrame(tweenRef.current);
     const from = viewportRef.current;
     const t0   = performance.now();
@@ -1112,7 +1114,7 @@ export default function ModeBPage({
         y:    from.y    + (target.y    - from.y)    * e,
       });
       if (t < 1) tweenRef.current = requestAnimationFrame(step);
-      else { tweenRef.current = 0; patchViewport(target); }
+      else { tweenRef.current = 0; if (remember) patchViewport(target); }
     };
     tweenRef.current = requestAnimationFrame(step);
   }, [patchViewport]);
@@ -1152,7 +1154,13 @@ export default function ModeBPage({
   const focusOpenedAtRef = useRef(0);
   /** The view last framed for the ayah alone, to tell whether the reader has moved. */
   const aloneFrameRef = useRef<CanvasViewport | null>(null);
-  useEffect(() => { if (focusAnchor) focusOpenedAtRef.current = performance.now(); }, [focusAnchor]);
+  /** The ayah is on a page still loading; frame it when the page is laid out. */
+  const aloneFramePendingRef = useRef(false);
+  useEffect(() => {
+    // A step has no opening glide to wait out.
+    if (focusAnchor) focusOpenedAtRef.current = steppingRef.current ? 0 : performance.now();
+    steppingRef.current = false;
+  }, [focusAnchor]);
   const frameAlone = useCallback(() => {
     const ayah = prevIsolateRef.current;
     if (ayah == null) return;
@@ -1160,6 +1168,7 @@ export default function ModeBPage({
     const card = mushafCardRef.current;
     if (!el || !card) return;
     const glyphs = card.querySelectorAll<HTMLElement>(`.qcf-glyph[data-ayah="${ayah}"]`);
+    aloneFramePendingRef.current = !glyphs.length;
     if (!glyphs.length) return;
     const box = el.getBoundingClientRect();
     const vp  = viewportRef.current;
@@ -1199,7 +1208,8 @@ export default function ModeBPage({
       y: top + (clearsRail ? Math.max(0, (roomH - wholeH * zoom) / 2) : 0) - wt * zoom,
     };
     aloneFrameRef.current = target;
-    tweenTo(target);
+    // Not remembered: this zoom is for the ayah, and the page opens at the reader's.
+    tweenTo(target, false);
   }, [tweenTo]);
   useEffect(() => {
     const was = prevIsolateRef.current;
@@ -1233,6 +1243,27 @@ export default function ModeBPage({
     ro.observe(el);
     return () => { clearTimeout(t); ro.disconnect(); };
   }, [frameAlone]);
+  const onMushafLaidOut = useCallback(() => {
+    if (aloneFramePendingRef.current) frameAlone();
+  }, [frameAlone]);
+
+  /* In the ayah alone the turner and the arrow keys go ayah by ayah, onto the
+     next page when the ayah is there. The layer moves with them, so each ayah
+     keeps its own ink, and the reader's tool and the open session carry on. */
+  const stepAyah = useCallback((dir: 1 | -1) => {
+    if (!focusAnchor || isolateAyah == null) return;
+    const key = `${focusAnchor.verseKey.split(":")[0]}:${isolateAyah + dir}`;
+    const verse = verses.find((v) => v.verse_key === key);
+    if (!verse) return;
+    steppingRef.current = true;
+    setAloneTextAt(null);
+    if (verse.page_number !== currentMushafahPage) {
+      setCurrentMushafahPage(verse.page_number);
+      localStorage.setItem(MUSHAF_PAGE_KEY(pageId), String(verse.page_number));
+    }
+    setFocusAnchor({ verseKey: key, wordPos: null });
+    onAyahSelect?.(key);
+  }, [focusAnchor, isolateAyah, verses, currentMushafahPage, pageId, onAyahSelect]);
 
   /* Arabic study: arriving from a word's āyāt (?mpage=593&word=88:23:4) opens
      that page with the word's note space and analysis already open. Read once. */
@@ -1267,11 +1298,13 @@ export default function ModeBPage({
       if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
       if (isTypingTarget(e)) return;
       e.preventDefault();
-      if (e.key === "ArrowLeft") goToPrevPage(); else goToNextPage();
+      if (isolateAyah != null) stepAyah(e.key === "ArrowLeft" ? -1 : 1);
+      else if (e.key === "ArrowLeft") goToPrevPage();
+      else goToNextPage();
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [goToPrevPage, goToNextPage]);
+  }, [goToPrevPage, goToNextPage, isolateAyah, stepAyah]);
 
   // ── Scroll to note (split-view sync) ─────────────────────────────────
   const containerRef = useRef<HTMLDivElement>(null);
@@ -1627,6 +1660,7 @@ export default function ModeBPage({
           loading={qcfLoading}
           cardRef={mushafCardRef}
           isolateAyah={isolateAyah}
+          onLaidOut={onMushafLaidOut}
           onRegisterAyahRef={registerAyahRef}
           onRegisterWordRef={registerWordRef}
           onOpenFocus={openFocus}
@@ -2011,30 +2045,35 @@ export default function ModeBPage({
 
       {/* ── Page turner, bottom centre of the canvas ──
           The top-bar navigator stays as the seeker; this is the one within
-          reach while reading. */}
-      {availablePages.length > 1 && (() => {
+          reach while reading. In the ayah alone it turns ayah by ayah, and
+          shows on a one-page surah too. */}
+      {(availablePages.length > 1 || (isolateAyah != null && chapter.verses_count > 1)) && (() => {
+        const alone = isolateAyah != null;
         const idx = availablePages.indexOf(currentMushafahPage);
+        const unit = alone ? "āyah" : "page";
         return (
           <div className="mode-b-pager" onPointerDown={(e) => e.stopPropagation()}>
             <button
               className="mode-b-pager-btn"
-              disabled={idx <= 0}
-              onClick={goToPrevPage}
-              title="Previous page (←)"
-              aria-label="Previous page"
+              disabled={alone ? isolateAyah <= 1 : idx <= 0}
+              onClick={alone ? () => stepAyah(-1) : goToPrevPage}
+              title={`Previous ${unit} (←)`}
+              aria-label={`Previous ${unit}`}
             >
               <ChevronLeft size={22} strokeWidth={2.2} />
             </button>
             <span className="mode-b-pager-label" aria-live="polite">
-              Page {currentMushafahPage}
-              <span className="mode-b-pager-of">{idx + 1} of {availablePages.length}</span>
+              {alone ? `Āyah ${focusAnchor?.verseKey}` : `Page ${currentMushafahPage}`}
+              <span className="mode-b-pager-of">
+                {alone ? `${isolateAyah} of ${chapter.verses_count}` : `${idx + 1} of ${availablePages.length}`}
+              </span>
             </span>
             <button
               className="mode-b-pager-btn"
-              disabled={idx >= availablePages.length - 1}
-              onClick={goToNextPage}
-              title="Next page (→)"
-              aria-label="Next page"
+              disabled={alone ? isolateAyah >= chapter.verses_count : idx >= availablePages.length - 1}
+              onClick={alone ? () => stepAyah(1) : goToNextPage}
+              title={`Next ${unit} (→)`}
+              aria-label={`Next ${unit}`}
             >
               <ChevronRight size={22} strokeWidth={2.2} />
             </button>

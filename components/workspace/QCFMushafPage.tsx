@@ -76,6 +76,8 @@ interface Props {
    *  in place rather than re-laid-out, so the ayah keeps its exact position on
    *  the page and ink written in either view lines up in the other. */
   isolateAyah?:      number | null;
+  /** Called when the lines have been fitted, so glyphs measure true. */
+  onLaidOut?:        () => void;
   /** Arabic study only: how well the reader knows each word, keyed
    *  "verseKey:position" — red learning, amber almost there, green learnt;
    *  absent (any other workspace) leaves the page exactly as it always was. */
@@ -122,9 +124,9 @@ interface WordEntry {
 
 // ── Skeleton ─────────────────────────────────────────────────────────────────
 
-function Skeleton({ cardRef }: { cardRef: React.RefObject<HTMLDivElement | null> }) {
+function Skeleton({ cardRef, isolate }: { cardRef: React.RefObject<HTMLDivElement | null>; isolate: boolean }) {
   return (
-    <div ref={cardRef} className="qcf-page qcf-page--loading">
+    <div ref={cardRef} className="qcf-page qcf-page--loading" data-isolate={isolate ? "true" : undefined}>
       <div className="qcf-skeleton">
         {Array.from({ length: 15 }, (_, i) => (
           <div
@@ -156,6 +158,7 @@ function QCFMushafPage({
   activeSegmentId = null,
   onSegmentClick,
   isolateAyah = null,
+  onLaidOut,
   wordStatus,
 }: Props) {
 
@@ -280,6 +283,8 @@ function QCFMushafPage({
 
      Runs on layout after the font is ready — the glyphs have no width until
      then — and again on resize, since the measure follows the card. */
+  const onLaidOutRef = useRef(onLaidOut);
+  useEffect(() => { onLaidOutRef.current = onLaidOut; });
   useLayoutEffect(() => {
     if (!fontReady) return;
     const host = linesRef.current;
@@ -304,6 +309,7 @@ function QCFMushafPage({
            alone and stays centred. */
         fits[i].style.setProperty("--qcf-fit", ratio > 1.12 ? "1" : String(ratio.toFixed(4)));
       }
+      onLaidOutRef.current?.();
     };
 
     const schedule = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(fit); };
@@ -370,7 +376,7 @@ function QCFMushafPage({
 
   // ── Gate 1: data still loading ────────────────────────────────────────────
   if (loading) {
-    return <Skeleton cardRef={cardRef} />;
+    return <Skeleton cardRef={cardRef} isolate={isolateAyah != null} />;
   }
 
   // ── Gate 2: font still loading (show skeleton, not fallback Arabic) ───────
@@ -382,7 +388,7 @@ function QCFMushafPage({
   // overlapping / broken text.  Showing the skeleton instead prevents any
   // flash of broken content.
   if (!fontReady && !fontError) {
-    return <Skeleton cardRef={cardRef} />;
+    return <Skeleton cardRef={cardRef} isolate={isolateAyah != null} />;
   }
 
   // ── Gate 3: font failed to load ───────────────────────────────────────────

@@ -14065,7 +14065,8 @@ body {
 .qcf-glyph--away { opacity: 0; pointer-events: none; }
 .qcf-ayah-run--away { background: transparent !important; }
 .qcf-page[data-isolate="true"] .qcf-surah-header,
-.qcf-page[data-isolate="true"] .qcf-page-num { opacity: 0; pointer-events: none; }
+.qcf-page[data-isolate="true"] .qcf-page-num,
+.qcf-page[data-isolate="true"] .qcf-skeleton { opacity: 0; pointer-events: none; }
 /* The English under the ayah alone. On the canvas, so it moves with the Arabic,
    and it lets every pen stroke through. One size everywhere, so ink on it lands
    on the same words on any device, and as wide as a line of the Mushaf, so it
@@ -14075,9 +14076,10 @@ body {
   position: absolute; left: 0; top: 0; width: 520px;
   display: flex; justify-content: center;
   pointer-events: none;
-  opacity: 0; transition: opacity 220ms ease 120ms;
+  opacity: 0;
 }
-.ayah-alone-text[data-ready="true"] { opacity: 1; }
+/* In only: a step swaps the words at once, so the old place must not show them. */
+.ayah-alone-text[data-ready="true"] { opacity: 1; transition: opacity 220ms ease 120ms; }
 .ayah-alone-text p {
   margin: 0; width: max-content; max-width: 340px;
   font-family: var(--font-serif); font-size: 14px; line-height: 1.55;

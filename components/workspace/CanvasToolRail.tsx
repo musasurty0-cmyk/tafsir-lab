@@ -201,9 +201,9 @@ export const RAIL_FOLDED_KEY = "tl-rail-folded";
 
 const SAVE_TITLE: Record<SaveState, string> = {
   saved:   "All changes saved  ⌘S",
-  unsaved: "Unsaved changes — save now  ⌘S",
+  unsaved: "Unsaved changes. Save now  ⌘S",
   saving:  "Saving…",
-  failed:  "Couldn’t save — tap to try again",
+  failed:  "Couldn’t save. Tap to try again",
 };
 
 // ── Width preview ─────────────────────────────────────────────────────────
