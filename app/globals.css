@@ -4232,15 +4232,17 @@ input, textarea { font: inherit; color: inherit; }
   top: 50%;
   bottom: auto;
 
-  background: var(--bg-elev);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--line-strong);
-  box-shadow: var(--shadow-md);
+  /* The floating material the zoom control and page turner use. */
+  background: var(--float-bg);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
+  border-radius: 16px;
+  box-shadow: var(--float-shadow);
 
-  padding: 11px 12px;
+  padding: 14px;
   display: flex;
   flex-direction: column;
-  gap: 9px;
+  gap: 10px;
   min-width: 136px;
 
   /* Closed state — inert and invisible */
@@ -4258,11 +4260,13 @@ input, textarea { font: inherit; color: inherit; }
 }
 
 .ctr-popover-label {
-  font-size: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  font-size: 12.5px;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: var(--ink-4);
+  color: var(--ink-2);
   margin: 0;
 }
 
@@ -4291,27 +4295,31 @@ input, textarea { font: inherit; color: inherit; }
 /* ── Stroke-width buttons ── */
 .ctr-widths {
   display: flex;
-  gap: 4px;
+  gap: 2px;
+  padding: 2px;
+  width: max-content;
+  border-radius: 11px;
+  background: var(--hover);
 }
 .ctr-width-btn {
   width: 34px;
   height: 30px;
-  border-radius: var(--radius);
-  border: 1px solid var(--line-strong);
-  background: var(--panel);
+  border-radius: 9px;
+  border: 0;
+  background: transparent;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 0;
-  transition: background var(--dur-fast) ease, border-color var(--dur-fast) ease;
+  transition: background var(--dur-fast) ease;
 }
-.ctr-width-btn:hover { background: var(--hover); border-color: var(--line-strong); }
+.ctr-width-btn:hover { background: var(--hover); }
 .ctr-width-btn[data-active="true"] {
-  background: var(--accent-soft);
-  border-color: var(--accent);
-  color: var(--accent-ink) !important;
+  background: var(--bg-elev);
+  box-shadow: 0 1px 2px oklch(0.22 0.012 80 / 0.14);
 }
+[data-theme="dark"] .ctr-width-btn[data-active="true"] { background: var(--panel-2); box-shadow: none; }
 
 /* ═══════════════════════════════════════════════════════════════════════════
    Phase 7 — FocusAnnotation (full-screen word/ayah drawing canvas)
@@ -9447,10 +9455,10 @@ input, textarea { font: inherit; color: inherit; }
 
 /* Tool rail: fine-adjust thickness slider */
 .ctr-size-value {
-  float: right;
-  font-family: var(--font-mono);
-  font-size: 9.5px;
+  font-size: 12px;
+  font-weight: 500;
   color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
 }
 .ctr-size-slider {
   width: 100%;
@@ -14596,7 +14604,8 @@ body {
 /* Mushaf page turner: bottom centre of the canvas, in the floating material
    the zoom control uses. The top-bar navigator remains the seeker. */
 .mode-b-pager {
-  position: absolute; left: 50%; bottom: 20px; z-index: 9;
+  position: absolute; left: 50%; bottom: 20px;
+  z-index: 30;            /* above .drawing-canvas-wrap (20), or Study Mode's ink takes its clicks */
   transform: translateX(-50%);
   display: inline-flex; align-items: center; gap: 2px;
   padding: 5px;

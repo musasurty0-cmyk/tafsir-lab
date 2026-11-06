@@ -604,69 +604,6 @@ export default function ModeBPage({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusAnchor]);
 
-  /* Frame the ayah when it is alone; put the page back when it is not. The
-     ayah is measured from its own glyphs, so a two-word ayah and a
-     half-page one both fill the view. Waits out the camera glide that
-     opening a layer starts, or it would measure a page still in motion. */
-  const prevIsolateRef = useRef<number | null>(null);
-  const focusOpenedAtRef = useRef(0);
-  useEffect(() => { if (focusAnchor) focusOpenedAtRef.current = performance.now(); }, [focusAnchor]);
-  useEffect(() => {
-    const was = prevIsolateRef.current;
-    prevIsolateRef.current = isolateAyah;
-    if (isolateAyah == null) {
-      setAloneTextAt(null);
-      // Back to the page -- but only when switching views mid-session.
-      // Closing the layer leaves the camera where the reader put it.
-      if (was != null && focusAnchor) tweenTo(homeView());
-      return;
-    }
-    const sinceOpen = performance.now() - focusOpenedAtRef.current;
-    const t = setTimeout(() => {
-      const el = containerRef.current;
-      const card = mushafCardRef.current;
-      if (!el || !card) return;
-      const glyphs = card.querySelectorAll<HTMLElement>(`.qcf-glyph[data-ayah="${isolateAyah}"]`);
-      if (!glyphs.length) return;
-      const box = el.getBoundingClientRect();
-      const vp  = viewportRef.current;
-      let l = Infinity, tp = Infinity, r = -Infinity, b = -Infinity;
-      glyphs.forEach((g) => {
-        const q = g.getBoundingClientRect();
-        l = Math.min(l, q.left); tp = Math.min(tp, q.top);
-        r = Math.max(r, q.right); b = Math.max(b, q.bottom);
-      });
-      // Screen -> world, the same mapping the ink uses.
-      const wl = (l - box.left - vp.x) / vp.zoom, wr = (r - box.left - vp.x) / vp.zoom;
-      const wt = (tp - box.top - vp.y) / vp.zoom, wb = (b - box.top - vp.y) / vp.zoom;
-      // Offset and client sizes ignore the camera, so these are canvas units.
-      const text = aloneTextRef.current;
-      const textW = text?.offsetWidth ?? 0, textH = text?.offsetHeight ?? 0;
-      const gap = textH ? AYAH_ALONE_TEXT_GAP : 0;
-      const ayahH = wb - wt, wholeH = ayahH + gap + textH;
-      // Clear of the session chip above, and the turner and zoom below.
-      const narrow = box.width < 720;
-      const top = narrow ? 128 : 72, roomH = box.height - top - (narrow ? 150 : 96);
-      const fitW = (box.width * 0.86) / Math.max(wr - wl, textW);
-      /* Capped at 2.5x: a two-word ayah would otherwise fill the screen at
-         4x and leave no paper around it to write on. The English caps it too,
-         or a short ayah's three words would come out as a headline. */
-      const maxZoom = text ? Math.min(AYAH_ALONE_MAX_ZOOM, AYAH_ALONE_TEXT_MAX_PX / parseFloat(getComputedStyle(text).fontSize)) : AYAH_ALONE_MAX_ZOOM;
-      const zoom = clamp(Math.min(fitW, roomH / wholeH), Math.min(0.7, fitW), maxZoom);
-      if (text) setAloneTextAt({ left: (wl + wr) / 2 - AYAH_ALONE_TEXT_WIDTH / 2, top: wb + gap });
-      tweenTo({
-        zoom,
-        x: box.width / 2 - ((wl + wr) / 2) * zoom,
-        // Centred in the room there is. An ayah too long for it starts at the
-        // top, with the English below for the reader to pan down to, and so
-        // does every ayah in a narrow pane: the pen rail is at mid-height.
-        y: top + (narrow ? 0 : Math.max(0, (roomH - wholeH * zoom) / 2)) - wt * zoom,
-      });
-    }, sinceOpen < 420 ? 420 - sinceOpen : 30);
-    return () => clearTimeout(t);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isolateAyah]);
-
   // ── QCF page data (fetched client-side when the page changes) ─────────
   // Fix #1 — surah page filtering: the page API returns ALL verses on a
   // Mushaf page (potentially from multiple surahs). We filter to only the
@@ -1199,12 +1136,103 @@ export default function ModeBPage({
     setCurrentMushafahPage(p);
     localStorage.setItem(MUSHAF_PAGE_KEY(pageId), String(p));
     setFocusAnchor(null);
-    // Centre the new page (fix #2)
+    // Centre the new page (fix #2), at the reader's zoom. The ayah alone's zoom
+    // is the framing's, and the next page would run off the screen at it.
     const z    = viewportRef.current.zoom;
-    const next: CanvasViewport = { x: centeredX(z), y: 40, zoom: z };
+    const next: CanvasViewport = isolateAyah != null ? homeView() : { x: centeredX(z), y: 40, zoom: z };
     setViewport(next);
     patchViewport(next);
-  }, [pageId, patchViewport, centeredX]);
+  }, [pageId, patchViewport, centeredX, isolateAyah, homeView]);
+
+  /* Frame the ayah when it is alone; put the page back when it is not. The
+     ayah is measured from its own glyphs, so a two-word ayah and a
+     half-page one both fill the view. Waits out the camera glide that
+     opening a layer starts, or it would measure a page still in motion. */
+  const prevIsolateRef = useRef<number | null>(null);
+  const focusOpenedAtRef = useRef(0);
+  /** The view last framed for the ayah alone, to tell whether the reader has moved. */
+  const aloneFrameRef = useRef<CanvasViewport | null>(null);
+  useEffect(() => { if (focusAnchor) focusOpenedAtRef.current = performance.now(); }, [focusAnchor]);
+  const frameAlone = useCallback(() => {
+    const ayah = prevIsolateRef.current;
+    if (ayah == null) return;
+    const el = containerRef.current;
+    const card = mushafCardRef.current;
+    if (!el || !card) return;
+    const glyphs = card.querySelectorAll<HTMLElement>(`.qcf-glyph[data-ayah="${ayah}"]`);
+    if (!glyphs.length) return;
+    const box = el.getBoundingClientRect();
+    const vp  = viewportRef.current;
+    let l = Infinity, tp = Infinity, r = -Infinity, b = -Infinity;
+    glyphs.forEach((g) => {
+      const q = g.getBoundingClientRect();
+      l = Math.min(l, q.left); tp = Math.min(tp, q.top);
+      r = Math.max(r, q.right); b = Math.max(b, q.bottom);
+    });
+    // Screen -> world, the same mapping the ink uses.
+    const wl = (l - box.left - vp.x) / vp.zoom, wr = (r - box.left - vp.x) / vp.zoom;
+    const wt = (tp - box.top - vp.y) / vp.zoom, wb = (b - box.top - vp.y) / vp.zoom;
+    // Offset and client sizes ignore the camera, so these are canvas units.
+    const text = aloneTextRef.current;
+    const textW = text?.offsetWidth ?? 0, textH = text?.offsetHeight ?? 0;
+    const gap = textH ? AYAH_ALONE_TEXT_GAP : 0;
+    const ayahH = wb - wt, wholeH = ayahH + gap + textH;
+    // Clear of the session chip above, and the turner and zoom below.
+    const narrow = box.width < 720;
+    const top = narrow ? 128 : 72, roomH = box.height - top - (narrow ? 150 : 96);
+    const wholeW = Math.max(wr - wl, textW);
+    const fitW = (box.width * 0.86) / wholeW;
+    /* Capped at 2.5x: a two-word ayah would otherwise fill the screen at
+       4x and leave no paper around it to write on. The English caps it too,
+       or a short ayah's three words would come out as a headline. */
+    const maxZoom = text ? Math.min(AYAH_ALONE_MAX_ZOOM, AYAH_ALONE_TEXT_MAX_PX / parseFloat(getComputedStyle(text).fontSize)) : AYAH_ALONE_MAX_ZOOM;
+    const zoom = clamp(Math.min(fitW, roomH / wholeH), Math.min(0.7, fitW), maxZoom);
+    if (text) setAloneTextAt({ left: (wl + wr) / 2 - AYAH_ALONE_TEXT_WIDTH / 2, top: wb + gap });
+    // The pen rail stands at mid-height against the left edge.
+    const clearsRail = (box.width - wholeW * zoom) / 2 >= 84;
+    const target: CanvasViewport = {
+      zoom,
+      x: box.width / 2 - ((wl + wr) / 2) * zoom,
+      // Centred in the room there is, or from the top where the rail would
+      // cover it. An ayah too long for the room also starts at the top, with
+      // the English below for the reader to pan down to.
+      y: top + (clearsRail ? Math.max(0, (roomH - wholeH * zoom) / 2) : 0) - wt * zoom,
+    };
+    aloneFrameRef.current = target;
+    tweenTo(target);
+  }, [tweenTo]);
+  useEffect(() => {
+    const was = prevIsolateRef.current;
+    prevIsolateRef.current = isolateAyah;
+    if (isolateAyah == null) {
+      setAloneTextAt(null);
+      aloneFrameRef.current = null;
+      /* Back to the page, however the view was left. The ayah's zoom was the
+         framing's choice, not the reader's, and at that zoom the page runs off
+         the screen. */
+      if (was != null) tweenTo(homeView());
+      return;
+    }
+    const sinceOpen = performance.now() - focusOpenedAtRef.current;
+    const t = setTimeout(frameAlone, sinceOpen < 420 ? 420 - sinceOpen : 30);
+    return () => clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isolateAyah]);
+  /* The pane can change under the framed ayah: an iPad turned, a window
+     resized, the sidebar closed. Reframe, unless the reader has moved it. */
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    let t: ReturnType<typeof setTimeout>;
+    const ro = new ResizeObserver(() => {
+      const was = aloneFrameRef.current, v = viewportRef.current;
+      if (!was || Math.abs(v.x - was.x) > 1 || Math.abs(v.y - was.y) > 1 || Math.abs(v.zoom - was.zoom) > 0.01) return;
+      clearTimeout(t);
+      t = setTimeout(frameAlone, 120);
+    });
+    ro.observe(el);
+    return () => { clearTimeout(t); ro.disconnect(); };
+  }, [frameAlone]);
 
   /* Arabic study: arriving from a word's āyāt (?mpage=593&word=88:23:4) opens
      that page with the word's note space and analysis already open. Read once. */

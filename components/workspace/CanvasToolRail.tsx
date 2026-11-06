@@ -209,13 +209,13 @@ const SAVE_TITLE: Record<SaveState, string> = {
 // ── Width preview ─────────────────────────────────────────────────────────
 
 function WidthBar({ value, isHighlight }: { value: number; isHighlight: boolean }) {
-  const h = isHighlight ? Math.min(value * 0.55, 11) : Math.min(value * 0.85, 4.5);
+  const h = isHighlight ? Math.min(value * 0.55, 11) : Math.min(value, 4.5);
   return (
     <span
       style={{
         display: "block",
         width: 20,
-        height: Math.max(h, 1.5),
+        height: Math.max(h, 1),
         borderRadius: 99,
         background: "currentColor",
         opacity: isHighlight ? 0.55 : 0.85,
@@ -616,7 +616,7 @@ export default function CanvasToolRail({
                 <button
                   key={w.value}
                   className="ctr-width-btn"
-                  title={`${w.label} — ${w.value}px`}
+                  title={`${w.label}, ${w.value}px`}
                   data-active={eraserSize === w.value ? "true" : "false"}
                   onClick={onTap(() => handleEraserSize(w.value))}
                   onPointerUp={penTap(() => handleEraserSize(w.value))}
@@ -670,9 +670,9 @@ export default function CanvasToolRail({
                 <button
                   key={w.value}
                   className="ctr-width-btn"
-                  title={`${w.label} — ${w.value}px`}
+                  title={`${w.label}, ${w.value}px`}
                   data-active={strokeSize === w.value ? "true" : "false"}
-                  style={{ color: isHighlight ? "#ca8a04" : "#374151" }}
+                  style={{ color: isHighlight ? "#ca8a04" : "var(--ink-2)" }}
                   onClick={onTap(() => handleWidth(w.value))}
                   onPointerUp={penTap(() => handleWidth(w.value))}
                 >
