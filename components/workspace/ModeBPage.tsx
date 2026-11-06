@@ -29,6 +29,11 @@ const HINT_KEY        = "tl-word-tap-hint-dismissed";
 /** Whether pressing into an ayah shows it in the page or alone. */
 const AYAH_VIEW_KEY   = "tl-ayah-view";
 const AYAH_ALONE_MAX_ZOOM = 2.5;
+/* The English under the ayah alone, in canvas units. Must match .ayah-alone-text. */
+const AYAH_ALONE_TEXT_WIDTH = 520;
+const AYAH_ALONE_TEXT_GAP = 24;
+/** The most the framing may enlarge the English to, in screen pixels. */
+const AYAH_ALONE_TEXT_MAX_PX = 21;
 const MUSHAF_PAGE_KEY = (pageId: string) => `tl-mushaf-page:${pageId}`;
 import type { Verse, Chapter, QCFVerse } from "@/lib/types";
 import type { ProgressStatus } from "@/lib/services/progress.service";
@@ -42,6 +47,7 @@ import SelectionList from "./SelectionList";
 import ConnectionsPanel from "./ConnectionsPanel";
 import { ayahKey, surahKey, selectionKey } from "@/lib/quran-objects";
 import { textBoxOnPage } from "@/lib/canvas-scope";
+import { plainTranslation } from "@/lib/quran-text";
 export type Range = { start: number; end: number };
 import DrawingCanvas, { type DrawTool, type DrawingCanvasHandle, type SaveState } from "./DrawingCanvas";
 import CanvasToolRail, {
@@ -532,6 +538,17 @@ export default function ModeBPage({
   const isolateAyah = focusAnchor && !focusAnchor.segmentId && ayahView === "alone"
     ? Number(focusAnchor.verseKey.split(":")[1])
     : null;
+  /* The English under the ayah alone: on the canvas, in canvas units, so it
+     pans and zooms with the Arabic and ink put on it stays on the same words.
+     The same size on every device for that reason, and about as wide as a
+     line of the Mushaf. Its place comes from the glyphs, measured when the
+     ayah is framed. */
+  const aloneText = useMemo(() => {
+    if (isolateAyah == null || !focusAnchor) return "";
+    return plainTranslation(verses.find((v) => v.verse_key === focusAnchor.verseKey)?.translations?.[0]?.text);
+  }, [isolateAyah, focusAnchor, verses]);
+  const aloneTextRef = useRef<HTMLParagraphElement>(null);
+  const [aloneTextAt, setAloneTextAt] = useState<{ left: number; top: number } | null>(null);
 
   // ── Annotation-layer session ───────────────────────────────────────────
   /* Anchor keys: "w:{verseKey}:{wordPos}" for words, "a:{verseKey}" for ayahs,
@@ -598,6 +615,7 @@ export default function ModeBPage({
     const was = prevIsolateRef.current;
     prevIsolateRef.current = isolateAyah;
     if (isolateAyah == null) {
+      setAloneTextAt(null);
       // Back to the page -- but only when switching views mid-session.
       // Closing the layer leaves the camera where the reader put it.
       if (was != null && focusAnchor) tweenTo(homeView());
@@ -621,14 +639,28 @@ export default function ModeBPage({
       // Screen -> world, the same mapping the ink uses.
       const wl = (l - box.left - vp.x) / vp.zoom, wr = (r - box.left - vp.x) / vp.zoom;
       const wt = (tp - box.top - vp.y) / vp.zoom, wb = (b - box.top - vp.y) / vp.zoom;
+      // Offset and client sizes ignore the camera, so these are canvas units.
+      const text = aloneTextRef.current;
+      const textW = text?.offsetWidth ?? 0, textH = text?.offsetHeight ?? 0;
+      const gap = textH ? AYAH_ALONE_TEXT_GAP : 0;
+      const ayahH = wb - wt, wholeH = ayahH + gap + textH;
+      // Clear of the session chip above, and the turner and zoom below.
+      const narrow = box.width < 720;
+      const top = narrow ? 128 : 72, roomH = box.height - top - (narrow ? 150 : 96);
+      const fitW = (box.width * 0.86) / Math.max(wr - wl, textW);
       /* Capped at 2.5x: a two-word ayah would otherwise fill the screen at
-         4x and leave no paper around it to write on. */
-      const zoom = clamp(Math.min((box.width * 0.82) / (wr - wl), (box.height * 0.55) / (wb - wt)), 1, AYAH_ALONE_MAX_ZOOM);
+         4x and leave no paper around it to write on. The English caps it too,
+         or a short ayah's three words would come out as a headline. */
+      const maxZoom = text ? Math.min(AYAH_ALONE_MAX_ZOOM, AYAH_ALONE_TEXT_MAX_PX / parseFloat(getComputedStyle(text).fontSize)) : AYAH_ALONE_MAX_ZOOM;
+      const zoom = clamp(Math.min(fitW, roomH / wholeH), Math.min(0.7, fitW), maxZoom);
+      if (text) setAloneTextAt({ left: (wl + wr) / 2 - AYAH_ALONE_TEXT_WIDTH / 2, top: wb + gap });
       tweenTo({
         zoom,
         x: box.width / 2 - ((wl + wr) / 2) * zoom,
-        // A little above centre: the session chip sits at the bottom.
-        y: box.height * 0.44 - ((wt + wb) / 2) * zoom,
+        // Centred in the room there is. An ayah too long for it starts at the
+        // top, with the English below for the reader to pan down to, and so
+        // does every ayah in a narrow pane: the pen rail is at mid-height.
+        y: top + (narrow ? 0 : Math.max(0, (roomH - wholeH * zoom) / 2)) - wt * zoom,
       });
     }, sinceOpen < 420 ? 420 - sinceOpen : 30);
     return () => clearTimeout(t);
@@ -1598,6 +1630,16 @@ export default function ModeBPage({
               : null
           }
         />
+
+        {aloneText && (
+          <div
+            className="ayah-alone-text"
+            data-ready={aloneTextAt ? "true" : undefined}
+            style={aloneTextAt ?? undefined}
+          >
+            <p ref={aloneTextRef} lang="en" dir="ltr" data-long={aloneText.length > 170 ? "true" : undefined}>{aloneText}</p>
+          </div>
+        )}
 
         {/* ── Study layer ──────────────────────────────────────────────────
             Connectors, note cards and text boxes. Mounted only in Study Mode
