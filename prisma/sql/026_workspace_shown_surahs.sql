@@ -1,4 +1,4 @@
--- Sūrahs on a workspace's grid (owner's request, 9 Nov 2026, for the Youth
+-- Sūrahs on a workspace's grid (owner's request, 7 Nov 2026, for the Youth
 -- Majlis cohort). Organisers choose which sūrahs the workspace shows; an empty
 -- list means all 114, so every existing workspace is unchanged. Pages already
 -- made in a sūrah left off the list keep their work; the sūrah is only hidden
