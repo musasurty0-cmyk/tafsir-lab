@@ -113,7 +113,7 @@ export default function LeaderboardClient({ user, isPublic, initialRows, streak 
               >
                 <span className="lb-rank">{MEDAL[r.rank - 1] ?? r.rank}</span>
                 <Avatar name={r.name} avatarUrl={r.avatarUrl} />
-                <span className="fr-name">{r.name}{r.isSelf && <span className="lb-you"> you</span>}</span>
+                <span className="fr-name">{r.name}{r.isSelf && <span className="lb-you">You</span>}</span>
                 <span className="lb-total">{r.total}</span>
               </li>
             ))}

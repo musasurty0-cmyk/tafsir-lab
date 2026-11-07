@@ -39,7 +39,7 @@ const arabic = (value: string): Node => ({
 });
 
 const translation = (value: string): Node => p([text(value, ITALIC)]);
-const cite        = (value: string): Node => p([text(`— ${value}`, muted())]);
+const cite        = (value: string): Node => p([text(value, muted())]);
 
 const ayah = (verseKey: string): Node => ({
   type: "ayahBlock",

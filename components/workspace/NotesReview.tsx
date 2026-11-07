@@ -13,7 +13,7 @@
  */
 
 import { pushWithSplash } from "@/lib/nav-splash";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Search, X, FileText } from "lucide-react";
@@ -82,6 +82,8 @@ export default function NotesReview({ workspaceId, workspaceName, chapters, curr
   const [notes,   setNotes]   = useState<ReviewNote[]>([]);
   const [loading, setLoading] = useState(true);
   const [query,   setQuery]   = useState("");
+  const searchRef = useRef<HTMLInputElement>(null);
+  useEffect(() => { if (window.matchMedia("(hover: hover)").matches) searchRef.current?.focus(); }, []);
   const [type,    setType]    = useState<(typeof FILTER_TYPES)[number]>("all");
 
   const chapterName = useMemo(() => {
@@ -148,21 +150,24 @@ export default function NotesReview({ workspaceId, workspaceName, chapters, curr
             {loading ? "Loading…" : `${totalShown} note${totalShown === 1 ? "" : "s"} across the workspace`}
           </p>
 
-          {/* Search */}
-          <div className="notes-review-search">
-            <Search size={13} style={{ color: "var(--ink-4)", flexShrink: 0 }} />
+          {/* Search. A label, so the whole field takes the tap, and focused on
+              arrival only with a mouse: on a phone or iPad that would raise
+              the keyboard over the notes before the reader asked to search. */}
+          <label className="notes-review-search">
+            <Search size={15} style={{ color: "var(--ink-4)", flexShrink: 0 }} />
             <input
+              ref={searchRef}
               placeholder="Search notes, authors…"
+              aria-label="Search notes"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              autoFocus
             />
             {query && (
-              <button onClick={() => setQuery("")} title="Clear" style={{ color: "var(--ink-4)" }}>
-                <X size={12} />
+              <button className="notes-review-clear" onClick={() => setQuery("")} title="Clear" aria-label="Clear search">
+                <X size={14} />
               </button>
             )}
-          </div>
+          </label>
 
           {/* Type filter chips */}
           <div className="notes-review-filters">

@@ -1662,8 +1662,8 @@ input, textarea { font: inherit; color: inherit; }
 }
 .hw-resume-body { flex: 1; min-width: 0; padding-left: 4px; }
 .hw-resume-label {
-  font-size: 10.5px; font-weight: 600; letter-spacing: 0.09em;
-  text-transform: uppercase; color: var(--ink-4); display: block; margin-bottom: 10px;
+  font-size: 13px; font-weight: 600; color: var(--accent-ink);
+  display: block; margin-bottom: 8px;
 }
 .hw-resume-surah {
   display: flex; align-items: baseline; gap: 10px; margin-bottom: 6px;
@@ -7565,9 +7565,10 @@ input, textarea { font: inherit; color: inherit; }
 }
 
 /* Segmented theme control */
+/* The track is a tint of the ink, so it shows on a tile and on a popover alike. */
 .settings-seg {
   display: grid; grid-template-columns: 1fr 1fr; gap: 3px;
-  padding: 3px; border-radius: 8px; background: var(--panel);
+  padding: 3px; border-radius: 9px; background: var(--hover);
 }
 .settings-seg-btn {
   border: 0; background: none; cursor: pointer;
@@ -7581,6 +7582,8 @@ input, textarea { font: inherit; color: inherit; }
   background: var(--bg-elev); color: var(--ink); font-weight: 500;
   box-shadow: var(--shadow-sm);
 }
+/* Dark: the chosen one is a lighter step, raised rather than sunk. */
+[data-theme="dark"] .settings-seg-btn[data-active="true"] { background: color-mix(in oklch, var(--ink) 20%, var(--panel)); box-shadow: none; }
 
 .settings-seg--4 { grid-template-columns: repeat(4, 1fr); }
 /* The Arabic stepper previews its own effect: each button shows the letter at
@@ -9162,15 +9165,22 @@ input, textarea { font: inherit; color: inherit; }
 }
 .notes-review-sub { font-size: 13px; color: var(--ink-3); margin: 0 0 18px; }
 
+/* A filled field and filled chips, separated by tone: no outlines. */
 .notes-review-search {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 9px 13px;
-  background: var(--bg-elev);
-  border: 1px solid var(--line-strong);
-  border-radius: var(--radius-md);
+  min-height: 42px;
+  padding: 0 14px;
+  background: var(--hover);
+  border-radius: 12px;
   margin-bottom: 12px;
+  cursor: text;
+  transition: background var(--dur-hover) var(--ease-soft), box-shadow var(--dur-hover) var(--ease-soft);
+}
+.notes-review-search:focus-within {
+  background: var(--bg-elev);
+  box-shadow: 0 0 0 2px color-mix(in oklch, var(--accent) 45%, transparent);
 }
 .notes-review-search input {
   flex: 1;
@@ -9181,27 +9191,30 @@ input, textarea { font: inherit; color: inherit; }
   color: var(--ink);
 }
 .notes-review-search input::placeholder { color: var(--ink-4); }
+.notes-review-clear { display: grid; place-items: center; width: 28px; height: 28px; margin-right: -8px; border-radius: 8px; color: var(--ink-4); }
+.notes-review-clear:hover { background: var(--hover); color: var(--ink); }
 
-.notes-review-filters { display: flex; flex-wrap: wrap; gap: 5px; }
+.notes-review-filters { display: flex; flex-wrap: wrap; gap: 6px; }
 .notes-review-chip {
-  font-size: 11.5px;
+  font-size: 12.5px;
   font-weight: 500;
-  padding: 4px 11px;
+  min-height: 30px;
+  padding: 0 12px;
   border-radius: 999px;
-  border: 1px solid var(--line);
-  color: var(--ink-3);
-  background: transparent;
+  border: 0;
+  color: var(--ink-2);
+  background: var(--hover);
   cursor: pointer;
   transition: color var(--dur-hover) var(--ease-soft),
-              border-color var(--dur-hover) var(--ease-soft),
               background var(--dur-hover) var(--ease-soft);
 }
-.notes-review-chip:hover { color: var(--ink); border-color: var(--line-strong); }
+.notes-review-chip:hover { color: var(--ink); background: color-mix(in oklch, var(--ink) 9%, transparent); }
 .notes-review-chip[data-active="true"] {
   color: var(--type-color, var(--accent-ink));
-  border-color: var(--type-color, var(--accent));
-  background: color-mix(in oklch, var(--type-color, var(--accent)) 8%, transparent);
+  font-weight: 600;
+  background: color-mix(in oklch, var(--type-color, var(--accent)) 15%, transparent);
 }
+@media (pointer: coarse) { .notes-review-chip { min-height: 36px; padding: 0 14px; } }
 
 .notes-review-empty {
   max-width: 780px;
@@ -10963,11 +10976,12 @@ body {
   to   { opacity: 1; transform: none; }
 }
 
+/* A solid tile a step off the ground, separated by tone rather than outlined. */
 .an-card {
   padding: var(--sp-5);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  background: var(--bg-elev);
+  border: 0;
+  border-radius: 18px;
+  background: var(--panel);
   display: flex;
   flex-direction: column;
   gap: var(--sp-3);
@@ -11318,12 +11332,15 @@ body {
   color: var(--ink-3);
 }
 .lb-you {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  display: inline-block;
+  font-size: 11.5px;
+  font-weight: 600;
   color: var(--accent-ink);
-  margin-left: 6px;
+  background: var(--accent-soft);
+  padding: 1px 7px;
+  border-radius: 6px;
+  margin-left: 7px;
+  vertical-align: 1px;
 }
 .lb-total { font-size: 16px; font-weight: 650; font-variant-numeric: tabular-nums; }
 
@@ -11362,6 +11379,10 @@ body {
   border-top: 1px solid var(--line);
 }
 .set-row:first-of-type { border-top: 0; }
+/* A four-way choice beside its label, wrapping under it where the row is narrow. */
+.set-row { flex-wrap: wrap; }
+.set-row .settings-seg { flex: 0 1 340px; min-width: 260px; }
+.set-row .settings-seg-btn { min-height: 32px; }
 .set-row-label {
   display: flex;
   flex-direction: column;
@@ -12004,6 +12025,9 @@ body {
   transition: background var(--dur-hover) var(--ease-flow), width var(--dur-hover) var(--ease-flow);
 }
 .ob-dot[data-active="true"] { background: var(--accent); width: 26px; }
+/* A 9px dot is a hard thing to hit: the tap area reaches past it, unseen. */
+.ob-dot { position: relative; }
+.ob-dot::after { content: ""; position: absolute; inset: -14px -6px; }
 
 @media (max-width: 720px) {
   .ob { padding: var(--sp-6) var(--sp-3) var(--sp-5); }
@@ -12420,8 +12444,7 @@ body {
 }
 .bs-head { display: flex; align-items: center; justify-content: space-between; }
 .bs-title {
-  font-size: 11px; font-weight: 700; letter-spacing: 0.07em;
-  text-transform: uppercase; color: var(--ink-4);
+  font-size: 13px; font-weight: 600; color: var(--ink-2);
 }
 .bs-collapse, .bs-reopen {
   width: 26px; height: 26px;
@@ -16207,3 +16230,11 @@ body {
 /* On a phone the reference is what fits and what matters; the kind of note
    is plain from the highlighted word or āyah under it. */
 @media (max-width: 720px) { .anchor-session-kind { display: none; } }
+
+/* A finger needs more than these text links and back links offer: the same
+   look, a taller box. Found by measuring every control on a phone. */
+@media (pointer: coarse) {
+  button.an-link { display: inline-flex; align-items: center; min-height: 36px; }
+  .notes-review-back, .cxcat-back { min-height: 40px; }
+  .whiteboard-shell-back { min-width: 40px; min-height: 40px; }
+}

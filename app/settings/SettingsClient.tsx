@@ -136,7 +136,7 @@ export default function SettingsClient({ user, streak }: Props) {
             <h2 className="an-card-title">Reading size</h2>
             <div className="set-row">
               <span className="set-row-label">Translation &amp; notes</span>
-              <div className="settings-seg" role="group" aria-label="Reading size">
+              <div className="settings-seg settings-seg--4" role="group" aria-label="Reading size">
                 {FONT_STEPS.map((s) => (
                   <button
                     key={s.id} className="settings-seg-btn"
@@ -148,7 +148,7 @@ export default function SettingsClient({ user, streak }: Props) {
             </div>
             <div className="set-row">
               <span className="set-row-label">Arabic</span>
-              <div className="settings-seg" role="group" aria-label="Arabic size">
+              <div className="settings-seg settings-seg--4" role="group" aria-label="Arabic size">
                 {FONT_STEPS.map((s) => (
                   <button
                     key={s.id} className="settings-seg-btn"

@@ -159,7 +159,7 @@ export default function AnalyticsClient({ user, initialSummary, workspaces }: Pr
             </div>
             {summary.total === 0 && (
               <p className="an-empty-cta">
-                Open a sūrah and write your first note — it will show up here straight away.{" "}
+                Open a sūrah and write your first note. It will show up here straight away.{" "}
                 <button className="an-link" onClick={() => pushWithSplash(router, "/home")}>
                   Go to your notebooks →
                 </button>
