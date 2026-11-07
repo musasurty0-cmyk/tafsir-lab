@@ -17,6 +17,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyFirebaseToken }       from "@/lib/firebase/admin";
 import { createSession }             from "@/lib/session";
 import { db }                        from "@/lib/db";
+import { verifyBetaCookie, BETA_COOKIE } from "@/lib/beta/gate";
 
 export async function POST(req: NextRequest) {
   try {
@@ -55,7 +56,19 @@ export async function POST(req: NextRequest) {
         });
       }
     } else {
-      // Brand new user — create with a default private workspace
+      // Brand new user — the private-beta access code is required to create an
+      // account. Existing users (matched above) are never asked again; this
+      // only stops a fresh Google account signing up without the code, the
+      // same gate /login enforces for the page. The cookie is set by
+      // /api/beta/unlock when the landing-page code is accepted.
+      if (!verifyBetaCookie(req.cookies.get(BETA_COOKIE)?.value)) {
+        return NextResponse.json(
+          { error: "An access code is required to join the private beta." },
+          { status: 403 },
+        );
+      }
+
+      // Create with a default private workspace
       user = await db.user.create({
         data: {
           email,

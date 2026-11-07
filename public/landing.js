@@ -2,11 +2,11 @@
 document.documentElement.classList.add("js");
 
 /* ── Private-beta gate ──────────────────────────────────────────────────────
-   Every "Open Tafsir Lab" and "Sign in" asks for the access code first. A
-   soft gate only: the code is in this public file and /login is reachable
-   directly. It keeps a casual visitor on the waitlist path, nothing more. */
+   Every "Open Tafsir Lab" and "Sign in" asks for the access code first. The
+   code is checked on the server (/api/beta/unlock), which sets a cookie; /login
+   and new-account sign-up both require it, so the gate cannot be skipped by
+   typing the URL. */
 (() => {
-  const BETA_PASSWORD = "READY2027";
   const modal = document.getElementById("beta-modal");
   const form = document.getElementById("beta-modal-form");
   const input = document.getElementById("beta-modal-input");
@@ -35,17 +35,33 @@ document.documentElement.classList.add("js");
   modal.querySelector(".gate-backdrop")?.addEventListener("click", close);
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !modal.hidden) close(); });
 
-  form.addEventListener("submit", (e) => {
+  const go = modal.querySelector(".gate-go");
+  form.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const code = input.value.trim().toUpperCase();
+    const code = input.value.trim();
     if (!code) return;
-    if (code !== BETA_PASSWORD) {
-      error.textContent = "That code isn’t right.";
+    error.hidden = true;
+    if (go) go.disabled = true;
+    try {
+      const res = await fetch("/api/beta/unlock", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        error.textContent = data.error || "That code isn’t right.";
+        error.hidden = false;
+        input.select();
+        return;
+      }
+      window.location.href = "/login";
+    } catch {
+      error.textContent = "Could not reach the server. Try again.";
       error.hidden = false;
-      input.select();
-      return;
+    } finally {
+      if (go) go.disabled = false;
     }
-    window.location.href = "/login";
   });
 })();
 

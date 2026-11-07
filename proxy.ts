@@ -24,6 +24,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify }                 from "jose";
 import { db }                        from "@/lib/db";
+import { verifyBetaCookie, BETA_COOKIE } from "@/lib/beta/gate";
 
 const SESSION_COOKIE = "tl-session";
 
@@ -46,6 +47,20 @@ async function isBlocked(userId: string): Promise<boolean> {
 
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
+
+  /* The private-beta gate in front of sign-in. /login is only reachable with
+     the access-code cookie (set by /api/beta/unlock from the landing page) or
+     an existing session — otherwise it is back to the landing page to enter
+     the code. This is the server half of what public/landing.js used to only
+     pretend to enforce. */
+  if (pathname === "/login" || pathname.startsWith("/login/")) {
+    const hasSession = !!req.cookies.get(SESSION_COOKIE)?.value;
+    const hasBeta    = verifyBetaCookie(req.cookies.get(BETA_COOKIE)?.value);
+    if (!hasSession && !hasBeta) {
+      return NextResponse.redirect(new URL("/", req.url));
+    }
+    return NextResponse.next();
+  }
 
   const AUTH_PATHS = [
     "/home", "/workspaces", "/workspace",
@@ -92,6 +107,7 @@ export async function proxy(req: NextRequest) {
 
 export const config = {
   matcher: [
+    "/login", "/login/:path*",
     "/home/:path*", "/workspaces/:path*", "/workspace/:path*",
     "/analytics/:path*", "/leaderboard/:path*", "/friends/:path*",
     "/settings/:path*", "/contact/:path*", "/explore/:path*", "/assistant/:path*",
