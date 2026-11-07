@@ -10,6 +10,7 @@ import { db } from "@/lib/db";
 import * as WorkspacesService from "@/lib/services/workspaces.service";
 import * as PagesService from "@/lib/services/pages.service";
 import BookShell from "@/components/workspace/BookShell";
+import { gatePage } from "@/lib/services/page-gate";
 
 export default async function BookRoute({
   params,
@@ -19,11 +20,11 @@ export default async function BookRoute({
   const { workspaceId, bookId } = await params;
   const { userId } = await getSession();
 
-  const [{ workspace, role }, book, currentUser] = await Promise.all([
+  const [{ workspace, role }, book, currentUser] = await gatePage(Promise.all([
     WorkspacesService.getWorkspaceWithRole(workspaceId, userId),
     PagesService.getWorkspaceBook(workspaceId, bookId, userId),
     db.user.findUnique({ where: { id: userId }, select: { name: true } }),
-  ]);
+  ]));
 
   if (!book || !book.pdfUrl) notFound();
 

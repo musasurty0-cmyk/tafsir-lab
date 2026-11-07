@@ -11,6 +11,7 @@ import { getSession } from "@/lib/session";
 import * as WorkspacesService from "@/lib/services/workspaces.service";
 import { fetchChapters } from "@/lib/quran-api";
 import NotesReview from "@/components/workspace/NotesReview";
+import { gatePage } from "@/lib/services/page-gate";
 
 export default async function NotesReviewPage({
   params,
@@ -20,10 +21,10 @@ export default async function NotesReviewPage({
   const { workspaceId } = await params;
   const { userId } = await getSession();
 
-  const [{ workspace }, chapters] = await Promise.all([
+  const [{ workspace }, chapters] = await gatePage(Promise.all([
     WorkspacesService.getWorkspaceWithRole(workspaceId, userId),
     fetchChapters(),
-  ]);
+  ]));
 
   return (
     <NotesReview

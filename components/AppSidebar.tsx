@@ -41,7 +41,7 @@ const ITEMS: Item[] = [
   { href: "/analytics",   label: "Analytics",  Icon: PieChart },
   { href: "/leaderboard", label: "Leaderboard", Icon: Trophy },
   { href: "/settings",    label: "Settings",   Icon: Settings },
-  { href: "/contact",     label: "Contact Us", Icon: MessageSquare },
+  { href: "/contact",     label: "Contact us", Icon: MessageSquare },
 ];
 
 export default function AppSidebar({ user }: { user: SidebarUser | null }) {

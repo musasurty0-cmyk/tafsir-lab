@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
-import Link from "next/link";
 import { hideNavSplash } from "@/lib/nav-splash";
+import StatusPage from "@/components/StatusPage";
 
 export default function WorkspaceError({
   error,
@@ -17,55 +17,13 @@ export default function WorkspaceError({
      pending one; hideNavSplash can. */
   useEffect(() => { hideNavSplash(); }, []);
 
+  // Not the raw message (see app/error.tsx); the reference is for a report.
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        minHeight: "100vh",
-        gap: "1rem",
-        fontFamily: "var(--font-sans, system-ui, sans-serif)",
-        color: "#374151",
-      }}
-    >
-      <h1 style={{ fontSize: "1.5rem", fontWeight: 600, margin: 0 }}>
-        Something went wrong
-      </h1>
-      <p style={{ margin: 0, color: "#6b7280", fontSize: "0.875rem" }}>
-        {error.message ?? "An unexpected error occurred loading this workspace."}
-      </p>
-      <div style={{ display: "flex", gap: "0.75rem", marginTop: "0.5rem" }}>
-        <button
-          onClick={reset}
-          style={{
-            padding: "0.5rem 1.25rem",
-            background: "#18181b",
-            color: "#fff",
-            borderRadius: "0.375rem",
-            border: "none",
-            fontSize: "0.875rem",
-            cursor: "pointer",
-          }}
-        >
-          Try again
-        </button>
-        <Link
-          href="/home"
-          style={{
-            padding: "0.5rem 1.25rem",
-            background: "transparent",
-            color: "#374151",
-            borderRadius: "0.375rem",
-            border: "1px solid #d1d5db",
-            textDecoration: "none",
-            fontSize: "0.875rem",
-          }}
-        >
-          Go home
-        </Link>
-      </div>
-    </div>
+    <StatusPage
+      title="Something went wrong."
+      body="This workspace didn’t load. Try again, and if it keeps happening, tell us through Contact us."
+      primary={{ label: "Try again", onClick: reset }}
+      reference={error.digest}
+    />
   );
 }

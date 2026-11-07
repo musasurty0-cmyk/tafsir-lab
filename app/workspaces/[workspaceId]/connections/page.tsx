@@ -12,6 +12,7 @@ import { getSession } from "@/lib/session";
 import * as WorkspacesService from "@/lib/services/workspaces.service";
 import { fetchChapters } from "@/lib/quran-api";
 import ConnectionsCatalogue from "@/components/workspace/ConnectionsCatalogue";
+import { gatePage } from "@/lib/services/page-gate";
 
 export default async function ConnectionsPage({
   params,
@@ -23,10 +24,10 @@ export default async function ConnectionsPage({
 
   // Membership is verified here, so the client never renders for a workspace
   // the user cannot access.
-  const [{ workspace }, chapters] = await Promise.all([
+  const [{ workspace }, chapters] = await gatePage(Promise.all([
     WorkspacesService.getWorkspaceWithRole(workspaceId, userId),
     fetchChapters(),
-  ]);
+  ]));
 
   return (
     <ConnectionsCatalogue

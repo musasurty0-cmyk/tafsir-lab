@@ -117,7 +117,7 @@ export function buildCommands(): SlashCommandItem[] {
   const tafsirShortcuts: SlashCommandItem[] = TAFSIR_SHORTCUTS.map((t) => ({
     id:               t.id,
     title:            `Tafsīr ${t.title}`,
-    description:      `${t.title}'s commentary — pick a verse (or /${t.id} 2:255)`,
+    description:      `${t.title}'s commentary. Pick a verse, or /${t.id} 2:255`,
     icon:             "📚",
     aliases:          t.aliases,
     isTafsir:         true,
@@ -169,7 +169,7 @@ export function buildCommands(): SlashCommandItem[] {
     {
       id:          "ayah",
       title:       "Ayah block",
-      description: "Embed a verse or a selection — /a 2:255 or /a 2:1-5",
+      description: "Embed a verse or a selection: /a 2:255 or /a 2:1-5",
       icon:        "📖",
       /* "a" is the short form, and exact, so it can never lose to a command
          that merely starts with an a. */
@@ -205,7 +205,7 @@ export function buildCommands(): SlashCommandItem[] {
     {
       id:          "tafsir",
       title:       "Tafsir block",
-      description: "Embed commentary — 67+ English & Arabic sources",
+      description: "Embed commentary from 67+ English and Arabic sources",
       icon:        "📚",
       aliases:     ["commentary", "tafseer"],
       isTafsir:    true,   // tafsirSlug undefined → resolves last-used source
@@ -303,7 +303,7 @@ export function buildCommands(): SlashCommandItem[] {
     {
       id:          "toggle",
       title:       "Toggle list",
-      description: "Collapsible section — click the chevron to fold",
+      description: "Collapsible section. Click the chevron to fold it",
       icon:        "▸",
       aliases:     ["collapse", "fold", "details", "dropdown"],
       execute(editor, range) {
@@ -317,7 +317,7 @@ export function buildCommands(): SlashCommandItem[] {
          "tabel" and got nothing back. */
       id:          "table",
       title:       "Table",
-      description: "3×3 table with a header row — columns resize by dragging",
+      description: "3×3 table with a header row. Drag to resize columns",
       icon:        "▦",
       aliases:     ["grid", "tabel"],
       execute(editor, range) {

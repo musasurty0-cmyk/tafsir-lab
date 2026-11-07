@@ -15,6 +15,7 @@ import * as PagesService from "@/lib/services/pages.service";
 import { db } from "@/lib/db";
 import { fetchChapter } from "@/lib/quran-api";
 import SurahNoPages from "@/components/workspace/SurahNoPages";
+import { gatePage } from "@/lib/services/page-gate";
 
 export default async function SurahIndexPage({
   params,
@@ -40,11 +41,11 @@ export default async function SurahIndexPage({
   if (kind === "arabic") redirect(`/workspaces/${workspaceId}/arabic/quran?surah=${surahNumber}`);
   if (!workspaceSurah) notFound();
 
-  const [{ workspace, role }, pages, chapter] = await Promise.all([
+  const [{ workspace, role }, pages, chapter] = await gatePage(Promise.all([
     WorkspacesService.getWorkspaceWithRole(workspaceId, userId),
     PagesService.listPages(workspaceSurah.id, userId),
     fetchChapter(surahNumber),
-  ]);
+  ]));
 
   // Redirect to first page if any exist.
   if (pages.length > 0) {

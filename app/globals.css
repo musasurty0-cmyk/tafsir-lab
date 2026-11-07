@@ -16238,3 +16238,47 @@ body {
   .notes-review-back, .cxcat-back { min-height: 40px; }
   .whiteboard-shell-back { min-width: 40px; min-height: 40px; }
 }
+
+/* ── Not found, no access, an error ──────────────────────────────────────
+   Themed (the old pages hard-coded greys that sank into dark mode), one
+   filled action and a text link, a headline that is a sentence. */
+.status-page {
+  min-height: 100dvh;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 14px; padding: 32px 20px;
+  background: var(--bg); color: var(--ink); text-align: center;
+}
+.status-title {
+  margin: 0; max-width: 18ch;
+  font-family: var(--font-serif); font-size: clamp(30px, 4.4vw, 44px);
+  font-weight: 600; letter-spacing: -0.03em; line-height: 1.1; text-wrap: balance;
+}
+.status-body { margin: 0; max-width: 46ch; font-size: 16px; line-height: 1.5; color: var(--ink-3); text-wrap: pretty; }
+.status-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 18px; margin-top: 10px; }
+.status-primary {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: 44px; padding: 0 20px; border: 0; border-radius: 12px;
+  background: var(--ink); color: var(--bg); font: inherit; font-size: 15px; font-weight: 600;
+  text-decoration: none; cursor: pointer;
+  transition: transform var(--dur-hover, 120ms) ease, opacity var(--dur-hover, 120ms) ease;
+}
+.status-primary:hover { opacity: 0.88; }
+.status-primary:active { transform: scale(0.97); }
+.status-link { font-size: 15px; font-weight: 600; color: var(--accent-ink); text-decoration: none; }
+.status-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+.status-primary:focus-visible, .status-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.status-ref { margin: 8px 0 0; font-size: 12px; color: var(--ink-4); font-variant-numeric: tabular-nums; }
+
+/* Links inside a tafsīr's own text took the browser's default blue and
+   visited violet, which barely read on the dark theme. The accent instead. */
+.commentary-body a { color: var(--accent-ink); text-decoration: underline; text-decoration-color: color-mix(in oklch, var(--accent) 40%, transparent); text-underline-offset: 3px; }
+.commentary-body a:hover { text-decoration-color: currentColor; }
+/* The ticks under the hadith cards are 4px wide: a finger gets a taller band. */
+.hl-tick { position: relative; }
+.hl-tick::after { content: ""; position: absolute; inset: -14px -1px; }
+@media (pointer: coarse) {
+  .tafsir-embed-btn { min-height: 36px; padding: 0 2px; font-size: 13px; }
+}
+/* Some sources colour their headings inline (a dark navy, invisible on the
+   dark theme). The commentary takes the theme's ink instead. */
+.commentary-body [style*="color"] { color: inherit !important; }

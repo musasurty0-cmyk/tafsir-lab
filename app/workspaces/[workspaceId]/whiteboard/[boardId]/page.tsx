@@ -10,6 +10,7 @@ import { db } from "@/lib/db";
 import * as WorkspacesService from "@/lib/services/workspaces.service";
 import * as PagesService from "@/lib/services/pages.service";
 import WhiteboardShell from "@/components/workspace/WhiteboardShell";
+import { gatePage } from "@/lib/services/page-gate";
 
 export default async function BoardRoute({
   params,
@@ -19,11 +20,11 @@ export default async function BoardRoute({
   const { workspaceId, boardId } = await params;
   const { userId } = await getSession();
 
-  const [{ workspace, role }, board, currentUser] = await Promise.all([
+  const [{ workspace, role }, board, currentUser] = await gatePage(Promise.all([
     WorkspacesService.getWorkspaceWithRole(workspaceId, userId),
     PagesService.getWorkspaceBoard(workspaceId, boardId, userId),
     db.user.findUnique({ where: { id: userId }, select: { name: true } }),
-  ]);
+  ]));
 
   if (!board) notFound();
 

@@ -19,6 +19,7 @@ import HadithHome from "@/components/workspace/HadithHome";
 import ArabicHome from "@/components/workspace/arabic/ArabicHome";
 import * as ArabicService from "@/lib/services/arabic.service";
 import * as PagesService from "@/lib/services/pages.service";
+import { gatePage } from "@/lib/services/page-gate";
 
 export type WorkspaceSurahSummary = {
   id: string;
@@ -42,7 +43,7 @@ export default async function WorkspaceHomePage({
   const { userId } = await getSession();
 
   // Boards workspace → the boards list is home (no surah grid).
-  const gate = await WorkspacesService.getWorkspaceWithRole(workspaceId, userId);
+  const gate = await gatePage(WorkspacesService.getWorkspaceWithRole(workspaceId, userId));
   if (gate.workspace.kind === "boards") {
     const boards = await PagesService.listWorkspaceBoards(workspaceId, userId);
     return (
