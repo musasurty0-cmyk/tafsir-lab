@@ -1195,17 +1195,29 @@ export default function ModeBPage({
        4x and leave no paper around it to write on. The English caps it too,
        or a short ayah's three words would come out as a headline. */
     const maxZoom = text ? Math.min(AYAH_ALONE_MAX_ZOOM, AYAH_ALONE_TEXT_MAX_PX / parseFloat(getComputedStyle(text).fontSize)) : AYAH_ALONE_MAX_ZOOM;
-    const zoom = clamp(Math.min(fitW, roomH / wholeH), Math.min(0.7, fitW), maxZoom);
+    let zoom = clamp(Math.min(fitW, roomH / wholeH), Math.min(0.7, fitW), maxZoom);
+    /* The pen rail stands against the left edge: at mid-height when folded on
+       a phone, from near the top in Split. Measured rather than assumed. If
+       the ayah and its English would run under it, they shrink to fit beside
+       it while they stay at reading size, and otherwise start from the top,
+       which clears a phone's folded rail. */
+    const rail = [...document.querySelectorAll<HTMLElement>(".canvas-tool-rail")].find((r) => r.offsetParent);
+    const rq = rail?.getBoundingClientRect();
+    const side = rq && rq.right > box.left && rq.left < box.left + box.width / 2 ? rq.right - box.left + 12 : 0;
+    let fromTop = false;
+    if (side && (box.width - wholeW * zoom) / 2 < side) {
+      const beside = Math.min((box.width - 2 * side) / wholeW, roomH / wholeH, maxZoom);
+      if (beside >= 1) zoom = beside;
+      else fromTop = true;
+    }
     if (text) setAloneTextAt({ left: (wl + wr) / 2 - AYAH_ALONE_TEXT_WIDTH / 2, top: wb + gap });
-    // The pen rail stands at mid-height against the left edge.
-    const clearsRail = (box.width - wholeW * zoom) / 2 >= 84;
     const target: CanvasViewport = {
       zoom,
       x: box.width / 2 - ((wl + wr) / 2) * zoom,
-      // Centred in the room there is, or from the top where the rail would
-      // cover it. An ayah too long for the room also starts at the top, with
-      // the English below for the reader to pan down to.
-      y: top + (clearsRail ? Math.max(0, (roomH - wholeH * zoom) / 2) : 0) - wt * zoom,
+      // Centred in the room there is, or from the top (see the rail above).
+      // An ayah too long for the room also starts at the top, with the
+      // English below for the reader to pan down to.
+      y: top + (fromTop ? 0 : Math.max(0, (roomH - wholeH * zoom) / 2)) - wt * zoom,
     };
     aloneFrameRef.current = target;
     // Not remembered: this zoom is for the ayah, and the page opens at the reader's.
