@@ -45,6 +45,26 @@ export class SessionError extends Error {
 
 // ── Read ──────────────────────────────────────────────────────────────────
 
+/**
+ * Decode the session cookie to a userId. No database — just the JWT. The
+ * middleware block gate and the /blocked page use this to learn who the viewer
+ * is without pulling the whole session stack (or the block check) in behind it.
+ */
+export async function readUserId(): Promise<string | null> {
+  const jar   = await cookies();
+  const token = jar.get(COOKIE)?.value;
+  if (!token) return null;
+
+  const key = secret();
+  try {
+    const { payload } = await jwtVerify(token, key);
+    const userId = payload.uid as string | undefined;
+    return userId ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export async function getSession(): Promise<Session> {
   const jar   = await cookies();
   const token = jar.get(COOKIE)?.value;

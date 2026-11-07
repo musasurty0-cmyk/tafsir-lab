@@ -27,6 +27,12 @@ model User {
   // ring and nothing else — missing it has no consequence.
   dailyGoal         Int     @default(10)
 
+  // Blocking (prisma/sql/028). A blocked user keeps their account and data but
+  // every authenticated request redirects them to /blocked, which shows only
+  // blockReason. Unblock by clearing blockedAt. Enforced in lib/session.ts.
+  blockedAt   DateTime? @db.Timestamptz(6)
+  blockReason String?
+
   ownedWorkspaces  Workspace[]            @relation("WorkspaceOwner")
   memberships      WorkspaceMember[]
   createdPages     Page[]                 @relation("PageCreatedBy")
