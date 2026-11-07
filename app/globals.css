@@ -16282,3 +16282,16 @@ body {
 /* Some sources colour their headings inline (a dark navy, invisible on the
    dark theme). The commentary takes the theme's ink instead. */
 .commentary-body [style*="color"] { color: inherit !important; }
+
+/* The Mushaf header's controls, drawn larger while the page is small. The
+   factor comes from the camera (--ui-boost on .mode-b-inner); a transform, so
+   nothing on the page moves. Each grows from its outer edge, away from the
+   basmala between them. */
+.qcf-plate   { transform: scale(var(--ui-boost, 1)); transform-origin: right center; }
+.qcf-bar-en  { transform: scale(var(--ui-boost, 1)); transform-origin: left center; }
+.qcf-plate--btn:active { transform: scale(calc(var(--ui-boost, 1) * 0.97)); }
+@media (pointer: coarse) {
+  /* The chevron only: the plate clips its own overflow, and is big enough. */
+  .qcf-bar-en .crumb-menu-btn { position: relative; }
+  .qcf-bar-en .crumb-menu-btn::after { content: ""; position: absolute; inset: -6px; }
+}

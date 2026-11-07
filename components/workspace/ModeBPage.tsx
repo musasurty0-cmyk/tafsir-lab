@@ -29,6 +29,8 @@ const HINT_KEY        = "tl-word-tap-hint-dismissed";
 /** Whether pressing into an ayah shows it in the page or alone. */
 const AYAH_VIEW_KEY   = "tl-ayah-view";
 const AYAH_ALONE_MAX_ZOOM = 2.5;
+/** How much larger the Mushaf header's controls may be drawn (see --ui-boost). */
+const MUSHAF_UI_BOOST_MAX = 1.4;
 /* The English under the ayah alone, in canvas units. Must match .ayah-alone-text. */
 const AYAH_ALONE_TEXT_WIDTH = 520;
 const AYAH_ALONE_TEXT_GAP = 24;
@@ -1663,7 +1665,14 @@ export default function ModeBPage({
           width: MUSHAF_CARD_WIDTH,
           // Smooth camera glide when an annotation session begins
           transition: cameraAnim ? "transform 0.35s cubic-bezier(0.33, 0.1, 0.25, 1)" : undefined,
-        }}
+          /* The header's controls are drawn larger while the page is shown
+             small (a phone frames it at about half size), so Study and the
+             surah switcher stay a size a finger can find. Paint only, never
+             layout: the page's coordinates, and the ink on them, must be the
+             same on every screen. Capped where the controls would reach the
+             basmala between them. */
+          ["--ui-boost" as string]: Math.min(MUSHAF_UI_BOOST_MAX, Math.max(1, 0.82 / viewport.zoom)),
+        } as React.CSSProperties}
       >
         <QCFMushafPage
           verses={qcfVerses}
