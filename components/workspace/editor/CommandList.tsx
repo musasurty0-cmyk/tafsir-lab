@@ -17,6 +17,7 @@ import {
   useState,
 } from "react";
 import type { SlashCommandItem } from "./SlashCommand";
+import SlashIcon from "./SlashIcon";
 
 // ── Imperative handle exposed to suggestion renderer ──────────────────────
 
@@ -94,7 +95,7 @@ const CommandList = forwardRef<CommandListHandle, Props>(
             onMouseEnter={() => setSelectedIndex(i)}
             onClick={() => onSelect(item)}
           >
-            <span className="slash-palette-icon">{item.icon}</span>
+            <span className="slash-palette-icon"><SlashIcon id={item.id} isTafsir={item.isTafsir} fallback={item.icon} /></span>
             <span className="slash-palette-text">
               <span className="slash-palette-title">{item.title}</span>
               <span className="slash-palette-desc">{item.description}</span>

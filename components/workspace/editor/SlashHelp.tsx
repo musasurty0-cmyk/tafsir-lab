@@ -13,6 +13,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { buildCommands, filterCommands } from "./SlashCommand";
+import SlashIcon from "./SlashIcon";
 
 export default function SlashHelp() {
   const [open, setOpen]   = useState(false);
@@ -106,7 +107,7 @@ export default function SlashHelp() {
               onMouseEnter={() => setSel(i)}
               onClick={() => choose(c.id)}
             >
-              <span className="slashhelp-icon" aria-hidden>{c.icon}</span>
+              <span className="slashhelp-icon" aria-hidden><SlashIcon id={c.id} isTafsir={c.isTafsir} fallback={c.icon} size={14} /></span>
               <span className="slashhelp-text">
                 <span className="slashhelp-name">/{c.id}</span>
                 <span className="slashhelp-desc">{c.description}</span>

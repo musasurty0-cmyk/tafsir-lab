@@ -393,8 +393,14 @@ export function filterCommands(
   // Match against the first word of the query (before any space + param)
   const word = q.split(/\s+/)[0];
   if (!word) return items;
+  /* A query that spells out more of a title than its first word ("heading 2",
+     "task list") means that title. Scored on the first word alone, "heading"
+     matched Heading 1's alias exactly and Enter made the wrong heading. A
+     parameter ("ayah 2:255") spells no title, so it still falls through. */
+  const spelled = (cmd: SlashCommandItem) =>
+    q.includes(" ") && cmd.title.toLowerCase().startsWith(q) ? 1100 : 0;
   return items
-    .map((cmd, i) => ({ cmd, i, score: scoreCommand(cmd, word) }))
+    .map((cmd, i) => ({ cmd, i, score: Math.max(spelled(cmd), scoreCommand(cmd, word)) }))
     .filter((r) => r.score > 0)
     // Stable on registry order within a tier, so browsing order is preserved
     // when scores tie — blocks stay ahead of the scholar shortcuts.

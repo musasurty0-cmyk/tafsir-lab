@@ -5916,12 +5916,13 @@ input, textarea { font: inherit; color: inherit; }
 .slash-palette-item:hover {
   background: var(--hover);
 }
+/* A filled tile, no outline; it takes the accent with the highlighted row. */
 .slash-palette-icon {
-  width: 28px; height: 28px;
+  width: 30px; height: 30px;
   display: flex; align-items: center; justify-content: center;
-  border-radius: 6px;
-  background: var(--panel);
-  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--hover);
+  border: 0;
   font-size: 13px; flex-shrink: 0;
   font-family: var(--font-mono); font-weight: 700;
   color: var(--ink-2);
@@ -5929,7 +5930,7 @@ input, textarea { font: inherit; color: inherit; }
               color        var(--dur-hover) var(--ease-soft);
 }
 .slash-palette-item[data-active="true"] .slash-palette-icon {
-  border-color: var(--accent);
+  background: color-mix(in oklch, var(--accent) 16%, transparent);
   color: var(--accent-ink);
 }
 .slash-palette-text {
@@ -10186,7 +10187,7 @@ input, textarea { font: inherit; color: inherit; }
 }
 .slashhelp-item[data-sel="true"] { background: var(--hover); }
 .slashhelp-item:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-.slashhelp-icon { font-size: 13px; line-height: 1.5; flex-shrink: 0; }
+.slashhelp-icon { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 20px; font-size: 13px; flex-shrink: 0; color: var(--ink-3); }
 .slashhelp-text { min-width: 0; display: flex; flex-direction: column; }
 .slashhelp-name {
   font-family: var(--font-mono); font-size: 12px; color: var(--ink); font-weight: 500;
