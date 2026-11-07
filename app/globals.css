@@ -6462,6 +6462,26 @@ input, textarea { font: inherit; color: inherit; }
   margin-bottom: 12px;
 }
 
+/* Sūrahs on the grid (organisers). Filled controls, no outlines. */
+.shown-sub { margin: 0 0 12px; font-size: 13px; line-height: 1.45; color: var(--ink-3); }
+.shown-err { margin: 10px 0 0; font-size: 13px; color: var(--danger); }
+.shown-seg { display: inline-flex; gap: 2px; padding: 3px; border-radius: 10px; background: var(--hover); margin-bottom: 12px; }
+.shown-seg button { border: 0; background: transparent; color: var(--ink-2); font: inherit; font-size: 13px; padding: 6px 14px; border-radius: 8px; cursor: pointer; min-height: 32px; }
+.shown-seg button[aria-selected="true"] { background: var(--bg-elev); color: var(--ink); box-shadow: 0 1px 2px oklch(0 0 0 / 0.12); }
+.shown-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.shown-chip { border: 0; background: var(--accent-soft); color: var(--accent-ink); font: inherit; font-size: 13px; padding: 5px 10px; border-radius: 999px; cursor: pointer; }
+.shown-chip:hover { filter: brightness(0.96); }
+.shown-chip span { margin-left: 4px; opacity: 0.7; }
+.shown-search { width: 100%; box-sizing: border-box; border: 0; background: var(--hover); color: var(--ink); font: inherit; font-size: 14px; padding: 9px 12px; border-radius: 10px; margin-bottom: 6px; }
+.shown-search:focus { outline: 2px solid var(--accent); outline-offset: 0; }
+.shown-list { max-height: 260px; overflow-y: auto; margin: 0 -6px; }
+.shown-row { display: grid; grid-template-columns: 20px 28px 1fr auto; align-items: center; gap: 8px; padding: 7px 6px; border-radius: 8px; cursor: pointer; font-size: 14px; color: var(--ink); }
+.shown-row:hover { background: var(--hover); }
+.shown-row input { accent-color: var(--accent); margin: 0; width: 16px; height: 16px; }
+.shown-n { color: var(--ink-4); font-variant-numeric: tabular-nums; font-size: 12px; }
+.shown-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.shown-ar { font-family: var(--font-arabic); font-size: 17px; color: var(--ink-2); }
+
 /* Permissions capability matrix */
 .ws-perm-grid {
   border: 1px solid var(--line);

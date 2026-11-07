@@ -21,8 +21,16 @@ export async function PATCH(
     const { workspaceId } = await params;
     const { userId } = await getSession();
     const body = await req.json() as {
-      name?: unknown; membersCanManagePages?: unknown; icon?: unknown;
+      name?: unknown; membersCanManagePages?: unknown; icon?: unknown; shownSurahs?: unknown;
     };
+
+    // The sūrahs on the grid (admins). An empty list means all 114.
+    if ("shownSurahs" in body) {
+      const list = WorkspacesService.cleanShownSurahs(body.shownSurahs);
+      if (!list) return NextResponse.json({ error: "shownSurahs must be sūrah numbers from 1 to 114" }, { status: 400 });
+      const result = await WorkspacesService.setShownSurahs(workspaceId, userId, list);
+      return NextResponse.json({ workspace: result });
+    }
 
     // Permission policy toggle (admins).
     if (typeof body.membersCanManagePages === "boolean") {

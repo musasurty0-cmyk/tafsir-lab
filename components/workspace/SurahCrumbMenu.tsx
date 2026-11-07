@@ -28,6 +28,8 @@ interface Props {
 export default function SurahCrumbMenu({ workspaceId, current }: Props) {
   const [open, setOpen] = useState(false);
   const [chapters, setChapters] = useState<Chapter[] | null>(null);
+  /** The sūrahs this workspace shows; empty means all 114. */
+  const [shown, setShown] = useState<number[]>([]);
   const [q, setQ] = useState("");
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -35,19 +37,28 @@ export default function SurahCrumbMenu({ workspaceId, current }: Props) {
   useEffect(() => {
     if (!open || chapters) return;
     let alive = true;
-    fetch("/api/chapters")
+    /* Both together: setting `chapters` re-runs this effect, whose cleanup
+       would drop a shown-sūrahs answer that arrived after it. */
+    const shownReq = fetch(`/api/workspaces/${workspaceId}/shown-surahs`)
+      .then((r) => (r.ok ? r.json() : {}))
+      .then((d: { shownSurahs?: number[] }) => d.shownSurahs ?? [])
+      .catch(() => [] as number[]);
+    const chaptersReq = fetch("/api/chapters")
       .then((r) => r.json())
-      .then((d: { chapters?: Chapter[] } | Chapter[]) => {
-        if (!alive) return;
-        setChapters(Array.isArray(d) ? d : d.chapters ?? []);
-      })
-      .catch(() => { if (alive) setChapters([]); });
+      .then((d: { chapters?: Chapter[] } | Chapter[]) => (Array.isArray(d) ? d : d.chapters ?? []))
+      .catch(() => [] as Chapter[]);
+    void Promise.all([shownReq, chaptersReq]).then(([s, c]) => {
+      if (!alive) return;
+      setShown(s);
+      setChapters(c);
+    });
     return () => { alive = false; };
-  }, [open, chapters]);
+  }, [open, chapters, workspaceId]);
 
   useEffect(() => { if (open) inputRef.current?.focus(); }, [open]);
 
   const visible = (chapters ?? []).filter((c) => {
+    if (shown.length && !shown.includes(c.id)) return false;
     const s = q.trim().toLowerCase();
     if (!s) return true;
     return String(c.id) === s

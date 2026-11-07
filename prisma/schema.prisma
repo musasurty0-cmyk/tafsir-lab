@@ -130,6 +130,10 @@ model Workspace {
   // members (prisma/sql/025, the Youth Majlis cohort).
   privateBoards Boolean @default(false)
 
+  // The sūrahs organisers chose for the grid; empty = all 114
+  // (prisma/sql/026). Hidden sūrahs keep their pages and work.
+  shownSurahs Int[] @default([])
+
   owner       User              @relation("WorkspaceOwner", fields: [ownerId], references: [id])
   members     WorkspaceMember[]
   surahs      WorkspaceSurah[]

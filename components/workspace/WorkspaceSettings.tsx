@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { X, Copy, RefreshCw, Check } from "lucide-react";
 import type { MemberRole } from "@/lib/services/workspaces.service";
 import { useDismissable } from "@/lib/use-dismissable";
+import ShownSurahsSetting from "./ShownSurahsSetting";
+import type { Chapter } from "@/lib/types";
 
 interface Member {
   workspaceId: string;
@@ -23,6 +25,8 @@ interface Props {
   onClose: () => void;
   onRenamed: (name: string) => void;
   onDeleted: () => void;
+  /** Study workspaces: the sūrahs on the grid, chosen by organisers. */
+  surahChoice?: { chapters: Chapter[]; shown: number[]; onChanged: (list: number[]) => void };
 }
 
 function getInitials(name: string) {
@@ -39,6 +43,7 @@ export default function WorkspaceSettings({
   onClose,
   onRenamed,
   onDeleted,
+  surahChoice,
 }: Props) {
   useDismissable(onClose);
   const isAdminOrOwner = currentUserRole === "owner" || currentUserRole === "admin";
@@ -309,6 +314,10 @@ export default function WorkspaceSettings({
               </button>
             </div>
           </div>
+        )}
+
+        {isAdminOrOwner && surahChoice && (
+          <ShownSurahsSetting workspaceId={workspaceId} chapters={surahChoice.chapters} shown={surahChoice.shown} onChanged={surahChoice.onChanged} />
         )}
 
         {/* Permissions — role capability matrix + member-page toggle */}

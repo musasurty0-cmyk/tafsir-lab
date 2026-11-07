@@ -14,7 +14,7 @@
 
 import { pushWithSplash } from "@/lib/nav-splash";
 import { useT } from "@/lib/i18n/LocaleProvider";
-import { useState, useCallback, useRef, useEffect, useLayoutEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useLayoutEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import type { Chapter } from "@/lib/types";
 import type { MemberRole } from "@/lib/services/workspaces.service";
@@ -38,7 +38,7 @@ const normArabic = (s: string) =>
 
 interface Props {
   workspaceId: string;
-  workspace: { id: string; name: string; type: string; ownerId: string; membersCanManagePages: boolean };
+  workspace: { id: string; name: string; type: string; ownerId: string; membersCanManagePages: boolean; shownSurahs?: number[] };
   role: MemberRole;
   chapters: Chapter[];
   workspaceSurahs: WorkspaceSurahSummary[];
@@ -120,7 +120,11 @@ export default function WorkspaceHome({
     workspaceSurahs.map((s) => [s.surahNumber, s])
   );
   const isStudying = (n: number) => !!startedMap.get(n)?.hasWork;
-  const studyingCount = workspaceSurahs.filter((s) => s.hasWork).length;
+  /* The sūrahs organisers chose for this workspace; none chosen means all 114.
+     Everything below (the grid, the counts, the search) works within them. */
+  const [shown, setShown] = useState<number[]>(workspace.shownSurahs ?? []);
+  const pool = useMemo(() => (shown.length ? chapters.filter((c) => shown.includes(c.id)) : chapters), [chapters, shown]);
+  const studyingCount = workspaceSurahs.filter((s) => s.hasWork && (!shown.length || shown.includes(s.surahNumber))).length;
 
   const canManageBoards = isAdmin(role);
 
@@ -166,7 +170,7 @@ export default function WorkspaceHome({
 
   const q = normLatin(query);
   const qa = normArabic(query);
-  const visible = chapters.filter((ch) => {
+  const visible = pool.filter((ch) => {
     if (filter === "started" && !isStudying(ch.id)) return false;
     if (filter === "not-started" && isStudying(ch.id)) return false;
     if (!q && !qa) return true;
@@ -292,7 +296,7 @@ export default function WorkspaceHome({
             <div className="ws-filter-indicator" aria-hidden />
             {(["all", "started", "not-started"] as const).map((f) => {
               const label = f === "all" ? t("ws.filter.all") : f === "started" ? t("ws.filter.started") : t("ws.filter.notStarted");
-              const count = f === "all" ? 114 : f === "started" ? studyingCount : 114 - studyingCount;
+              const count = f === "all" ? pool.length : f === "started" ? studyingCount : pool.length - studyingCount;
               return (
                 <button
                   key={f}
@@ -395,6 +399,7 @@ export default function WorkspaceHome({
         workspaceName={wsName}
         workspaceType={workspace.type}
         membersCanManagePages={workspace.membersCanManagePages}
+        surahChoice={{ chapters, shown, onChanged: setShown }}
         currentUserId={workspace.ownerId}
         currentUserRole={role}
         onClose={() => setSettingsOpen(false)}

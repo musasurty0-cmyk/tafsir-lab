@@ -85,11 +85,11 @@ export function capabilitiesFor(role: MemberRole, membersCanManagePages = false)
 export async function getWorkspaceWithRole(
   workspaceId: string,
   userId: string
-): Promise<{ workspace: { id: string; name: string; type: string; kind: string; ownerId: string; membersCanManagePages: boolean; privateBoards: boolean }; role: MemberRole }> {
+): Promise<{ workspace: { id: string; name: string; type: string; kind: string; ownerId: string; membersCanManagePages: boolean; privateBoards: boolean; shownSurahs: number[] }; role: MemberRole }> {
   const [workspace, membership] = await Promise.all([
     db.workspace.findUnique({
       where: { id: workspaceId },
-      select: { id: true, name: true, type: true, kind: true, ownerId: true, membersCanManagePages: true, privateBoards: true },
+      select: { id: true, name: true, type: true, kind: true, ownerId: true, membersCanManagePages: true, privateBoards: true, shownSurahs: true },
     }),
     db.workspaceMember.findUnique({
       where: { workspaceId_userId: { workspaceId, userId } },
@@ -240,6 +240,38 @@ export async function renameWorkspace(
     data:  { name: trimmed },
     select: { id: true, name: true, type: true, ownerId: true },
   });
+}
+
+/**
+ * Choose the sūrahs a workspace's grid shows. An empty list means all 114.
+ * Admins only; numbers are kept to 1..114, once each, in mushaf order.
+ */
+export function cleanShownSurahs(list: unknown): number[] | null {
+  if (!Array.isArray(list)) return null;
+  const nums = list.map((n) => Number(n));
+  if (nums.some((n) => !Number.isInteger(n) || n < 1 || n > 114)) return null;
+  return [...new Set(nums)].sort((a, b) => a - b);
+}
+
+export async function setShownSurahs(workspaceId: string, userId: string, list: number[]) {
+  const { role } = await getWorkspaceWithRole(workspaceId, userId);
+  if (!isAdmin(role)) {
+    throw new WorkspaceError("Only organisers can choose the sūrahs", "FORBIDDEN");
+  }
+  const updated = await db.workspace.update({
+    where: { id: workspaceId },
+    data:  { shownSurahs: list },
+    select: { id: true, shownSurahs: true },
+  });
+  void log({
+    workspaceId,
+    userId,
+    action:     "workspace.surahs_chosen",
+    entityType: "workspace",
+    entityId:   workspaceId,
+    metadata:   { shownSurahs: list },
+  });
+  return updated;
 }
 
 /**
