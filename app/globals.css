@@ -10825,97 +10825,171 @@ body {
   background: var(--bg);
 }
 
+/* The sidebar is a floating panel, the way a Mac sidebar sits inside its
+   window: inset from the edges, rounded, one step off the page colour, no
+   outline. Rows are icon + name, sentence case. The place you are on is a soft
+   green fill, not a stripe. Your account is a solid tile at the foot.
+   Three widths: wide (≥1240), an icon column (721–1239), and an iOS tab bar
+   (≤720), all from this one component. */
 .app-sidebar {
+  --sb-bg: color-mix(in oklch, var(--ink) 4.5%, var(--bg));
   flex: none;
-  width: 92px;
+  width: 236px;
+  margin: 10px 0 10px 10px;
+  height: calc(100vh - 20px);
+  height: calc(100dvh - 20px);
+  position: sticky;
+  top: 10px;
+  align-self: start;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: var(--sp-2);
-  padding: var(--sp-4) var(--sp-2);
-  border-right: 1px solid var(--line);
-  background: var(--bg-elev);
-  position: sticky;
-  top: 0;
-  height: 100vh;
-  height: 100dvh;
+  padding: 12px 10px 10px;
+  border-radius: 18px;
+  background: var(--sb-bg);
 }
 
-.app-sidebar-me {
-  position: relative;
-  display: grid;
-  place-items: center;
-  margin-bottom: var(--sp-4);
+.sb-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 44px;
+  padding: 0 8px;
+  margin-bottom: 18px;
+  border-radius: 12px;
+  color: var(--ink);
+  text-align: left;
 }
-.app-sidebar-avatar {
-  width: 44px; height: 44px;
+.sb-mark {
+  flex: none;
+  width: 30px; height: 30px;
+  display: grid; place-items: center;
+  border-radius: 8px;
+  background: var(--ink);
+  color: var(--bg);
+  font-family: var(--font-serif);
+  font-weight: 600;
+  font-size: 16px;
+  letter-spacing: -0.02em;
+}
+.sb-word {
+  font-family: var(--font-serif);
+  font-weight: 600;
+  font-size: 19px;
+  letter-spacing: -0.02em;
+}
+
+.sb-places {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sb-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  height: 40px;
+  padding: 0 12px;
+  border-radius: 10px;
+  color: var(--ink-2);
+  font-size: 15px;
+  font-weight: 500;
+  text-align: left;
+  transition: background var(--dur-hover) var(--ease-flow),
+              color var(--dur-hover) var(--ease-flow);
+}
+.sb-ico { flex: none; color: var(--ink-3); transition: color var(--dur-hover) var(--ease-flow); }
+.sb-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sb-row[data-active="true"] {
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+.sb-row[data-active="true"] .sb-ico { color: var(--accent-ink); }
+.sb-row--quiet { color: var(--ink-3); font-size: 14px; }
+.sb-row--quiet .sb-ico { color: var(--ink-4); }
+
+.sb-foot {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Your account: a solid tile, one step back from the panel. */
+.sb-me {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  border-radius: 14px;
+  background: var(--bg);
+}
+.sb-me-open {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px;
+  border-radius: 10px;
+  text-align: left;
+  color: var(--ink);
+  transition: background var(--dur-hover) var(--ease-flow);
+}
+.sb-me[data-active="true"] .sb-me-open { background: var(--accent-soft); }
+.sb-avatar {
+  flex: none;
+  width: 34px; height: 34px;
   border-radius: 999px;
   object-fit: cover;
   display: grid;
   place-items: center;
   background: var(--panel-2);
   color: var(--ink-2);
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 600;
-  letter-spacing: 0.02em;
-  transition: transform var(--dur-hover) var(--ease-flow);
 }
-.app-sidebar-me:hover .app-sidebar-avatar { transform: scale(1.06); }
-.app-sidebar-me-pencil {
-  position: absolute;
-  right: -2px; bottom: -2px;
-  width: 17px; height: 17px;
+.sb-me-text { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.sb-me-name {
+  font-size: 14.5px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.sb-me-sub { font-size: 12.5px; line-height: 1.2; color: var(--ink-4); }
+.sb-me-tab { display: none; }
+.sb-out {
+  flex: none;
+  width: 36px; height: 36px;
   display: grid; place-items: center;
-  border-radius: 999px;
-  background: var(--accent);
-  color: #fff;
-  font-size: 9px;
-  border: 2px solid var(--bg-elev);
-}
-
-.app-sidebar-items {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  width: 100%;
-}
-
-.app-sidebar-item {
-  position: relative;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 3px;
-  padding: 9px 4px;
-  border-radius: var(--radius-md);
+  border-radius: 10px;
   color: var(--ink-4);
-  background: transparent;
-  transition: color var(--dur-hover) var(--ease-flow),
-              background var(--dur-hover) var(--ease-flow);
+  transition: background var(--dur-hover) var(--ease-flow),
+              color var(--dur-hover) var(--ease-flow);
 }
-.app-sidebar-item:hover { color: var(--ink); background: var(--hover); }
-.app-sidebar-item[data-active="true"] { color: var(--ink); background: var(--active); }
-/* The active marker grows in rather than blinking on. The sidebar never
-   unmounts, so the only thing that should read as movement is which row
-   is lit. */
-.app-sidebar-item[data-active="true"]::before {
-  content: "";
-  position: absolute;
-  left: 0; top: 50%;
-  width: 3px; height: 22px;
-  margin-top: -11px;
-  border-radius: 0 3px 3px 0;
-  background: var(--accent);
-  animation: sidebar-mark var(--dur-slow) var(--ease-flow) both;
+.sb-out[disabled] { opacity: 0.5; }
+
+/* Hover only where there is a pointer that hovers: a tap leaves :hover stuck. */
+@media (hover: hover) {
+  .sb-brand:hover { background: var(--hover); }
+  .sb-row:not([data-active="true"]):hover { background: var(--hover); color: var(--ink); }
+  .sb-row:not([data-active="true"]):hover .sb-ico { color: var(--ink); }
+  .sb-me:not([data-active="true"]) .sb-me-open:hover { background: var(--hover); }
+  .sb-out:hover { background: var(--hover); color: var(--danger); }
 }
-@keyframes sidebar-mark {
-  from { opacity: 0; transform: scaleY(0.3); }
-  to   { opacity: 1; transform: scaleY(1); }
+
+/* The icon column: same panel, names in tooltips (and in aria-label). */
+@media (min-width: 721px) and (max-width: 1239px) {
+  .app-sidebar { width: 68px; padding: 12px 10px 10px; align-items: center; }
+  .sb-word, .sb-label, .sb-me-text { display: none; }
+  .sb-brand { width: 44px; padding: 0; justify-content: center; }
+  .sb-places, .sb-foot { align-items: center; width: 100%; }
+  .sb-row { width: 44px; height: 44px; padding: 0; justify-content: center; }
+  .sb-me { flex-direction: column; gap: 4px; padding: 4px; }
+  .sb-me-open { flex: none; padding: 4px; justify-content: center; }
 }
-.app-sidebar-label { font-size: 10.5px; letter-spacing: 0.01em; }
-.app-sidebar-out { margin-top: auto; }
-.app-sidebar-out:hover { color: var(--danger); }
 
 .app-shell-main {
   flex: 1 1 0;
@@ -11537,43 +11611,50 @@ body {
 /* ── Narrow screens ────────────────────────────────────────────────────── */
 
 @media (max-width: 720px) {
+  /* An iOS tab bar: translucent, one hairline on top, icon over a small name,
+     the place you are on in green. Home, Friends, Analytics, Leaderboard, You.
+     Contact us and Log out live in Settings on a phone. */
   .app-sidebar {
     position: fixed;
-    bottom: 0; left: 0; right: 0;
-    top: auto;
-    width: 100%;
+    left: 0; right: 0; bottom: 0; top: auto;
+    width: auto;
     height: auto;
+    margin: 0;
+    border-radius: 0;
     flex-direction: row;
-    justify-content: space-around;
-    padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0px));
-    border-right: 0;
-    border-top: 1px solid var(--line);
+    align-items: stretch;
+    padding: 4px 6px calc(4px + env(safe-area-inset-bottom, 0px));
+    background: color-mix(in oklch, var(--bg) 84%, transparent);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    backdrop-filter: saturate(180%) blur(20px);
+    box-shadow: 0 -1px 0 var(--line);
     z-index: 40;
   }
-  .app-sidebar-me,
-  .app-sidebar-label { display: none; }
-  /* The bar spans the screen but its items did not: six 28px-wide buttons in
-     a 178px group on a 375px phone, with the rest of the width unused. That
-     clears WCAG 2.2 AA at 24px and still misses under a thumb, which is the
-     standard nobody writes down. They fill the bar now. */
-  .app-sidebar-items {
-    flex-direction: row;
-    justify-content: space-around;
-    width: 100%;
-  }
-  .app-sidebar-item {
+  .sb-brand, .sb-row--quiet, .sb-out, .sb-me-text { display: none; }
+  .sb-places, .sb-foot, .sb-me { display: contents; }
+  .sb-row,
+  .sb-me-open {
     flex: 1 1 0;
-    min-width: 44px;
-    min-height: 44px;
+    min-width: 0;
+    width: auto;
+    height: auto;
+    min-height: 50px;
+    flex-direction: column;
     justify-content: center;
+    gap: 3px;
+    padding: 4px 0;
+    background: none;
+    color: var(--ink-4);
+    font-size: 10.5px;
+    font-weight: 500;
   }
-  .app-sidebar-item[data-active="true"]::before {
-    left: 50%; top: 0;
-    width: 20px; height: 3px;
-    margin: 0 0 0 -10px;
-    border-radius: 0 0 3px 3px;
-  }
-  .app-sidebar-out { margin-top: 0; }
+  .sb-row .sb-ico { width: 23px; height: 23px; color: inherit; }
+  .sb-row[data-active="true"],
+  .sb-me[data-active="true"] .sb-me-open { background: none; color: var(--accent-ink); font-weight: 600; }
+  .sb-avatar { width: 24px; height: 24px; font-size: 10px; }
+  .sb-me[data-active="true"] .sb-avatar { box-shadow: 0 0 0 2px var(--bg), 0 0 0 3.5px var(--accent); }
+  .sb-me-tab { display: block; line-height: 1; }
+  .sb-label { line-height: 1; }
   .app-shell-head { padding: var(--sp-5) var(--sp-4) var(--sp-3); }
   .app-shell-body { padding: 0 var(--sp-4) 92px; }
   .an-row { grid-template-columns: 1fr; }
@@ -11897,7 +11978,10 @@ body {
 
 /* Focus must be visible on every one of these, since they are now reachable
    from the sidebar by keyboard alone. */
-.app-sidebar-item:focus-visible,
+.sb-row:focus-visible,
+.sb-brand:focus-visible,
+.sb-me-open:focus-visible,
+.sb-out:focus-visible,
 .an-tab:focus-visible,
 .an-chip:focus-visible,
 .an-btn:focus-visible,

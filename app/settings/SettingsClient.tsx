@@ -16,6 +16,7 @@ import AppShell, { type ShellStreak } from "@/components/AppShell";
 import Toast from "@/components/Toast";
 import { squareToDataUrl } from "@/lib/avatar-image";
 import Onboarding, { clearOnboarded } from "@/components/Onboarding";
+import { signOut } from "@/lib/sign-out";
 import {
   FONT_STEPS, DEFAULT_TYPO, applyAppearance, readTheme, readTypo, writeAppearance,
   type Theme, type FontStep, type Typo,
@@ -42,6 +43,7 @@ export default function SettingsClient({ user, streak }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [replayOb, setReplayOb] = useState(false);
+  const [leaving, setLeaving] = useState(false);
 
   // ── Appearance ──────────────────────────────────────────────────────────
   const [theme, setTheme] = useState<Theme>("light");
@@ -277,6 +279,19 @@ export default function SettingsClient({ user, streak }: Props) {
             <a className="an-btn an-btn--ghost" href="/api/analytics/export" download>
               Export annotations
             </a>
+          </section>
+
+          {/* The sidebar's Log out is not on the phone tab bar, so it is here too. */}
+          <section className="an-card">
+            <h2 className="an-card-title">Signed in</h2>
+            <p className="an-muted">{user?.email ?? "Your account"}</p>
+            <button
+              className="an-btn an-btn--ghost"
+              disabled={leaving}
+              onClick={() => { setLeaving(true); void signOut(); }}
+            >
+              {leaving ? "Logging out…" : "Log out"}
+            </button>
           </section>
         </div>
       )}
