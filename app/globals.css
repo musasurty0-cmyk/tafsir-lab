@@ -10856,12 +10856,11 @@ body {
   background: var(--bg);
 }
 
-/* The sidebar is the same material as the cards beside it: a solid --panel
-   tile, rounded like .an-card, no outline, inset from the window edge. Rows
-   are icon + name, sentence case. The place you are on is the raised tile the
-   tab strips use (--bg-elev + a small shadow), not a coloured fill or stripe,
-   so nothing in the sidebar shouts louder than the content. Your account is
-   a row at the foot that lifts the same way on /settings.
+/* The sidebar is cut from the same cloth as Home's "Continue studying" card
+   (.hw-resume), by the owner's call: the card is the reference, the sidebar
+   follows it. Same surface (--bg-elev), same hairline, radius and soft
+   shadow, inset from the window edge. The place you are on is styled like
+   the card's Resume Study button: a soft green fill with green ink.
    Three widths: wide (≥1240), an icon column (721–1239), and an iOS tab bar
    (≤720), all from this one component. */
 .app-sidebar {
@@ -10876,8 +10875,10 @@ body {
   display: flex;
   flex-direction: column;
   padding: 12px 10px 10px;
-  border-radius: 18px;
-  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--bg-elev);
+  box-shadow: var(--shadow-sm);
 }
 
 .sb-brand {
@@ -10934,12 +10935,11 @@ body {
 .sb-ico { flex: none; color: var(--ink-3); transition: color var(--dur-hover) var(--ease-flow); }
 .sb-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sb-row[data-active="true"] {
-  background: var(--bg-elev);
-  box-shadow: var(--shadow-sm);
-  color: var(--ink);
+  background: var(--accent-soft);
+  color: var(--accent-ink);
   font-weight: 600;
 }
-.sb-row[data-active="true"] .sb-ico { color: var(--ink); }
+.sb-row[data-active="true"] .sb-ico { color: var(--accent-ink); }
 .sb-row--quiet { color: var(--ink-3); font-size: 14px; }
 .sb-row--quiet .sb-ico { color: var(--ink-4); }
 
@@ -10971,8 +10971,9 @@ body {
   color: var(--ink);
   transition: background var(--dur-hover) var(--ease-flow);
 }
-/* On /settings the account row is the page you are on: the same raised tile. */
-.sb-me[data-active="true"] { background: var(--bg-elev); box-shadow: var(--shadow-sm); }
+/* On /settings the account row is the page you are on: the same green. */
+.sb-me[data-active="true"] { background: var(--accent-soft); }
+.sb-me[data-active="true"] .sb-me-sub { color: var(--accent-ink); }
 .sb-avatar {
   flex: none;
   width: 34px; height: 34px;
@@ -11007,11 +11008,11 @@ body {
 
 /* Hover only where there is a pointer that hovers: a tap leaves :hover stuck. */
 @media (hover: hover) {
-  .sb-brand:hover { background: var(--panel-2); }
-  .sb-row:not([data-active="true"]):hover { background: var(--panel-2); color: var(--ink); }
+  .sb-brand:hover { background: var(--hover); }
+  .sb-row:not([data-active="true"]):hover { background: var(--hover); color: var(--ink); }
   .sb-row:not([data-active="true"]):hover .sb-ico { color: var(--ink); }
-  .sb-me:not([data-active="true"]) .sb-me-open:hover { background: var(--panel-2); }
-  .sb-out:hover { background: var(--panel-2); color: var(--danger); }
+  .sb-me:not([data-active="true"]) .sb-me-open:hover { background: var(--hover); }
+  .sb-out:hover { background: var(--hover); color: var(--danger); }
 }
 
 /* The icon column: same panel, names in tooltips (and in aria-label). */
@@ -11654,6 +11655,7 @@ body {
     width: auto;
     height: auto;
     margin: 0;
+    border: 0;
     border-radius: 0;
     flex-direction: row;
     align-items: stretch;
@@ -11684,10 +11686,9 @@ body {
   }
   .sb-row .sb-ico { width: 23px; height: 23px; color: inherit; }
   .sb-row[data-active="true"],
-  .sb-me[data-active="true"] .sb-me-open { background: none; box-shadow: none; color: var(--ink); font-weight: 600; }
-  .sb-me[data-active="true"] { box-shadow: none; }
+  .sb-me[data-active="true"] .sb-me-open { background: none; color: var(--accent-ink); font-weight: 600; }
   .sb-avatar { width: 24px; height: 24px; font-size: 10px; }
-  .sb-me[data-active="true"] .sb-avatar { box-shadow: 0 0 0 2px var(--bg), 0 0 0 3.5px var(--ink); }
+  .sb-me[data-active="true"] .sb-avatar { box-shadow: 0 0 0 2px var(--bg), 0 0 0 3.5px var(--accent); }
   .sb-me-tab { display: block; line-height: 1; }
   .sb-label { line-height: 1; }
   .app-shell-head { padding: var(--sp-5) var(--sp-4) var(--sp-3); }
