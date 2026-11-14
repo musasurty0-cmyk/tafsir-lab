@@ -47,6 +47,7 @@ import { ListItemWithHeading, PasteTidy } from "./PasteTidy";
 import { EmptyFirstLine } from "./EmptyFirstLine";
 import { TabKey } from "./TabKey";
 import { EmbedGuard } from "./EmbedGuard";
+import { ExitBelow } from "./ExitBelow";
 
 export interface BaseEditorOptions {
   /**
@@ -98,6 +99,8 @@ export function baseExtensions(o: BaseEditorOptions): Extensions {
     TabKey,
     // One stray Backspace or Delete selects an embed rather than deleting it.
     EmbedGuard,
+    // Down on the last line of a table or toggle that ends the note opens a line below.
+    ExitBelow,
 
     Underline,
     Highlight.configure({ multicolor: true }),

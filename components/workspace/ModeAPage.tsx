@@ -154,6 +154,15 @@ export default function ModeAPage({
      wheel must keep scrolling. */
   const wrapRef = useRef<HTMLDivElement>(null);
   const [docZoom, setDocZoom] = useState(1);
+  const [zoomOpen, setZoomOpen] = useState(false);
+  const zoomRef = useRef<HTMLDivElement>(null);
+  // The opened zoom control folds away at the next press anywhere else.
+  useEffect(() => {
+    if (!zoomOpen) return;
+    const away = (e: PointerEvent) => { if (!zoomRef.current?.contains(e.target as Node)) setZoomOpen(false); };
+    document.addEventListener("pointerdown", away, true);
+    return () => document.removeEventListener("pointerdown", away, true);
+  }, [zoomOpen]);
   useEffect(() => {
     try {
       // A phone has no zoom control, so it must not open on one it can't undo.
@@ -190,9 +199,18 @@ export default function ModeAPage({
       {/* Zoom HUD — mirrors the canvas control so the gesture and the
           readout are the same wherever you are. Outside the scrolling
           document, so it stays in the editor pane's bottom-left corner. */}
-      <div className="doc-zoom" role="group" aria-label="Zoom">
+      <div className="doc-zoom" role="group" aria-label="Zoom" ref={zoomRef} data-open={zoomOpen ? "true" : "false"}>
+        {/* At rest only the level shows: the whole control sat over the first
+            words of every line that scrolled past the corner. The level opens
+            it (a pointer resting on it does too), and it folds away again. */}
+        <button
+          className="doc-zoom-label"
+          onClick={() => setZoomOpen((o) => !o)}
+          aria-expanded={zoomOpen}
+          aria-label={`Zoom, ${Math.round(docZoom * 100)}%`}
+          title="Zoom"
+        >{Math.round(docZoom * 100)}%</button>
         <button onClick={() => applyZoom(docZoom / 1.15)} title="Zoom out" aria-label="Zoom out"><Minus size={13} /></button>
-        <span className="doc-zoom-label">{Math.round(docZoom * 100)}%</span>
         <button onClick={() => applyZoom(docZoom * 1.15)} title="Zoom in" aria-label="Zoom in"><Plus size={13} /></button>
         <button className="doc-zoom-reset" onClick={() => applyZoom(1)} title="Reset zoom" aria-label="Reset zoom"><RotateCw size={12} /></button>
       </div>

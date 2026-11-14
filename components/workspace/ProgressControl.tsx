@@ -62,9 +62,12 @@ function StatusButton({
       data-active={isActive ? "true" : "false"}
       disabled={disabled}
       onClick={onClick}
-      title={disabled ? "Members cannot reverse group progress" : LABELS[status]}
+      aria-pressed={isActive}
+      title={disabled ? "Members cannot reverse group progress" : undefined}
     >
-      {status === "not_studied" ? "—" : status === "pending" ? "○" : "✓"}
+      {/* The word, not a dash, a ring and a tick: nobody could tell which
+          mark meant "in progress" without hovering, and a finger cannot hover. */}
+      {LABELS[status]}
     </button>
   );
 }
@@ -83,8 +86,8 @@ export default function ProgressControl({
     <div className="progress-control">
       {/* Personal */}
       <div className="prog-row">
-        <span className="prog-label">Personal</span>
-        <div className="prog-btns">
+        <span className="prog-label">You</span>
+        <div className="prog-btns" role="group" aria-label="Your progress">
           {STATUSES.map((s) => (
             <StatusButton
               key={s}
@@ -99,7 +102,7 @@ export default function ProgressControl({
       {/* Group */}
       <div className="prog-row">
         <span className="prog-label">Group</span>
-        <div className="prog-btns">
+        <div className="prog-btns" role="group" aria-label="The group's progress">
           {STATUSES.map((s) => {
             // Members: disable if this status would be a regression.
             const wouldRegress =
@@ -117,11 +120,8 @@ export default function ProgressControl({
             );
           })}
         </div>
-        {groupEntry && (
-          <span className="prog-changed-by" title="Last changed by">
-            ↩ {groupEntry.lastChangedBy.slice(0, 8)}…
-          </span>
-        )}
+        {/* "Last changed by" used to follow here, but it printed the first
+            eight characters of an account id, which tells a reader nothing. */}
       </div>
     </div>
   );

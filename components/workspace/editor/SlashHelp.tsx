@@ -12,6 +12,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { buildCommands, filterCommands } from "./SlashCommand";
 import SlashIcon from "./SlashIcon";
 
@@ -21,15 +22,22 @@ export default function SlashHelp() {
   const [sel, setSel]     = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef  = useRef<HTMLDivElement>(null);
+  /* When the sheet was opened. The Enter that picks "All commands" in the
+     slash menu is still travelling up the page when this sheet mounts and
+     starts listening, so it arrived here as well and "chose" the first row:
+     the sheet typed "/help" back into the note instead of opening. Any key
+     pressed before the sheet existed is not meant for it. */
+  const openedAt = useRef(0);
 
   /* Built once per open rather than at module load: the registry is a
      function, and building it on each keystroke would rebuild every tafsir
      shortcut for nothing. */
-  const all = useMemo(() => (open ? buildCommands() : []), [open]);
+  // Without the sheet's own entry: choosing it would only reopen the sheet.
+  const all = useMemo(() => (open ? buildCommands().filter((c) => c.id !== "help") : []), [open]);
   const shown = useMemo(() => filterCommands(all, query), [all, query]);
 
   useEffect(() => {
-    const onOpen = () => { setOpen(true); setQuery(""); setSel(0); };
+    const onOpen = () => { openedAt.current = performance.now(); setOpen(true); setQuery(""); setSel(0); };
     window.addEventListener("tl:slash-help", onOpen);
     return () => window.removeEventListener("tl:slash-help", onOpen);
   }, []);
@@ -50,6 +58,7 @@ export default function SlashHelp() {
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
+      if (e.timeStamp <= openedAt.current) return;
       if (e.key === "Escape")      { e.preventDefault(); close(); return; }
       if (e.key === "ArrowDown")   { e.preventDefault(); setSel((i) => Math.min(shown.length - 1, i + 1)); }
       else if (e.key === "ArrowUp"){ e.preventDefault(); setSel((i) => Math.max(0, i - 1)); }
@@ -71,7 +80,11 @@ export default function SlashHelp() {
 
   if (!open) return null;
 
-  return (
+  /* On the body, not inside the note. The note sits in a zoomed, movable
+     frame, which becomes the reference for anything "fixed" inside it: the
+     dimmed backdrop covered only the note and the sheet ran off the bottom
+     of the window. */
+  return createPortal(
     <div className="slashhelp-scrim" onMouseDown={close} role="presentation">
       <div
         className="slashhelp"
@@ -120,6 +133,7 @@ export default function SlashHelp() {
           <span>↑↓ move</span><span>↵ insert</span><span>Esc close</span>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

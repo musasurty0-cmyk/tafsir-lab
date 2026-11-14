@@ -207,8 +207,8 @@ export function useConnectionLink(
           currentSurah={currentSurah}
           selections={selections}
           placeholder={stage.which === "source"
-            ? "Linking FROM — choose an āyah, Selection or Surah…"
-            : "Linking TO — choose an āyah, Selection or Surah…"}
+            ? "Link from an āyah, a Selection or a sūrah…"
+            : "Link to an āyah, a Selection or a sūrah…"}
           onSelect={choose}
           onCancel={() => close()}
         />

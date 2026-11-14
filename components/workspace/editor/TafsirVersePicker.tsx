@@ -62,7 +62,7 @@ export default function TafsirVersePicker({
 
   return createPortal(
     <div ref={rootRef} className="verse-picker" style={pos}>
-      <div className="verse-picker-head">{sourceName} — pick a verse</div>
+      <div className="verse-picker-head">{sourceName}: pick a verse</div>
       <div className="verse-picker-row">
         <span className="verse-picker-surah">{surah}:</span>
         <input
@@ -75,13 +75,13 @@ export default function TafsirVersePicker({
             if (e.key === "Enter")  { e.preventDefault(); confirm(); }
             if (e.key === "Escape") { e.preventDefault(); onCancel(); }
           }}
-          placeholder="āyah #"
+          placeholder="Āyah"
         />
         <button
           className="verse-picker-go"
           onMouseDown={(e) => { e.preventDefault(); confirm(); }}
         >
-          Insert →
+          Insert
         </button>
       </div>
       {ayahsOnPage.length > 0 && (

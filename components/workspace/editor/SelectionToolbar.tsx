@@ -21,6 +21,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import type { Editor } from "@tiptap/core";
+import { NodeSelection } from "@tiptap/pm/state";
 import {
   BoldIcon, ItalicIcon, UnderlineIcon, StrikeIcon,
   BulletIcon, NumberedIcon, QuoteIcon,
@@ -81,8 +82,12 @@ export default function SelectionToolbar({ editor }: Props) {
 
   const updatePos = useCallback(() => {
     if (!editor) { hide(); return; }
-    const { empty } = editor.state.selection;
-    if (empty) { hide(); return; }
+    const selection = editor.state.selection;
+    if (selection.empty) { hide(); return; }
+    /* A selected embed (an āyah, a tafsīr, a Connection, a divider) has no
+       text to format: bold, headings and colour do nothing to it. The bubble
+       only covered the line above and competed with the block's own tools. */
+    if (selection instanceof NodeSelection && selection.node.isAtom) { hide(); return; }
     if (draggingRef.current) return;
 
     // Small RAF to let the DOM selection settle after Tiptap updates

@@ -16316,3 +16316,105 @@ body {
   .qcf-bar-en .crumb-menu-btn { position: relative; }
   .qcf-bar-en .crumb-menu-btn::after { content: ""; position: absolute; inset: -6px; }
 }
+
+/* ═══ Notes: refinements from a walk through the editor (14 Nov 2026) ═════
+   Each rule here answers something seen on screen, not a restyle. */
+
+/* A third-level heading reads as typed. It was forced to capitals with
+   tracking by an old .tiptap rule: the one shouting line on a calm page. */
+.tiptap h3,
+.block-h3,
+.page-editor-content h3 { text-transform: none; letter-spacing: 0; }
+.page-editor-content h3 { color: var(--ink); }
+
+/* Zoom at rest is only the level. The full control (148px) sat on the first
+   words of every line that passed the bottom-left corner; the level alone
+   fits the margin beside the text. Hover, focus or a press opens the rest. */
+.doc-zoom { left: 6px; }
+.doc-zoom .doc-zoom-label {
+  width: auto; min-width: 0; padding: 0 5px; margin: 0;
+  font-family: var(--font-sans); font-size: 11.5px; font-weight: 500;
+  color: var(--ink-3); font-variant-numeric: tabular-nums;
+}
+.doc-zoom[data-open="false"] > button:not(.doc-zoom-label) { display: none; }
+@media (hover: hover) {
+  .doc-zoom:hover > button:not(.doc-zoom-label),
+  .doc-zoom:focus-within > button:not(.doc-zoom-label) { display: inline-flex; }
+}
+
+/* An embedded āyah or tafsīr is a solid tile like a Connection, not an
+   outlined card. The drag dots sit in the tile's own margin, so the text is
+   inset the same on both sides (it was 38px on the left and 14 on the right). */
+.ayah-block-node,
+.tafsir-block-node {
+  border: 0; border-radius: 12px;
+  background: var(--panel);
+}
+.ayah-block-node:hover,
+.tafsir-block-node:hover { background: var(--panel); }
+.ayah-block-node[data-selected="true"],
+.tafsir-block-node[data-selected="true"] {
+  background: var(--panel);
+  box-shadow: 0 0 0 2px var(--accent);
+}
+.ayah-block-drag { position: absolute; left: 0; top: 0; padding: 14px 5px; }
+.ayah-block-inner { padding: 10px 20px 14px 22px; }
+.ayah-block-head { margin-bottom: 6px; min-height: 32px; }
+.ayah-block-ref { font-size: 13px; }
+/* The block's own tools: big enough to press, and shown while the block is
+   selected, which is the only way a finger can ask for them. */
+.ayah-block-tool,
+.tafsir-block-tool { width: 32px; height: 32px; border-radius: 8px; color: var(--ink-3); }
+.ayah-block-node[data-selected="true"] .ayah-block-toolbar { opacity: 1; }
+@media (pointer: coarse) {
+  .ayah-block-tool, .tafsir-block-tool { width: 40px; height: 40px; }
+}
+
+/* The verse picker and the search groups label themselves in plain words. */
+.verse-picker-head {
+  font-family: var(--font-sans); font-size: 13px; font-weight: 600;
+  letter-spacing: 0; text-transform: none; color: var(--ink);
+}
+.verse-picker-label,
+.qs-group-label {
+  font-family: var(--font-sans); font-size: 12px; font-weight: 500;
+  letter-spacing: 0; text-transform: none; color: var(--ink-3);
+}
+.verse-picker-surah,
+.verse-picker-input { font-family: var(--font-sans); font-variant-numeric: tabular-nums; }
+.verse-picker-go { min-height: 36px; border-radius: 10px; }
+.verse-picker-chip {
+  min-height: 32px; padding: 0 11px;
+  border: 0; border-radius: 9px; background: var(--hover);
+  font-family: var(--font-sans); font-size: 13px; font-variant-numeric: tabular-nums;
+}
+.verse-picker-chip:hover { background: var(--accent-soft); color: var(--accent-ink); }
+/* A selected tile wears one ring (above), not that and the editor's generic
+   selected-block outline around it. */
+.page-editor-content .ayah-block-node.ProseMirror-selectednode,
+.page-editor-content .tafsir-block-node.ProseMirror-selectednode,
+.page-editor-content .ProseMirror-selectednode:has(> .ayah-block-node, > .tafsir-block-node) { outline: 0; }
+
+/* Progress on an āyah: two labelled rows of words. It was a tiny uppercase
+   label beside three outlined 28x24 boxes holding a dash, a ring and a tick. */
+.progress-control { gap: 8px; padding: 12px 0 2px; }
+.prog-row { gap: 10px; min-height: 34px; flex-wrap: wrap; }
+.prog-label {
+  width: 46px;
+  font-family: var(--font-sans); font-size: 12.5px; font-weight: 500;
+  letter-spacing: 0; text-transform: none; color: var(--ink-3);
+}
+.prog-btns { gap: 2px; padding: 3px; border-radius: 11px; background: var(--hover); }
+.prog-btn {
+  width: auto; height: 30px; padding: 0 11px;
+  border: 0; border-radius: 8px;
+  font-family: var(--font-sans); font-size: 12.5px; font-weight: 500;
+  color: var(--ink-3); white-space: nowrap;
+}
+.prog-btn:hover:not(:disabled) { background: transparent; color: var(--ink); }
+.prog-btn[data-active="true"] {
+  background: var(--bg-elev); color: var(--ink); font-weight: 600;
+  box-shadow: 0 1px 2px oklch(0 0 0 / 0.08);
+}
+.prog-btn[data-status="studied"][data-active="true"] { background: var(--accent); color: white; }
+@media (pointer: coarse) { .prog-btn { height: 40px; padding: 0 12px; } }

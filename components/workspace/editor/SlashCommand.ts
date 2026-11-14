@@ -117,7 +117,7 @@ export function buildCommands(): SlashCommandItem[] {
   const tafsirShortcuts: SlashCommandItem[] = TAFSIR_SHORTCUTS.map((t) => ({
     id:               t.id,
     title:            `Tafsīr ${t.title}`,
-    description:      `${t.title}'s commentary. Pick a verse, or /${t.id} 2:255`,
+    description:      `Pick a verse, or type /${t.id} 2:255`,
     icon:             "📚",
     aliases:          t.aliases,
     isTafsir:         true,
@@ -136,7 +136,7 @@ export function buildCommands(): SlashCommandItem[] {
          inside ProseMirror and has no way to mount React UI itself. */
       id:          "help",
       title:       "All commands",
-      description: "Show every slash command available here",
+      description: "Everything you can add to a note",
       icon:        "❓",
       /* No "list" alias: it collided with Bullet list's, and help sits first
          in the registry so it won the tie — "/list" surfaced the help sheet
@@ -156,7 +156,7 @@ export function buildCommands(): SlashCommandItem[] {
          the same Connection is visible from both objects it joins. */
       id:          "link",
       title:       "Link Qur'anic passage",
-      description: "Create a permanent Connection to an ayah, Selection or Surah",
+      description: "Connect two passages of the Qur'an",
       icon:        "🔗",
       aliases:     ["connection", "munasabat", "munasaba", "relate"],
       execute() {
@@ -169,7 +169,7 @@ export function buildCommands(): SlashCommandItem[] {
     {
       id:          "ayah",
       title:       "Ayah block",
-      description: "Embed a verse or a selection: /a 2:255 or /a 2:1-5",
+      description: "A verse or a range: /a 2:255, /a 2:1-5",
       icon:        "📖",
       /* "a" is the short form, and exact, so it can never lose to a command
          that merely starts with an a. */
@@ -205,7 +205,7 @@ export function buildCommands(): SlashCommandItem[] {
     {
       id:          "tafsir",
       title:       "Tafsir block",
-      description: "Embed commentary from 67+ English and Arabic sources",
+      description: "Commentary on a verse, from any source",
       icon:        "📚",
       aliases:     ["commentary", "tafseer"],
       isTafsir:    true,   // tafsirSlug undefined → resolves last-used source
@@ -243,7 +243,7 @@ export function buildCommands(): SlashCommandItem[] {
     {
       id:          "h3",
       title:       "Heading 3",
-      description: "Small section label",
+      description: "Small heading",
       icon:        "H₃",
       aliases:     ["subheading"],
       execute(editor, range) {
@@ -303,7 +303,7 @@ export function buildCommands(): SlashCommandItem[] {
     {
       id:          "toggle",
       title:       "Toggle list",
-      description: "Collapsible section. Click the chevron to fold it",
+      description: "A section you can fold away",
       icon:        "▸",
       aliases:     ["collapse", "fold", "details", "dropdown"],
       execute(editor, range) {
@@ -317,7 +317,7 @@ export function buildCommands(): SlashCommandItem[] {
          "tabel" and got nothing back. */
       id:          "table",
       title:       "Table",
-      description: "3×3 table with a header row. Drag to resize columns",
+      description: "Three by three, with a header row",
       icon:        "▦",
       aliases:     ["grid", "tabel"],
       execute(editor, range) {
