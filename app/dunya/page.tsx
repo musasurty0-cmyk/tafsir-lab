@@ -13,12 +13,13 @@ export const dynamic = "force-dynamic";
 import { db } from "@/lib/db";
 import { hasAccess, PLAN_ID } from "@/lib/dunya/gate";
 import { asCatalog, asProgress } from "@/lib/dunya/catalog";
+import { asSpec } from "@/lib/dunya/maths-spec";
 import DunyaGate from "@/components/dunya/DunyaGate";
 import DunyaApp from "@/components/dunya/DunyaApp";
 
 export default async function DunyaPage() {
   if (!(await hasAccess())) return <DunyaGate />;
-  const row = await db.dunyaPlan.findUnique({ where: { id: PLAN_ID }, select: { catalog: true, progress: true } });
+  const row = await db.dunyaPlan.findUnique({ where: { id: PLAN_ID }, select: { catalog: true, progress: true, spec: true } });
   if (!row) return <DunyaGate />;
-  return <DunyaApp catalog={asCatalog(row.catalog)} progress={asProgress(row.progress)} />;
+  return <DunyaApp catalog={asCatalog(row.catalog)} progress={asProgress(row.progress)} spec={asSpec(row.spec)} />;
 }

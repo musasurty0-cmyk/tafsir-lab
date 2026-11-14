@@ -15,6 +15,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Toast from "@/components/Toast";
+import SpecTracker from "./SpecTracker";
+import type { SpecState } from "@/lib/dunya/maths-spec";
 import {
   CONFIDENCE, type Attempt, type Catalog, type Confidence, type Paper, type Progress, type Subject,
 } from "@/lib/dunya/catalog";
@@ -46,7 +48,7 @@ function summary(papers: Paper[], attempts: Attempts) {
 type Summary = ReturnType<typeof summary>;
 const papersOf = (s: Subject) => s.groups.flatMap((g) => g.papers);
 
-export default function DunyaApp({ catalog, progress }: { catalog: Catalog; progress: Progress }) {
+export default function DunyaApp({ catalog, progress, spec }: { catalog: Catalog; progress: Progress; spec: SpecState }) {
   const router = useRouter();
   const [attempts, setAttempts] = useState(progress.attempts);
   const [subjectId, setSubjectId] = useState(catalog.subjects[0]?.id ?? "");
@@ -156,7 +158,12 @@ export default function DunyaApp({ catalog, progress }: { catalog: Catalog; prog
           })}
         </nav>
 
-        {subject && <SubjectView key={subject.id} subject={subject} attempts={attempts} sum={sums.get(subject.id)!} onLog={log} onRemove={remove} />}
+        {subject && (
+          <SubjectView
+            key={subject.id} subject={subject} attempts={attempts} sum={sums.get(subject.id)!} onLog={log} onRemove={remove}
+            spec={subject.id === "maths" ? spec : null} onError={(msg) => setToast({ msg, tone: "error" })}
+          />
+        )}
       </main>
 
       <Toast message={toast?.msg ?? null} tone={toast?.tone} onDismiss={() => setToast(null)} />
@@ -176,13 +183,28 @@ function Bar({ total, green, amber, red }: Pick<Summary, "total" | "green" | "am
   );
 }
 
-function SubjectView({ subject, attempts, sum, onLog, onRemove }: {
+function SubjectView({ subject, attempts, sum, onLog, onRemove, spec, onError }: {
   subject: Subject; attempts: Attempts; sum: Summary;
   onLog: (p: Paper, i: LogInput) => Promise<boolean>;
   onRemove: (p: Paper, a: Attempt) => void;
+  /** Maths only: the spec tracker, opened by the tutor's button. */
+  spec: SpecState | null; onError: (msg: string) => void;
 }) {
   const [open, setOpen] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>("all");
+  const [tutorView, setTutorView] = useState(false);
+
+  useEffect(() => {
+    // Which of the two (papers or the tutor's tracker) you last had open.
+    try {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      if (spec && localStorage.getItem("tl-dunya-maths-view") === "tutor") setTutorView(true);
+    } catch { /* private mode */ }
+  }, [spec]);
+  const showTutor = (on: boolean) => {
+    setTutorView(on);
+    try { localStorage.setItem("tl-dunya-maths-view", on ? "tutor" : "papers"); } catch { /* private mode */ }
+  };
 
   const papers = papersOf(subject);
   // The next paper in course order you haven't done, and the weakest you have.
@@ -215,14 +237,22 @@ function SubjectView({ subject, attempts, sum, onLog, onRemove }: {
           <h2 className="dn-h2">{subject.name}.</h2>
           <p className="dn-sv-board">{[subject.board, subject.level].filter(Boolean).join(" · ")}</p>
         </div>
-        {subject.all.length > 0 && (
+        {spec && (
+          <div className="dn-views" role="tablist" aria-label="Maths">
+            <button type="button" role="tab" aria-selected={!tutorView} onClick={() => showTutor(false)}>Papers</button>
+            <button type="button" role="tab" aria-selected={tutorView} onClick={() => showTutor(true)}>{spec.tutor}</button>
+          </div>
+        )}
+        {subject.all.length > 0 && !(spec && tutorView) && (
           <div className="dn-alls">
             {subject.all.map((f) => <a key={f.key} className="dn-chev" href={fileHref(f.key)}>{f.label} <Arrow /></a>)}
           </div>
         )}
       </header>
 
-      {sum.total === 0 ? (
+      {spec && tutorView ? (
+        <SpecTracker tutor={spec.tutor} initial={spec.topics} onError={onError} />
+      ) : sum.total === 0 ? (
         <div className="dn-empty">
           <p className="dn-empty-title">No {subject.name.toLowerCase()} papers yet.</p>
           <p>They’ll be here as soon as they’re added.</p>
