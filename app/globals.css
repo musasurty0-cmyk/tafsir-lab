@@ -1923,6 +1923,15 @@ input, textarea { font: inherit; color: inherit; }
   .home-content     { padding: 40px 16px 60px; gap: 48px; }
   .hw-greeting-title { font-size: 24px; }
   .hw-resume        { flex-direction: column; align-items: flex-start; }
+  /* In the stacked card the body is a flex-start cross-axis item, so it
+     sizes to its content; the nowrap title would push it past the card.
+     Stretch it to the card's width and let the title wrap to two lines. */
+  .hw-resume-body   { align-self: stretch; }
+  .hw-resume-page   {
+    white-space: normal; line-height: 1.4;
+    display: -webkit-box; -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2; line-clamp: 2;
+  }
   .hw-resume-btn    { width: 100%; justify-content: center; }
 }
 
