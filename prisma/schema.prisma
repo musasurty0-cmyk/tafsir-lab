@@ -647,6 +647,12 @@ model YouthMajlisAssignment {
   note      String?
   due       DateTime? @db.Date
   createdAt DateTime  @default(now()) @db.Timestamptz(6)
+  /// Set: a project (sql 029), done together on one page of the cohort workspace.
+  title     String?
+  /// A project for the whole cohort rather than the students listed.
+  everyone  Boolean   @default(false)
+  /// The project's page in the cohort workspace; made on first open.
+  pageId    String?   @db.Uuid
 
   session   YouthMajlisSession    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   assignees YouthMajlisAssignee[]

@@ -49,7 +49,59 @@ export interface PackView { id: string; title: string; fileName: string; bytes: 
 export interface AssignmentView {
   id: string; sessionId: string; point: number | null; ayahFrom: number | null; ayahTo: number | null;
   note: string | null; due: string | null; assignees: { userId: string; name: string }[];
+  /** Set for a project (sql 029); research on a point has none. */
+  title: string | null;
+  /** A project for the whole cohort. */
+  everyone: boolean;
+  /** How far the project's shared page has got, read from its saved content.
+   *  Null until someone has opened it (the page is made on first open). */
+  progress: ProjectProgress | null;
 }
+
+export interface ProjectProgress { ayat: number; words: number }
+
+/** Āyāt embedded in a page (a range block counts each āyah) and its words. */
+export function projectProgress(doc: unknown): ProjectProgress {
+  let ayat = 0;
+  const walk = (node: unknown) => {
+    if (!node || typeof node !== "object") return;
+    const nd = node as { type?: string; attrs?: Record<string, unknown>; content?: unknown[] };
+    if (nd.type === "ayahBlock") {
+      // A selection block ("/a 2:1-5") is one block over several āyāt: endAyah.
+      const from = Number(nd.attrs?.ayahNumber);
+      const end = Number(nd.attrs?.endAyah);
+      ayat += Number.isInteger(from) && Number.isInteger(end) && end > from ? end - from + 1 : 1;
+    }
+    (nd.content ?? []).forEach(walk);
+  };
+  walk(doc);
+  return { ayat, words: wordsIn(doc) };
+}
+
+/** A project page's starting content: its title, the shaykh's brief quoted
+ *  beneath it, then a line to start writing on. */
+export function projectDoc(title: string, brief: string | null) {
+  return {
+    type: "doc",
+    content: [
+      { type: "heading", attrs: { level: 1 }, content: [{ type: "text", text: title }] },
+      ...(brief ? [{ type: "blockquote", content: [{ type: "paragraph", content: [{ type: "text", text: brief }] }] }] : []),
+      { type: "paragraph" },
+    ],
+  };
+}
+
+/** What the cohort has added: the page's starting title and brief are not theirs. */
+function written(p: ProjectProgress, title: string | null, note: string | null): ProjectProgress {
+  return title ? { ayat: p.ayat, words: Math.max(0, p.words - wordsIn(projectDoc(title, note))) } : p;
+}
+
+/** Is this assignment one of the shaykh's projects (rather than point research)? */
+export const isProject = (a: Pick<AssignmentView, "title">) => !!a.title;
+
+/** Is this assignment for this student? Projects for everyone are. */
+export const isFor = (a: Pick<AssignmentView, "everyone" | "assignees">, userId: string) =>
+  a.everyone || a.assignees.some((x) => x.userId === userId);
 
 const arr = <T>(v: unknown, ok: (x: unknown) => x is T): T[] => (Array.isArray(v) ? v.filter(ok) : []);
 const isPrep = (x: unknown): x is PrepItem => !!x && typeof (x as PrepItem).text === "string";
@@ -68,6 +120,14 @@ export async function getSessions(): Promise<SessionView[]> {
       packs: { where: { ready: true }, orderBy: { createdAt: "asc" }, select: { id: true, title: true, fileName: true, bytes: true } },
     },
   });
+  /* Projects' pages, read in one query: a handful of rows, and only the ones
+     someone has opened. The saved content trails the live (realtime) copy by
+     the save interval, which is close enough for a count. */
+  const pageIds = rows.flatMap((r) => r.assignments.map((a) => a.pageId).filter((x): x is string => !!x));
+  const pages = pageIds.length
+    ? await db.page.findMany({ where: { id: { in: pageIds } }, select: { id: true, tiptapContent: true } })
+    : [];
+  const progressByPage = new Map(pages.map((p) => [p.id, projectProgress(p.tiptapContent)]));
   return rows.map((r) => {
     const m = MODULES.find((x) => x.n === r.moduleN);
     return {
@@ -81,6 +141,8 @@ export async function getSessions(): Promise<SessionView[]> {
         id: a.id, sessionId: a.sessionId, point: a.point, ayahFrom: a.ayahFrom, ayahTo: a.ayahTo,
         note: a.note, due: ymd(a.due),
         assignees: a.assignees.map((x) => ({ userId: x.user.id, name: x.user.name })),
+        title: a.title, everyone: a.everyone,
+        progress: a.pageId && progressByPage.has(a.pageId) ? written(progressByPage.get(a.pageId)!, a.title, a.note) : null,
       })),
       packs: r.packs,
     };

@@ -28,6 +28,7 @@ import { getSessionOrNull } from "@/lib/session";
 import {
   cohortMember, currentModule, daysUntil, getSessions, getSettings, joinCohort, londonToday, longDate,
   moduleDone, nextSession, sessionPoints, sessionScope, tabStats, type SessionView,
+  isFor, isProject, type AssignmentView,
 } from "@/lib/youth-majlis/data";
 import {
   AIM, AIM_DETAIL, AREAS, COHORT, LEVELS, METHOD, MODULES, QUESTIONS, SHAYKH, TAB_TITLES,
@@ -119,7 +120,16 @@ export default async function YouthMajlisPage({ searchParams }: { searchParams: 
     counts[m.n] = sessions.filter((s) => s.moduleN === m.n).length;
   }
   const myAssignments = next && account
-    ? next.assignments.filter((a) => a.assignees.some((x) => x.userId === account.userId)) : [];
+    ? next.assignments.filter((a) => !isProject(a) && a.assignees.some((x) => x.userId === account.userId)) : [];
+  /* The shaykh's projects still to do: any session's, for this student (or
+     for everyone), until the day they are due, or the day of their session
+     when no due date was set. After that they live on in the session archive. */
+  const today = londonToday();
+  const openProjects = sessions
+    .flatMap((s) => s.assignments.filter(isProject).map((a) => ({ a, until: a.due ?? s.date })))
+    .filter(({ a, until }) => (account ? isFor(a, account.userId) : a.everyone) && (!until || until >= today))
+    .sort((x, y) => (x.until ?? "9999").localeCompare(y.until ?? "9999"))
+    .map(({ a }) => a);
   const slim = MODULES.map(({ n, surah, surahEn, surahAr, title }) => ({ n, surah, surahEn, surahAr, title }));
 
   return (
@@ -202,8 +212,8 @@ export default async function YouthMajlisPage({ searchParams }: { searchParams: 
                     {next.assignments.map((a) => (
                       <li key={a.id}>
                         <a href={`/youth-majlis/assignment/${a.id}`}>
-                          <strong>{a.point ? pointName(a.point) : "Research"}</strong>
-                          <span>{a.assignees.map((x) => x.name).join(", ")}{ayat(a) ? ` · ${ayat(a)}` : ""}</span>
+                          <strong>{a.title ?? (a.point ? pointName(a.point) : "Research")}</strong>
+                          <span>{a.everyone ? "Everyone" : a.assignees.map((x) => x.name).join(", ")}{ayat(a) ? ` · ${ayat(a)}` : ""}</span>
                         </a>
                       </li>
                     ))}
@@ -262,6 +272,22 @@ export default async function YouthMajlisPage({ searchParams }: { searchParams: 
                 )}
               </div>
             </div>
+
+            {openProjects.length > 0 && (
+              <div id="projects" className="y-projects-wrap">
+                <h3 className="y-projects-h" data-reveal>Projects</h3>
+                <p className="y-projects-sub" data-reveal>
+                  Set by Shaykh Omid and done together: each project is one page in the cohort workspace that everyone writes into.
+                </p>
+                <ul className="y-projects">
+                  {openProjects.map((a, i) => <ProjectTile key={a.id} a={a} me={account?.userId ?? null} i={i} />)}
+                </ul>
+                <p className="y-projects-how" data-reveal>
+                  On the page, add an āyah by typing <kbd>/ayah</kbd> and its reference, like <kbd>/ayah 2:53</kbd>, or a run
+                  like <kbd>/ayah 7:142-145</kbd>. Then write a line beneath it on what it shows.
+                </p>
+              </div>
+            )}
           </div>
         </section>
 
@@ -291,7 +317,7 @@ export default async function YouthMajlisPage({ searchParams }: { searchParams: 
                   {withNotes.has(m.n) && <Link className="y-more y-notes-link" href={`/youth-majlis/notes/${m.n}`}>Class notes</Link>}
                 </h3>
                 <ol className="y-sess-list">
-                  {sessions.filter((s) => s.moduleN === m.n).map((s) => <SessionCard key={s.id} s={s} isNext={s.id === next?.id} />)}
+                  {sessions.filter((s) => s.moduleN === m.n).map((s) => <SessionCard key={s.id} s={s} isNext={s.id === next?.id} me={account?.userId ?? null} />)}
                 </ol>
               </div>
             ))}
@@ -417,6 +443,36 @@ export default async function YouthMajlisPage({ searchParams }: { searchParams: 
 const size = (b: number) => b < 1024 * 1024 ? `${Math.max(1, Math.round(b / 1024))} KB` : `${(b / 1024 / 1024).toFixed(1)} MB`;
 
 /** Prep pack PDFs: read in the browser, or save a copy. */
+/** One of the shaykh's projects: what it asks, who it is for, how far the
+ *  cohort has got, and the way into its shared page. */
+function ProjectTile({ a, me, i }: { a: AssignmentView; me: string | null; i: number }) {
+  const others = a.assignees.filter((x) => x.userId !== me).map((x) => x.name);
+  const mine = !!me && a.assignees.some((x) => x.userId === me);
+  const who = a.everyone ? "For everyone"
+    : mine ? (others.length ? `You, with ${others.join(", ")}` : "Just you")
+    : a.assignees.map((x) => x.name).join(", ");
+  const p = a.progress;
+  const started = !!p && (p.ayat > 0 || p.words > 0);
+  const counts = p ? [
+    p.ayat ? `${p.ayat} ${p.ayat === 1 ? "āyah" : "āyāt"}` : null,
+    p.words ? `${p.words} ${p.words === 1 ? "word" : "words"}` : null,
+  ].filter(Boolean).join(" · ") : "";
+  const state = !started ? "empty" : p!.ayat >= 3 || p!.words >= 60 ? "written" : "started";
+  return (
+    <li className="y-project" data-reveal data-reveal-i={i}>
+      <p className="y-project-t">{a.title}</p>
+      {a.note && <p className="y-project-brief">{a.note}</p>}
+      <p className="y-project-meta">{who}{a.due ? ` · due ${longDate(a.due, false)}` : ""}</p>
+      <div className="y-project-foot">
+        <span className="y-state" data-state={state}>{started ? counts : "Nothing added yet"}</span>
+        <a className="y-pack-btn y-pack-btn--fill" href={`/youth-majlis/assignment/${a.id}`}>
+          {started ? "Add to it" : "Start it"}
+        </a>
+      </div>
+    </li>
+  );
+}
+
 function PackList({ packs }: { packs: SessionView["packs"] }) {
   return (
     <ul className="y-packs">
@@ -437,8 +493,10 @@ function PackList({ packs }: { packs: SessionView["packs"] }) {
 }
 
 /** One session in the archive: when, what, and what to keep from it. */
-function SessionCard({ s, isNext }: { s: SessionView; isNext: boolean }) {
+function SessionCard({ s, isNext, me }: { s: SessionView; isNext: boolean; me: string | null }) {
   const past = !!s.date && s.date < londonToday();
+  // The session's projects that were for this student, or for everyone.
+  const projects = s.assignments.filter((a) => isProject(a) && (me ? isFor(a, me) : a.everyone));
   return (
     <li className="y-sess" data-when={isNext ? "next" : past ? "past" : "later"}>
       <div className="y-sess-head">
@@ -452,8 +510,11 @@ function SessionCard({ s, isNext }: { s: SessionView; isNext: boolean }) {
           {s.takeaways.map((t, i) => <li key={i}>{t}</li>)}
         </ol>
       )}
-      {(s.recordingUrl || s.followUp || s.packs.length > 0) && (
+      {(s.recordingUrl || s.followUp || s.packs.length > 0 || projects.length > 0) && (
         <p className="y-sess-foot">
+          {projects.map((a) => (
+            <a key={a.id} className="y-more" href={`/youth-majlis/assignment/${a.id}`}>{a.title}</a>
+          ))}
           {s.packs.map((p) => (
             <a key={p.id} className="y-more" href={`/api/youth-majlis/pack/${p.id}`} target="_blank" rel="noopener">{p.title}</a>
           ))}
@@ -461,7 +522,7 @@ function SessionCard({ s, isNext }: { s: SessionView; isNext: boolean }) {
           {s.followUp && <span>Follow-up: {s.followUp}</span>}
         </p>
       )}
-      {past && s.takeaways.length === 0 && !s.recordingUrl && s.packs.length === 0 && <p className="y-sess-none">Takeaways not added yet.</p>}
+      {past && s.takeaways.length === 0 && !s.recordingUrl && s.packs.length === 0 && projects.length === 0 && <p className="y-sess-none">Takeaways not added yet.</p>}
     </li>
   );
 }

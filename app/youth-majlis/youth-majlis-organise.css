@@ -199,3 +199,9 @@
   .og-removed .og-member-mail { display: none; }
   .og-row-head { flex-wrap: wrap; gap: 6px 14px; }
 }
+
+/* Projects: the brief takes a full-width row in the form; the row's actions
+   (open the page, edit) sit together at its end. */
+.og-form .og-block { margin-top: 14px; }
+.og-assign-acts { display: inline-flex; align-items: center; gap: 14px; justify-self: end; }
+.og-assign-who .og-muted { font-size: 13px; }

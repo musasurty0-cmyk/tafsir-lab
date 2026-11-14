@@ -103,7 +103,7 @@ export default function OrganiserApp({
               <tbody>
                 {active.map((m) => {
                   const written = m.tabs.filter((t) => t.state === "written").length;
-                  const mine = next?.assignments.filter((a) => a.assignees.some((x) => x.userId === m.userId)) ?? [];
+                  const mine = next?.assignments.filter((a) => !a.title && a.assignees.some((x) => x.userId === m.userId)) ?? [];
                   return (
                     <tr key={m.userId}>
                       <th scope="row">{m.name}{m.role === "organiser" && <span className="og-role">organiser</span>}</th>
@@ -145,6 +145,13 @@ export default function OrganiserApp({
         <h2 id="og-assign" className="og-h">Research assignments.</h2>
         <p className="og-sub">Give one of the ten points, an āyah range, or both, to one student or a group. They see it on their portal, with how far they’ve got.</p>
         <Assignments sessions={sessions} members={active} tabTitles={tabTitles} defaultSession={nextId} run={run} />
+      </section>
+
+      {/* ── Projects ── */}
+      <section className="og-sec" aria-labelledby="og-projects">
+        <h2 id="og-projects" className="og-h">Projects.</h2>
+        <p className="og-sub">A small piece of work for everyone or a few, like compiling the verses that honour Mūsā and the Torah. It shows on the portal with its brief, and opens one page in the cohort workspace that everyone writes into together.</p>
+        <Projects sessions={sessions} members={active} defaultSession={nextId} run={run} />
       </section>
 
       {/* ── Cohort ── */}
@@ -484,8 +491,8 @@ function Assignments({ sessions, members, tabTitles, defaultSession, run }: {
       </label>
       {s && (
         <ul className="og-assign">
-          {s.assignments.length === 0 && <li className="og-empty">No research set for this session yet.</li>}
-          {s.assignments.map((a) => (
+          {s.assignments.filter((a) => !a.title).length === 0 && <li className="og-empty">No research set for this session yet.</li>}
+          {s.assignments.filter((a) => !a.title).map((a) => (
             <li key={a.id}>
               <div className="og-assign-what">
                 <strong>{a.point ? tabTitles[a.point - 1] : "Research"}</strong>
@@ -570,6 +577,116 @@ function AssignmentForm({ sessionId, a, members, tabTitles, run, onDone }: {
           <button className="og-link-btn og-danger" type="button"
             onClick={() => { if (confirm("Delete this assignment?")) void run({ action: "assignment.delete", id: a.id }, "Assignment deleted.").then((ok) => ok && onDone()); }}>
             Delete
+          </button>
+        )}
+      </div>
+    </form>
+  );
+}
+
+// ── Projects ────────────────────────────────────────────────────────────────
+
+function Projects({ sessions, members, defaultSession, run }: {
+  sessions: SessionView[]; members: MemberView[]; defaultSession: string | null;
+  run: (b: Record<string, unknown>, ok: string) => Promise<boolean>;
+}) {
+  const [sid, setSid] = useState(defaultSession ?? sessions[sessions.length - 1]?.id ?? "");
+  const s = sessions.find((x) => x.id === sid);
+  const [editing, setEditing] = useState<AssignmentView | "new" | null>(null);
+  const projects = s?.assignments.filter((a) => a.title) ?? [];
+
+  return (
+    <div>
+      <label className="og-inline">Due at
+        <select value={sid} onChange={(e) => { setSid(e.target.value); setEditing(null); }}>
+          {sessions.map((x) => <option key={x.id} value={x.id}>{x.surahEn}, session {x.seq} · {fmt(x.date)}</option>)}
+        </select>
+      </label>
+      {s && (
+        <ul className="og-assign">
+          {projects.length === 0 && <li className="og-empty">No projects for this session yet.</li>}
+          {projects.map((a) => (
+            <li key={a.id}>
+              <div className="og-assign-what">
+                <strong>{a.title}</strong>
+                {a.due && <span className="og-muted"> · due {fmt(a.due)}</span>}
+                {a.note && <p className="og-muted">{a.note}</p>}
+              </div>
+              <div className="og-assign-who">
+                {a.everyone
+                  ? <span className="og-chip">Everyone</span>
+                  : a.assignees.map((x) => <a key={x.userId} className="og-chip og-chip--link" href={asStudent(x.userId)} title={`See this as ${x.name} does`}>{x.name}</a>)}
+                <span className="og-muted">
+                  {a.progress ? `${a.progress.ayat} āyāt · ${a.progress.words} words` : "not opened yet"}
+                </span>
+              </div>
+              <span className="og-assign-acts">
+                <a className="og-link-btn" href={`/youth-majlis/assignment/${a.id}`}>Open page</a>
+                <button className="og-link-btn" onClick={() => setEditing(a)}>Edit</button>
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {editing
+        ? <ProjectForm key={editing === "new" ? "new" : editing.id} sessionId={sid} a={editing === "new" ? undefined : editing}
+            members={members} run={run} onDone={() => setEditing(null)} />
+        : s && <button className="og-add" onClick={() => setEditing("new")}>Set a project</button>}
+    </div>
+  );
+}
+
+function ProjectForm({ sessionId, a, members, run, onDone }: {
+  sessionId: string; a?: AssignmentView; members: MemberView[];
+  run: (b: Record<string, unknown>, ok: string) => Promise<boolean>; onDone: () => void;
+}) {
+  const [title, setTitle] = useState(a?.title ?? "");
+  const [note, setNote] = useState(a?.note ?? "");
+  const [due, setDue] = useState(a?.due ?? "");
+  const [everyone, setEveryone] = useState(a ? a.everyone : true);
+  const [who, setWho] = useState<Set<string>>(new Set(a?.assignees.map((x) => x.userId) ?? []));
+  const [busy, setBusy] = useState(false);
+  const toggle = (id: string) => setWho((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  const ready = title.trim().length > 0 && (everyone || who.size > 0);
+
+  async function save(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    const ok = await run({
+      action: "assignment.save", id: a?.id, sessionId, title, note, due: due || null,
+      everyone, userIds: everyone ? [] : [...who],
+    }, a ? "Project saved." : "Project set. It is on the portal now.");
+    setBusy(false);
+    if (ok) onDone();
+  }
+
+  return (
+    <form className="og-form" onSubmit={save}>
+      <div className="og-fields og-fields--2">
+        <label>Project
+          <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={120} required
+            placeholder="Compile the verses that honour Mūsā and the Torah" />
+        </label>
+        <label>Due<input type="date" value={due} onChange={(e) => setDue(e.target.value)} /></label>
+      </div>
+      <label className="og-block">What to do
+        <textarea value={note} onChange={(e) => setNote(e.target.value)} maxLength={1200} rows={3}
+          placeholder="Find where Allah praises the Torah and Mūsā, and put each āyah on the page with a line on what it shows." />
+      </label>
+      <fieldset className="og-who">
+        <legend>Who <span>{everyone ? "The whole cohort" : who.size > 1 ? `A group of ${who.size}` : who.size === 1 ? "One student" : "Choose one or more"}</span></legend>
+        <button type="button" className="og-pick" aria-pressed={everyone} onClick={() => setEveryone((v) => !v)}>Everyone</button>
+        {!everyone && members.map((m) => (
+          <button type="button" key={m.userId} className="og-pick" aria-pressed={who.has(m.userId)} onClick={() => toggle(m.userId)}>{m.name}</button>
+        ))}
+      </fieldset>
+      <div className="og-form-actions">
+        <button className="og-btn" type="submit" disabled={busy || !ready}>{busy ? "Saving…" : a ? "Save" : "Set the project"}</button>
+        <button className="og-link-btn" type="button" onClick={onDone}>Cancel</button>
+        {a && (
+          <button className="og-link-btn og-danger" type="button"
+            onClick={() => { if (confirm("Remove this project from the portal? Its page, and everything written on it, stays in the cohort workspace.")) void run({ action: "assignment.delete", id: a.id }, "Project removed.").then((ok) => ok && onDone()); }}>
+            Remove
           </button>
         )}
       </div>

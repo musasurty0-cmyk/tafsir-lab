@@ -13,7 +13,7 @@
 
 import { db } from "@/lib/db";
 import { QUESTIONS, TAB_TITLES } from "@/lib/youth-majlis/content";
-import { getSettings, tabNumber } from "@/lib/youth-majlis/data";
+import { getSettings, projectDoc, tabNumber } from "@/lib/youth-majlis/data";
 
 const WORKSPACE_NAME = "Youth Majlis";
 const ADMIN_ROLES = ["owner", "admin"];
@@ -161,5 +161,54 @@ export async function surahWithTabs(workspaceId: string, surah: number, userId: 
       ids.set(q.n, page.id);
     }
     return ids;
+  });
+}
+
+/**
+ * A project's page: the one the cohort writes into together. Made the first
+ * time anyone opens the project, in the sūrah it was set during, after the ten
+ * points. Only a page in the shared cohort workspace is remembered on the
+ * project; a personal fallback (no cohort workspace yet) is the student's own.
+ */
+export async function projectPage(
+  workspaceId: string, surah: number, userId: string,
+  project: { id: string; title: string; note: string | null; pageId: string | null },
+): Promise<string> {
+  const { cohortWorkspaceId } = await getSettings();
+  const shared = workspaceId === cohortWorkspaceId;
+  return db.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`ym-project:${project.id}:${workspaceId}`}))`;
+    if (shared) {
+      const row = await tx.youthMajlisAssignment.findUnique({ where: { id: project.id }, select: { pageId: true } });
+      if (row?.pageId) {
+        const still = await tx.page.findFirst({
+          where: { id: row.pageId, workspaceSurah: { workspaceId } }, select: { id: true },
+        });
+        if (still) return still.id;
+      }
+    }
+    const ws = await tx.workspaceSurah.upsert({
+      where:  { workspaceId_surahNumber: { workspaceId, surahNumber: surah } },
+      create: { workspaceId, surahNumber: surah },
+      update: {},
+      select: { id: true },
+    });
+    // Without a shared page to remember, a personal workspace reuses its own copy by title.
+    if (!shared) {
+      const mine = await tx.page.findFirst({ where: { workspaceSurahId: ws.id, title: project.title }, select: { id: true } });
+      if (mine) return mine.id;
+    }
+    const last = await tx.page.aggregate({ where: { workspaceSurahId: ws.id }, _max: { orderIndex: true } });
+    const status = shared ? "published" : "draft";
+    const page = await tx.page.create({
+      data: {
+        workspaceSurahId: ws.id, title: project.title, orderIndex: (last._max.orderIndex ?? -1) + 1, status,
+        ...(shared ? { publishedById: userId, publishedAt: new Date() } : {}),
+        tiptapContent: projectDoc(project.title, project.note), createdById: userId,
+      },
+      select: { id: true },
+    });
+    if (shared) await tx.youthMajlisAssignment.update({ where: { id: project.id }, data: { pageId: page.id } });
+    return page.id;
   });
 }

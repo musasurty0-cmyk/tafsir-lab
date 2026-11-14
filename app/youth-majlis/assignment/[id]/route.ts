@@ -5,6 +5,9 @@
  * that sūrah in the cohort's shared workspace, so the Majlis can go through
  * everyone's findings together. Until a shared workspace exists, it opens in
  * the student's own workspace instead.
+ *
+ * A project opens its own page there instead, made on the first open, which
+ * everyone it is for writes into together.
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -12,7 +15,7 @@ import { db } from "@/lib/db";
 import { getSessionOrNull } from "@/lib/session";
 import { hasAccess } from "@/lib/youth-majlis/gate";
 import { joinCohort } from "@/lib/youth-majlis/data";
-import { majlisWorkspace, surahWithTabs } from "@/lib/youth-majlis/workspace";
+import { majlisWorkspace, projectPage, surahWithTabs } from "@/lib/youth-majlis/workspace";
 import { MODULES } from "@/lib/youth-majlis/content";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -23,7 +26,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   if (!session) return to("/login");
 
   const a = await db.youthMajlisAssignment.findUnique({
-    where: { id }, select: { point: true, session: { select: { moduleN: true } } },
+    where: { id },
+    select: { id: true, point: true, title: true, note: true, pageId: true, session: { select: { moduleN: true } } },
   }).catch(() => null);
   const surah = a ? MODULES.find((m) => m.n === a.session.moduleN)?.surah : undefined;
   if (!a || !surah) return to("/youth-majlis");
@@ -31,6 +35,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   // Also adds them to the cohort workspace. Null: the account is gone.
   if (!(await joinCohort(session.userId))) return to("/login");
   const workspaceId = await majlisWorkspace(session.userId);
+
+  if (a.title) {
+    const pageId = await projectPage(workspaceId, surah, session.userId, { id: a.id, title: a.title, note: a.note, pageId: a.pageId });
+    return to(`/workspaces/${workspaceId}/surahs/${surah}/pages/${pageId}`);
+  }
 
   const tabs = await surahWithTabs(workspaceId, surah, session.userId);
   const pageId = tabs.get(a.point ?? 1) ?? tabs.get(1);

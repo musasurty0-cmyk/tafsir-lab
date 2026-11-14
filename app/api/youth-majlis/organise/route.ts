@@ -4,8 +4,9 @@
  * Everything an organiser changes, so running the Majlis needs no code:
  *   session.save     create or edit a session (dates, venue, prep, takeaways…)
  *   session.delete
- *   assignment.save  set research for a session, for one student or several
- *   assignment.delete
+ *   assignment.save  set research for a session, for one student or several;
+ *                    with a title it is a project (for chosen students or everyone)
+ *   assignment.delete  (a project's page, and everything written on it, stays)
  *   member.role      make someone an organiser, a student, or remove them
  *   member.rename    change someone's name on their TafsirLab account
  *   pack.begin       start uploading a prep pack PDF for a session → { id, uploadUrl }
@@ -120,19 +121,24 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ ok: true });
       }
       case "assignment.save": {
-        const userIds = (Array.isArray(b.userIds) ? b.userIds : []).map(uuid).slice(0, 40);
-        if (!userIds.length) throw new Bad("Choose at least one student.");
+        const title = str(b.title, 120);
+        const everyone = !!title && b.everyone === true;
+        const userIds = everyone ? [] : (Array.isArray(b.userIds) ? b.userIds : []).map(uuid).slice(0, 40);
+        if (!everyone && !userIds.length) throw new Bad(title ? "Choose who it is for, or set it for everyone." : "Choose at least one student.");
         const data = {
-          point: int(b.point, 1, 10), ayahFrom: int(b.ayahFrom, 1, 286), ayahTo: int(b.ayahTo, 1, 286),
-          note: str(b.note, 600), due: date(b.due),
+          point: title ? null : int(b.point, 1, 10),
+          ayahFrom: int(b.ayahFrom, 1, 286), ayahTo: int(b.ayahTo, 1, 286),
+          note: str(b.note, 1200), due: date(b.due), title, everyone,
         };
-        if (data.point == null && data.ayahFrom == null && !data.note) throw new Bad("Give it a point, an āyah range or a note.");
+        if (!title && data.point == null && data.ayahFrom == null && !data.note) throw new Bad("Give it a point, an āyah range or a note.");
         const id = await db.$transaction(async (tx) => {
           const a = b.id
-            ? await tx.youthMajlisAssignment.update({ where: { id: uuid(b.id) }, data, select: { id: true } })
-            : await tx.youthMajlisAssignment.create({ data: { ...data, sessionId: uuid(b.sessionId) }, select: { id: true } });
+            ? await tx.youthMajlisAssignment.update({ where: { id: uuid(b.id) }, data, select: { id: true, pageId: true } })
+            : await tx.youthMajlisAssignment.create({ data: { ...data, sessionId: uuid(b.sessionId) }, select: { id: true, pageId: true } });
           await tx.youthMajlisAssignee.deleteMany({ where: { assignmentId: a.id } });
-          await tx.youthMajlisAssignee.createMany({ data: userIds.map((userId) => ({ assignmentId: a.id, userId })) });
+          if (userIds.length) await tx.youthMajlisAssignee.createMany({ data: userIds.map((userId) => ({ assignmentId: a.id, userId })) });
+          // A renamed project renames its page, so the workspace tab matches.
+          if (title && a.pageId) await tx.page.updateMany({ where: { id: a.pageId }, data: { title } });
           return a.id;
         });
         return NextResponse.json({ ok: true, id });

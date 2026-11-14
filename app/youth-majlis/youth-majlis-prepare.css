@@ -156,3 +156,26 @@
 @media (max-width: 720px) {
   .y-prep-grid, .y-points-list, .y-sess-list { grid-template-columns: 1fr; }
 }
+
+/* Projects: the shaykh's small pieces of work, done together on one page.
+   Tiles on the band's ground, like the cards above them; the brief is the
+   shaykh's own words, so it reads as body text, not a caption. */
+.y-projects-wrap { margin-top: 56px; }
+.y-projects-h { font-family: var(--y-display); font-size: 28px; font-weight: 700; letter-spacing: -0.025em; }
+.y-projects-sub { margin-top: 6px; max-width: 46ch; font-size: 17px; line-height: 1.45; color: var(--ink-3); }
+.y-projects { margin-top: 20px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.y-project { display: flex; flex-direction: column; gap: 8px; padding: 26px 28px; border-radius: 28px; background: var(--bg); }
+.y-project-t { font-family: var(--y-display); font-size: 23px; font-weight: 700; line-height: 1.18; letter-spacing: -0.024em; text-wrap: balance; }
+.y-project-brief { font-size: 17px; line-height: 1.5; color: var(--ink-2); }
+.y-project-meta { font-size: 14px; color: var(--ink-3); }
+.y-project-foot { margin-top: auto; padding-top: 12px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.y-project-foot .y-pack-btn { height: 40px; padding: 0 18px; border-radius: 20px; font-size: 15px; }
+.y-projects-how { margin-top: 18px; max-width: 62ch; font-size: 15px; line-height: 1.55; color: var(--ink-3); }
+.y-projects-how kbd {
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 0.9em;
+  padding: 1px 6px; border-radius: 6px; background: var(--bg); color: var(--ink-2);
+}
+@media (max-width: 720px) {
+  .y-projects { grid-template-columns: 1fr; }
+  .y-project { padding: 22px; border-radius: 24px; }
+}
