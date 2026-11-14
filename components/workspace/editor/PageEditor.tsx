@@ -20,7 +20,7 @@
  *   replaced entirely.
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useEditor, EditorContent, type Editor } from "@tiptap/react";
 import { baseExtensions } from "./sharedExtensions";
@@ -34,9 +34,12 @@ import Collaboration from "@tiptap/extension-collaboration";
 import CollaborationCursor from "@tiptap/extension-collaboration-cursor";
 import * as Y from "yjs";
 import YProvider from "y-partyserver/provider";
+import { yXmlFragmentToProseMirrorRootNode, yUndoPluginKey } from "y-prosemirror";
 import type { SuggestionProps, SuggestionKeyDownProps } from "@tiptap/suggestion";
 
 import { PARTYKIT_HOST } from "@/lib/collab/config";
+import { linkDocs, RELAY } from "@/lib/collab/link-docs";
+import { makeMarker, markerOf, mergeOffline, withoutMarker, type OfflineMarker } from "./offlineMerge";
 import { BlockMove } from "./BlockMove";
 import BlockHandle from "./BlockHandle";
 import EditorInkLayer from "./EditorInkLayer";
@@ -63,6 +66,37 @@ import { isLive, onLiveChange } from "@/lib/collab/liveness";
 // ── Constants ──────────────────────────────────────────────────────────────
 
 const SAVE_DEBOUNCE_MS = 900;
+
+/* How long the editor waits for the room before opening an offline copy.
+   A healthy room answers in about a second; past this, waiting longer only
+   keeps someone from writing. */
+const OFFLINE_AFTER_MS = 5000;
+
+/** pending: waiting for the room, read-only. live: linked to the room.
+    offline: the room never answered; editing a local copy of the snapshot. */
+type SyncPhase = "pending" | "live" | "offline";
+
+/** Lines typed while the editor was waiting, as the paragraphs they become.
+    They go where the caret would have been: the end of the page, filling its
+    trailing empty line if it has one. */
+function insertTyped(editor: Editor, typed: string) {
+  const paras = typed.split("\n").map((line) =>
+    line ? { type: "paragraph", content: [{ type: "text", text: line }] } : { type: "paragraph" });
+  const { doc } = editor.state;
+  const end  = doc.content.size;
+  const last = doc.lastChild;
+  const from = last && last.type.name === "paragraph" && last.content.size === 0 ? end - last.nodeSize : end;
+  editor.chain().insertContentAt({ from, to: end }, paras).focus("end").run();
+}
+
+/** The snapshot minus a trailing empty line, for showing typed text after it. */
+function withoutTrailingBlank(content: unknown): unknown {
+  const doc = content as { content?: { type?: string; content?: unknown[] }[] } | null;
+  const blocks = doc?.content;
+  if (!blocks?.length) return content;
+  const last = blocks[blocks.length - 1];
+  return last?.type === "paragraph" && !last.content?.length ? { ...doc, content: blocks.slice(0, -1) } : content;
+}
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -327,17 +361,29 @@ export default function PageEditor({
   // configuration time (an effect would run too late).  The component is
   // keyed by pageId in ModeAPage, so one instance = one room for its
   // whole lifetime.
-  const collabRef  = useRef<{ ydoc: Y.Doc; provider: YProvider } | null>(null);
-  /* False until Yjs holds the real document. Until then the stored snapshot is
-     painted underneath, so the page is never blank while the socket connects. */
-  const [collabSynced, setCollabSynced] = useState(false);
+  //
+  // Two documents (lib/collab/link-docs): the editor writes to `ydoc`, the
+  // provider syncs `roomDoc`, and the two are linked only once the room has
+  // answered. Until then the editor is read-only and the stored snapshot is
+  // painted in its place, so the page is never blank while the socket
+  // connects and nothing typed early can merge into the room out of order.
+  const collabRef  = useRef<{ ydoc: Y.Doc; roomDoc: Y.Doc; provider: YProvider } | null>(null);
+  const [phase, setPhase] = useState<SyncPhase>("pending");
+  const phaseRef   = useRef<SyncPhase>("pending");
+  const unlinkRef  = useRef<(() => void) | null>(null);
   const mountedRef = useRef(false);
 
   if (!collabRef.current) {
-    const ydoc = new Y.Doc();
+    const ydoc    = new Y.Doc();
+    const roomDoc = new Y.Doc();
+    /* One client id for both, so the room's awareness entry for this tab is
+       the editor's own caret (the cursor plugin compares against ydoc). Only
+       ydoc ever authors anything. */
+    roomDoc.clientID = ydoc.clientID;
     collabRef.current = {
       ydoc,
-      provider: new YProvider(PARTYKIT_HOST, pageId, ydoc, {
+      roomDoc,
+      provider: new YProvider(PARTYKIT_HOST, pageId, roomDoc, {
         connect: true,
         /* The realtime server rejects any socket without a valid, page-scoped
            token (party/server.ts gate). params is called on every
@@ -350,7 +396,7 @@ export default function PageEditor({
       }),
     };
   }
-  const { ydoc, provider } = collabRef.current;
+  const { ydoc, roomDoc, provider } = collabRef.current;
 
   // Connection lifecycle. Survives React Strict Mode's dev double-mount:
   // cleanup only disconnects; the delayed destroy is skipped if the same
@@ -385,7 +431,10 @@ export default function PageEditor({
       mountedRef.current = false;
       provider.disconnect();
       setTimeout(() => {
-        if (!mountedRef.current) provider.destroy();
+        if (mountedRef.current) return;
+        provider.destroy();
+        unlinkRef.current?.();
+        unlinkRef.current = null;
       }, 1000);
     };
   }, [provider]);
@@ -421,6 +470,16 @@ export default function PageEditor({
 
   // ── Save helper ───────────────────────────────────────────────────────
 
+  /* Set while editing an offline copy: the base it started from, saved with
+     every snapshot so the copy is merged into the room even if this tab is
+     closed before the server comes back (see offlineMerge). */
+  const offlineMarkerRef = useRef<OfflineMarker | null>(null);
+  const snapshotBody = useCallback((editor: Editor) => {
+    const doc = editor.getJSON();
+    const offline = offlineMarkerRef.current;
+    return JSON.stringify({ tiptapContent: offline ? { ...doc, offline } : doc });
+  }, []);
+
   const scheduleSave = useCallback(
     (editor: Editor) => {
       if (saveTimer.current) clearTimeout(saveTimer.current);
@@ -428,11 +487,11 @@ export default function PageEditor({
         fetch(`/api/pages/${pageId}/content`, {
           method:  "PATCH",
           headers: { "Content-Type": "application/json" },
-          body:    JSON.stringify({ tiptapContent: editor.getJSON() }),
+          body:    snapshotBody(editor),
         }).catch(() => {});
       }, SAVE_DEBOUNCE_MS);
     },
-    [pageId],
+    [pageId, snapshotBody],
   );
 
   useEffect(() => () => { if (saveTimer.current) clearTimeout(saveTimer.current); }, []);
@@ -531,8 +590,10 @@ export default function PageEditor({
     // content would inject it into the Yjs doc on EVERY mount — before the
     // provider has synced — duplicating the document each load.  Seeding
     // from DB content happens once, after first sync, in the effect below.
+    //
+    // No `autofocus` either: the editor is read-only until then, and the
+    // effect below puts the caret at the end when it opens.
 
-    autofocus:         "end",
     immediatelyRender: false,
 
     onUpdate({ editor }) {
@@ -540,6 +601,10 @@ export default function PageEditor({
     },
 
     editorProps: {
+      /* Read-only until the first sync (or the offline fallback). A view prop
+         rather than TipTap's `editable` option, which useEditor re-applies
+         from its options on a re-mount and would lock the editor again. */
+      editable: () => phaseRef.current !== "pending",
       attributes: { class: "page-editor-content", spellcheck: "true" },
       // Keep the caret visible above the iPad on-screen keyboard: ProseMirror
       // auto-scrolls the selection into view with this margin whenever it
@@ -555,34 +620,143 @@ export default function PageEditor({
      work. Two copies of that meant two copies of every rule inside it. */
   const { openLink, linkUI } = useConnectionLink({ editor, workspaceId, currentSurah: studySurah });
 
-  // ── One-time content seeding ──────────────────────────────────────────
-  // After the provider completes its first sync: if the shared Yjs doc is
-  // still empty but the DB has content (pages created before live collab,
-  // or PartyKit storage was cleared), seed the doc from the DB snapshot.
-  const seededRef = useRef(false);
+  // ── First sync: link to the room and seed it, or open offline ─────────
+  //
+  // Typing into a page before its room had synced used to scramble it: the
+  // typed lines were Yjs history in an empty doc, and the seed (or the room's
+  // own content) then merged around them by client id. Typed lines landed in
+  // the heading, or the seed was skipped because the doc no longer looked
+  // empty and the starter text was lost from the page AND the snapshot.
+  //
+  // Now the editor opens only once the room has answered:
+  //   • first sync   → link the docs; seed the room from the snapshot ONLY if
+  //                    it is empty (seeding a non-empty room is what used to
+  //                    duplicate pages on reload); open for editing.
+  //   • no answer in OFFLINE_AFTER_MS → open an offline copy of the snapshot
+  //                    in the editor's own doc, never linked, saved by PATCH.
+  //   • sync after that → reconcile the copy with the room by content
+  //                    (offlineMerge), adopt the room's history, then link.
+  // Keys pressed while waiting are kept and typed in when the editor opens.
+  const seededRef        = useRef(false);
+  const pendingTypingRef = useRef("");
+  const [pendingTyping, setPendingTyping] = useState("");
+  const startContent = useMemo(() => withoutMarker(initialContent), [initialContent]);
+
   useEffect(() => {
     if (!editor) return;
+    const ed       = editor;
+    const fragment = ydoc.getXmlFragment("default");
+    const roomFrag = () => roomDoc.getXmlFragment("default");
+    const startMarker = markerOf(initialContent);
 
-    function seed() {
-      if (seededRef.current || !editor || editor.isDestroyed) return;
-      seededRef.current = true;
-      const fragment = ydoc.getXmlFragment("default");
-      if (fragment.length === 0 && initialContent) {
-        editor.commands.setContent(initialContent as object);
-      }
-      /* Drop the pre-paint only once the real document is in hand — whether it
-         came over the wire or was just seeded from the snapshot. Keying this
-         off the same signal that already gates seeding means the two can never
-         disagree about when the editor is authoritative. */
-      setCollabSynced(true);
+    function clearUndo() {
+      /* Seeding and reconciling go through the editor, so Ctrl+Z would undo
+         them: the first undo on a page emptied it. */
+      const s = yUndoPluginKey.getState(ed.state) as { undoManager?: { clear(): void } } | undefined;
+      s?.undoManager?.clear();
     }
 
-    if (provider.synced) seed();
-    else provider.on("synced", seed);
-    return () => { provider.off("synced", seed); };
+    function open(next: SyncPhase) {
+      seededRef.current = true;
+      phaseRef.current  = next;
+      clearUndo();
+      ed.setEditable(true, false);   // re-reads the editable prop
+      setPhase(next);
+      const typed = pendingTypingRef.current;
+      pendingTypingRef.current = "";
+      setPendingTyping("");
+      if (typed) insertTyped(ed, typed);
+      else if (!document.activeElement || document.activeElement === document.body) ed.commands.focus("end");
+    }
+
+    function goLive() {
+      unlinkRef.current = linkDocs(ydoc, roomDoc);
+      if (fragment.length === 0) {
+        // An empty room: a new page, one made before live collab, or storage cleared.
+        if (startContent) ed.commands.setContent(startContent as object);
+      } else if (startMarker) {
+        // The snapshot was saved from an offline copy the room has not seen.
+        const merged = mergeOffline(ed.schema, startMarker, startContent,
+          yXmlFragmentToProseMirrorRootNode(fragment, ed.schema));
+        if (merged) ed.commands.setContent(merged);
+      }
+      open("live");
+      if (startMarker) scheduleSave(ed);   // saves without the marker
+    }
+
+    function goOffline() {
+      offlineMarkerRef.current = startMarker ?? makeMarker(ed.schema, startContent);
+      // Into the editor's own doc only: it is never linked to the room as is.
+      if (startContent) ed.commands.setContent(startContent as object);
+      open("offline");
+    }
+
+    function recover() {
+      const base = offlineMarkerRef.current ?? makeMarker(ed.schema, startContent);
+      if (roomFrag().length === 0) {
+        // Nobody has written to this room: the offline copy becomes it.
+        unlinkRef.current = linkDocs(ydoc, roomDoc);
+      } else {
+        const merged = mergeOffline(ed.schema, base, ed.getJSON(),
+          yXmlFragmentToProseMirrorRootNode(roomFrag(), ed.schema));
+        const { from, to } = ed.state.selection;
+        /* Take the room's history in place of the copy's. The copy's items
+           become deletions, which the link carries to the room as well, so a
+           later edit next to one of them is never left waiting for it. */
+        ydoc.transact(() => fragment.delete(0, fragment.length), RELAY);
+        unlinkRef.current = linkDocs(ydoc, roomDoc);
+        if (merged) ed.commands.setContent(merged);
+        const max = ed.state.doc.content.size;
+        try { ed.commands.setTextSelection({ from: Math.min(from, max), to: Math.min(to, max) }); } catch { /* ignore */ }
+      }
+      offlineMarkerRef.current = null;
+      phaseRef.current = "live";
+      setPhase("live");
+      clearUndo();
+      scheduleSave(ed);
+    }
+
+    const onSynced = (ok: boolean) => {
+      if (!ok || unlinkRef.current || ed.isDestroyed) return;
+      if (phaseRef.current === "pending") goLive();
+      else if (phaseRef.current === "offline") recover();
+    };
+    provider.on("synced", onSynced);
+    if (provider.synced) onSynced(true);
+
+    const timer = setTimeout(() => {
+      if (phaseRef.current === "pending" && !ed.isDestroyed) goOffline();
+    }, OFFLINE_AFTER_MS);
+
+    return () => {
+      provider.off("synced", onSynced);
+      clearTimeout(timer);
+    };
   // initialContent is stable for the lifetime of this mount (keyed by pageId)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editor, provider]);
+
+  /* Keys pressed while the editor waits. It is read-only then, so they would
+     otherwise vanish; they show at the end of the stand-in and are typed in
+     when it opens. Only plain typing with nothing else focused. */
+  useEffect(() => {
+    if (phase !== "pending") return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.defaultPrevented || e.isComposing || e.ctrlKey || e.metaKey || e.altKey) return;
+      const active = document.activeElement;
+      if (active && active !== document.body && !active.closest(".main-doc-container")) return;
+      let next = pendingTypingRef.current;
+      if (e.key === "Enter") next += "\n";
+      else if (e.key === "Backspace" && next) next = next.slice(0, -1);
+      else if (e.key.length === 1) next += e.key;
+      else return;
+      e.preventDefault();
+      pendingTypingRef.current = next;
+      setPendingTyping(next);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [phase]);
 
   // ── Flush on close ───────────────────────────────────────────────────
   // The DB snapshot trails the live document by the save debounce. When the
@@ -595,7 +769,7 @@ export default function PageEditor({
       if (!saveTimer.current || !seededRef.current || editor.isDestroyed) return;
       clearTimeout(saveTimer.current);
       saveTimer.current = null;
-      const body = JSON.stringify({ tiptapContent: editor.getJSON() });
+      const body = snapshotBody(editor);
       fetch(`/api/pages/${pageId}/content`, {
         method:  "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -610,7 +784,7 @@ export default function PageEditor({
       window.removeEventListener("pagehide", flush);
       document.removeEventListener("visibilitychange", onHide);
     };
-  }, [editor, pageId]);
+  }, [editor, pageId, snapshotBody]);
 
   // ── Expose editor to parent ────────────────────────────────────────────
 
@@ -824,7 +998,7 @@ export default function PageEditor({
   // ── Render ────────────────────────────────────────────────────────────
 
   return (
-    <div className="page-editor" ref={pageEditorRef}>
+    <div className="page-editor" ref={pageEditorRef} data-sync={phase}>
       {/* Main container — same structure as the square ones: top drag bar,
           square chrome, movable (offset persisted per page) */}
       <div
@@ -852,12 +1026,22 @@ export default function PageEditor({
             which is the several seconds of blank page.
 
             The text was in initialContent the whole time. This shows it, in the
-            same typography, and gets out of the way the moment Yjs has the
-            real document. Never interactive: the editor underneath owns every
-            click, so a caret placed before sync still lands in the real doc. */}
-        {!collabSynced && !docIsEmpty(initialContent) && (
+            same typography, and gets out of the way the moment the editor
+            opens (first sync, or the offline copy). The editor underneath is
+            read-only until then; keys pressed meanwhile appear at the end of
+            this, with a caret, where they will be typed in. */}
+        {phase === "pending" && (
           <div className="page-editor-content page-editor-prepaint" aria-hidden>
-            <StaticDoc content={initialContent} />
+            {!docIsEmpty(startContent) && (
+              <StaticDoc content={pendingTyping ? withoutTrailingBlank(startContent) : startContent} />
+            )}
+            {pendingTyping && pendingTyping.split("\n").map((line, i, all) => (
+              <p key={i} className="page-editor-typed">
+                {line}
+                {i === all.length - 1 && <span className="page-editor-typed-caret" />}
+              </p>
+            ))}
+            <p className="page-editor-wait">Connecting…</p>
           </div>
         )}
       </div>

@@ -10792,6 +10792,28 @@ body {
 .main-doc-container:has(> .page-editor-prepaint) .ProseMirror :is(.is-empty, .is-editor-empty)::before {
   content: none;
 }
+/* Read-only until the room answers (PageEditor's SyncPhase). */
+.page-editor[data-sync="pending"] .main-doc-container { cursor: progress; }
+/* Keys pressed while waiting, shown where they will be typed in. */
+.page-editor-typed-caret {
+  display: inline-block;
+  width: 1.5px;
+  height: 1.15em;
+  margin-inline-start: 1px;
+  vertical-align: text-bottom;
+  background: currentColor;
+  animation: page-editor-caret 1.06s steps(1) infinite;
+}
+@keyframes page-editor-caret { 50% { opacity: 0; } }
+/* Said only once the wait is long enough to notice: a healthy room answers
+   before this fades in, and the stand-in simply becomes the editor. */
+.page-editor-wait {
+  margin-top: 6px;
+  font-size: 14px;
+  color: var(--ink-3);
+  animation: page-editor-wait 240ms var(--ease-overlay) 1.2s backwards;
+}
+@keyframes page-editor-wait { from { opacity: 0; } }
 
 /* Reading size reaches the sūrah list too.
    The scale was scoped to "reading text, never chrome" — correct for toolbars
