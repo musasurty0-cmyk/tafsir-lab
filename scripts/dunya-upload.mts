@@ -55,6 +55,7 @@ const KINDS: Record<string, { label: string; suffix: string; order: number }> = 
   WORKED_ANSWERS:   { label: "Worked answers",   suffix: "-worked",       order: 1 },
   WORKED_SOLUTIONS: { label: "Worked solutions", suffix: "-worked",       order: 1 },
   MARK_SCHEME:      { label: "Mark scheme",      suffix: "-mark-scheme",  order: 2 },
+  REVISION:         { label: "Revision booklet", suffix: "-revision",     order: 3 },
 };
 const ALL: Record<string, { label: string; slug: string; order: number }> = {
   TESTS:            { label: "All papers",           slug: "all-papers",       order: 0 },
@@ -128,9 +129,9 @@ function take(subjectId: string, path: string, bytes: Buffer) {
   }
 
   // Edexcel: a numbered test in a series.
-  const ed = /^(Test|Pure|Mechanics|Statistics)_(\d+)_(.+?)_(TEST|WORKED_ANSWERS|WORKED_SOLUTIONS|MARK_SCHEME)\.pdf$/i.exec(file);
+  const ed = /^(Test|Pure|Mechanics|Statistics)_(\d+)_(.+?)_(TEST|WORKED_ANSWERS|WORKED_SOLUTIONS|MARK_SCHEME|REVISION)\.pdf$/i.exec(file);
   // OCR: a test named by its specification points.
-  const ocr = /_(\d+\.\d+\.\d+(?:-\d+\.\d+\.\d+)?)_(TEST|MARK_SCHEME|WORKED_ANSWERS|WORKED_SOLUTIONS)\.pdf$/i.exec(file);
+  const ocr = /_(\d+\.\d+\.\d+(?:-\d+\.\d+\.\d+)?)_(TEST|MARK_SCHEME|WORKED_ANSWERS|WORKED_SOLUTIONS|REVISION)\.pdf$/i.exec(file);
   if (!ed && !ocr) { console.warn(`  skipping ${file}`); return; }
 
   const kind = KINDS[(ed ? ed[4] : ocr![2]).toUpperCase()];
