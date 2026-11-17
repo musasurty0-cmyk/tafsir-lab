@@ -107,6 +107,8 @@ export default async function YouthMajlisPage({ searchParams }: { searchParams: 
   /* A new module whose first session is set but not yet dated: it is what
      comes next, "date to be confirmed". */
   const pending = next ? null : undatedSession(sessions, modN);
+  /** The session being prepared for: the next dated one, or the one awaiting its date. */
+  const upcoming = next ?? pending;
   const level = LEVELS[current.level - 1] ?? LEVELS[0];
   const tonight = next?.date === londonToday();
 
@@ -123,8 +125,8 @@ export default async function YouthMajlisPage({ searchParams }: { searchParams: 
     states[m.n] = m.n === modN ? "current" : moduleDone(sessions, m.n, modN) ? "done" : "upcoming";
     counts[m.n] = sessions.filter((s) => s.moduleN === m.n).length;
   }
-  const myAssignments = next && account
-    ? next.assignments.filter((a) => !isProject(a) && a.assignees.some((x) => x.userId === account.userId)) : [];
+  const myAssignments = upcoming && account
+    ? upcoming.assignments.filter((a) => !isProject(a) && a.assignees.some((x) => x.userId === account.userId)) : [];
   /* The shaykh's projects still to do: any session's, for this student (or
      for everyone), until the day they are due, or the day of their session
      when no due date was set. After that they live on in the session archive. */
@@ -200,7 +202,7 @@ export default async function YouthMajlisPage({ searchParams }: { searchParams: 
             ) : (
               <div className="y-cta y-cta--stack y-in" style={{ "--d": "1400ms" } as React.CSSProperties}>
                 <a className="y-btn" href={`/youth-majlis/open/${current.surah}`}>Open {current.surahEn} in TafsirLab</a>
-                <p className="y-next">{pending ? `Level ${current.level} begins with Sūrah ${current.surahEn}. The date is to be confirmed.` : "The next session hasn’t been set yet."}</p>
+                <p className="y-next">{pending ? <>Level {current.level} begins with <span className="y-nowrap">Sūrah {current.surahEn}</span>. The date is to be confirmed.</> : "The next session hasn’t been set yet."}</p>
               </div>
             )}
 
@@ -233,15 +235,16 @@ export default async function YouthMajlisPage({ searchParams }: { searchParams: 
           <div className="y-wrap">
             <Words id="y-p-h" className="y-h2" text="Before the Majlis." />
             <p className="y-h2-sub" data-reveal>
-              {next ? <>For {longDate(next.date!, false)}{next.prepDue ? `, ready by ${longDate(next.prepDue, false)}` : ""}.</> : "For the next session."}
+              {next ? <>For {longDate(next.date!, false)}{next.prepDue ? `, ready by ${longDate(next.prepDue, false)}` : ""}.</>
+                : pending ? <>For Sūrah {current.surahEn}, session {pending.seq}. The date is to be confirmed.</> : "For the next session."}
             </p>
 
             <div className="y-prep-grid">
               <div className="y-prep-card" data-reveal>
                 <p className="y-prep-h">The prep pack</p>
-                {next && next.prep.length > 0 && <ul className="y-prep-list">{next.prep.map((p, i) => <li key={i}>{p.text}</li>)}</ul>}
-                {next && next.packs.length > 0 && <PackList packs={next.packs} />}
-                {!(next && (next.prep.length > 0 || next.packs.length > 0)) && (
+                {upcoming && upcoming.prep.length > 0 && <ul className="y-prep-list">{upcoming.prep.map((p, i) => <li key={i}>{p.text}</li>)}</ul>}
+                {upcoming && upcoming.packs.length > 0 && <PackList packs={upcoming.packs} />}
+                {!(upcoming && (upcoming.prep.length > 0 || upcoming.packs.length > 0)) && (
                   <p className="y-prep-empty">Nothing set yet. Shaykh Omid’s preparation for this session will appear here.</p>
                 )}
               </div>

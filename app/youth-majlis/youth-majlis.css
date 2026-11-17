@@ -64,6 +64,7 @@
 /* The hero with no dated session: the button, then one centred line under it. */
 .y-cta--stack { flex-direction: column; gap: 18px; }
 .y-cta--stack .y-next { margin-top: 0; text-align: center; text-wrap: balance; }
+.y-nowrap { white-space: nowrap; }
 .y-btn {
   display: inline-flex; align-items: center; justify-content: center;
   min-height: 46px; padding: 0 24px; border-radius: 12px;
