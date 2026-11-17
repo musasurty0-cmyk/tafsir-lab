@@ -261,6 +261,19 @@ export const ADHKAR: Dhikr[] = [
     "source": "al-Ḥākim"
   },
   {
+    "id": "hamm",
+    "when": "both",
+    "count": 1,
+    "parts": [
+      {
+        "ar": "اللَّهُمَّ إِنِّي أَعُوذُ بِكَ مِنَ الْهَمِّ وَالْحَزَنِ، وَأَعُوذُ بِكَ مِنَ الْعَجْزِ وَالْكَسَلِ، وَأَعُوذُ بِكَ مِنَ الْجُبْنِ وَالْبُخْلِ، وَأَعُوذُ بِكَ مِنْ غَلَبَةِ الدَّيْنِ وَقَهْرِ الرِّجَالِ"
+      }
+    ],
+    "en": "O Allah, I seek refuge in You from worry and grief, and I seek refuge in You from helplessness and laziness, and I seek refuge in You from cowardice and miserliness, and I seek refuge in You from being overcome by debt and overpowered by men.",
+    "virtue": "The Prophet ﷺ taught it to Abū Umāmah, who was weighed down by worry and debt, to say morning and evening. He said: I did, and Allah took away my worry and paid off my debt.",
+    "source": "Abū Dāwūd; the duʿāʾ is also in al-Bukhārī"
+  },
+  {
     "id": "fath",
     "when": "both",
     "count": 1,
