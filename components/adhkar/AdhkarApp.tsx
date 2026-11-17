@@ -100,7 +100,7 @@ export default function AdhkarApp() {
   return (
     <div className="ak" data-time={time} data-ready={ready || undefined} style={{ "--ak-ar": `${SIZES[size].ar}px` } as React.CSSProperties}>
       <header className="ak-top">
-        <Link className="ak-brand" href="/" aria-label="Tafsir Lab"><span className="ak-mark" aria-hidden>T</span>Tafsir Lab</Link>
+        <Link className="ak-brand" href="/" prefetch={false} aria-label="Tafsir Lab"><span className="ak-mark" aria-hidden>T</span>Tafsir Lab</Link>
         <div className="ak-tools">
           <button type="button" className="ak-tool" aria-pressed={meaning} onClick={() => savePrefs({ meaning: !meaning })}>
             Meaning
