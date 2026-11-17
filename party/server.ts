@@ -32,7 +32,7 @@ import { YServer } from "y-partyserver";
 import * as Y from "yjs";
 import { jwtVerify } from "jose";
 import type { IncomingMessage, PresenceData } from "./types";
-import { ensureInk, importInk, inkSummary, loadInk, readInk, saveInk, wipeInk, type InkCache } from "./ink";
+import { ensureInk, importInk, inkSummary, loadInk, readInk, saveInk, strokesOf, wipeInk, type InkCache } from "./ink";
 
 /** The worker's bindings (worker-configuration.d.ts, from `wrangler types`)
  *  plus the secret shared with the Vercel app, which mints the tokens
@@ -105,8 +105,9 @@ export class TafsirRoom extends YServer {
   // ── Ink (party/ink.ts) ─────────────────────────────────────────────────────
 
   private inkReady = false;
-  /** The room's ink in memory (party/ink.ts): read from storage once per wake. */
+  /** The room's ink in memory (party/ink.ts): heads on wake, strokes (by bucket) when first needed. */
   private inkMem: InkCache | null = null;
+  private txn = <T,>(fn: () => T): T => this.ctx.storage.transactionSync(fn);
   private inkSql() {
     const sql = this.ctx.storage.sql;
     if (!this.inkReady) { ensureInk(sql); this.inkReady = true; }
@@ -130,7 +131,7 @@ export class TafsirRoom extends YServer {
     const sql = this.inkSql();
     if (req.method === "GET") {
       const q = new URL(req.url).searchParams;
-      return readInk(sql, this.inkCache(), me, q.get("mine"), q.get("others"));
+      return readInk(sql, this.inkCache(), me, q.get("mine"), q.get("others"), this.txn);
     }
     if (req.method === "POST") {
       let body: unknown;
@@ -138,6 +139,7 @@ export class TafsirRoom extends YServer {
       // All of one save, or none of it.
       const cache = this.inkCache();
       try {
+        strokesOf(sql, cache, this.txn);   // loaded (and moved to buckets) before the save's own transaction
         return this.ctx.storage.transactionSync(() => saveInk(sql, cache, me, body));
       } catch (e) {
         this.inkMem = null;   // storage rolled back; the copy may not have, so read it again
@@ -168,7 +170,10 @@ export class TafsirRoom extends YServer {
   async inkImport(author: string, name: string, updated: number, strokes: { id: string; surface?: string }[]): Promise<number> {
     const sql = this.inkSql();
     const cache = this.inkCache();
-    try { return this.ctx.storage.transactionSync(() => importInk(sql, cache, author, name, updated, strokes)); }
+    try {
+      strokesOf(sql, cache, this.txn);
+      return this.ctx.storage.transactionSync(() => importInk(sql, cache, author, name, updated, strokes));
+    }
     catch (e) { this.inkMem = null; throw e; }
   }
   /** Admin: remove one author's ink, or all of it (a deleted page). */
@@ -180,7 +185,7 @@ export class TafsirRoom extends YServer {
   }
   /** Admin: what is stored, to check a copy. */
   async inkSummary() {
-    return inkSummary(this.inkSql());
+    return inkSummary(this.inkSql(), this.inkCache(), this.txn);
   }
 
   // ── Incoming messages ───────────────────────────────────────────────────────
