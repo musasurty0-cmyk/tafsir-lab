@@ -9,12 +9,12 @@
 import { useEffect, useRef, useState } from "react";
 import { Ring } from "./QuestionExplorer";
 
-type M = { n: number; surahAr: string; surahEn: string; title: string };
+type M = { n: number; surahAr: string; surahEn: string; title: string; level: number };
 type L = { n: number; name: string };
 export type TileState = "done" | "current" | "upcoming";
 
-function Tile({ m, state, written, total, sessions }: { m: M; state: TileState; written: number | null; total: number; sessions: number }) {
-  const label = state === "done" ? "Completed" : state === "current" ? "Now studying" : "Coming up";
+function Tile({ m, state, written, total, sessions, soon }: { m: M; state: TileState; written: number | null; total: number; sessions: number; soon: boolean }) {
+  const label = state === "done" ? "Completed" : state === "current" ? (soon ? "Starting soon" : "Now studying") : "Coming up";
   return (
     <a href={`#module-${m.n}`} className="y-tile" role="listitem" data-current={state === "current" ? "" : undefined} data-reveal data-reveal-i={m.n - 1}>
       <span className="y-tile-top">
@@ -26,13 +26,15 @@ function Tile({ m, state, written, total, sessions }: { m: M; state: TileState; 
       <span className="y-tile-ar" lang="ar" dir="rtl">{m.surahAr}</span>
       <span className="y-tile-name">{m.surahEn}</span>
       <span className="y-tile-title">{m.title}</span>
-      <span className="y-tile-n">Module {m.n}{sessions ? ` · ${sessions} session${sessions === 1 ? "" : "s"}` : ""}</span>
+      <span className="y-tile-n">Level {m.level} · Module {m.n}{sessions && !soon ? ` · ${sessions} session${sessions === 1 ? "" : "s"}` : ""}</span>
     </a>
   );
 }
 
-export default function JourneyRail({ modules, levels, states, written, sessions, total }: {
+export default function JourneyRail({ modules, levels, states, written, sessions, total, soon = null }: {
   modules: M[]; levels: L[];
+  /** The module whose first session is still waiting for its date. */
+  soon?: number | null;
   states: Record<number, TileState>;
   /** Points written per module, or null when not signed in. */
   written: Record<number, number> | null;
@@ -71,9 +73,10 @@ export default function JourneyRail({ modules, levels, states, written, sessions
     <>
       <div className="y-rail" role="list" ref={rail}>
         {modules.map((m) => (
-          <Tile key={m.n} m={m} state={states[m.n] ?? "upcoming"} written={written ? written[m.n] ?? 0 : null} total={total} sessions={sessions[m.n] ?? 0} />
+          <Tile key={m.n} m={m} state={states[m.n] ?? "upcoming"} written={written ? written[m.n] ?? 0 : null} total={total} sessions={sessions[m.n] ?? 0} soon={soon === m.n} />
         ))}
-        {levels.slice(1).map((lv, i) => (
+        {/* Levels with no module yet, still to come. */}
+        {levels.filter((lv) => !modules.some((m) => m.level >= lv.n)).map((lv, i) => (
           <div key={lv.n} className="y-tile y-tile--locked" role="listitem" data-reveal data-reveal-i={modules.length + i}>
             <span className="y-tile-top"><span className="y-tile-state">Later</span></span>
             <span className="y-tile-level">{lv.n}</span>

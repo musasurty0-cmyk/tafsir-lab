@@ -91,6 +91,8 @@ export interface Module {
   exercises: string[];
   /** Which of the four areas the module mainly develops. */
   areas:    Area[];
+  /** The course level (year) it belongs to: LEVELS[level - 1]. */
+  level:    number;
 }
 
 export const LEVELS = [
@@ -114,6 +116,7 @@ export const MODULES: Module[] = [
       "What does true guidance mean?",
     ],
     areas: ["faith", "worship"],
+    level: 1,
   },
   {
     n: 2, surah: 73, surahEn: "Al-Muzzammil", surahAr: "ٱلْمُزَّمِّل", ayat: 20,
@@ -127,6 +130,7 @@ export const MODULES: Module[] = [
       "What role does spiritual discipline play in sustaining activism and daʿwah?",
     ],
     areas: ["worship", "dawah"],
+    level: 1,
   },
   {
     n: 3, surah: 25, surahEn: "Al-Furqān", surahAr: "ٱلْفُرْقَان", ayat: 77,
@@ -142,6 +146,7 @@ export const MODULES: Module[] = [
       "How does humility protect a revival movement from arrogance and collapse?",
     ],
     areas: ["character", "worship"],
+    level: 1,
   },
   {
     n: 4, surah: 61, surahEn: "Al-Ṣaff", surahAr: "ٱلصَّفّ", ayat: 14,
@@ -154,6 +159,24 @@ export const MODULES: Module[] = [
     ],
     exercises: [],
     areas: ["dawah", "character"],
+    level: 1,
+  },
+  // ── Year 2 ──
+  // Īmān again, now through the Ākhirah. Themes follow the sūrah's own
+  // sections; the shaykh's exercises are added when he sets them.
+  {
+    n: 5, surah: 78, surahEn: "Al-Nabaʾ", surahAr: "ٱلنَّبَأ", ayat: 40,
+    title: "Belief in the Hereafter",
+    titleAr: "ٱلنَّبَإِ ٱلْعَظِيمِ",
+    themes: [
+      "The Great News that people dispute: the Resurrection (1–5)",
+      "The signs in creation, proof that the One who made it can bring it back (6–16)",
+      "The Day of Sorting: what awaits those who denied, and what awaits the righteous (17–36)",
+      "The Day the Spirit and the angels stand in rows, and the regret of “Would that I were dust” (37–40)",
+    ],
+    exercises: [],
+    areas: ["faith"],
+    level: 2,
   },
 ];
 

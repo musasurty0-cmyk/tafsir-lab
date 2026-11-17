@@ -27,7 +27,7 @@ import { modulesWithNotes } from "@/lib/youth-majlis/notes";
 import { getSessionOrNull } from "@/lib/session";
 import {
   cohortMember, currentModule, daysUntil, getSessions, getSettings, joinCohort, londonToday, longDate,
-  moduleDone, nextSession, sessionPoints, sessionScope, tabStats, type SessionView,
+  moduleDone, nextSession, sessionPoints, sessionScope, tabStats, undatedSession, type SessionView,
   isFor, isProject, type AssignmentView,
 } from "@/lib/youth-majlis/data";
 import {
@@ -104,6 +104,10 @@ export default async function YouthMajlisPage({ searchParams }: { searchParams: 
   const next = nextSession(sessions);
   const modN = currentModule(sessions);
   const current = MODULES.find((m) => m.n === modN) ?? MODULES[0];
+  /* A new module whose first session is set but not yet dated: it is what
+     comes next, "date to be confirmed". */
+  const pending = next ? null : undatedSession(sessions, modN);
+  const level = LEVELS[current.level - 1] ?? LEVELS[0];
   const tonight = next?.date === londonToday();
 
   /* How far assigned research has got, from its tab: in the shared workspace,
@@ -130,7 +134,7 @@ export default async function YouthMajlisPage({ searchParams }: { searchParams: 
     .filter(({ a, until }) => (account ? isFor(a, account.userId) : a.everyone) && (!until || until >= today))
     .sort((x, y) => (x.until ?? "9999").localeCompare(y.until ?? "9999"))
     .map(({ a }) => a);
-  const slim = MODULES.map(({ n, surah, surahEn, surahAr, title }) => ({ n, surah, surahEn, surahAr, title }));
+  const slim = MODULES.map(({ n, surah, surahEn, surahAr, title, level }) => ({ n, surah, surahEn, surahAr, title, level }));
 
   return (
     <div className="y-page">
@@ -173,7 +177,7 @@ export default async function YouthMajlisPage({ searchParams }: { searchParams: 
           <div className="y-hero-in">
             <p className="y-basmala y-in" style={{ "--d": "0ms" } as React.CSSProperties} lang="ar" dir="rtl">بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ</p>
             <p className="y-kicker y-in" style={{ "--d": "250ms" } as React.CSSProperties}>
-              {tonight ? "Majlis tonight" : `${LEVELS[0].name} · Module ${current.n}`}{next ? ` · Session ${next.seq}` : ""}
+              {tonight ? "Majlis tonight" : `${level.name} · Module ${current.n}`}{next ? ` · Session ${next.seq}` : pending ? ` · Session ${pending.seq}` : ""}
             </p>
             <p className="y-hero-ar y-ink" lang="ar" dir="rtl">{current.titleAr ?? current.surahAr}</p>
             <h1 id="y-hero-h" className="y-display y-in" style={{ "--d": "1100ms" } as React.CSSProperties}>{current.surahEn}.</h1>
@@ -196,7 +200,7 @@ export default async function YouthMajlisPage({ searchParams }: { searchParams: 
             ) : (
               <div className="y-cta y-in" style={{ "--d": "1400ms" } as React.CSSProperties}>
                 <a className="y-btn" href={`/youth-majlis/open/${current.surah}`}>Open {current.surahEn} in TafsirLab</a>
-                <p className="y-next">The next session hasn’t been set yet.</p>
+                <p className="y-next">{pending ? `Level ${current.level} begins with Sūrah ${current.surahEn}. The date is to be confirmed.` : "The next session hasn’t been set yet."}</p>
               </div>
             )}
 
@@ -297,7 +301,7 @@ export default async function YouthMajlisPage({ searchParams }: { searchParams: 
             <Words id="y-j-h" className="y-h2" text="The journey." />
             <p className="y-h2-sub" data-reveal>Three levels, each built upon the one before.</p>
           </div>
-          <JourneyRail modules={slim} levels={LEVELS} states={states} written={null} sessions={counts} total={QUESTIONS.length} />
+          <JourneyRail modules={slim} levels={LEVELS} states={states} written={null} sessions={counts} total={QUESTIONS.length} soon={pending ? modN : null} />
         </section>
 
         {/* ── Every session ── */}
@@ -330,7 +334,7 @@ export default async function YouthMajlisPage({ searchParams }: { searchParams: 
             <section key={m.n} id={`module-${m.n}`} className={`y-band y-module${i % 2 ? " y-band--alt" : ""}`} aria-labelledby={`y-m${m.n}`}>
               <div className="y-wrap y-module-grid">
                 <div className="y-module-text">
-                  <p className="y-kicker" data-reveal>Module {m.n}{m.n === modN ? " · Now studying" : states[m.n] === "done" ? " · Completed" : ""}</p>
+                  <p className="y-kicker" data-reveal>{m.level > 1 ? `Level ${m.level} · ` : ""}Module {m.n}{m.n === modN ? (pending ? " · Starting soon" : " · Now studying") : states[m.n] === "done" ? " · Completed" : ""}</p>
                   <Words id={`y-m${m.n}`} className="y-h2" text={`${m.surahEn}.`} />
                   <p className="y-h2-sub" data-reveal>{m.title}.</p>
                   <ul className="y-themes">

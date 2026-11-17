@@ -175,12 +175,21 @@ export function nextSession(sessions: SessionView[]): SessionView | null {
     .sort((a, b) => a.date!.localeCompare(b.date!))[0] ?? null;
 }
 
-/** The module being studied: the next session's, or else the most recent one's. */
+/** The module being studied: the next session's; else a later module whose
+ *  first session is set but not yet dated (a new year, "date to be
+ *  confirmed"); else the most recent session's. */
 export function currentModule(sessions: SessionView[]): number {
   const next = nextSession(sessions);
   if (next) return next.moduleN;
   const past = sessions.filter((s) => s.date).sort((a, b) => b.date!.localeCompare(a.date!));
-  return past[0]?.moduleN ?? 1;
+  const last = past[0]?.moduleN ?? 0;
+  const pending = sessions.filter((s) => !s.date && s.moduleN > last).sort((a, b) => a.moduleN - b.moduleN || a.seq - b.seq)[0];
+  return pending?.moduleN ?? (last || 1);
+}
+
+/** The first session of a module still waiting for its date, if any. */
+export function undatedSession(sessions: SessionView[], moduleN: number): SessionView | null {
+  return sessions.filter((s) => s.moduleN === moduleN && !s.date).sort((a, b) => a.seq - b.seq)[0] ?? null;
 }
 
 /** Has every session of a module happened? (And it is not the current one.) */
