@@ -400,6 +400,19 @@ export const ADHKAR: Dhikr[] = [
     "source": "Muslim; al-Tirmidhī"
   },
   {
+    "id": "ghadab",
+    "when": "evening",
+    "count": 1,
+    "parts": [
+      {
+        "ar": "أَعُوذُ بِكَلِمَاتِ اللَّهِ التَّامَّاتِ مِنْ غَضَبِهِ وَعِقَابِهِ، وَشَرِّ عِبَادِهِ، وَمِنْ هَمَزَاتِ الشَّيَاطِينِ وَأَنْ يَحْضُرُونِ"
+      }
+    ],
+    "en": "I seek refuge in the perfect words of Allah from His anger and His punishment, from the evil of His servants, and from the whisperings of the devils and from their coming near me.",
+    "note": "Taught for fear and unease at night, and for being startled in your sleep.",
+    "source": "Abū Dāwūd; al-Tirmidhī"
+  },
+  {
     "id": "salawat",
     "when": "both",
     "count": 10,
