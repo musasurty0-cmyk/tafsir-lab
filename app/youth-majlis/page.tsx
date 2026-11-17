@@ -198,7 +198,7 @@ export default async function YouthMajlisPage({ searchParams }: { searchParams: 
                 </div>
               </div>
             ) : (
-              <div className="y-cta y-in" style={{ "--d": "1400ms" } as React.CSSProperties}>
+              <div className="y-cta y-cta--stack y-in" style={{ "--d": "1400ms" } as React.CSSProperties}>
                 <a className="y-btn" href={`/youth-majlis/open/${current.surah}`}>Open {current.surahEn} in TafsirLab</a>
                 <p className="y-next">{pending ? `Level ${current.level} begins with Sūrah ${current.surahEn}. The date is to be confirmed.` : "The next session hasn’t been set yet."}</p>
               </div>

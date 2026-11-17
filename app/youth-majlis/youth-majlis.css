@@ -61,6 +61,9 @@
 /* ── Actions: one solid button, and chevron links ── */
 .y-cta { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 14px 30px; margin-top: 36px; }
 .y-cta--left { justify-content: flex-start; }
+/* The hero with no dated session: the button, then one centred line under it. */
+.y-cta--stack { flex-direction: column; gap: 18px; }
+.y-cta--stack .y-next { margin-top: 0; text-align: center; text-wrap: balance; }
 .y-btn {
   display: inline-flex; align-items: center; justify-content: center;
   min-height: 46px; padding: 0 24px; border-radius: 12px;
