@@ -1,0 +1,152 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   /adhkar: the morning and evening adhkār. Laid out like the app's newer
+   pages: a large headline ending in a full stop, sentence case, solid tiles
+   with no outlines, one accent. The Arabic is the whole point, so it is set
+   large in the King Fahd face with generous leading for the ḥarakāt, and
+   everything else steps back. Follows the app's light and dark themes.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.ak {
+  --ak-ar: 29px;
+  --ak-tile: var(--panel);
+  --ak-done: color-mix(in oklch, var(--accent) 9%, var(--bg));
+  min-height: 100vh; min-height: 100dvh;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", var(--font-sans), sans-serif;
+  font-size: 16px; line-height: 1.5;
+  padding-bottom: 64px;
+}
+.ak :where(h1, p, ol) { margin: 0; }
+.ak :where(button) { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+.ak :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 10px; }
+
+/* ── Top ── */
+.ak-top {
+  max-width: 760px; margin: 0 auto; padding: 18px 20px 0;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}
+.ak-brand { display: inline-flex; align-items: center; gap: 9px; font-weight: 600; font-size: 15px; color: var(--ink); text-decoration: none; }
+.ak-mark {
+  display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 7px;
+  background: var(--ink); color: var(--bg); font: 700 15px Georgia, serif;
+}
+.ak-tools { display: flex; align-items: center; gap: 8px; }
+.ak-tool {
+  height: 36px; padding: 0 14px; border-radius: 10px; font-size: 14px; font-weight: 500; color: var(--ink-3);
+  background: var(--ak-tile); transition: background 160ms ease, color 160ms ease;
+}
+.ak-tool[aria-pressed="true"] { color: var(--ink); }
+.ak-size { display: flex; gap: 2px; padding: 3px; border-radius: 11px; background: var(--ak-tile); }
+.ak-size button {
+  width: 34px; height: 30px; border-radius: 8px; display: grid; place-items: center;
+  font-family: var(--font-arabic); color: var(--ink-3); line-height: 1;
+}
+.ak-size button[aria-pressed="true"] { background: var(--bg); color: var(--ink); box-shadow: 0 1px 2px oklch(0 0 0 / 0.08); }
+
+/* ── Hero ── */
+.ak-hero { max-width: 760px; margin: 0 auto; padding: 44px 20px 22px; text-align: center; }
+.ak-hero-ar { font-family: var(--font-arabic); font-size: 30px; line-height: 1.7; color: var(--accent-ink); }
+.ak-title {
+  margin-top: 6px; font-size: clamp(40px, 8vw, 64px); font-weight: 700; line-height: 1.04; letter-spacing: -0.035em;
+  text-wrap: balance;
+}
+.ak-sub { margin-top: 12px; font-size: 18px; color: var(--ink-3); text-wrap: balance; }
+
+/* ── The bar: which list, and how far ── */
+.ak-bar {
+  position: sticky; top: 0; z-index: 5;
+  background: color-mix(in oklch, var(--bg) 82%, transparent);
+  -webkit-backdrop-filter: saturate(180%) blur(18px); backdrop-filter: saturate(180%) blur(18px);
+}
+.ak-bar-in { max-width: 760px; margin: 0 auto; padding: 10px 20px; display: flex; align-items: center; gap: 18px; }
+.ak-seg { display: flex; gap: 2px; padding: 3px; border-radius: 12px; background: var(--ak-tile); flex: none; }
+.ak-seg button {
+  display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 16px; border-radius: 9px;
+  font-size: 15px; font-weight: 600; color: var(--ink-3); transition: background 180ms ease, color 180ms ease;
+}
+.ak-seg button[aria-selected="true"] { background: var(--bg); color: var(--ink); box-shadow: 0 1px 3px oklch(0 0 0 / 0.1); }
+.ak-prog { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; }
+.ak-prog-n { flex: none; font-size: 14px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.ak-prog-n b { color: var(--ink); font-weight: 600; }
+.ak-prog-track { flex: 1; height: 6px; border-radius: 3px; background: var(--ak-tile); overflow: hidden; }
+.ak-prog-track i { display: block; height: 100%; border-radius: 3px; background: var(--accent); transition: width 420ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+
+/* ── Cards ── */
+.ak-list { list-style: none; max-width: 760px; margin: 14px auto 0; padding: 0 20px; display: flex; flex-direction: column; gap: 14px; }
+.ak:not([data-ready]) .ak-list { opacity: 0; }
+.ak-list { transition: opacity 240ms ease; }
+.ak-card {
+  position: relative; padding: 22px 26px 18px; border-radius: 22px; background: var(--ak-tile);
+  cursor: pointer; user-select: text; -webkit-tap-highlight-color: transparent;
+  transition: background 260ms ease, transform 140ms ease;
+}
+.ak-card:active { transform: scale(0.992); }
+.ak-card[data-done] { background: var(--ak-done); }
+.ak-card-head { display: flex; align-items: baseline; gap: 10px; }
+.ak-n { font-size: 14px; font-weight: 600; color: var(--ink-4); font-variant-numeric: tabular-nums; min-width: 1.4em; }
+.ak-name { font-size: 15px; font-weight: 600; color: var(--ink); }
+.ak-times { margin-left: auto; font-size: 13.5px; font-weight: 500; color: var(--accent-ink); white-space: nowrap; }
+
+.ak-ar { margin-top: 10px; }
+.ak-ar-part p {
+  font-family: var(--font-arabic); font-size: var(--ak-ar); line-height: 2.05; text-align: right;
+  color: var(--ink); text-wrap: pretty; word-spacing: 0.04em;
+}
+.ak-ar-part + .ak-ar-part { margin-top: 2px; }
+.ak-sura {
+  display: block; margin-top: 12px; font-family: inherit; font-size: 12.5px; font-weight: 600;
+  color: var(--ink-4); text-align: right;
+}
+.ak-ar-part:first-child .ak-sura { margin-top: 0; }
+/* A basmala heading its sūrah sits centred, as in the muṣḥaf. */
+.ak-quran:has(> .ak-sura) p { text-align: center; }
+
+.ak-en { margin-top: 12px; font-size: 16px; line-height: 1.6; color: var(--ink-2); white-space: pre-line; max-width: 62ch; }
+.ak-extra { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; }
+.ak-note { font-size: 14.5px; font-weight: 500; color: var(--ink-2); }
+.ak-virtue { font-size: 14.5px; line-height: 1.55; color: var(--ink-3); max-width: 62ch; }
+.ak-virtue::before { content: "Virtue · "; font-weight: 600; color: var(--accent-ink); }
+
+.ak-foot { margin-top: 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.ak-src { font-size: 13px; color: var(--ink-4); }
+
+.ak-count { position: relative; flex: none; width: 48px; height: 48px; display: grid; place-items: center; }
+.ak-count svg { position: absolute; inset: 0; }
+.ak-ring-bg { fill: var(--bg); stroke: color-mix(in oklch, var(--ink) 10%, transparent); stroke-width: 3; }
+.ak-ring { fill: none; stroke: var(--accent); stroke-width: 3; stroke-linecap: round; transition: stroke-dashoffset 300ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+.ak-count-n { position: relative; font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--ink); }
+.ak-card[data-done] .ak-ring-bg { fill: var(--accent); stroke: var(--accent); }
+.ak-card[data-done] .ak-count-n { color: #fff; animation: ak-pop 320ms cubic-bezier(0.3, 1.6, 0.5, 1); }
+@keyframes ak-pop { from { transform: scale(0.4); opacity: 0; } }
+
+/* ── End ── */
+.ak-end { max-width: 760px; margin: 40px auto 0; padding: 0 20px; text-align: center; }
+.ak-end-ar { font-family: var(--font-arabic); font-size: 30px; line-height: 1.8; color: var(--accent-ink); }
+.ak-end-h { font-size: 32px; font-weight: 700; letter-spacing: -0.03em; }
+.ak-end-sub { margin-top: 4px; font-size: 17px; color: var(--ink-3); }
+.ak-end-acts { margin-top: 18px; display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
+.ak-btn-quiet { height: 42px; padding: 0 18px; border-radius: 12px; background: var(--ak-tile); font-size: 15px; font-weight: 500; }
+.ak-cite { margin: 28px auto 0; max-width: 52ch; font-size: 13px; color: var(--ink-4); }
+
+@media (hover: hover) {
+  .ak-card:not([data-done]):hover { background: color-mix(in oklch, var(--ink) 3%, var(--ak-tile)); }
+  .ak-btn-quiet:hover, .ak-tool:hover { background: var(--panel-2); }
+}
+
+/* ── Phones ── */
+@media (max-width: 720px) {
+  .ak-top { padding: 14px 16px 0; }
+  .ak-tool { padding: 0 11px; }
+  .ak-hero { padding: 30px 16px 16px; }
+  .ak-hero-ar { font-size: 26px; }
+  .ak-sub { font-size: 16px; }
+  .ak-bar-in { padding: 8px 16px; gap: 12px; flex-wrap: wrap; }
+  .ak-seg { flex: 1; }
+  .ak-seg button { flex: 1; justify-content: center; padding: 0 10px; }
+  .ak-prog { flex-basis: 100%; }
+  .ak-list { padding: 0 12px; gap: 10px; }
+  .ak-card { padding: 18px 18px 14px; border-radius: 18px; }
+  .ak-ar-part p { line-height: 2.1; }
+  .ak-en { font-size: 15px; }
+}
