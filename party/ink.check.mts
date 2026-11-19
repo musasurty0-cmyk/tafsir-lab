@@ -98,6 +98,44 @@ const empty = await read(B, null, null);
 assert.deepEqual(empty.myStrokes, []); assert.deepEqual(empty.otherLayers, []);
 console.log("buckets: ok");
 
+// ── Scoped reads: one Mushaf page at a time, or the editor's ink alone ──
+{
+  const sdb = new DatabaseSync(":memory:");
+  const ssql = sqlOf(sdb);
+  ensureInk(ssql);
+  c = loadInk(ssql);
+  const onPage = (id: string, mushafPage?: number) => ({ ...st(id), ...(mushafPage === undefined ? {} : { mushafPage }) });
+  const sv = async (me: typeof A, strokes: object[], surface: string) => { strokesOf(ssql, c); return JSON.parse(await saveInk(ssql, c, me, { strokes, surface }).text()); };
+  // 600 strokes on page 551 first (whole buckets of them), then page 552, a page-less one, and editor ink.
+  for (let i = 0; i < 600; i += 100) await sv(A, Array.from({ length: 100 }, (_, k) => onPage(`p551-${i + k}`, 551)), "canvas");
+  await sv(A, [onPage("p552-a", 552), onPage("p552-b", 552), onPage("nopage")], "canvas");
+  await sv(A, [st("ed-1")], "editor");
+  await sv(B, [onPage("b552", 552), onPage("b551", 551)], "canvas");
+  const rd = async (me: typeof A, scope?: object) => JSON.parse(await readInk(ssql, c, me, null, null, undefined, scope as never).text());
+
+  const all = await rd(A);
+  assert.equal(all.myStrokes.length, 604);
+  let r552 = await rd(A, { surface: "canvas", mushafPage: 552 });
+  assert.deepEqual(ids(r552.myStrokes), ["p552-a", "p552-b", "nopage"]);
+  assert.deepEqual(ids(r552.otherLayers[0].strokes), ["b552"]);
+  const ed = await rd(A, { surface: "editor" });
+  assert.deepEqual(ids(ed.myStrokes), ["ed-1"]);
+  assert.deepEqual(ed.otherLayers, [], "an author with nothing in scope sends no layer");
+  // After a wake, a page-552 read touches only the buckets that hold page-552 ink.
+  c = loadInk(ssql);
+  strokesOf(ssql, c);
+  const before = ssql.rows;
+  r552 = await rd(A, { surface: "canvas", mushafPage: 552 });
+  const touched = ssql.rows - before;
+  assert.deepEqual(ids(r552.myStrokes), ["p552-a", "p552-b", "nopage"]);
+  assert.ok(touched <= 2, `a page-552 read read ${touched} bucket rows`);
+  // An edit that moves a stroke to another page moves it between scopes.
+  await sv(A, [onPage("p552-a", 551)], "canvas");
+  assert.deepEqual(ids((await rd(A, { surface: "canvas", mushafPage: 552 })).myStrokes), ["p552-b", "nopage"]);
+  assert.ok(ids((await rd(A, { surface: "canvas", mushafPage: 551 })).myStrokes).includes("p552-a"));
+  console.log(`scoped reads: one Mushaf page, or the editor alone; a page read touched ${touched} of ${3 + 1} bucket rows: ok`);
+}
+
 // ── A page far past the old 48 MB ceiling still takes new strokes, and its reply streams whole ──
 {
   const big = new DatabaseSync(":memory:");

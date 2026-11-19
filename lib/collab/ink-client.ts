@@ -27,11 +27,23 @@ function roomUrl(pageId: string, q: URLSearchParams): string {
   return `${local ? "http" : "https"}://${PARTYKIT_HOST}/parties/main/${encodeURIComponent(pageId)}/ink?${q}`;
 }
 
-/** The page's ink, less whatever `seen` says is already here. */
-export async function readInk(pageId: string, seen?: InkSeen | null): Promise<Response> {
+/**
+ * What part of a page's ink a read wants (party/ink.ts InkScope): one Mushaf
+ * page of the canvas, or the editor's ink. Without it, everything: a page
+ * with a whole sūrah of Mushaf ink (one has 68 MB) would be downloaded in
+ * full just to show one page of it.
+ */
+export interface InkReadScope { surface: "canvas" | "editor"; mushafPage?: number }
+
+/** The page's ink (or the part `scope` asks for), less whatever `seen` says is already here. */
+export async function readInk(pageId: string, seen?: InkSeen | null, scope?: InkReadScope): Promise<Response> {
   const q = new URLSearchParams({ token: await getCollabToken(pageId) });
   if (seen?.mine) q.set("mine", seen.mine);
   if (seen?.others) q.set("others", seen.others);
+  if (scope) {
+    q.set("surface", scope.surface);
+    if (scope.surface === "canvas" && scope.mushafPage !== undefined) q.set("mp", String(scope.mushafPage));
+  }
   return fetch(roomUrl(pageId, q), { cache: "no-store" });
 }
 

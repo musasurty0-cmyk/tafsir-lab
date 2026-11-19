@@ -99,7 +99,8 @@ export function ensureInk(sql: InkSql): void {
 
 type Head = { author: string; updated: number; name: string };
 type Bucket = { n: number; ids: string[]; size: number };
-type Entry = { b: Bucket; size: number };
+/** Where a stroke is, and what it is on: its surface, and its Mushaf page (null: none, shown on every page). */
+type Entry = { b: Bucket; size: number; surface: string; page: number | null };
 type AuthorIdx = { buckets: Bucket[]; strokes: Map<string, Entry> };
 type Line = { id: string; surface: string; data: string };
 
@@ -128,6 +129,24 @@ function parseLines(data: string): Line[] {
   }
   return out;
 }
+const PAGE_RE = /"mushafPage":(-?\d+)/;
+const pageOf = (data: string): number | null => { const m = PAGE_RE.exec(data); return m ? Number(m[1]) : null; };
+
+/**
+ * Which strokes a read wants. No scope: all of them (older browsers, and the
+ * board snapshot). A Mushaf page is read on its own, so a page with a whole
+ * sūrah of ink (one has 25,556 strokes, 68 MB) sends only the page being
+ * looked at. Strokes with no Mushaf page are on every page, as the browser
+ * already treats them.
+ */
+export interface InkScope { surface?: "canvas" | "editor"; mushafPage?: number }
+function inScope(scope: InkScope | undefined, surface: string, page: number | null): boolean {
+  if (!scope?.surface) return true;
+  if (surface !== scope.surface) return false;
+  if (scope.surface !== "canvas" || scope.mushafPage === undefined) return true;
+  return page === null || page === scope.mushafPage;
+}
+
 const linesText = (lines: Line[]) => lines.map((l) => `${l.id}\t${l.surface}\t${l.data}`).join("\n");
 
 function readBucket(sql: InkSql, author: string, n: number): Line[] {
@@ -195,7 +214,7 @@ export function strokesOf(sql: InkSql, c: InkCache, txn?: <T>(fn: () => T) => T)
     for (const l of parseLines(r.data)) {
       b.ids.push(l.id);
       b.size += l.data.length;
-      a.strokes.set(l.id, { b, size: l.data.length });
+      a.strokes.set(l.id, { b, size: l.data.length, surface: l.surface, page: pageOf(l.data) });
     }
     a.buckets.push(b);
     size += b.size;
@@ -210,7 +229,7 @@ const json = (body: string, status = 200) =>
 
 export function readInk(
   sql: InkSql, c: InkCache, me: InkUser, seenMine: string | null, seenOthers: string | null,
-  txn?: <T>(fn: () => T) => T,
+  txn?: <T>(fn: () => T) => T, scope?: InkScope,
 ): Response {
   const heads = [...c.heads.values()];
   const mine = c.heads.get(me.uid);
@@ -228,7 +247,9 @@ export function readInk(
      and dropped once sent. Strokes are JSON text, never parsed. */
   type Piece = string | { author: string; n: number };
   const plan: Piece[] = ["{"];
-  const list = (a: AuthorIdx | undefined) => { for (const b of a?.buckets ?? []) if (b.ids.length) plan.push({ author: "", n: b.n }); };
+  // Only the buckets holding something in scope are read at all.
+  const wanted = (a: AuthorIdx, b: Bucket) => b.ids.some((id) => { const e = a.strokes.get(id); return !!e && inScope(scope, e.surface, e.page); });
+  const list = (a: AuthorIdx | undefined) => { for (const b of a?.buckets ?? []) if (b.ids.length && wanted(a!, b)) plan.push({ author: "", n: b.n }); };
   const listFor = (author: string) => {
     const at = plan.length;
     list(idx.get(author));
@@ -241,7 +262,7 @@ export function readInk(
     let firstLayer = true;
     for (const h of others) {
       const a = idx.get(h.author);
-      if (!a || !a.strokes.size) continue;
+      if (!a || !a.strokes.size || !a.buckets.some((b) => wanted(a, b))) continue;
       plan.push(`${firstLayer ? "" : ","}{"authorId":${JSON.stringify(h.author)},"authorName":${JSON.stringify(h.name)},"strokes":[`);
       listFor(h.author);
       plan.push("]}");
@@ -265,7 +286,9 @@ export function readInk(
           text += p;
           continue;
         }
-        const strokes = readBucket(sql, p.author, p.n).map((l) => l.data);
+        const strokes = readBucket(sql, p.author, p.n)
+          .filter((l) => inScope(scope, l.surface, scope?.surface === "canvas" ? pageOf(l.data) : null))
+          .map((l) => l.data);
         if (strokes.length) { text += (firstInList ? "" : ",") + strokes.join(","); firstInList = false; }
         break;
       }
@@ -323,13 +346,15 @@ export function saveInk(sql: InkSql, c: InkCache, me: InkUser, body: unknown): R
       was.b.size += s.data.length - was.size;
       c.size += s.data.length - was.size;
       was.size = s.data.length;
+      was.surface = surface;
+      was.page = pageOf(s.data);
     } else {
       const bk = lastBucketFor(a, s.data.length);
       linesOf(bk).push({ id: s.id, surface, data: s.data });
       bk.ids.push(s.id);
       bk.size += s.data.length;
       c.size += s.data.length;
-      a.strokes.set(s.id, { b: bk, size: s.data.length });
+      a.strokes.set(s.id, { b: bk, size: s.data.length, surface, page: pageOf(s.data) });
     }
   }
   for (const [bk, lines] of open) {

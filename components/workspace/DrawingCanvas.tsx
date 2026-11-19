@@ -290,6 +290,17 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
      read sends them so only what changed comes back, and a save updates
      `mine` so drawing never downloads your own ink again. */
   const inkSeenRef    = useRef<InkSeen>({ mine: null, others: null });
+  /* Every read asks for ONE Mushaf page's ink (the one open), never the
+     whole page tab's: one tab holds a whole surah of handwriting (25,556
+     strokes, 68 MB), and downloading all of it to show one page made it
+     crawl. Resolves with the page asked for, so a reply that arrives after
+     the page was turned can be told apart and dropped. */
+  const readPage = useCallback((seen: InkSeen | null) => {
+    const page = mushafPageRef.current;
+    return readInk(pageId, seen, { surface: "canvas", mushafPage: page })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { myStrokes?: Stroke[]; otherLayers?: DrawingLayer[]; mine?: string; others?: string; unchanged?: boolean } | null) => ({ d, page }));
+  }, [pageId]);
   const savedIdsRef   = useRef<Set<string>>(new Set());
   const loadedRef     = useRef(false);
   /* dirty: id -> edit number, for every stroke added or moved since the
@@ -369,8 +380,13 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
    * A stroke confirmed saved AFTER the snapshot was requested simply cannot
    * be in it, so its absence proves nothing and must not delete anything.
    */
-  const syncMyStrokes = useCallback((serverMine: Stroke[], issuedAt = 0) => {
+  const syncMyStrokes = useCallback((serverMine: Stroke[], issuedAt = 0, scopePage?: number) => {
     const canvasServer = serverMine.filter((s) => strokeSurface(s) === "canvas");
+    /* Reads are of one Mushaf page (see readPage). A stroke on another page
+       was not asked about, so its absence from the reply says nothing:
+       only strokes on the page read (or on no page) can be "deleted elsewhere". */
+    const outOfScope = (s: Stroke) =>
+      scopePage !== undefined && s.mushafPage !== undefined && s.mushafPage !== scopePage;
     const serverIds    = new Set(canvasServer.map((s) => s.id));
     const now = Date.now();
     for (const id of serverIds) {
@@ -384,6 +400,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     );
     const kept = allMyStrokesRef.current.filter(
       (s) =>
+        outOfScope(s) ||
         serverIds.has(s.id) ||
         !savedIdsRef.current.has(s.id) ||
         (savedAtRef.current.get(s.id) ?? 0) >= issuedAt,
@@ -725,12 +742,13 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
 
     inkSeenRef.current = { mine: null, others: null };
     function load() {
-      readInk(pageId)
-        .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
-        .then((d: { myStrokes?: Stroke[]; otherLayers?: DrawingLayer[]; mine?: string; others?: string; unchanged?: boolean }) => {
+      readPage(null)
+        .then(({ d, page }) => {
+          if (!d) throw new Error("ink read failed");
           if (!alive) return;
           loadedRef.current = true;
-          noteInkVersions(inkSeenRef.current, d);
+          // Versions describe what was sent; a reply for a page since left is not what is open now.
+          if (page === mushafPageRef.current) noteInkVersions(inkSeenRef.current, d);
 
           if (d.myStrokes) {
             const curPage = mushafPageRef.current;
@@ -773,7 +791,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
             }
           }
 
-          if (d.otherLayers) setOtherLayers(d.otherLayers);
+          if (d.otherLayers && page === mushafPageRef.current) setOtherLayers(d.otherLayers);
           // Anything restored from the outbox goes to the server now.
           if (dirtyRef.current.size || deleteSeqRef.current !== savedDeleteSeqRef.current) scheduleSave();
         })
@@ -800,6 +818,27 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     notifyHistory();
   }, [mushafPage, activeAnchor]);
 
+  /* Turning the Mushaf page loads that page's ink at once (reads are per
+     page, see readPage): what was already here shows straight away, and the
+     server's copy is merged in when it arrives. The first page is the
+     initial load's. */
+  const shownPageRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (shownPageRef.current === null || shownPageRef.current === mushafPage) { shownPageRef.current = mushafPage; return; }
+    shownPageRef.current = mushafPage;
+    let live = true;
+    const issuedAt = Date.now();
+    readPage(null)
+      .then(({ d, page }) => {
+        if (!live || !d || page !== mushafPageRef.current) return;
+        noteInkVersions(inkSeenRef.current, d);
+        if (d.otherLayers) setOtherLayers(d.otherLayers);
+        if (d.myStrokes) syncMyStrokes(d.myStrokes, issuedAt, page);
+      })
+      .catch(() => {});
+    return () => { live = false; };
+  }, [mushafPage, readPage, syncMyStrokes]);
+
   // ── Reconciliation poll (slow) ────────────────────────────────────────
   // Live additions arrive via the socket, but erasures / undo / clear by
   // peers are only persisted to the DB — this poll picks those up and also
@@ -816,18 +855,17 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     const id = setInterval(() => {
       if (!shouldPoll()) return;   // hidden, or nobody at the page (lib/idle)
       const issuedAt = Date.now();   // anything saved after this cannot be in the reply
-      readInk(pageId, inkSeenRef.current)
-        .then(r => r.ok ? r.json() : null)
-        .then((d: { myStrokes?: Stroke[]; otherLayers?: DrawingLayer[]; mine?: string; others?: string; unchanged?: boolean } | null) => {
-          if (!live || !d) return;
+      readPage(inkSeenRef.current)
+        .then(({ d, page }) => {
+          if (!live || !d || page !== mushafPageRef.current) return;
           noteInkVersions(inkSeenRef.current, d);
           if (d.otherLayers) setOtherLayers(d.otherLayers);
-          if (d.myStrokes && loadedRef.current) syncMyStrokes(d.myStrokes, issuedAt);
+          if (d.myStrokes && loadedRef.current) syncMyStrokes(d.myStrokes, issuedAt, page);
         })
         .catch(() => {});
     }, 15000);
     return () => { live = false; clearInterval(id); };
-  }, [pageId, syncMyStrokes]);
+  }, [pageId, readPage, syncMyStrokes]);
 
   // ── Real-time remote strokes via PartyKit socket ──────────────────────
   // • stroke-segment: peer is actively drawing — update remoteActiveRef
@@ -911,19 +949,18 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     let live = true;   // same cross-page guard as the poll and the refocus
     const onOpen = () => {
       if (first) { first = false; return; } // skip the initial connect
-      readInk(pageId, inkSeenRef.current)
-        .then((r) => (r.ok ? r.json() : null))
-        .then((d: { myStrokes?: Stroke[]; otherLayers?: DrawingLayer[]; mine?: string; others?: string; unchanged?: boolean } | null) => {
-          if (!live || !d) return;
+      readPage(inkSeenRef.current)
+        .then(({ d, page }) => {
+          if (!live || !d || page !== mushafPageRef.current) return;
           noteInkVersions(inkSeenRef.current, d);
           if (d.otherLayers) setOtherLayers(d.otherLayers);
-          if (d.myStrokes && loadedRef.current) syncMyStrokes(d.myStrokes);
+          if (d.myStrokes && loadedRef.current) syncMyStrokes(d.myStrokes, 0, page);
         })
         .catch(() => {});
     };
     roomSocket.addEventListener("open", onOpen);
     return () => { live = false; roomSocket.removeEventListener("open", onOpen); };
-  }, [roomSocket, pageId, syncMyStrokes]);
+  }, [roomSocket, readPage, syncMyStrokes]);
 
   // ── Debounced save ─────────────────────────────────────────────────────
   // A save sends only the strokes edited since the server last confirmed
@@ -1043,13 +1080,12 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
         flushPending();
       } else {
         // Back from suspension — don't wait up to 15 s for the poll.
-        readInk(pageId, inkSeenRef.current)
-          .then(r => r.ok ? r.json() : null)
-          .then((d: { myStrokes?: Stroke[]; otherLayers?: DrawingLayer[]; mine?: string; others?: string; unchanged?: boolean } | null) => {
-            if (!live || !d) return;
+        readPage(inkSeenRef.current)
+          .then(({ d, page }) => {
+            if (!live || !d || page !== mushafPageRef.current) return;
             noteInkVersions(inkSeenRef.current, d);
             if (d.otherLayers) setOtherLayers(d.otherLayers);
-            if (d.myStrokes && loadedRef.current) syncMyStrokes(d.myStrokes);
+            if (d.myStrokes && loadedRef.current) syncMyStrokes(d.myStrokes, 0, page);
           })
           .catch(() => {});
       }
@@ -1061,7 +1097,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("pagehide", flushPending);
     };
-  }, [pageId, putStrokes, syncMyStrokes]);
+  }, [pageId, putStrokes, readPage, syncMyStrokes]);
 
   useEffect(() => () => {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);

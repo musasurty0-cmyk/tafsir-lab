@@ -41,7 +41,8 @@ export interface BoardSnapshot {
 
 /** Every stroke on the whiteboard surface, mine and other people's. */
 export async function loadBoardStrokes(pageId: string): Promise<InkStroke[]> {
-  const res = await readInk(pageId).catch(() => null);
+  // Only the whiteboard's own Mushaf "page" (0) of the canvas.
+  const res = await readInk(pageId, null, { surface: "canvas", mushafPage: WB_PAGE }).catch(() => null);
   if (!res?.ok) return [];
   const data = await res.json().catch(() => null) as {
     myStrokes?: unknown[];

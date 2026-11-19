@@ -131,7 +131,13 @@ export class TafsirRoom extends YServer {
     const sql = this.inkSql();
     if (req.method === "GET") {
       const q = new URL(req.url).searchParams;
-      return readInk(sql, this.inkCache(), me, q.get("mine"), q.get("others"), this.txn);
+      // ?surface=canvas&mp=<Mushaf page>, or ?surface=editor: only that part of the page's ink.
+      const surface = q.get("surface");
+      const mp = q.get("mp");
+      const scope = surface === "canvas" || surface === "editor"
+        ? { surface: surface as "canvas" | "editor", ...(mp !== null && /^-?\d+$/.test(mp) ? { mushafPage: Number(mp) } : {}) }
+        : undefined;
+      return readInk(sql, this.inkCache(), me, q.get("mine"), q.get("others"), this.txn, scope);
     }
     if (req.method === "POST") {
       let body: unknown;

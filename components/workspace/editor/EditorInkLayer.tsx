@@ -247,7 +247,8 @@ export default function EditorInkLayer({ pageId }: Props) {
     inkSeenRef.current = { mine: null, others: null };
     function load() {
       const issuedAt = Date.now();   // anything confirmed after this cannot be in the reply
-      readInk(pageId, inkSeenRef.current)
+      // Only the editor's own ink: the page's Mushaf ink can be far larger.
+      readInk(pageId, inkSeenRef.current, { surface: "editor" })
         .then((r) => (r.ok ? r.json() : null))
         .then((d: { myStrokes?: InkStroke[]; otherLayers?: OtherInkLayer[]; mine?: string; others?: string; unchanged?: boolean } | null) => {
           if (!d || cancelled) return;
