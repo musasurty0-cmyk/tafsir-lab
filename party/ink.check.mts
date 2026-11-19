@@ -98,6 +98,31 @@ const empty = await read(B, null, null);
 assert.deepEqual(empty.myStrokes, []); assert.deepEqual(empty.otherLayers, []);
 console.log("buckets: ok");
 
+// ── A page far past the old 48 MB ceiling still takes new strokes, and its reply streams whole ──
+{
+  const big = new DatabaseSync(":memory:");
+  const bsql = sqlOf(big);
+  ensureInk(bsql);
+  c = loadInk(bsql);
+  const fat = (i: number) => ({ id: `f${i}`, color: "#000", width: 2, points: Array.from({ length: 9000 }, (_, k) => ({ x: k + i, y: k })) });
+  for (let i = 0; i < 360; i += 20) {
+    strokesOf(bsql, c);
+    await saveInk(bsql, c, A, { strokes: Array.from({ length: 20 }, (_, k) => fat(i + k)), surface: "canvas" }).text();
+  }
+  const mb = (c.size / 1e6).toFixed(0);
+  assert.ok(c.size > 48_000_000, `test page is only ${mb} MB`);
+  strokesOf(bsql, c);
+  const res = JSON.parse(await saveInk(bsql, c, A, { strokes: [st("after-the-ceiling")], surface: "canvas" }).text());
+  assert.equal(res.ok, true, "a new stroke on a page past 48 MB is accepted");
+  c = loadInk(bsql);                                   // a wake: only the index comes back into memory
+  const reply = await readInk(bsql, c, B, null, null).text();
+  const parsed = JSON.parse(reply);
+  assert.equal(parsed.otherLayers[0].strokes.length, 361);
+  assert.equal(parsed.otherLayers[0].strokes.at(-1).id, "after-the-ceiling");
+  assert.deepEqual(ids(parsed.otherLayers[0].strokes).slice(0, 3), ["f0", "f1", "f2"]);
+  console.log(`${mb} MB page: new strokes accepted, reply streamed whole (${(reply.length / 1e6).toFixed(0)} MB): ok`);
+}
+
 // ── An old room, one row per stroke, moves into buckets on first use ──
 const old = new DatabaseSync(":memory:");
 const osql = sqlOf(old);

@@ -32,7 +32,7 @@ import { YServer } from "y-partyserver";
 import * as Y from "yjs";
 import { jwtVerify } from "jose";
 import type { IncomingMessage, PresenceData } from "./types";
-import { ensureInk, importInk, inkSummary, loadInk, readInk, saveInk, strokesOf, wipeInk, type InkCache } from "./ink";
+import { ensureInk, importInk, inkStats, inkSummary, loadInk, readInk, saveInk, strokesOf, wipeInk, type InkCache } from "./ink";
 
 /** The worker's bindings (worker-configuration.d.ts, from `wrangler types`)
  *  plus the secret shared with the Vercel app, which mints the tokens
@@ -183,6 +183,10 @@ export class TafsirRoom extends YServer {
     try { this.ctx.storage.transactionSync(() => wipeInk(sql, cache, author)); }
     catch (e) { this.inkMem = null; throw e; }
   }
+  /** Admin: aggregate numbers only (party/ink.ts inkStats). */
+  async inkStats() {
+    return inkStats(this.inkSql(), this.inkCache(), this.txn);
+  }
   /** Admin: what is stored, to check a copy. */
   async inkSummary() {
     return inkSummary(this.inkSql(), this.inkCache(), this.txn);
@@ -321,6 +325,7 @@ function withCors(res: Response, origin: string | null): Response {
  *   { op: "import",  page, author, name, updated, strokes }  the copy from the database
  *   { op: "summary", pages: string[] }  what is stored, to check the copy
  *   { op: "doc-reset", pages: string[] }  forget the live text, to re-seed from the database
+ *   { op: "ids",     pages: string[] }  each room's Durable Object id (to read usage reports)
  */
 async function inkAdmin(req: Request, env: RoomEnv): Promise<Response> {
   const secret = env.COLLAB_SECRET || env.SESSION_SECRET;
@@ -349,6 +354,14 @@ async function inkAdmin(req: Request, env: RoomEnv): Promise<Response> {
     const out: Record<string, string> = {};
     for (const id of b.pages) out[id] = await (await room(id)).docReset();
     return Response.json(out);
+  }
+  // Which Durable Object holds each room: Cloudflare's usage reports only give
+  // object ids, and this is the only way to put a page name to one. Read-only.
+  if (b.op === "ids" && Array.isArray(b.pages)) {
+    return Response.json(Object.fromEntries(b.pages.slice(0, 2000).map((id) => [id, env.Main.idFromName(id).toString()])));
+  }
+  if (b.op === "stats" && typeof b.page === "string") {
+    return Response.json(await (await room(b.page)).inkStats());
   }
   if (b.op === "summary" && Array.isArray(b.pages)) {
     const out: Record<string, unknown> = {};

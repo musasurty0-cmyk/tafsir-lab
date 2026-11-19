@@ -57,10 +57,22 @@ export interface InkUser {
    time such a room's strokes are needed they are moved into buckets, once,
    in one transaction, and the old rows deleted. */
 
+/* ── Memory: an index, never the ink ─────────────────────────────────────────
+   A room keeps only an INDEX in memory: for each stroke, which bucket holds
+   it and how big it is. The ink itself stays in storage. One page (25,556
+   Mushaf strokes, 68 MB) is far past what a room can hold in its 128 MB, and
+   with the whole page in memory a reply for it ran the room out of memory
+   (15 Nov 2026), and a 48 MB ceiling added after that refused that page's
+   every new stroke (17-19 Nov). Now:
+   - a reply is STREAMED, one bucket row at a time, so no page is ever in
+     memory whole, whatever its size;
+   - a save reads and rewrites only the buckets it touches (usually one).
+   ROOM_MAX is a guard against runaway storage, not memory. */
+
 const BUCKET_STROKES = 250;
 const BUCKET_CHARS = 400_000;        // stays far below SQLite's 2 MB value limit
 const STROKE_MAX = 1_000_000;        // one stroke's JSON, beyond any real stroke
-const ROOM_MAX = 48_000_000;         // a page's ink in memory stays well inside 128 MB
+const ROOM_MAX = 400_000_000;        // a page's ink in storage; a runaway guard only
 
 export function ensureInk(sql: InkSql): void {
   // The old per-stroke table: only read, to move a room's ink into buckets.
@@ -86,14 +98,15 @@ export function ensureInk(sql: InkSql): void {
 }
 
 type Head = { author: string; updated: number; name: string };
-type Stroke = { data: string; surface: string; b: Bucket };
 type Bucket = { n: number; ids: string[]; size: number };
-type AuthorInk = { buckets: Bucket[]; strokes: Map<string, Stroke> };
+type Entry = { b: Bucket; size: number };
+type AuthorIdx = { buckets: Bucket[]; strokes: Map<string, Entry> };
+type Line = { id: string; surface: string; data: string };
 
-/** A room's ink in memory. Heads are read when the room wakes; strokes only when first needed. */
+/** A room's ink in memory: heads from waking, and (when first needed) an index of where each stroke is. */
 export class InkCache {
   heads = new Map<string, Head>();
-  ink: Map<string, AuthorInk> | null = null;
+  idx: Map<string, AuthorIdx> | null = null;
   size = 0;
 }
 
@@ -103,109 +116,97 @@ export function loadInk(sql: InkSql): InkCache {
   return c;
 }
 
-const authorOf = (ink: Map<string, AuthorInk>, author: string): AuthorInk =>
-  ink.get(author) ?? ink.set(author, { buckets: [], strokes: new Map() }).get(author)!;
+const authorOf = (idx: Map<string, AuthorIdx>, author: string): AuthorIdx =>
+  idx.get(author) ?? idx.set(author, { buckets: [], strokes: new Map() }).get(author)!;
 
-function bucketText(a: AuthorInk, b: Bucket): string {
-  return b.ids.map((id) => { const s = a.strokes.get(id)!; return `${id}\t${s.surface}\t${s.data}`; }).join("\n");
+function parseLines(data: string): Line[] {
+  const out: Line[] = [];
+  for (const line of data.split("\n")) {
+    if (!line) continue;
+    const t1 = line.indexOf("\t"), t2 = line.indexOf("\t", t1 + 1);
+    out.push({ id: line.slice(0, t1), surface: line.slice(t1 + 1, t2), data: line.slice(t2 + 1) });
+  }
+  return out;
+}
+const linesText = (lines: Line[]) => lines.map((l) => `${l.id}\t${l.surface}\t${l.data}`).join("\n");
+
+function readBucket(sql: InkSql, author: string, n: number): Line[] {
+  const row = sql.exec<{ data: string }>(`SELECT data FROM ink_bucket WHERE author = ? AND n = ?`, author, n).toArray()[0];
+  return row ? parseLines(row.data) : [];
 }
 
-function putBucket(sql: InkSql, author: string, a: AuthorInk, b: Bucket): void {
-  if (!b.ids.length) {
-    sql.exec(`DELETE FROM ink_bucket WHERE author = ? AND n = ?`, author, b.n);
-    a.buckets = a.buckets.filter((x) => x !== b);
-    return;
-  }
+function writeBucket(sql: InkSql, author: string, n: number, lines: Line[]): void {
+  if (!lines.length) { sql.exec(`DELETE FROM ink_bucket WHERE author = ? AND n = ?`, author, n); return; }
   sql.exec(
     `INSERT INTO ink_bucket (author, n, data) VALUES (?, ?, ?)
      ON CONFLICT (author, n) DO UPDATE SET data = excluded.data`,
-    author, b.n, bucketText(a, b));
+    author, n, linesText(lines));
 }
 
-/** Adds a stroke at the end of an author's drawing order, starting a new bucket when the last is full. */
-function append(a: AuthorInk, id: string, surface: string, data: string): Bucket {
+/** Where the next new stroke goes: the author's last bucket, or a new one when that is full. */
+function lastBucketFor(a: AuthorIdx, size: number): Bucket {
   let last = a.buckets[a.buckets.length - 1];
-  if (!last || last.ids.length >= BUCKET_STROKES || (last.ids.length > 0 && last.size + data.length > BUCKET_CHARS)) {
+  if (!last || last.ids.length >= BUCKET_STROKES || (last.ids.length > 0 && last.size + size > BUCKET_CHARS)) {
     last = { n: last ? last.n + 1 : 0, ids: [], size: 0 };
     a.buckets.push(last);
   }
-  last.ids.push(id);
-  last.size += data.length;
-  a.strokes.set(id, { data, surface, b: last });
   return last;
+}
+
+/** Writes a whole author's strokes as fresh buckets (a move or an import). */
+function writeAll(sql: InkSql, author: string, lines: Line[]): void {
+  sql.exec(`DELETE FROM ink_bucket WHERE author = ?`, author);
+  const a: AuthorIdx = { buckets: [], strokes: new Map() };
+  const pending = new Map<number, Line[]>();
+  for (const l of lines) {
+    const b = lastBucketFor(a, l.data.length);
+    b.ids.push(l.id); b.size += l.data.length;
+    (pending.get(b.n) ?? pending.set(b.n, []).get(b.n)!).push(l);
+  }
+  for (const [n, ls] of pending) writeBucket(sql, author, n, ls);
 }
 
 /** Moves a room still stored one row per stroke into buckets. Once per room, ever. */
 function migrate(sql: InkSql): void {
   if (!sql.exec(`SELECT 1 FROM ink_stroke LIMIT 1`).toArray().length) return;
-  const ink = new Map<string, AuthorInk>();
+  const by = new Map<string, Line[]>();
   for (const r of sql.exec<{ author: string; id: string; surface: string; data: string }>(
     `SELECT author, id, surface, data FROM ink_stroke ORDER BY seq`)) {
-    append(authorOf(ink, r.author), r.id, r.surface, r.data);
+    (by.get(r.author) ?? by.set(r.author, []).get(r.author)!).push({ id: r.id, surface: r.surface, data: r.data });
   }
-  for (const [author, a] of ink) {
-    sql.exec(`DELETE FROM ink_bucket WHERE author = ?`, author);
-    for (const b of a.buckets) putBucket(sql, author, a, b);
-  }
+  for (const [author, lines] of by) writeAll(sql, author, lines);
   sql.exec(`DELETE FROM ink_stroke`);
 }
 
 /**
- * The room's strokes, read from storage the first time they are needed after
- * a wake: one row per bucket. `txn` runs the one-off move from the old table
- * atomically; callers already inside a transaction pass none.
+ * The room's index, read from storage the first time it is needed after a
+ * wake: one row per bucket, each parsed for its ids and sizes and then let
+ * go. `txn` runs the one-off move from the old table atomically; callers
+ * already inside a transaction pass none.
  */
-export function strokesOf(sql: InkSql, c: InkCache, txn?: <T>(fn: () => T) => T): Map<string, AuthorInk> {
-  if (c.ink) return c.ink;
+export function strokesOf(sql: InkSql, c: InkCache, txn?: <T>(fn: () => T) => T): Map<string, AuthorIdx> {
+  if (c.idx) return c.idx;
   if (txn) txn(() => migrate(sql)); else migrate(sql);
-  const ink = new Map<string, AuthorInk>();
+  const idx = new Map<string, AuthorIdx>();
   let size = 0;
   for (const r of sql.exec<{ author: string; n: number; data: string }>(`SELECT author, n, data FROM ink_bucket ORDER BY author, n`)) {
-    const a = authorOf(ink, r.author);
+    const a = authorOf(idx, r.author);
     const b: Bucket = { n: r.n, ids: [], size: 0 };
-    for (const line of r.data.split("\n")) {
-      if (!line) continue;
-      const t1 = line.indexOf("\t"), t2 = line.indexOf("\t", t1 + 1);
-      const id = line.slice(0, t1), data = line.slice(t2 + 1);
-      b.ids.push(id);
-      b.size += data.length;
-      a.strokes.set(id, { data, surface: line.slice(t1 + 1, t2), b });
+    for (const l of parseLines(r.data)) {
+      b.ids.push(l.id);
+      b.size += l.data.length;
+      a.strokes.set(l.id, { b, size: l.data.length });
     }
     a.buckets.push(b);
     size += b.size;
   }
-  c.ink = ink;
+  c.idx = idx;
   c.size = size;
-  return ink;
+  return idx;
 }
 
 const json = (body: string, status = 200) =>
   new Response(body, { status, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } });
-
-/** Text joined into a body in one pass, in UTF-8 chunks, never as one giant string. */
-class Body {
-  private parts: Uint8Array[] = [];
-  private buf: string[] = [];
-  private n = 0;
-  private enc = new TextEncoder();
-  add(s: string) {
-    this.buf.push(s); this.n += s.length;
-    if (this.n > 256_000) this.flush();
-  }
-  private flush() {
-    if (this.buf.length) this.parts.push(this.enc.encode(this.buf.join("")));
-    this.buf = []; this.n = 0;
-  }
-  response(): Response {
-    this.flush();
-    return new Response(new Blob(this.parts), { headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } });
-  }
-}
-
-function* strokeData(a: AuthorInk | undefined): Generator<string> {
-  if (!a) return;
-  for (const b of a.buckets) for (const id of b.ids) yield a.strokes.get(id)!.data;
-}
 
 export function readInk(
   sql: InkSql, c: InkCache, me: InkUser, seenMine: string | null, seenOthers: string | null,
@@ -221,38 +222,61 @@ export function readInk(
   // Nothing new: answered from the heads alone, without reading a stroke.
   if (!needMine && !needOthers) return json(JSON.stringify({ unchanged: true, mine: mineV, others: othersV }));
 
-  const ink = strokesOf(sql, c, txn);
-  // Strokes are stored as JSON text and joined back into arrays as text, never parsed.
-  const out = new Body();
-  out.add("{");
-  const list = (strokes: Iterable<string>) => {
-    let first = true;
-    for (const d of strokes) { out.add(first ? d : "," + d); first = false; }
+  const idx = strokesOf(sql, c, txn);
+  /* The reply is a plan of text and bucket references, streamed one piece at
+     a time: a bucket is read from storage only when the stream reaches it,
+     and dropped once sent. Strokes are JSON text, never parsed. */
+  type Piece = string | { author: string; n: number };
+  const plan: Piece[] = ["{"];
+  const list = (a: AuthorIdx | undefined) => { for (const b of a?.buckets ?? []) if (b.ids.length) plan.push({ author: "", n: b.n }); };
+  const listFor = (author: string) => {
+    const at = plan.length;
+    list(idx.get(author));
+    for (let i = at; i < plan.length; i++) (plan[i] as { author: string }).author = author;
   };
-  if (needMine) {
-    out.add(`"myStrokes":[`);
-    list(strokeData(ink.get(me.uid)));
-    out.add("],");
-  }
+  if (needMine) { plan.push(`"myStrokes":[`); listFor(me.uid); plan.push("],"); }
   if (needOthers) {
     // Sent whenever it changed, even empty, so ink erased elsewhere clears here.
-    out.add(`"otherLayers":[`);
+    plan.push(`"otherLayers":[`);
     let firstLayer = true;
     for (const h of others) {
-      const a = ink.get(h.author);
+      const a = idx.get(h.author);
       if (!a || !a.strokes.size) continue;
-      out.add(`${firstLayer ? "" : ","}{"authorId":${JSON.stringify(h.author)},"authorName":${JSON.stringify(h.name)},"strokes":[`);
-      list(strokeData(a));
-      out.add("]}");
+      plan.push(`${firstLayer ? "" : ","}{"authorId":${JSON.stringify(h.author)},"authorName":${JSON.stringify(h.name)},"strokes":[`);
+      listFor(h.author);
+      plan.push("]}");
       firstLayer = false;
     }
-    out.add("],");
+    plan.push("],");
   }
-  out.add(`"mine":${JSON.stringify(mineV)},"others":${JSON.stringify(othersV)}}`);
-  return out.response();
+  plan.push(`"mine":${JSON.stringify(mineV)},"others":${JSON.stringify(othersV)}}`);
+
+  const enc = new TextEncoder();
+  let i = 0;
+  let firstInList = true;
+  const stream = new ReadableStream<Uint8Array>({
+    pull(ctrl) {
+      // Text pieces go together; each bucket is its own chunk.
+      let text = "";
+      while (i < plan.length) {
+        const p = plan[i++];
+        if (typeof p === "string") {
+          if (p.endsWith("[")) firstInList = true;
+          text += p;
+          continue;
+        }
+        const strokes = readBucket(sql, p.author, p.n).map((l) => l.data);
+        if (strokes.length) { text += (firstInList ? "" : ",") + strokes.join(","); firstInList = false; }
+        break;
+      }
+      if (text) ctrl.enqueue(enc.encode(text));
+      if (i >= plan.length) ctrl.close();
+    },
+  });
+  return new Response(stream, { headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } });
 }
 
-/** Call inside a transaction, with the strokes already loaded (strokesOf). */
+/** Call inside a transaction, with the index already loaded (strokesOf). */
 export function saveInk(sql: InkSql, c: InkCache, me: InkUser, body: unknown): Response {
   if (!me.canWrite) return json(JSON.stringify({ error: "Read-only" }), 403);
   const b = (body ?? {}) as { strokes?: unknown; surface?: unknown; deletedIds?: unknown; base?: unknown };
@@ -267,38 +291,51 @@ export function saveInk(sql: InkSql, c: InkCache, me: InkUser, body: unknown): R
     .map((s) => ({ id: s.id, data: JSON.stringify(s) }));
   if (packed.some((s) => s.data.length > STROKE_MAX)) return json(JSON.stringify({ error: "That stroke is too large to save." }), 413);
 
-  const ink = strokesOf(sql, c);
+  const idx = strokesOf(sql, c);
   const prev = c.heads.get(me.uid)?.updated ?? 0;
-  const roomHadInk = [...ink.values()].some((a) => a.strokes.size > 0);
-  const a = authorOf(ink, me.uid);
-  const added = packed.reduce((n, s) => n + s.data.length - (a.strokes.get(s.id)?.data.length ?? 0), 0);
+  const roomHadInk = [...idx.values()].some((a) => a.strokes.size > 0);
+  const a = authorOf(idx, me.uid);
+  const added = packed.reduce((n, s) => n + s.data.length - (a.strokes.get(s.id)?.size ?? 0), 0);
   if (added > 0 && c.size + added > ROOM_MAX) return json(JSON.stringify({ error: "This page holds as much handwriting as it can." }), 413);
 
-  const touched = new Set<Bucket>();
+  // The buckets this save touches, read once each, changed, and written back.
+  const open = new Map<Bucket, Line[]>();
+  const linesOf = (bk: Bucket) => open.get(bk) ?? open.set(bk, readBucket(sql, me.uid, bk.n)).get(bk)!;
+
   for (const id of deleted) {
-    const s = a.strokes.get(id);
-    if (!s) continue;
-    s.b.ids = s.b.ids.filter((x) => x !== id);
-    s.b.size -= s.data.length;
-    c.size -= s.data.length;
+    const e = a.strokes.get(id);
+    if (!e) continue;
+    const lines = linesOf(e.b);
+    open.set(e.b, lines.filter((l) => l.id !== id));
+    e.b.ids = e.b.ids.filter((x) => x !== id);
+    e.b.size -= e.size;
+    c.size -= e.size;
     a.strokes.delete(id);
-    touched.add(s.b);
   }
   for (const s of packed) {
     const was = a.strokes.get(s.id);
     if (was) {
       // An edit keeps its place in the drawing order.
-      was.b.size += s.data.length - was.data.length;
-      c.size += s.data.length - was.data.length;
-      was.data = s.data;
-      was.surface = surface;
-      touched.add(was.b);
+      const lines = linesOf(was.b);
+      const l = lines.find((x) => x.id === s.id);
+      if (l) { l.data = s.data; l.surface = surface; }
+      else lines.push({ id: s.id, surface, data: s.data });   // the index and storage disagreed: storage wins, then this
+      was.b.size += s.data.length - was.size;
+      c.size += s.data.length - was.size;
+      was.size = s.data.length;
     } else {
+      const bk = lastBucketFor(a, s.data.length);
+      linesOf(bk).push({ id: s.id, surface, data: s.data });
+      bk.ids.push(s.id);
+      bk.size += s.data.length;
       c.size += s.data.length;
-      touched.add(append(a, s.id, surface, s.data));
+      a.strokes.set(s.id, { b: bk, size: s.data.length });
     }
   }
-  for (const bk of touched) putBucket(sql, me.uid, a, bk);
+  for (const [bk, lines] of open) {
+    writeBucket(sql, me.uid, bk.n, lines);
+    if (!lines.length) a.buckets = a.buckets.filter((x) => x !== bk);
+  }
 
   // Strictly later than the last version, even within one millisecond.
   const now = Math.max(Date.now(), prev + 1);
@@ -317,26 +354,18 @@ export function saveInk(sql: InkSql, c: InkCache, me: InkUser, body: unknown): R
   }));
 }
 
-/** Replace one author's ink here wholesale: the copy from the database. Inside a transaction, strokes loaded. */
+/** Replace one author's ink here wholesale: the copy from the database. Inside a transaction, index loaded. */
 export function importInk(sql: InkSql, c: InkCache, author: string, name: string, updated: number, strokes: { id: string; surface?: string }[]): number {
-  const ink = strokesOf(sql, c);
-  for (const s of ink.get(author)?.strokes.values() ?? []) c.size -= s.data.length;
-  sql.exec(`DELETE FROM ink_bucket WHERE author = ?`, author);
-  ink.delete(author);
-  const a = authorOf(ink, author);
+  strokesOf(sql, c);
   // A repeated id keeps its last copy, at the place of that copy (as the old
   // INSERT OR REPLACE did).
-  const last = new Map<string, { id: string; surface?: string }>();
-  for (const s of strokes) { last.delete(s.id); last.set(s.id, s); }
-  for (const s of last.values()) {
-    const data = JSON.stringify(s);
-    append(a, s.id, s.surface === "editor" ? "editor" : "canvas", data);
-    c.size += data.length;
-  }
-  for (const b of [...a.buckets]) putBucket(sql, author, a, b);
+  const last = new Map<string, Line>();
+  for (const s of strokes) { last.delete(s.id); last.set(s.id, { id: s.id, surface: s.surface === "editor" ? "editor" : "canvas", data: JSON.stringify(s) }); }
+  writeAll(sql, author, [...last.values()]);
   sql.exec(`INSERT INTO ink_head (author, updated, name) VALUES (?, ?, ?)
             ON CONFLICT (author) DO UPDATE SET updated = excluded.updated, name = excluded.name`, author, updated, name);
   c.heads.set(author, { author, updated, name });
+  c.idx = null;   // re-read on next use: cheap, and never out of step
   return strokes.length;
 }
 
@@ -347,23 +376,54 @@ export function wipeInk(sql: InkSql, c: InkCache, author?: string): void {
     sql.exec(`DELETE FROM ink_stroke WHERE author = ?`, author);
     sql.exec(`DELETE FROM ink_head WHERE author = ?`, author);
     c.heads.delete(author);
-    if (c.ink) { for (const s of c.ink.get(author)?.strokes.values() ?? []) c.size -= s.data.length; c.ink.delete(author); }
   } else {
     sql.exec(`DELETE FROM ink_bucket`);
     sql.exec(`DELETE FROM ink_stroke`);
     sql.exec(`DELETE FROM ink_head`);
     c.heads.clear();
-    c.ink = new Map();
-    c.size = 0;
   }
+  c.idx = null;
 }
 
 /** Per-author stroke counts and ids in order, to check a copy against its source. */
-export function inkSummary(sql: InkSql, c: InkCache, txn?: <T>(fn: () => T) => T): { author: string; count: number; updated: number; ids: string }[] {
-  const ink = strokesOf(sql, c, txn);
+export function inkSummary(sql: InkSql, c: InkCache, txn?: <T>(fn: () => T) => T): { author: string; count: number; updated: number; ids: string; chars: number; buckets: number }[] {
+  const idx = strokesOf(sql, c, txn);
   return [...c.heads.values()].map((h) => {
-    const a = ink.get(h.author);
+    const a = idx.get(h.author);
     const ids = a ? a.buckets.flatMap((b) => b.ids) : [];
-    return { author: h.author, count: ids.length, updated: h.updated, ids: ids.join(",") };
+    const chars = a ? a.buckets.reduce((n, b) => n + b.size, 0) : 0;
+    return { author: h.author, count: ids.length, updated: h.updated, ids: ids.join(","), chars, buckets: a?.buckets.length ?? 0 };
   });
+}
+
+/**
+ * Admin: aggregate numbers about a room's ink, never the ink itself: how many
+ * strokes per surface and Mushaf page, point counts, and how many strokes
+ * are exact copies of another (same geometry, different id). Reads bucket by
+ * bucket, so it is safe on any size of page.
+ */
+export function inkStats(sql: InkSql, c: InkCache, txn?: <T>(fn: () => T) => T) {
+  const idx = strokesOf(sql, c, txn);
+  const out: Record<string, unknown>[] = [];
+  for (const [author, a] of idx) {
+    const bySurface: Record<string, number> = {}, byPage: Record<string, number> = {};
+    const seen = new Set<string>();
+    let strokes = 0, points = 0, maxPoints = 0, dupes = 0, chars = 0;
+    for (const bk of a.buckets) {
+      for (const l of readBucket(sql, author, bk.n)) {
+        let o: { surface?: string; mushafPage?: number; anchor?: string; points?: unknown[]; tool?: string } = {};
+        try { o = JSON.parse(l.data); } catch { /* unreadable: counted with no page */ }
+        strokes++; chars += l.data.length;
+        bySurface[o.surface ?? l.surface] = (bySurface[o.surface ?? l.surface] ?? 0) + 1;
+        const pg = String(o.mushafPage ?? "-");
+        byPage[pg] = (byPage[pg] ?? 0) + 1;
+        const n = Array.isArray(o.points) ? o.points.length : 0;
+        points += n; if (n > maxPoints) maxPoints = n;
+        const key = `${o.tool}|${o.surface}|${o.mushafPage}|${o.anchor}|${JSON.stringify(o.points)}`;
+        if (seen.has(key)) dupes++; else seen.add(key);
+      }
+    }
+    out.push({ author, strokes, chars, buckets: a.buckets.length, bySurface, byPage, points, avgPoints: Math.round(points / Math.max(1, strokes)), maxPoints, dupes });
+  }
+  return out;
 }
