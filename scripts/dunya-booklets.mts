@@ -1,7 +1,7 @@
 /**
  * Put the MadAsMaths question booklets behind /dunya, filed by chapter.
  *
- *   npx tsx scripts/dunya-booklets.mts <booklets.zip>
+ *   npx tsx scripts/dunya-booklets.mts <booklets.zip> [TafsirLab_<name>.pdf …]
  *
  * The zip holds TafsirLab_<name>.pdf files (T. Madas' worksheets from
  * madasmaths.com, answers taken out, credited on every page). Where each belongs
@@ -13,12 +13,14 @@
  * Files go to the private R2 bucket; the list to DunyaPlan.catalog.booklets,
  * which scripts/dunya-upload.mts leaves alone. A file already stored at the
  * same size is not sent again, so an interrupted run can simply be repeated.
+ * A loose PDF after the zip is used instead of the zip's own copy.
  *
  *   DRY_RUN=1      print the list and stop (JSON_OUT=file writes it there too)
  *   SKIP_UPLOAD=1  write the list only
+ *   REPLACE=1      send every file again, for a new edition
  */
 
-import { writeFileSync, mkdtempSync, rmSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { exec } from "node:child_process";
@@ -44,7 +46,7 @@ discriminant_practice | The discriminant | y1-pure-2
 discriminant_exam_questions | The discriminant | y1-pure-2
 inequalities_basic_practice | Inequalities, the basics | y1-pure-3
 inequalities_exam_questions | Inequalities | y1-pure-3
-inequalities | Inequalities, harder | y1-pure-3 @ pages 1 to 9 and 19 to 23; y2-pure-2 @ pages 10 to 18; fp1-7.1
+inequalities | Inequalities, harder | y1-pure-3 @ pages 3 to 14 and 29 to 35; y2-pure-2 @ pages 16 to 27; fp1-7.1
 equations_exam_questions_i | Equations | y1-pure-3; y1-pure-2
 equations_advanced_skills | Equations, advanced skills | y1-pure-3; y1-pure-2
 cubic_sketching | Sketching cubics | y1-pure-4
@@ -56,7 +58,7 @@ transformations_of_graphs_exam_questions | Transformations of graphs | y1-pure-4
 line_coordinate_geometry_practice | Straight lines | y1-pure-5
 line_coordinate_geometry_exam_questions | Straight lines | y1-pure-5
 circle_coordinate_geometry_exam_questions | Circles | y1-pure-6
-polynomials_practice_intro | Polynomials, introduction | y1-pure-7; y1-pure-1
+polynomials_practice_intro | Polynomials, introduction | y1-pure-7; y1-pure-1 @ pages 3 to 5
 polynomials_exam_questions_intro | Polynomials, introduction | y1-pure-7
 polynomials | Polynomials, harder | y1-pure-7
 identities | Algebraic identities | y1-pure-7
@@ -67,7 +69,7 @@ trigonometric_graphs | Trigonometric graphs | y1-pure-9 @ the questions in degre
 3d_geometric_mensuration | Triangles in 3D | y1-pure-9
 trigonometric_equations_introduction | Trigonometric equations, introduction | y1-pure-10 @ the questions in degrees; y2-pure-5 @ the questions in radians
 trigonometry_introduction_exam_equations | Trigonometric equations, introduction | y1-pure-10 @ the questions in degrees; y2-pure-5 @ the questions in radians
-vector_algebra_introduction | Vectors, introduction | y1-pure-11 @ pages 1 to 19; y2-pure-12 @ pages 20 to 42
+vector_algebra_introduction | Vectors, introduction | y1-pure-11 @ pages 1 to 20; y2-pure-12 @ pages 22 to 49
 differentiation_practice_i | Differentiation, part 1 | y1-pure-12
 differentiation_from_first_principles | Differentiation from first principles | y1-pure-12 @ everything but sin and cos; y2-pure-9 @ the questions on sin and cos
 calculus_introduction_exam_questions | Calculus, introduction | y1-pure-12; y1-pure-13
@@ -83,15 +85,15 @@ linearization_of_graphs | Linearising graphs | y1-pure-14
 m1_kinematic_graphs | Kinematic graphs | y1-mech-2
 m1_kinematics | Kinematics | y1-mech-2
 m1_connected_particles | Connected particles | y1-mech-3 @ the questions without slopes or friction; y2-mech-7 @ the ones with slopes or friction
-m1_m2_kinematics_using_calculus | Kinematics with calculus | y1-mech-4 @ pages 1 to 21; y2-mech-8 @ pages 23 to 29
+m1_m2_kinematics_using_calculus | Kinematics with calculus | y1-mech-4 @ pages 3 to 26; y2-mech-8 @ pages 29 to 37
 
-data_analysis | Data analysis | y1-stats-2 @ pages 1 to 23 and 34 to 38; y1-stats-3 @ pages 25 to 33
+data_analysis | Data analysis | y1-stats-2 @ pages 3 to 32 and 48 to 53; y1-stats-3 @ pages 35 to 46
 data_analysis_exam_questions | Data analysis | y1-stats-2; y1-stats-3
-probability | Probability | y1-stats-5 @ pages 96 to 136, and the earlier ones without conditional probability; y2-stats-2 @ pages 1 to 94
+probability | Probability | y1-stats-5 @ pages 118 to 162, and the earlier ones without conditional probability; y2-stats-2 @ pages 3 to 115
 binomial_distribution | The binomial distribution | y1-stats-6
-hypothesis_testing_introduction | Hypothesis testing, introduction | y1-stats-7 @ pages 1 to 34; fs1-4.1 @ pages 35 to 50
+hypothesis_testing_introduction | Hypothesis testing, introduction | y1-stats-7 @ pages 3 to 44; fs1-4.1 @ pages 46 to 64
 
-algebraic_fractions | Algebraic fractions | y2-pure-1 @ pages 8 to 42; y1-pure-7 @ pages 1 to 7
+algebraic_fractions | Algebraic fractions | y2-pure-1 @ pages 11 to 48; y1-pure-7 @ pages 3 to 9
 algebraic_fractions_exam_questions | Algebraic fractions | y2-pure-1
 function_practice | Functions | y2-pure-2
 function_exam_questions | Functions | y2-pure-2
@@ -118,10 +120,11 @@ trigonometry_double_angle_identities | Double angle identities | y2-pure-7
 trigonometry_r_transformations | R transformations | y2-pure-7
 trigonometric_identities_with_solutions | Trigonometric identities | y2-pure-7; y2-pure-6
 trigonometry_exam_questions | Trigonometry, the full set | y2-pure-7; y2-pure-5; y2-pure-6
-parametric_equations | Parametric equations | y2-pure-8 @ pages 1 to 20; y2-pure-9 @ pages 21 to 25
+parametric_equations | Parametric equations | y2-pure-8 @ pages 3 to 25; y2-pure-9 @ pages 27 to 33
 parametric_equations_exam_questions | Parametric equations | y2-pure-8; y2-pure-9
 differentiation_practice_ii_student_version | Differentiation, part 2 | y2-pure-9
 differentiation_practice_ii_exam_questions | Differentiation, part 2 | y2-pure-9
+differentiation_ii_exam_questions | Differentiation, part 2, the full set | y2-pure-9
 related_rates_of_change | Related rates of change | y2-pure-9
 implicit_differentiation | Implicit differentiation | y2-pure-9
 implicit_equations_exam_questions | Implicit equations | y2-pure-9
@@ -141,7 +144,7 @@ integration_definite_megamix_student_version | Definite integrals, megamix | y2-
 integration_structured_exam_questions_part_i | Integration, structured questions, part 1 | y2-pure-11
 integration_areas | Areas | y2-pure-11
 parametric_integration_exam_questions | Parametric integration | y2-pure-11; y2-pure-8; cp-5.1
-integration_numerical | Numerical integration | y2-pure-11 @ pages 1 to 20; fp1-6.2 @ pages 22 to 41
+integration_numerical | Numerical integration | y2-pure-11 @ pages 3 to 28; fp1-6.2 @ pages 30 to 51
 series_and_integrals | Series and integrals | y2-pure-11
 odes_separable_no_context | Separable differential equations | y2-pure-11
 odes_context_modelling | Differential equations in context | y2-pure-11
@@ -152,29 +155,29 @@ m1_dynamics | Dynamics | y2-mech-5; y2-mech-7
 m1_m2_projectiles | Projectiles | y2-mech-6
 m1_equilibrium | Equilibrium of a particle | y2-mech-7; y2-mech-5
 m2_equilibrium_of_rigid_bodies | Equilibrium of rigid bodies | y2-mech-7
-m1_vectors_applications | Vectors in mechanics | y2-mech-8; y1-mech-3 @ the questions with forces, and pages 53 to 55
+m1_vectors_applications | Vectors in mechanics | y2-mech-8; y1-mech-3 @ the questions with forces, and pages 69 to 71
 
-correlation_and_regression | Correlation and regression | y2-stats-1; y1-stats-4 @ pages 24 to 52; fs2-1.2; fs2-3.2 @ pages 54 to 59; fs2-3.3
+correlation_and_regression | Correlation and regression | y2-stats-1; y1-stats-4 @ pages 26 to 59; fs2-1.2; fs2-3.2 @ pages 61 to 66; fs2-3.3
 normal_distribution_calculations | The Normal distribution | y2-stats-3
-hypothesis_testing_normal_distribution | Hypothesis testing with the Normal | y2-stats-3 @ pages 1 to 11 and 26 to 47; fs2-5.2 @ pages 12 to 24; fs2-5.4 @ pages 48 to 63
+hypothesis_testing_normal_distribution | Hypothesis testing with the Normal | y2-stats-3 @ pages 3 to 17 and 38 to 64; fs2-5.2 @ pages 19 to 35; fs2-5.4 @ pages 66 to 83
 
 trigonometric_general_solutions | General solutions | beyond-pure
 
-vector_practice_part_a | Vectors, part A | cp-6.1 @ pages 35 to 63; cp-6.3 @ pages 26 to 35; y1-pure-11 @ pages 1 to 12; y2-pure-12 @ pages 13 to 25
+vector_practice_part_a | Vectors, part A | cp-6.1 @ pages 48 to 90; cp-6.3 @ pages 37 to 46; y1-pure-11 @ pages 3 to 16; y2-pure-12 @ pages 18 to 35
 vector_exam_questions_part_a | Vectors, part A | cp-6.1; cp-6.3; cp-6.5
 
 proof_by_induction | Proof by induction | cp-1.1
 complex_numbers_part_1 | Complex numbers, part 1 | cp-2.2; cp-2.3; cp-2.5
 complex_numbers_part_1_exam_questions | Complex numbers, part 1 | cp-2.2; cp-2.3; cp-2.5
-complex_numbers_part_2 | Complex numbers, part 2 | cp-2.8; cp-2.7; cp-2.10; fp2-4.1; fp2-4.2
+complex_numbers_part_2 | Complex numbers, part 2 | cp-2.8 @ pages 14 to 23; cp-2.10 @ pages 3 to 12; cp-2.7 @ pages 25 to 44; fp2-4.1 @ pages 25 to 44; fp2-4.2 @ pages 46 to 75
 complex_numbers_part_2_exam_questions | Complex numbers, part 2 | cp-2.8; cp-2.7; cp-2.10; fp2-4.1; fp2-4.2
-matrices_practice | Matrices | cp-3.1; cp-3.3; cp-3.5; cp-3.6; cp-3.7; fp2-3.1
+matrices_practice | Matrices | cp-3.1 @ pages 3 to 8; cp-3.3 @ pages 53 to 75; cp-3.5 @ pages 23 to 36; cp-3.6 @ pages 38 to 51; cp-3.7 @ pages 10 to 21; fp2-3.1 @ pages 77 to 92
 matrices_exam_questions_part_a | Matrices, part A | cp-3.3; cp-3.1; cp-3.5; cp-3.6
 matrices_exam_questions_part_b | Matrices, part B | fp2-3.1; fp2-3.2; cp-3.3; cp-3.5; cp-3.6
 consistency_of_equations | Consistency of equations | cp-3.8; cp-3.7
 roots_of_polynomial_equations | Roots of polynomial equations | cp-4.1; cp-4.2
-series_summation_practice | Summing series | cp-4.3; cp-4.4
-series_expansions | Series expansions | cp-4.5; fp1-2.1
+series_summation_practice | Summing series | cp-4.3 @ pages 3 to 51; cp-4.4 @ pages 53 to 91
+series_expansions | Series expansions | cp-4.5 @ pages 3 to 47; fp1-2.1 @ pages 49 to 65
 integration_volume_of_revolution | Volumes of revolution | cp-5.1
 improper_integrals | Improper integrals | cp-5.2
 integration_structured_exam_questions_part_ii | Integration, structured questions, part 2 | cp-5.6; cp-5.4; cp-8.5
@@ -190,7 +193,7 @@ differentiation_practice_iii | Differentiation, part 3 | cp-8.2; cp-5.5; cp-8.3
 2nd_order_differential_equations_exam_questions | Second order differential equations | cp-9.5; cp-9.4
 1st_order_differential_equations_substitutions | First order equations by substitution | fp1-3.2
 2nd_order_differential_equations_substitutions | Second order equations by substitution | fp1-3.2
-conic_sections | Conic sections | fp1-4.1; fp1-4.3; fp1-4.4
+conic_sections | Conic sections | fp1-4.1; fp1-4.3; fp1-4.4; y1-pure-6 @ pages 3 to 34, all hard (skip any with parametric equations)
 differential_equations_numerical_methods | Differential equations, numerical methods | fp1-6.1
 reduction_formulas | Reduction formulae | fp2-2.1
 arclength_surface_of_revolution | Arc length and surfaces of revolution | fp2-2.2
@@ -200,7 +203,7 @@ combinatorics | Combinatorics | fp2-5.7
 
 discrete_random_variables | Discrete random variables | fs1-1.1; y1-stats-6
 poisson_distribution | The Poisson distribution | fs1-2.1
-distributional_approximations | Distributional approximations | fs1-2.3; y2-stats-3
+distributional_approximations | Distributional approximations | fs1-2.3 @ pages 3 to 9; y2-stats-3 @ pages 11 to 22
 geometric_distribution | The geometric distribution | fs1-3.1
 contingency_tables | Contingency tables | fs1-6.1
 goodness_of_fit | Goodness of fit | fs1-6.1
@@ -219,7 +222,7 @@ m2_power | Power | fm1-2.1
 m2_m3_elastic_strings_springs | Elastic strings and springs | fm1-3.1; fm1-3.2
 m2_collisions | Collisions, restitution | fm1-4.1; fm1-4.2
 m3_m4_oblique_collisions | Oblique collisions | fm1-5.1
-m2_m3_circular_motion | Circular motion | fm2-1.2; fm2-1.1
+m2_m3_circular_motion | Circular motion | fm2-1.2 @ pages 45 to 75; fm2-1.1 @ pages 1 to 43
 m2_centre_of_mass | Centres of mass | fm2-2.2; fm2-2.1
 m3_centre_of_mass | Centres of mass, solids | fm2-3.1; fm2-3.2
 m3_m4_kinematics_dynamics_easier_odes | Kinematics and dynamics, easier equations | fm2-4.1; fm2-5.1
@@ -267,6 +270,11 @@ for (const e of new AdmZip(zipPath).getEntries()) {
   if (bytes.subarray(0, 5).toString("latin1") !== "%PDF-") throw new Error(`${e.entryName} is not a PDF`);
   files.set(m[1], bytes);
 }
+for (const path of process.argv.slice(3)) {
+  const m = /(?:^|[\/])TafsirLab_([A-Za-z0-9_.]+)\.pdf$/.exec(path);
+  if (!m) throw new Error(`Not a booklet: ${path}`);
+  files.set(m[1], readFileSync(path));
+}
 const unlisted = [...files.keys()].filter((f) => !rows.some((r) => r.file === f));
 const missing = rows.filter((r) => !files.has(r.file)).map((r) => r.file);
 if (unlisted.length || missing.length) throw new Error(`Not in the table: ${unlisted.join(", ") || "none"}. In the table but not the zip: ${missing.join(", ") || "none"}.`);
@@ -312,7 +320,7 @@ const stored: Record<string, number> = { ...before.stored };
 const MAX_BUCKET_BYTES = 2 * 1024 ** 3;
 const MAX_FILE_BYTES = 50 * 1024 ** 2;
 const mb = (n: number) => `${(n / 1024 ** 2).toFixed(1)} MB`;
-const todo = [...bytesOf].filter(([k, b]) => stored[k] !== b.length);
+const todo = [...bytesOf].filter(([k, b]) => process.env.REPLACE || stored[k] !== b.length);
 
 if (!process.env.SKIP_UPLOAD && todo.length) {
   const adding = todo.reduce((n, [, b]) => n + b.length, 0);
