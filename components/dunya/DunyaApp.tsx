@@ -16,9 +16,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Toast from "@/components/Toast";
 import SpecTracker from "./SpecTracker";
+import Booklets from "./Booklets";
 import type { SpecState } from "@/lib/dunya/maths-spec";
 import {
-  CONFIDENCE, type Attempt, type Catalog, type Confidence, type Paper, type Progress, type Subject,
+  CONFIDENCE, type Attempt, type Booklet, type Catalog, type Confidence, type Paper, type Progress, type Subject,
 } from "@/lib/dunya/catalog";
 
 type Attempts = Progress["attempts"];
@@ -161,7 +162,7 @@ export default function DunyaApp({ catalog, progress, spec }: { catalog: Catalog
         {subject && (
           <SubjectView
             key={subject.id} subject={subject} attempts={attempts} sum={sums.get(subject.id)!} onLog={log} onRemove={remove}
-            spec={subject.id === "maths" ? spec : null} onError={(msg) => setToast({ msg, tone: "error" })}
+            spec={subject.id === "maths" ? spec : null} booklets={subject.id === "maths" ? catalog.booklets ?? NONE : NONE} onError={(msg) => setToast({ msg, tone: "error" })}
           />
         )}
       </main>
@@ -183,27 +184,32 @@ function Bar({ total, green, amber, red }: Pick<Summary, "total" | "green" | "am
   );
 }
 
-function SubjectView({ subject, attempts, sum, onLog, onRemove, spec, onError }: {
+/** Maths' three views; the other subjects only have papers. */
+type View = "papers" | "booklets" | "tutor";
+const NONE: Booklet[] = [];
+
+function SubjectView({ subject, attempts, sum, onLog, onRemove, spec, booklets, onError }: {
   subject: Subject; attempts: Attempts; sum: Summary;
   onLog: (p: Paper, i: LogInput) => Promise<boolean>;
   onRemove: (p: Paper, a: Attempt) => void;
   /** Maths only: the spec tracker, opened by the tutor's button. */
-  spec: SpecState | null; onError: (msg: string) => void;
+  spec: SpecState | null; booklets: Booklet[]; onError: (msg: string) => void;
 }) {
   const [open, setOpen] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>("all");
-  const [tutorView, setTutorView] = useState(false);
+  const [view, setView] = useState<View>("papers");
 
   useEffect(() => {
-    // Which of the two (papers or the tutor's tracker) you last had open.
+    // Which view (papers, booklets or the tutor's tracker) you last had open.
     try {
+      const v = localStorage.getItem("tl-dunya-maths-view");
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      if (spec && localStorage.getItem("tl-dunya-maths-view") === "tutor") setTutorView(true);
+      if ((spec && v === "tutor") || (booklets.length && v === "booklets")) setView(v as View);
     } catch { /* private mode */ }
-  }, [spec]);
-  const showTutor = (on: boolean) => {
-    setTutorView(on);
-    try { localStorage.setItem("tl-dunya-maths-view", on ? "tutor" : "papers"); } catch { /* private mode */ }
+  }, [spec, booklets.length]);
+  const show = (v: View) => {
+    setView(v);
+    try { localStorage.setItem("tl-dunya-maths-view", v); } catch { /* private mode */ }
   };
 
   const papers = papersOf(subject);
@@ -239,18 +245,21 @@ function SubjectView({ subject, attempts, sum, onLog, onRemove, spec, onError }:
         </div>
         {spec && (
           <div className="dn-views" role="tablist" aria-label="Maths">
-            <button type="button" role="tab" aria-selected={!tutorView} onClick={() => showTutor(false)}>Papers</button>
-            <button type="button" role="tab" aria-selected={tutorView} onClick={() => showTutor(true)}>{spec.tutor}</button>
+            <button type="button" role="tab" aria-selected={view === "papers"} onClick={() => show("papers")}>Papers</button>
+            {booklets.length > 0 && <button type="button" role="tab" aria-selected={view === "booklets"} onClick={() => show("booklets")}>Booklets</button>}
+            <button type="button" role="tab" aria-selected={view === "tutor"} onClick={() => show("tutor")}>{spec.tutor}</button>
           </div>
         )}
-        {subject.all.length > 0 && !(spec && tutorView) && (
+        {subject.all.length > 0 && view === "papers" && (
           <div className="dn-alls">
             {subject.all.map((f) => <a key={f.key} className="dn-chev" href={fileHref(f.key)}>{f.label} <Arrow /></a>)}
           </div>
         )}
       </header>
 
-      {spec && tutorView ? (
+      {view === "booklets" ? (
+        <Booklets booklets={booklets} />
+      ) : spec && view === "tutor" ? (
         <SpecTracker tutor={spec.tutor} initial={spec.topics} onError={onError} />
       ) : sum.total === 0 ? (
         <div className="dn-empty">

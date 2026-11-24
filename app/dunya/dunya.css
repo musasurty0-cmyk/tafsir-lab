@@ -384,6 +384,47 @@
 .dn-lights-dots button[data-c="green"] { color: var(--dn-green); }
 .dn-lights-word { font-size: 12.5px; color: var(--ink-3); white-space: nowrap; }
 
+/* ── Maths: question booklets, by specification point ── */
+.dn-bk-link { color: var(--accent-ink); }
+.dn-bk-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+.dn-bk-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px 20px; flex-wrap: wrap; margin-top: 28px; }
+.dn-bk-bar .dn-filter { margin-top: 0; }
+.dn-bk-search {
+  display: inline-flex; align-items: center; gap: 9px; flex: 0 1 280px; height: 40px; padding: 0 14px; border-radius: 12px;
+  background: var(--dn-tile); color: var(--ink-4);
+}
+.dn-bk-search:focus-within { box-shadow: 0 0 0 3px var(--accent-soft), 0 0 0 1px var(--accent) inset; }
+.dn-bk-search input { flex: 1; min-width: 0; border: 0; background: none; outline: none; color: var(--ink); font: inherit; font-size: 16px; }
+.dn-bk-search input:focus-visible { outline: none; }
+.dn-bk-search input::-webkit-search-cancel-button { filter: grayscale(1); cursor: pointer; }
+.dn-bk-search input::placeholder { color: var(--ink-4); opacity: 1; }
+.dn-bk-part { display: flex; align-items: baseline; gap: 4px 14px; flex-wrap: wrap; margin-top: 48px; }
+.dn-bk-part .dn-spec-area { margin: 0; }
+.dn-bk-note { font-size: 15px; color: var(--ink-3); }
+.dn-bk .dn-bk-part + .dn-group { margin-top: 18px; }
+.dn-bk-tn { margin-right: 10px; color: var(--ink-4); font-variant-numeric: tabular-nums; }
+.dn-bk-head {
+  width: 100%; display: grid; grid-template-columns: 40px 1fr auto 14px; align-items: center; gap: 14px;
+  padding: 14px 18px; text-align: left; transition: background 160ms ease;
+}
+button.dn-bk-head:hover:not(:disabled) { background: var(--dn-tile-2); }
+button.dn-bk-head:disabled { cursor: default; color: inherit; }
+.dn-bk-n { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; color: var(--accent-ink); font-variant-numeric: tabular-nums; }
+.dn-bk-n:empty { display: none; }
+.dn-bk-n:empty + .dn-paper-title { grid-column: 1 / 3; }
+.dn-bk-count { font-size: 13.5px; color: var(--ink-3); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.dn-bk-none .dn-paper-title { font-weight: 500; color: var(--ink-3); }
+.dn-bk-none .dn-bk-n, .dn-bk-none .dn-bk-count { color: var(--ink-4); }
+.dn-bk-body { padding: 0 10px 12px 62px; animation: dn-open 260ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+.dn-bk-also { padding: 10px 10px 4px; font-size: 13.5px; font-weight: 500; color: var(--ink-4); }
+.dn-bk-item { display: flex; align-items: center; border-radius: 12px; transition: background 160ms ease; }
+.dn-bk-item:hover { background: var(--dn-tile-2); }
+.dn-bk-open { flex: 1; min-width: 0; display: flex; flex-direction: column; padding: 9px 10px; border-radius: 12px; }
+.dn-bk-title { font-weight: 600; font-size: 16px; letter-spacing: -0.012em; line-height: 1.3; }
+.dn-bk-dl { display: grid; place-items: center; flex: none; width: 44px; height: 44px; border-radius: 12px; color: var(--accent-ink); transition: background 160ms ease, transform 120ms ease; }
+.dn-bk-dl:hover { background: var(--bg); }
+.dn-bk-dl:active { transform: scale(0.94); }
+
 @media (pointer: coarse) {
   .dn-lights-dots button { width: 44px; height: 44px; }
 }
@@ -399,7 +440,12 @@
   .dn-spec-stats { grid-template-columns: 1fr; }
   .dn-spec-stat-n { font-size: 26px; }
   .dn-views { width: 100%; }
-  .dn-views button { flex: 1; }
+  .dn-views button { flex: 1; padding: 0 8px; }
+  .dn-bk-search { flex: 1 1 100%; height: 44px; }
+  .dn-bk-head { grid-template-columns: 38px 1fr auto 12px; gap: 10px; padding: 14px; }
+  .dn-bk-head .dn-paper-title { font-size: 16px; }
+  .dn-bk-count { font-size: 13px; }
+  .dn-bk-body { padding: 0 4px 10px; }
   .dn-lights-dots button { width: 36px; height: 40px; }
   .dn-lights-dots i { width: 16px; height: 16px; }
 }
@@ -447,5 +493,5 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .dn-subject-view, .dn-paper-body, .dn-field[data-error] input { animation: none; }
+  .dn-subject-view, .dn-paper-body, .dn-bk-body, .dn-field[data-error] input { animation: none; }
 }

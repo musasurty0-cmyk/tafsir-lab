@@ -31,7 +31,7 @@ import { randomBytes, scryptSync } from "node:crypto";
 import AdmZip from "adm-zip";
 import * as mupdf from "mupdf";
 import { PrismaClient } from "@prisma/client";
-import type { Catalog, FileRef, Paper, Subject } from "../lib/dunya/catalog";
+import { asCatalog, type Catalog, type FileRef, type Paper, type Subject } from "../lib/dunya/catalog";
 
 const BUCKET = "tafsir-lab-dunya";
 
@@ -261,7 +261,9 @@ if (!process.env.SKIP_UPLOAD) {
 
 const stored = process.env.SKIP_UPLOAD ? previous.stored
   : { ...previous.stored, ...Object.fromEntries([...uploads].map(([k, b]) => [k, b.length])) };
-const catalog: Catalog = { v: 2, subjects: [...subjects.values()], stored };
+// The question booklets are scripts/dunya-booklets.mts' own; they stay as they are.
+const booklets = asCatalog(previousRow?.catalog).booklets;
+const catalog: Catalog = { v: 2, subjects: [...subjects.values()], ...(booklets ? { booklets } : {}), stored };
 const pw = process.env.DUNYA_PASSWORD?.trim().toLowerCase();
 const hash = pw
   ? (() => {

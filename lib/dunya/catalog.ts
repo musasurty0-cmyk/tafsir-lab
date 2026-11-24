@@ -7,6 +7,8 @@
  * DunyaPlan.progress, { attempts: { [paperId]: Attempt[] } }.
  */
 
+import { placeOf } from "./spec-points";
+
 /** One PDF in the bucket: "Paper", "Worked solutions", "Mark scheme"… */
 export interface FileRef { label: string; key: string }
 
@@ -26,8 +28,20 @@ export interface Subject {
   all: FileRef[];
   groups: Group[];
 }
+/** A question booklet, filed under a specification point (lib/dunya/spec-points.ts). */
+export interface Booklet {
+  id: string; title: string;
+  kind: "Practice" | "Exam questions" | "Questions";
+  /** The point it is filed under first, then any others it covers. */
+  points: string[];
+  /** How many are numbered in it; null for a long unnumbered list. */
+  questions: number | null;
+  pages: number; key: string;
+}
 export interface Catalog {
   v: 2; subjects: Subject[];
+  /** The MadAsMaths booklets (scripts/dunya-booklets.mts), in filing order. */
+  booklets?: Booklet[];
   /** Every key ever uploaded and its size, so the upload script can count
       what the bucket holds without waiting on Cloudflare's lagging figure. */
   stored?: Record<string, number>;
@@ -73,6 +87,11 @@ export function findPaper(catalog: Catalog, paperId: string): { subject: Subject
  * Only keys on the list can be fetched, so a guessed key gets nothing.
  */
 export function fileFor(catalog: Catalog, key: string): string | null {
+  const b = catalog.booklets?.find((x) => x.key === key);
+  if (b) {
+    const n = placeOf(b.points[0])?.point.n;
+    return `Maths ${n ? `${n} ` : ""}- ${b.title} (${b.kind.toLowerCase()}).pdf`;
+  }
   for (const s of catalog.subjects) {
     const whole = s.all.find((f) => f.key === key);
     if (whole) return `${s.name} - ${whole.label.toLowerCase()}.pdf`;
