@@ -28,12 +28,14 @@ export interface Subject {
   all: FileRef[];
   groups: Group[];
 }
-/** A question booklet, filed under a specification point (lib/dunya/spec-points.ts). */
+/** A question booklet, filed under a chapter or a Further Maths point (lib/dunya/spec-points.ts). */
 export interface Booklet {
   id: string; title: string;
   kind: "Practice" | "Exam questions" | "Questions";
   /** The point it is filed under first, then any others it covers. */
   points: string[];
+  /** Which of its pages are for a point, when only some are: "pages 1 to 19". */
+  parts?: Record<string, string>;
   /** How many are numbered in it; null for a long unnumbered list. */
   questions: number | null;
   pages: number; key: string;
@@ -89,8 +91,9 @@ export function findPaper(catalog: Catalog, paperId: string): { subject: Subject
 export function fileFor(catalog: Catalog, key: string): string | null {
   const b = catalog.booklets?.find((x) => x.key === key);
   if (b) {
-    const n = placeOf(b.points[0])?.point.n;
-    return `Maths ${n ? `${n} ` : ""}- ${b.title} (${b.kind.toLowerCase()}).pdf`;
+    const at = placeOf(b.points[0]);
+    const where = !at?.point.n ? "" : at.area.id === "further" ? `${at.part.short} ${at.point.n} ` : `${at.area.name} ${at.part.name} ${at.point.n} `;
+    return `Maths ${where}- ${b.title} (${b.kind.toLowerCase()}).pdf`;
   }
   for (const s of catalog.subjects) {
     const whole = s.all.find((f) => f.key === key);

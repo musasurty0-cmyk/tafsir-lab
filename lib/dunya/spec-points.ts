@@ -1,12 +1,13 @@
 /**
- * Edexcel's numbered specification points, in our own short words, for filing
- * question booklets under. A level Maths is 9MA0 (Issue 4) in full; Further
- * Maths is 9FM0 (Issue 4), only the points a booklet is filed under, and
- * after it a few headings for topics neither specification has.
+ * Where question booklets are filed. Years 1 and 2 of A level Maths go by the
+ * chapters of the course (Pearson's Edexcel textbooks, and the same chapters
+ * the tests under Papers use), so a Year 1 chapter holds only Year 1 work.
+ * Further Maths goes by 9FM0's numbered points (Issue 4), only the ones a
+ * booklet is filed under, and after it come topics neither course has.
  *
- * A point's id is its paper's prefix and its number, since the numbers repeat
- * between papers ("pure-4.1", "stats-4.1"). Catalogued booklets hold these
- * ids, so don't rename them.
+ * Mechanics in Year 1 counts its own chapters from 1, as the tests do.
+ * Catalogued booklets hold these ids, so renaming one means running
+ * scripts/dunya-booklets.mts again (marks are kept by booklet, not by point).
  */
 
 export interface SpecPoint { id: string; n: string; label: string }
@@ -20,141 +21,77 @@ const part = (id: string, name: string, short: string, topics: [n: string, name:
   id, name, short,
   topics: topics.map(([n, topic, rows]) => ({ n, name: topic, points: rows.map(([pn, label]) => ({ id: `${id}-${pn}`, n: pn, label })) })),
 });
+/** A part that is simply a list of chapters, with no topics between. */
+const chapters = (id: string, name: string, list: string[], from = 1): SpecPart =>
+  part(id, name, name, [["", "", list.map((label, i): Row => [String(i + from), label])]]);
 
 export const SPEC_AREAS: SpecArea[] = [
   {
-    id: "pure", name: "Pure", note: "9MA0, Papers 1 and 2",
-    parts: [part("pure", "Pure", "Pure", [
-      ["1", "Proof", [["1.1", "Deduction, exhaustion, counter-example and contradiction"]]],
-      ["2", "Algebra and functions", [
-        ["2.1", "Laws of indices"],
-        ["2.2", "Surds and rationalising"],
-        ["2.3", "Quadratics and the discriminant"],
-        ["2.4", "Simultaneous equations"],
-        ["2.5", "Inequalities"],
-        ["2.6", "Polynomials, the factor theorem and algebraic fractions"],
-        ["2.7", "Graphs of functions, modulus and proportion"],
-        ["2.8", "Composite and inverse functions"],
-        ["2.9", "Transformations of graphs"],
-        ["2.10", "Partial fractions"],
-        ["2.11", "Functions in modelling"],
-      ]],
-      ["3", "Coordinate geometry", [
-        ["3.1", "Straight lines"],
-        ["3.2", "Circles"],
-        ["3.3", "Parametric equations"],
-        ["3.4", "Parametric equations in modelling"],
-      ]],
-      ["4", "Sequences and series", [
-        ["4.1", "Binomial expansion"],
-        ["4.2", "Sequences and recurrence relations"],
-        ["4.3", "Sigma notation"],
-        ["4.4", "Arithmetic sequences and series"],
-        ["4.5", "Geometric sequences and series"],
-        ["4.6", "Sequences and series in modelling"],
-      ]],
-      ["5", "Trigonometry", [
-        ["5.1", "Sine and cosine rules, radians, arcs and sectors"],
-        ["5.2", "Small angle approximations"],
-        ["5.3", "Trigonometric graphs and exact values"],
-        ["5.4", "Sec, cosec, cot and the inverse functions"],
-        ["5.5", "Pythagorean identities"],
-        ["5.6", "Compound and double angles, and the R form"],
-        ["5.7", "Trigonometric equations"],
-        ["5.8", "Proving identities"],
-        ["5.9", "Trigonometry in context"],
-      ]],
-      ["6", "Exponentials and logarithms", [
-        ["6.1", "Exponential functions and their graphs"],
-        ["6.2", "The gradient of an exponential"],
-        ["6.3", "Logarithms as inverses, and ln x"],
-        ["6.4", "Laws of logarithms"],
-        ["6.5", "Solving exponential equations"],
-        ["6.6", "Straight-line graphs from logarithms"],
-        ["6.7", "Exponential growth and decay"],
-      ]],
-      ["7", "Differentiation", [
-        ["7.1", "The derivative, first principles and second derivatives"],
-        ["7.2", "Differentiating standard functions"],
-        ["7.3", "Tangents, normals, stationary points and optimisation"],
-        ["7.4", "Chain, product and quotient rules, connected rates"],
-        ["7.5", "Implicit and parametric differentiation"],
-        ["7.6", "Setting up differential equations"],
-      ]],
-      ["8", "Integration", [
-        ["8.1", "The fundamental theorem of calculus"],
-        ["8.2", "Integrating standard functions"],
-        ["8.3", "Definite integrals and areas"],
-        ["8.4", "Integration as the limit of a sum"],
-        ["8.5", "Substitution and integration by parts"],
-        ["8.6", "Integrating with partial fractions"],
-        ["8.7", "Separable differential equations"],
-        ["8.8", "Differential equations in context"],
-      ]],
-      ["9", "Numerical methods", [
-        ["9.1", "Locating roots by a change of sign"],
-        ["9.2", "Iteration, cobweb and staircase diagrams"],
-        ["9.3", "Newton-Raphson"],
-        ["9.4", "The trapezium rule"],
-        ["9.5", "Numerical methods in context"],
-      ]],
-      ["10", "Vectors", [
-        ["10.1", "Vectors in two and three dimensions"],
-        ["10.2", "Magnitude and direction"],
-        ["10.3", "Adding and scaling vectors"],
-        ["10.4", "Position vectors and distance"],
-        ["10.5", "Solving problems with vectors"],
-      ]],
-    ])],
+    id: "y1", name: "Year 1", note: "",
+    parts: [
+      chapters("y1-pure", "Pure", [
+        "Algebraic expressions",
+        "Quadratics",
+        "Equations and inequalities",
+        "Graphs and transformations",
+        "Straight line graphs",
+        "Circles",
+        "Algebraic methods",
+        "The binomial expansion",
+        "Trigonometric ratios",
+        "Trigonometric identities and equations",
+        "Vectors",
+        "Differentiation",
+        "Integration",
+        "Exponentials and logarithms",
+      ]),
+      chapters("y1-mech", "Mechanics", [
+        "Modelling in mechanics",
+        "Constant acceleration",
+        "Forces and motion",
+        "Variable acceleration",
+      ]),
+      chapters("y1-stats", "Statistics", [
+        "Data collection",
+        "Measures of location and spread",
+        "Representations of data",
+        "Correlation",
+        "Probability",
+        "Statistical distributions",
+        "Hypothesis testing",
+      ]),
+    ],
   },
   {
-    id: "stats", name: "Statistics", note: "9MA0, Paper 3",
-    parts: [part("stats", "Statistics", "Statistics", [
-      ["1", "Statistical sampling", [["1.1", "Populations and sampling methods"]]],
-      ["2", "Presenting and interpreting data", [
-        ["2.1", "Diagrams for single-variable data"],
-        ["2.2", "Scatter diagrams, regression and correlation"],
-        ["2.3", "Averages and spread"],
-        ["2.4", "Outliers and cleaning data"],
-      ]],
-      ["3", "Probability", [
-        ["3.1", "Mutually exclusive and independent events"],
-        ["3.2", "Conditional probability"],
-        ["3.3", "Modelling with probability"],
-      ]],
-      ["4", "Statistical distributions", [
-        ["4.1", "Discrete distributions and the binomial"],
-        ["4.2", "The Normal distribution"],
-        ["4.3", "Choosing a distribution"],
-      ]],
-      ["5", "Hypothesis testing", [
-        ["5.1", "The language of tests, and testing correlation"],
-        ["5.2", "Testing a binomial proportion"],
-        ["5.3", "Testing a Normal mean"],
-      ]],
-    ])],
-  },
-  {
-    id: "mech", name: "Mechanics", note: "9MA0, Paper 3",
-    parts: [part("mech", "Mechanics", "Mechanics", [
-      ["6", "Quantities and units", [["6.1", "SI and derived units"]]],
-      ["7", "Kinematics", [
-        ["7.1", "The language of kinematics"],
-        ["7.2", "Motion graphs"],
-        ["7.3", "Constant acceleration, and in 2D with vectors"],
-        ["7.4", "Calculus in kinematics"],
-        ["7.5", "Projectiles"],
-      ]],
-      ["8", "Forces and Newton’s laws", [
-        ["8.1", "Forces and Newton’s first law"],
-        ["8.2", "Newton’s second law"],
-        ["8.3", "Weight and motion under gravity"],
-        ["8.4", "Newton’s third law, equilibrium and connected particles"],
-        ["8.5", "Adding forces and motion in a plane"],
-        ["8.6", "Friction"],
-      ]],
-      ["9", "Moments", [["9.1", "Moments and rigid bodies"]]],
-    ])],
+    id: "y2", name: "Year 2", note: "",
+    parts: [
+      chapters("y2-pure", "Pure", [
+        "Algebraic methods",
+        "Functions and graphs",
+        "Sequences and series",
+        "Binomial expansion",
+        "Radians",
+        "Trigonometric functions",
+        "Trigonometry and modelling",
+        "Parametric equations",
+        "Differentiation",
+        "Numerical methods",
+        "Integration",
+        "Vectors",
+      ]),
+      chapters("y2-mech", "Mechanics", [
+        "Moments",
+        "Forces and friction",
+        "Projectiles",
+        "Applications of forces",
+        "Further kinematics",
+      ], 4),
+      chapters("y2-stats", "Statistics", [
+        "Regression, correlation and hypothesis testing",
+        "Conditional probability",
+        "The normal distribution",
+      ]),
+    ],
   },
   {
     id: "further", name: "Further Maths", note: "9FM0, and topics beyond it",
@@ -325,6 +262,7 @@ export const SPEC_AREAS: SpecArea[] = [
         topics: [{
           n: "", name: "Not in Edexcel Maths or Further Maths",
           points: [
+            { id: "beyond-pure", n: "", label: "Pure" },
             { id: "beyond-stats", n: "", label: "Statistics" },
             { id: "beyond-statics", n: "", label: "Statics and frameworks" },
             { id: "beyond-motion", n: "", label: "Projectiles, pendulums and relative motion" },
@@ -340,13 +278,18 @@ export const SPEC_AREAS: SpecArea[] = [
 const PLACE = new Map(SPEC_AREAS.flatMap((area) => area.parts.flatMap((p) =>
   p.topics.flatMap((t) => t.points.map((point) => [point.id, { area, part: p, point }] as const)))));
 
+const PART_AREA = new Map(SPEC_AREAS.flatMap((a) => a.parts.map((x) => [x.id, a.id] as const)));
+
 /** Where a point sits: its area, its part and itself. */
 export const placeOf = (id: string) => PLACE.get(id);
 
-/** How a point is named on a booklet: "2.3", or "Core Pure 6.1" from another part. */
+/** How a point is named on a booklet: "chapter 4", "Year 2 Pure chapter 12", "Core Pure 6.1". */
 export function pointName(id: string, fromPart: string): string {
   const p = PLACE.get(id);
   if (!p) return id;
   if (!p.point.n) return p.part.name.toLowerCase();
-  return p.part.id === fromPart ? p.point.n : `${p.part.short} ${p.point.n}`;
+  if (p.area.id === "further") return p.part.id === fromPart ? p.point.n : `${p.part.short} ${p.point.n}`;
+  if (p.part.id === fromPart) return `chapter ${p.point.n}`;
+  const sameYear = PART_AREA.get(fromPart) === p.area.id;
+  return `${sameYear ? "" : `${p.area.name} `}${p.part.name} chapter ${p.point.n}`;
 }

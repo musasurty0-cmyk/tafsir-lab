@@ -384,7 +384,7 @@
 .dn-lights-dots button[data-c="green"] { color: var(--dn-green); }
 .dn-lights-word { font-size: 12.5px; color: var(--ink-3); white-space: nowrap; }
 
-/* ── Maths: question booklets, by specification point ── */
+/* ── Maths: question booklets, by chapter ── */
 .dn-bk-link { color: var(--accent-ink); }
 .dn-bk-link:hover { text-decoration: underline; text-underline-offset: 3px; }
 .dn-bk-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px 20px; flex-wrap: wrap; margin-top: 28px; }
@@ -435,6 +435,8 @@ button.dn-bk-head:disabled { cursor: default; color: inherit; }
 .dn-bk-done[aria-pressed="true"] .dn-bk-tick { background: var(--dn-green); color: var(--bg); }
 .dn-bk-stats { grid-template-columns: repeat(4, 1fr); }
 .dn-bk .dn-bk-filter { margin-top: 20px; }
+.dn-bk-here { margin-top: 1px; font-size: 13.5px; font-weight: 500; color: var(--accent-ink); font-variant-numeric: tabular-nums; }
+.dn-bk-part .dn-group-count { margin-left: auto; }
 .dn-bk-dl { display: grid; place-items: center; flex: none; width: 44px; height: 44px; border-radius: 12px; color: var(--accent-ink); transition: background 160ms ease, transform 120ms ease; }
 .dn-bk-dl:hover { background: var(--bg); }
 .dn-bk-dl:active { transform: scale(0.94); }

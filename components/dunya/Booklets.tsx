@@ -1,14 +1,15 @@
 "use client";
 
 /**
- * Maths question booklets (MadAsMaths), by Edexcel specification point.
+ * Maths question booklets (MadAsMaths), by chapter.
  *
- * Pick a part of the course; its points are listed in the specification's own
- * order and numbers, and one opens to the booklets filed under it, followed by
- * any filed elsewhere that also cover it. A booklet opens in a new tab or
- * downloads. Searching looks through every part at once, by booklet, by point
- * ("2.3") or by topic, and opens what it finds. A point with no booklet still
- * shows, so the list reads as the whole specification.
+ * Pick a year; its chapters are listed as the tests under Papers are, and one
+ * opens to the booklets filed under it, then any from the same year that also
+ * cover it, then any from another year with some of it, each with the pages
+ * that count. Further Maths goes by its specification's points instead. A
+ * booklet opens in a new tab or downloads. Searching looks through everything
+ * at once, by booklet, chapter or topic, and opens what it finds. A chapter
+ * with no booklet still shows, so the list reads as the whole course.
  *
  * Each booklet takes two marks, done and a traffic-light confidence, the same
  * wherever it is listed. The counts are for the part that is open, and a
@@ -121,12 +122,12 @@ export default function Booklets({ booklets, marks, onMark }: { booklets: Bookle
   return (
     <div className="dn-spec dn-bk">
       <p className="dn-spec-lede">
-        {count(booklets.length, "MadAsMaths booklet")} by T. Madas, sorted into the Edexcel specification. The answers are taken out;
+        {count(booklets.length, "MadAsMaths booklet")} by T. Madas, filed by chapter. The answers are taken out;
         check them against the originals at <a className="dn-bk-link" href="https://www.madasmaths.com" target="_blank" rel="noreferrer">madasmaths.com</a>.
       </p>
 
       <div className="dn-bk-bar">
-        <div className="dn-filter" role="radiogroup" aria-label="Part of the course">
+        <div className="dn-filter" role="radiogroup" aria-label="Year">
           {SPEC_AREAS.map((a) => (
             <button key={a.id} type="button" role="radio" aria-checked={!q && a.id === areaId} onClick={() => pick(a.id)}>
               {a.name}<span className="dn-filter-n">{perArea.get(a.id)?.length ?? 0}</span>
@@ -136,7 +137,7 @@ export default function Booklets({ booklets, marks, onMark }: { booklets: Bookle
         <label className="dn-bk-search">
           <Search />
           <span className="dn-sr">Search booklets</span>
-          <input type="search" placeholder="Search, or a point like 2.3" value={query} onChange={(e) => setQuery(e.target.value)} />
+          <input type="search" placeholder="Search booklets" value={query} onChange={(e) => setQuery(e.target.value)} />
         </label>
       </div>
 
@@ -164,7 +165,7 @@ export default function Booklets({ booklets, marks, onMark }: { booklets: Bookle
       {blocks.length === 0 && (q ? (
         <div className="dn-empty">
           <p className="dn-empty-title">Nothing for “{query.trim()}”.</p>
-          <p>Try a topic, such as vectors, or a point, such as 7.4.</p>
+          <p>Try a topic, such as vectors or circles.</p>
         </div>
       ) : (
         <div className="dn-empty">
@@ -175,18 +176,17 @@ export default function Booklets({ booklets, marks, onMark }: { booklets: Bookle
 
       {blocks.map(({ area, part, first, groups }) => (
         <section key={part.id}>
-          {(first || q || area.parts.length > 1) && (
-            <div className="dn-bk-part">
-              <h3 className="dn-spec-area">{part.name}.</h3>
-              {first && !q && <p className="dn-bk-note">{area.note}</p>}
-            </div>
-          )}
+          <div className="dn-bk-part">
+            <h3 className="dn-spec-area">{part.name}.</h3>
+            {q ? <p className="dn-bk-note">{area.name}</p> : first && area.note && <p className="dn-bk-note">{area.note}</p>}
+            {area.id !== "further" && <Progress list={part.topics.flatMap((t) => t.points.flatMap((x) => shelves.get(x.id)?.here ?? []))} marks={marks} />}
+          </div>
           {groups.map(({ topic, points }) => (
             <div className="dn-group" key={topic.n + topic.name}>
-              <div className="dn-group-head">
+              {topic.name && <div className="dn-group-head">
                 <h4 className="dn-group-name">{topic.n && <span className="dn-bk-tn">{topic.n}</span>}{topic.name}</h4>
                 <Progress list={topic.points.flatMap((p) => shelves.get(p.id)?.here ?? [])} marks={marks} />
-              </div>
+              </div>}
               <ul className="dn-papers">
                 {points.map(({ point, shelf }) => (
                   <Point key={point.id} point={point} part={part} shelf={shelf} open={held || open.has(point.id)} onToggle={() => toggle(point.id)} locked={held} marks={marks} onMark={onMark} />
@@ -233,12 +233,17 @@ function Point({ point, part, shelf, open, onToggle, locked, marks, onMark }: {
       {open && (
         <div className="dn-bk-body" id={bodyId}>
           <List booklets={shelf.here} part={part} point={point} marks={marks} onMark={onMark} />
-          {shelf.also.length > 0 && (
-            <>
-              {shelf.here.length > 0 && <p className="dn-bk-also">Also cover this</p>}
-              <List booklets={shelf.also} part={part} point={point} marks={marks} onMark={onMark} />
-            </>
-          )}
+          {SPEC_AREAS.map((a) => {
+            const from = shelf.also.filter((b) => placeOf(b.points[0])?.area.id === a.id);
+            if (!from.length) return null;
+            const own = a.parts.some((x) => x.id === part.id);
+            return (
+              <div key={a.id}>
+                <p className="dn-bk-also">{own ? "Also cover this" : `${a.name} booklets with some of this`}</p>
+                <List booklets={from} part={part} point={point} marks={marks} onMark={onMark} />
+              </div>
+            );
+          })}
         </div>
       )}
     </li>
@@ -254,6 +259,7 @@ function List({ booklets, part, point, marks, onMark }: { booklets: Booklet[]; p
         const filed = b.points[0] === point.id;
         const others = b.points.slice(1).map((p) => pointName(p, part.id));
         const where = filed ? (others.length ? `also ${others.join(", ")}` : null) : `filed under ${pointName(b.points[0], part.id)}`;
+        const here = b.parts?.[point.id];
         return (
           <li key={b.id} className="dn-bk-item" data-done={mark?.done || undefined}>
             <a className="dn-bk-open" href={href(b.key, true)} target="_blank" rel="noreferrer">
@@ -261,6 +267,7 @@ function List({ booklets, part, point, marks, onMark }: { booklets: Booklet[]; p
               <span className="dn-paper-meta">
                 {[b.kind === "Questions" ? null : b.kind, b.questions && count(b.questions, "question"), count(b.pages, "page"), where].filter(Boolean).join(" · ")}
               </span>
+              {here && <span className="dn-bk-here">For this, {here}.</span>}
             </a>
             <div className="dn-bk-marks">
               <button type="button" className="dn-bk-done" aria-pressed={!!mark?.done} aria-label={`Done, ${b.title}`} onClick={() => onMark(b.id, "done", !mark?.done)}>
