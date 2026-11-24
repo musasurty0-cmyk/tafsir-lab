@@ -6,7 +6,7 @@
  *   Lesson      red not yet · amber in lessons now · green covered
  *   Questions   red not done · green done
  *   Confidence  red · amber · green (or not rated yet)
- * A tap saves at once (optimistically, put back if the save fails). Nothing is
+ * A tap saves at once (DunyaApp holds the marks and puts one back if it fails). Nothing is
  * lit until it is marked, so an untouched spec reads grey, not a wall of red.
  */
 
@@ -42,10 +42,9 @@ function tally(topics: SpecTopic[], marks: Marks) {
   };
 }
 
-export default function SpecTracker({ tutor, initial, onError }: {
-  tutor: string; initial: Marks; onError: (msg: string) => void;
+export default function SpecTracker({ tutor, marks, onMark }: {
+  tutor: string; marks: Marks; onMark: (topicId: string, f: SpecField, v: string | null) => void;
 }) {
-  const [marks, setMarks] = useState<Marks>(initial);
   const [filter, setFilter] = useState<Filter>("all");
 
   useEffect(() => {
@@ -62,19 +61,6 @@ export default function SpecTracker({ tutor, initial, onError }: {
 
   const all = useMemo(() => MATHS_SPEC.flatMap((s) => s.topics), []);
   const sum = useMemo(() => tally(all, marks), [all, marks]);
-
-  async function mark(topic: SpecTopic, field: SpecField, value: string | null) {
-    const before = marks[topic.id];
-    setMarks((m) => ({ ...m, [topic.id]: { ...m[topic.id], [field]: value } }));
-    const r = await fetch("/api/dunya/spec", {
-      method: "PATCH", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ topicId: topic.id, field, value }),
-    }).catch(() => null);
-    if (!r?.ok) {
-      setMarks((m) => ({ ...m, [topic.id]: before ?? {} }));
-      onError("Couldn’t save that. Check your connection.");
-    }
-  }
 
   const shows = (x: SpecTopic) =>
     filter === "all" || (filter === "y1" ? x.year === 1 : filter === "y2" ? x.year === 2 : confidenceOf(marks[x.id]) !== "green");
@@ -116,7 +102,7 @@ export default function SpecTracker({ tutor, initial, onError }: {
         if (!shown.length) return null;
         const newArea = i === 0 || MATHS_SPEC[i - 1].area !== section.area;
         return (
-          <Section key={section.id} section={section} shown={shown} marks={marks} area={newArea ? section.area : null} onMark={mark} />
+          <Section key={section.id} section={section} shown={shown} marks={marks} area={newArea ? section.area : null} onMark={(x, f, v) => onMark(x.id, f, v)} />
         );
       })}
     </div>
@@ -175,7 +161,7 @@ function Section({ section, shown, marks, area, onMark }: {
 }
 
 /** A traffic light: one dot per state, the chosen one lit, the word beside it. */
-function Lights<V extends string>({ name, label, empty, options, value, onPick }: {
+export function Lights<V extends string>({ name, label, empty, options, value, onPick }: {
   name: string; label: string; empty: string; options: { value: V; label: string }[]; value: V | null; onPick: (v: V) => void;
 }) {
   const current = options.find((o) => o.value === value);

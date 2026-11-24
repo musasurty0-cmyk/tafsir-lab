@@ -818,7 +818,8 @@ model DunyaPlan {
   passwordHash String
   catalog      Json
   progress     Json?
-  /// The Maths spec tracker: { tutor, topics: { [id]: { lesson, questions, confidence } } } (sql 030).
+  /// The Maths spec tracker: { tutor, topics: { [id]: { lesson, questions, confidence } } } (sql 030),
+  /// and the marks on the question booklets: booklets: { [id]: { done, confidence } }.
   spec         Json     @default("{}")
   /// File links handed out in fileReadsMonth ("2026-10"): the R2 free-tier guard.
   fileReads      Int     @default(0)

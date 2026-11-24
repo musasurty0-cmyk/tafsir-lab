@@ -186,7 +186,9 @@ export const SPEC_IDS = new Set(MATHS_SPEC.flatMap((s) => s.topics.map((x) => x.
 export type Light = "red" | "amber" | "green";
 /** Lesson: red not yet, amber in lessons now, green covered. Questions: red or green. */
 export interface TopicMark { lesson?: Light; questions?: "red" | "green"; confidence?: Light | null }
-export interface SpecState { tutor: string; topics: Record<string, TopicMark> }
+/** A question booklet: done or not, and how confident it felt. */
+export interface BookletMark { done?: boolean; confidence?: Light | null }
+export interface SpecState { tutor: string; topics: Record<string, TopicMark>; booklets: Record<string, BookletMark> }
 
 export const SPEC_FIELDS = {
   lesson:     ["red", "amber", "green"],
@@ -200,5 +202,6 @@ export function asSpec(raw: unknown): SpecState {
   return {
     tutor: typeof s?.tutor === "string" && s.tutor.trim() ? s.tutor.trim() : "Tutor",
     topics: s?.topics && typeof s.topics === "object" ? s.topics : {},
+    booklets: s?.booklets && typeof s.booklets === "object" ? s.booklets : {},
   };
 }

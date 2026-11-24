@@ -17,7 +17,8 @@ import { useRouter } from "next/navigation";
 import Toast from "@/components/Toast";
 import SpecTracker from "./SpecTracker";
 import Booklets from "./Booklets";
-import type { SpecState } from "@/lib/dunya/maths-spec";
+import Bar from "./Bar";
+import type { BookletMark, SpecField, SpecState } from "@/lib/dunya/maths-spec";
 import {
   CONFIDENCE, type Attempt, type Booklet, type Catalog, type Confidence, type Paper, type Progress, type Subject,
 } from "@/lib/dunya/catalog";
@@ -49,9 +50,11 @@ function summary(papers: Paper[], attempts: Attempts) {
 type Summary = ReturnType<typeof summary>;
 const papersOf = (s: Subject) => s.groups.flatMap((g) => g.papers);
 
-export default function DunyaApp({ catalog, progress, spec }: { catalog: Catalog; progress: Progress; spec: SpecState }) {
+export default function DunyaApp({ catalog, progress, spec: saved }: { catalog: Catalog; progress: Progress; spec: SpecState }) {
   const router = useRouter();
   const [attempts, setAttempts] = useState(progress.attempts);
+  // Held here, not in the views, so a mark survives switching view or subject.
+  const [spec, setSpec] = useState(saved);
   const [subjectId, setSubjectId] = useState(catalog.subjects[0]?.id ?? "");
   const [toast, setToast] = useState<{ msg: string; tone: "success" | "error" } | null>(null);
   const [compact, setCompact] = useState(false);
@@ -109,6 +112,18 @@ export default function DunyaApp({ catalog, progress, spec }: { catalog: Catalog
     return true;
   }
 
+  /** One mark on a spec part or a booklet: shown at once, put back if it doesn't save. */
+  async function mark(kind: "topics" | "booklets", id: string, field: string, value: string | boolean | null) {
+    const was = (spec[kind][id] as Record<string, unknown> | undefined)?.[field];
+    const put = (v: unknown) => setSpec((s) => ({ ...s, [kind]: { ...s[kind], [id]: { ...s[kind][id], [field]: v } } }));
+    put(value);
+    const r = await fetch(kind === "topics" ? "/api/dunya/spec" : "/api/dunya/booklets", {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(kind === "topics" ? { topicId: id, field, value } : { id, field, value }),
+    }).catch(() => null);
+    if (!r?.ok) { put(was); setToast({ msg: "Couldn’t save that. Check your connection.", tone: "error" }); }
+  }
+
   async function remove(paper: Paper, a: Attempt) {
     const r = await fetch("/api/dunya/attempts", {
       method: "DELETE", headers: { "Content-Type": "application/json" },
@@ -162,7 +177,8 @@ export default function DunyaApp({ catalog, progress, spec }: { catalog: Catalog
         {subject && (
           <SubjectView
             key={subject.id} subject={subject} attempts={attempts} sum={sums.get(subject.id)!} onLog={log} onRemove={remove}
-            spec={subject.id === "maths" ? spec : null} booklets={subject.id === "maths" ? catalog.booklets ?? NONE : NONE} onError={(msg) => setToast({ msg, tone: "error" })}
+            spec={subject.id === "maths" ? spec : null} booklets={subject.id === "maths" ? catalog.booklets ?? NONE : NONE}
+            onMarkTopic={(id, f, v) => mark("topics", id, f, v)} onMarkBooklet={(id, f, v) => mark("booklets", id, f, v)}
           />
         )}
       </main>
@@ -172,28 +188,19 @@ export default function DunyaApp({ catalog, progress, spec }: { catalog: Catalog
   );
 }
 
-function Bar({ total, green, amber, red }: Pick<Summary, "total" | "green" | "amber" | "red">) {
-  if (!total) return <span className="dn-bar" aria-hidden="true" />;
-  return (
-    <span className="dn-bar" role="img" aria-label={`${green} confident, ${amber} getting there, ${red} not yet, ${total - green - amber - red} not done`}>
-      <i data-c="green" style={{ flexGrow: green }} />
-      <i data-c="amber" style={{ flexGrow: amber }} />
-      <i data-c="red" style={{ flexGrow: red }} />
-      <i style={{ flexGrow: total - green - amber - red }} />
-    </span>
-  );
-}
-
 /** Maths' three views; the other subjects only have papers. */
 type View = "papers" | "booklets" | "tutor";
 const NONE: Booklet[] = [];
+const NO_MARKS: Record<string, BookletMark> = {};
 
-function SubjectView({ subject, attempts, sum, onLog, onRemove, spec, booklets, onError }: {
+function SubjectView({ subject, attempts, sum, onLog, onRemove, spec, booklets, onMarkTopic, onMarkBooklet }: {
   subject: Subject; attempts: Attempts; sum: Summary;
   onLog: (p: Paper, i: LogInput) => Promise<boolean>;
   onRemove: (p: Paper, a: Attempt) => void;
   /** Maths only: the spec tracker, opened by the tutor's button. */
-  spec: SpecState | null; booklets: Booklet[]; onError: (msg: string) => void;
+  spec: SpecState | null; booklets: Booklet[];
+  onMarkTopic: (id: string, f: SpecField, v: string | null) => void;
+  onMarkBooklet: (id: string, f: keyof BookletMark, v: boolean | string | null) => void;
 }) {
   const [open, setOpen] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>("all");
@@ -258,9 +265,9 @@ function SubjectView({ subject, attempts, sum, onLog, onRemove, spec, booklets, 
       </header>
 
       {view === "booklets" ? (
-        <Booklets booklets={booklets} />
+        <Booklets booklets={booklets} marks={spec?.booklets ?? NO_MARKS} onMark={onMarkBooklet} />
       ) : spec && view === "tutor" ? (
-        <SpecTracker tutor={spec.tutor} initial={spec.topics} onError={onError} />
+        <SpecTracker tutor={spec.tutor} marks={spec.topics} onMark={onMarkTopic} />
       ) : sum.total === 0 ? (
         <div className="dn-empty">
           <p className="dn-empty-title">No {subject.name.toLowerCase()} papers yet.</p>

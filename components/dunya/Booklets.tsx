@@ -9,10 +9,17 @@
  * downloads. Searching looks through every part at once, by booklet, by point
  * ("2.3") or by topic, and opens what it finds. A point with no booklet still
  * shows, so the list reads as the whole specification.
+ *
+ * Each booklet takes two marks, done and a traffic-light confidence, the same
+ * wherever it is listed. The counts are for the part that is open, and a
+ * filter narrows it to what still needs work.
  */
 
 import { useEffect, useMemo, useState } from "react";
-import type { Booklet } from "@/lib/dunya/catalog";
+import { CONFIDENCE, type Booklet, type Confidence } from "@/lib/dunya/catalog";
+import type { BookletMark } from "@/lib/dunya/maths-spec";
+import Bar from "./Bar";
+import { Lights } from "./SpecTracker";
 import { SPEC_AREAS, placeOf, pointName, type SpecPart, type SpecPoint } from "@/lib/dunya/spec-points";
 
 const href = (key: string, view = false) => `/api/dunya/file?key=${encodeURIComponent(key)}${view ? "&view=1" : ""}`;
@@ -22,10 +29,20 @@ const count = (n: number, one: string) => `${n} ${one}${n === 1 ? "" : "s"}`;
 type Shelf = { here: Booklet[]; also: Booklet[] };
 const EMPTY: Shelf = { here: [], also: [] };
 
-export default function Booklets({ booklets }: { booklets: Booklet[] }) {
+type Marks = Record<string, BookletMark>;
+type OnMark = (id: string, field: keyof BookletMark, value: boolean | string | null) => void;
+type Filter = "all" | "todo" | "done" | Confidence;
+
+function tally(list: Booklet[], marks: Marks) {
+  const n = (c: Confidence) => list.filter((b) => marks[b.id]?.confidence === c).length;
+  return { total: list.length, done: list.filter((b) => marks[b.id]?.done).length, green: n("green"), amber: n("amber"), red: n("red") };
+}
+
+export default function Booklets({ booklets, marks, onMark }: { booklets: Booklet[]; marks: Marks; onMark: OnMark }) {
   const [areaId, setAreaId] = useState(SPEC_AREAS[0].id);
   const [open, setOpen] = useState<Set<string>>(new Set());
   const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<Filter>("all");
 
   useEffect(() => {
     // The part of the course you last had open, kept in this browser.
@@ -43,21 +60,28 @@ export default function Booklets({ booklets }: { booklets: Booklet[] }) {
     return m;
   }, [booklets]);
   const perArea = useMemo(() => {
-    const n = new Map<string, number>();
-    for (const b of booklets) {
-      const a = placeOf(b.points[0])?.area.id;
-      if (a) n.set(a, (n.get(a) ?? 0) + 1);
-    }
-    return n;
+    const m = new Map<string, Booklet[]>(SPEC_AREAS.map((a) => [a.id, []]));
+    for (const b of booklets) m.get(placeOf(b.points[0])?.area.id ?? "")?.push(b);
+    return m;
   }, [booklets]);
+  const sum = useMemo(() => tally(perArea.get(areaId) ?? [], marks), [perArea, areaId, marks]);
 
   const q = query.trim().toLowerCase();
   const words = q.split(/\s+/).filter(Boolean);
   const has = (text: string) => words.every((w) => text.toLowerCase().includes(w));
-  /** What a point shows: its whole shelf, or only what a search finds on it. */
+  const passes = (b: Booklet) => {
+    const m = marks[b.id];
+    return filter === "todo" ? !m?.done : filter === "done" ? !!m?.done : m?.confidence === filter;
+  };
+  /** What a point shows: its whole shelf, or only what a search or the filter finds on it. */
   const shown = (part: SpecPart, topic: string, point: SpecPoint): Shelf | null => {
     const shelf = shelves.get(point.id) ?? EMPTY;
-    if (!q) return shelf;
+    if (!q && filter === "all") return shelf;
+    if (!q) {
+      // To do lists a booklet at every point it helps; the others pick out a few, once each.
+      const here = shelf.here.filter(passes), also = filter === "todo" ? shelf.also.filter(passes) : [];
+      return here.length + also.length ? { here, also } : null;
+    }
     const numbered = /^\d+(\.\d+)?$/.test(q);
     // The point itself: everything on it. Its topic, or a booklet's own name: only
     // what is filed here, so the same booklet isn't found again and again.
@@ -73,8 +97,18 @@ export default function Booklets({ booklets }: { booklets: Booklet[] }) {
   const pick = (id: string) => {
     setAreaId(id);
     setQuery("");
+    setFilter("all");
     try { localStorage.setItem("tl-dunya-booklets-area", id); } catch { /* private mode */ }
   };
+
+  const FILTERS: { value: Filter; label: string; count: number; c?: Confidence }[] = [
+    { value: "all", label: "All", count: sum.total },
+    { value: "todo", label: "To do", count: sum.total - sum.done },
+    { value: "done", label: "Done", count: sum.done },
+    ...CONFIDENCE.map((c) => ({ value: c.value, label: c.label, count: sum[c.value], c: c.value })),
+  ];
+  // A search, or a filter that picks out a few, holds what it finds open.
+  const held = !!q || (filter !== "all" && filter !== "todo");
 
   const blocks = areas.flatMap((area) => area.parts.flatMap((part, i) => {
     const groups = part.topics.map((t) => ({
@@ -95,7 +129,7 @@ export default function Booklets({ booklets }: { booklets: Booklet[] }) {
         <div className="dn-filter" role="radiogroup" aria-label="Part of the course">
           {SPEC_AREAS.map((a) => (
             <button key={a.id} type="button" role="radio" aria-checked={!q && a.id === areaId} onClick={() => pick(a.id)}>
-              {a.name}<span className="dn-filter-n">{perArea.get(a.id) ?? 0}</span>
+              {a.name}<span className="dn-filter-n">{perArea.get(a.id)?.length ?? 0}</span>
             </button>
           ))}
         </div>
@@ -106,12 +140,38 @@ export default function Booklets({ booklets }: { booklets: Booklet[] }) {
         </label>
       </div>
 
-      {blocks.length === 0 && (
+      {!q && (
+        <>
+          <dl className="dn-stats dn-bk-stats">
+            <div><dt>Done</dt><dd>{sum.done}<small> of {sum.total}</small></dd></div>
+            {CONFIDENCE.slice().reverse().map((c) => (
+              <div key={c.value}><dt><i className="dn-dot" data-c={c.value} />{c.label}</dt><dd>{sum[c.value]}</dd></div>
+            ))}
+          </dl>
+          <div className="dn-filter dn-bk-filter" role="radiogroup" aria-label="Show">
+            {FILTERS.map((f) => (
+              <button
+                key={f.value} type="button" role="radio" aria-checked={filter === f.value}
+                disabled={f.count === 0 && f.value !== "all" && f.value !== filter} onClick={() => setFilter(f.value)}
+              >
+                {f.c && <i className="dn-dot" data-c={f.c} />}{f.label}<span className="dn-filter-n">{f.count}</span>
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+
+      {blocks.length === 0 && (q ? (
         <div className="dn-empty">
           <p className="dn-empty-title">Nothing for “{query.trim()}”.</p>
           <p>Try a topic, such as vectors, or a point, such as 7.4.</p>
         </div>
-      )}
+      ) : (
+        <div className="dn-empty">
+          <p className="dn-empty-title">None left here.</p>
+          <p>Choose All to see every booklet again.</p>
+        </div>
+      ))}
 
       {blocks.map(({ area, part, first, groups }) => (
         <section key={part.id}>
@@ -125,10 +185,11 @@ export default function Booklets({ booklets }: { booklets: Booklet[] }) {
             <div className="dn-group" key={topic.n + topic.name}>
               <div className="dn-group-head">
                 <h4 className="dn-group-name">{topic.n && <span className="dn-bk-tn">{topic.n}</span>}{topic.name}</h4>
+                <Progress list={topic.points.flatMap((p) => shelves.get(p.id)?.here ?? [])} marks={marks} />
               </div>
               <ul className="dn-papers">
                 {points.map(({ point, shelf }) => (
-                  <Point key={point.id} point={point} part={part} shelf={shelf} open={!!q || open.has(point.id)} onToggle={() => toggle(point.id)} locked={!!q} />
+                  <Point key={point.id} point={point} part={part} shelf={shelf} open={held || open.has(point.id)} onToggle={() => toggle(point.id)} locked={held} marks={marks} onMark={onMark} />
                 ))}
               </ul>
             </div>
@@ -139,18 +200,27 @@ export default function Booklets({ booklets }: { booklets: Booklet[] }) {
   );
 }
 
-function Point({ point, part, shelf, open, onToggle, locked }: {
+/** A topic's booklets, done and how confident: nothing until there is one. */
+function Progress({ list, marks }: { list: Booklet[]; marks: Marks }) {
+  if (!list.length) return null;
+  const s = tally(list, marks);
+  return <span className="dn-group-count"><Bar {...s} />{s.done} of {s.total}</span>;
+}
+
+function Point({ point, part, shelf, open, onToggle, locked, marks, onMark }: {
   point: SpecPoint; part: SpecPart; shelf: Shelf; open: boolean; onToggle: () => void;
-  /** Held open by a search. */
+  /** Held open by a search or a filter. */
   locked: boolean;
+  marks: Marks; onMark: OnMark;
 }) {
   const n = shelf.here.length + shelf.also.length;
+  const done = [...shelf.here, ...shelf.also].filter((b) => marks[b.id]?.done).length;
   const bodyId = `dn-bk-${point.id}`;
   const head = (
     <>
       <span className="dn-bk-n">{point.n}</span>
       <span className="dn-paper-title">{point.label}</span>
-      <span className="dn-bk-count">{n ? count(n, "booklet") : "No booklet"}</span>
+      <span className="dn-bk-count">{!n ? "No booklet" : done && !locked ? `${done} of ${n} done` : count(n, "booklet")}</span>
     </>
   );
   if (!n) return <li className="dn-paper dn-bk-none"><div className="dn-bk-head">{head}</div></li>;
@@ -162,11 +232,11 @@ function Point({ point, part, shelf, open, onToggle, locked }: {
       </button>
       {open && (
         <div className="dn-bk-body" id={bodyId}>
-          <List booklets={shelf.here} part={part} point={point} />
+          <List booklets={shelf.here} part={part} point={point} marks={marks} onMark={onMark} />
           {shelf.also.length > 0 && (
             <>
               {shelf.here.length > 0 && <p className="dn-bk-also">Also cover this</p>}
-              <List booklets={shelf.also} part={part} point={point} />
+              <List booklets={shelf.also} part={part} point={point} marks={marks} onMark={onMark} />
             </>
           )}
         </div>
@@ -175,22 +245,32 @@ function Point({ point, part, shelf, open, onToggle, locked }: {
   );
 }
 
-function List({ booklets, part, point }: { booklets: Booklet[]; part: SpecPart; point: SpecPoint }) {
+function List({ booklets, part, point, marks, onMark }: { booklets: Booklet[]; part: SpecPart; point: SpecPoint; marks: Marks; onMark: OnMark }) {
   if (!booklets.length) return null;
   return (
     <ul className="dn-bk-list">
       {booklets.map((b) => {
+        const mark = marks[b.id];
         const filed = b.points[0] === point.id;
         const others = b.points.slice(1).map((p) => pointName(p, part.id));
         const where = filed ? (others.length ? `also ${others.join(", ")}` : null) : `filed under ${pointName(b.points[0], part.id)}`;
         return (
-          <li key={b.id} className="dn-bk-item">
+          <li key={b.id} className="dn-bk-item" data-done={mark?.done || undefined}>
             <a className="dn-bk-open" href={href(b.key, true)} target="_blank" rel="noreferrer">
               <span className="dn-bk-title">{b.title}</span>
               <span className="dn-paper-meta">
                 {[b.kind === "Questions" ? null : b.kind, b.questions && count(b.questions, "question"), count(b.pages, "page"), where].filter(Boolean).join(" · ")}
               </span>
             </a>
+            <div className="dn-bk-marks">
+              <button type="button" className="dn-bk-done" aria-pressed={!!mark?.done} aria-label={`Done, ${b.title}`} onClick={() => onMark(b.id, "done", !mark?.done)}>
+                <span className="dn-bk-tick"><Tick /></span>Done
+              </button>
+              <Lights
+                name={`Confidence, ${b.title}`} label="Confidence" empty="Not rated" options={CONFIDENCE} value={mark?.confidence ?? null}
+                onPick={(v) => onMark(b.id, "confidence", v === mark?.confidence ? null : v)}
+              />
+            </div>
             <a className="dn-bk-dl" href={href(b.key)} aria-label={`Download ${b.title}`} title="Download"><Download /></a>
           </li>
         );
@@ -201,6 +281,9 @@ function List({ booklets, part, point }: { booklets: Booklet[]; part: SpecPart; 
 
 const Search = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5" /><path d="M16 16l4.5 4.5" /></svg>
+);
+const Tick = () => (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
 );
 const Download = () => (
   <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14" /></svg>
