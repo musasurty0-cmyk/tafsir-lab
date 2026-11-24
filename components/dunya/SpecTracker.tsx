@@ -2,7 +2,7 @@
 
 /**
  * The Maths spec tracker, opened from the tutor's button on Maths. Every part
- * of the specification, by section, with three marks each:
+ * of the course, by chapter, with three marks each:
  *   Lesson      red not yet · amber in lessons now · green covered
  *   Questions   red not done · green done
  *   Confidence  red · amber · green (or not rated yet)
@@ -62,20 +62,21 @@ export default function SpecTracker({ tutor, marks, onMark }: {
   const all = useMemo(() => MATHS_SPEC.flatMap((s) => s.topics), []);
   const sum = useMemo(() => tally(all, marks), [all, marks]);
 
-  const shows = (x: SpecTopic) =>
-    filter === "all" || (filter === "y1" ? x.year === 1 : filter === "y2" ? x.year === 2 : confidenceOf(marks[x.id]) !== "green");
+  const shows = (s: SpecSection, x: SpecTopic) =>
+    filter === "all" || (filter === "y1" ? s.year === 1 : filter === "y2" ? s.year === 2 : confidenceOf(marks[x.id]) !== "green");
+  const inYear = (y: number) => MATHS_SPEC.reduce((n, s) => n + (s.year === y ? s.topics.length : 0), 0);
   const unsure = all.length - sum.confidence.green;
   const FILTERS: { value: Filter; label: string; count: number }[] = [
     { value: "all", label: "All", count: all.length },
-    { value: "y1", label: "Year 1", count: all.filter((x) => x.year === 1).length },
-    { value: "y2", label: "Year 2", count: all.filter((x) => x.year === 2).length },
+    { value: "y1", label: "Year 1", count: inYear(1) },
+    { value: "y2", label: "Year 2", count: inYear(2) },
     { value: "unsure", label: "Not confident yet", count: unsure },
   ];
 
   return (
     <div className="dn-spec">
       <p className="dn-spec-lede">
-        The whole specification, part by part. Mark what you’ve covered with {tutor}, whether you’ve done the questions, and how confident you feel.
+        The whole course, chapter by chapter. Mark what you’ve covered with {tutor}, whether you’ve done the questions, and how confident you feel.
       </p>
 
       <div className="dn-spec-stats">
@@ -97,14 +98,14 @@ export default function SpecTracker({ tutor, marks, onMark }: {
         ))}
       </div>
 
-      {MATHS_SPEC.map((section, i) => {
-        const shown = section.topics.filter(shows);
-        if (!shown.length) return null;
-        const newArea = i === 0 || MATHS_SPEC[i - 1].area !== section.area;
-        return (
-          <Section key={section.id} section={section} shown={shown} marks={marks} area={newArea ? section.area : null} onMark={(x, f, v) => onMark(x.id, f, v)} />
-        );
-      })}
+      {MATHS_SPEC.map((section) => ({ section, shown: section.topics.filter((x) => shows(section, x)) }))
+        .filter((g) => g.shown.length)
+        .map(({ section, shown }, i, list) => {
+          // Each year's Pure, Mechanics and Statistics opens with its own heading.
+          const before = list[i - 1]?.section;
+          const opens = !before || before.area !== section.area || before.year !== section.year;
+          return <Section key={section.id} section={section} shown={shown} marks={marks} opens={opens} onMark={(x, f, v) => onMark(x.id, f, v)} />;
+        })}
     </div>
   );
 }
@@ -124,21 +125,30 @@ function Stat({ label, n, of, note, bar }: {
   );
 }
 
-function Section({ section, shown, marks, area, onMark }: {
-  section: SpecSection; shown: SpecTopic[]; marks: Marks; area: string | null;
+function Section({ section, shown, marks, opens, onMark }: {
+  section: SpecSection; shown: SpecTopic[]; marks: Marks;
+  /** The first of its year and area, under their heading and the column names. */
+  opens: boolean;
   onMark: (t: SpecTopic, f: SpecField, v: string | null) => void;
 }) {
   const s = tally(section.topics, marks);
   return (
     <div className="dn-group">
-      {area && <h3 className="dn-spec-area">{area}.</h3>}
+      {opens && (
+        <div className="dn-bk-part">
+          <h3 className="dn-spec-area">{section.area}.</h3>
+          <p className="dn-bk-note">Year {section.year}</p>
+        </div>
+      )}
       <div className="dn-group-head">
-        <h4 className="dn-group-name">{section.name}</h4>
+        <h4 className="dn-group-name"><span className="dn-bk-tn">{section.n}</span>{section.name}</h4>
         <span className="dn-group-count">{s.confidence.green} of {s.total} confident</span>
       </div>
-      <div className="dn-spec-cols" aria-hidden="true">
-        <span /><span>Lesson</span><span>Questions</span><span>Confidence</span>
-      </div>
+      {opens && (
+        <div className="dn-spec-cols" aria-hidden="true">
+          <span /><span>Lesson</span><span>Questions</span><span>Confidence</span>
+        </div>
+      )}
       <ul className="dn-papers">
         {shown.map((x) => {
           const m = marks[x.id];
@@ -146,7 +156,6 @@ function Section({ section, shown, marks, area, onMark }: {
             <li key={x.id} className="dn-spec-row" data-c={confidenceOf(m) ?? undefined}>
               <div className="dn-spec-name">
                 <span>{x.name}</span>
-                {x.year === 2 && <small>Year 2</small>}
               </div>
               <Lights name={`Lesson, ${x.name}`} label="Lesson" empty="Not started" options={LESSON} value={lessonOf(m)} onPick={(v) => onMark(x, "lesson", v)} />
               <Lights name={`Questions, ${x.name}`} label="Questions" empty="Not done" options={QUESTIONS} value={questionsOf(m)} onPick={(v) => onMark(x, "questions", v)} />
